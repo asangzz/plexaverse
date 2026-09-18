@@ -153,6 +153,22 @@ class DioClient {
       );
     }
 
+    // Keep `meta` before the payload replaces the envelope.
+    //
+    // Cursor pagination lives ONLY in `meta.pagination` ({cursor, hasMore,
+    // limit}) — the list endpoints return a bare array as `data`. Replacing
+    // the envelope therefore used to throw the cursor away, which made every
+    // paginated endpoint on the API unreachable past its first page. Stashing
+    // it in `extra` keeps the `data` contract every repository already relies
+    // on, and [envelopeMeta] reads it back.
+    final Object? meta = body['meta'];
+    if (meta is Map) {
+      response.extra = <String, dynamic>{
+        ...response.extra,
+        _metaKey: Map<String, dynamic>.from(meta),
+      };
+    }
+
     if (body.containsKey('data')) {
       // The inner payload replaces the envelope. `T` is what the caller
       // asked for (Map / List / dynamic); the cast mirrors Dio's own
@@ -161,6 +177,18 @@ class DioClient {
     }
     return response;
   }
+
+  static const String _metaKey = 'plexaverse.envelope.meta';
+
+  /// The envelope's `meta` for a response, or null when it carried none.
+  ///
+  /// Use it for `meta.pagination`:
+  /// ```dart
+  /// final page = DioClient.envelopeMeta(response)?['pagination'] as Map?;
+  /// final cursor = page?['cursor'] as String?;
+  /// ```
+  static Map<String, dynamic>? envelopeMeta(Response<Object?> response) =>
+      response.extra[_metaKey] as Map<String, dynamic>?;
 
   /// Maps an envelope `error` object to a [Failure]. Runs at the parse seam
   /// (after interceptors), so it mirrors [ErrorInterceptor]'s status table
