@@ -46,6 +46,17 @@ class ApiPaths {
   /// GET returns roadmap progress; POST records a completed step.
   static const String roadmapProgress = '/roadmap/progress';
 
+  // ── Planner ─────────────────────────────────────────────────────────────
+  // Added to the mobile API by the web-alignment work; there was no planner
+  // surface on mobile before, so the Plan tab had nothing to call.
+  /// GET the week plan (?week=&season=); PATCH one slot.
+  static const String planner = '/planner';
+
+  /// GET the Sunday article; POST to record that the user published it
+  /// themselves. LinkedIn's API cannot publish an article, so the app never
+  /// pushes one — it prepares a body and the user pastes it.
+  static const String plannerArticle = '/planner/article';
+
   // ── Posts ───────────────────────────────────────────────────────────────
   static const String posts = '/posts';
 

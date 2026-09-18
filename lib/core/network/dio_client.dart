@@ -64,6 +64,30 @@ class DioClient {
     return _unwrap(response);
   }
 
+  /// PATCH.
+  ///
+  /// The mobile API prefers PATCH over PUT for partial updates — user
+  /// preferences, a planner slot, a post, a schedule, a topic, marking a
+  /// notification read. It deliberately exposes no PUT on mobile at all, so a
+  /// client that only knows `put` cannot perform most writes. This verb was
+  /// missing from the client entirely.
+  Future<Response<T>> patch<T>(
+    String path, {
+    Object? data,
+    Map<String, dynamic>? queryParameters,
+    Options? options,
+    CancelToken? cancelToken,
+  }) async {
+    final response = await _dio.patch<T>(
+      path,
+      data: data,
+      queryParameters: queryParameters,
+      options: options,
+      cancelToken: cancelToken,
+    );
+    return _unwrap(response);
+  }
+
   Future<Response<T>> put<T>(
     String path, {
     Object? data,
