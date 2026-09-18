@@ -1,0 +1,15 @@
+{
+  "accessToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJ1c3JfZGVtbzAwMSIsIm5hbWUiOiJEZW1vIENyZWF0b3IiLCJpYXQiOjE3MjAwMDM2MDAsImV4cCI6NDg3MzYwMzYwMH0.rX2I2mS2o0mockrefreshedaccesstokendemo",
+  "refreshToken": "rt_demo_2f8c1a9b4e7d6c5a0b3e2d1f9a8c7b6e5d4c3b2a1",
+  "expiresIn": 3600,
+  "refreshExpiresIn": 2592000,
+  "user": {
+    "id": "usr_demo001",
+    "name": "Demo Creator",
+    "email": "demo@plexaverse.com",
+    "image": "https://i.pravatar.cc/300?u=demo@plexaverse.com",
+    "role": "user",
+    "xpBalance": 1280,
+    "createdAt": "2025-01-14T09:30:00.000Z"
+  }
+}

@@ -1,0 +1,62 @@
+{
+  "stats": {
+    "streakDays": 12,
+    "weeklyXp": 1450,
+    "weeklyXpGoal": 2000,
+    "level": 7,
+    "levelTitle": "Creator"
+  },
+  "totalImpressions": 48200,
+  "totalEngagements": 3120,
+  "totalFollowers": 2341,
+  "scheduledCount": 3,
+  "impressionsDelta": "+18%",
+  "engagementsDelta": "+12%",
+  "followersDelta": "+5%",
+  "mission": {
+    "title": "Get 1,000 impressions on a post",
+    "statusLabel": "Active"
+  },
+  "recentPosts": [
+    {
+      "id": "post_1042",
+      "preview": "Shipping fast is a skill. Here are 5 habits that keep my releases green.",
+      "status": "published",
+      "impressions": 18400,
+      "engagements": 1260,
+      "hasMetrics": true
+    },
+    {
+      "id": "post_1041",
+      "preview": "The best product decision I made this quarter cost nothing but attention.",
+      "status": "published",
+      "impressions": 9200,
+      "engagements": 540,
+      "hasMetrics": true
+    },
+    {
+      "id": "post_1040",
+      "preview": "Weekend build log: turning a rough idea into a working prototype in 6 hours.",
+      "status": "scheduled",
+      "impressions": 0,
+      "engagements": 0,
+      "hasMetrics": false
+    },
+    {
+      "id": "post_1039",
+      "preview": "Three underrated Flutter packages that quietly saved me weeks of work.",
+      "status": "published",
+      "impressions": 12600,
+      "engagements": 820,
+      "hasMetrics": true
+    },
+    {
+      "id": "post_1038",
+      "preview": "Draft: why most engagement advice is backwards (and what actually works).",
+      "status": "draft",
+      "impressions": 0,
+      "engagements": 0,
+      "hasMetrics": false
+    }
+  ]
+}

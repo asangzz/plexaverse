@@ -1,0 +1,15 @@
+{
+  "accessToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJ1c3JfbmV3MDAyIiwibmFtZSI6Ik5ldyBNZW1iZXIiLCJpYXQiOjE3MjAwMDAwMDAsImV4cCI6NDg3MzYwMDAwMH0.qW1H1lR1n9mockaccesstokensignaturenew",
+  "refreshToken": "rt_new_3a9d2b0c5f8e7d6b1c4f3e2a0b9d8c7f6e5d4c3b2",
+  "expiresIn": 3600,
+  "refreshExpiresIn": 2592000,
+  "user": {
+    "id": "usr_new002",
+    "name": "New Member",
+    "email": "new.member@plexaverse.com",
+    "image": null,
+    "role": "user",
+    "xpBalance": 0,
+    "createdAt": "2026-07-05T12:00:00.000Z"
+  }
+}

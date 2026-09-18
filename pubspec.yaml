@@ -1,0 +1,208 @@
+name: plexaverse
+description: "Plexaverse — Production Flutter Application"
+publish_to: 'none'
+version: 1.0.0+1
+
+# Local toolchain is Flutter 3.41.8 / Dart 3.11.5 (no FVM). The ^3.8.0 floor
+# is a deliberate hard constraint — do not bump it, and do not copy version
+# pins from projects on newer SDKs without re-resolving here.
+environment:
+  sdk: ^3.8.0
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+  flutter_localizations:
+    sdk: flutter
+
+  # State + DI
+  flutter_riverpod: ^3.3.1
+  riverpod_annotation: ^4.0.2
+
+  # Navigation
+  go_router: ^17.2.3
+
+  # Models
+  freezed_annotation: ^3.1.0
+  # `json_annotation 4.12+` would force `json_serializable 6.14+`, which
+  # needs analyzer 10+. `drift_dev ^2.31.0` caps analyzer at `<11`, so
+  # `json_serializable` resolves to 6.13.x — which pairs with
+  # `json_annotation 4.11.x`. Re-bump in lockstep when drift_dev lifts.
+  json_annotation: ^4.11.0
+
+  # HTTP
+  dio: ^5.9.2
+  pretty_dio_logger: ^1.4.0
+
+  # Functional error model (Either/TaskEither). Replaces `dartz`, which is
+  # effectively unmaintained; also replaces `equatable` at the call sites
+  # that only used it for value-equality on failure types.
+  fpdart: ^1.2.0
+
+  # Storage — DB is encrypted with SQLCipher (AES-256). The whole drift
+  # / sqlite3 / sqlcipher stack tracks the analyzer-8 floor (see the
+  # codegen comment block under dev_dependencies):
+  #   • drift 2.31.0      — resolvable max under analyzer 8
+  #   • sqlite3 2.9.4     — pinned by drift 2.31 (drift 2.32+ moves to 3.x)
+  #   • sqlcipher 0.6.8   — kept on the actively-maintained 0.6.x line;
+  #                         the 0.7.0+eol line is literally end-of-life.
+  # The drift maintainer (simolus3) still ships SQLCipher updates on the
+  # 0.6.x line (last bump: SQLCipher 4.10.0 in sqlcipher 0.6.8).
+  flutter_secure_storage: ^10.2.0
+  shared_preferences: ^2.5.5
+  drift: ^2.31.0
+  sqlcipher_flutter_libs: ^0.6.8
+  # Used directly inside `app_database.dart` for the SQLCipher PRAGMA setup;
+  # drift also depends on it transitively. Pinned to the v2 line that
+  # `sqlcipher_flutter_libs ^0.6.x` resolves against.
+  sqlite3: ^2.9.4
+  path_provider: ^2.1.5
+  path: ^1.9.1
+  crypto: ^3.0.7
+  # AES-GCM key class shared with the DB key (generated on first launch,
+  # stored in `flutter_secure_storage`, see core/storage/db_key_manager.dart).
+  cryptography: ^2.9.0
+
+  # Typography — Sora (display + headings) and Urbanist (body + UI) make up
+  # the Plexaverse brand type pairing. `google_fonts` fetches and caches the
+  # .ttf files at runtime. Pure-Dart asset loader — no codegen, no analyzer
+  # constraint, so it sits outside the pinned-version comments above.
+  google_fonts: ^6.2.1
+  cupertino_icons: ^1.0.8
+
+  # Media & imagery
+  cached_network_image: ^3.4.1
+  shimmer: ^3.0.0
+  lottie: ^3.3.1
+
+  # Motion & expressive components — M3 Expressive tokens, springs, page
+  # transitions (global PageTransitionsTheme), shape-morphing loaders.
+  expressive_m3: ^0.2.0
+
+  # Effect-chain animations (fade + slide) for the Global Timeline's era
+  # label transition — ported from the Wonderous reference app
+  # (flutter-wonderous-app-main), the only new dependency the port needed;
+  # every other Wonderous utility (Gap, extra_alignments, get_it, equatable,
+  # BlendMask) was replaceable with existing Flutter/Plexaverse primitives.
+  flutter_animate: ^4.5.0
+
+  # OAuth — LinkedIn in-app browser flow, wrapped behind the
+  # core/platform web-auth adapter seam.
+  flutter_web_auth_2: ^4.0.1
+
+  # Utilities
+  intl: ^0.20.2
+  clock: ^1.1.2
+  logger: ^2.7.0
+  uuid: ^4.5.3
+
+  # Background sync — periodic drain of the offline mutation queue
+  # (core/sync/sync_engine.dart); resume-drain + connectivity-drain
+  # remain the primary paths.
+  workmanager: ^0.9.0+3
+
+  # Security (§ hardening)
+  # `freerasp` (Talsec) is the maintained RASP layer — root/jailbreak,
+  # debugger, hooking, and emulator detection. Talsec Watcher Mail must be
+  # configured before release; the wrapper in `core/security/` carries the
+  # required TODO and release_guards refuse prod boot until configured.
+  freerasp: ^7.5.1
+  # Screenshot / screen-recording protection for sensitive screens.
+  # Android: FLAG_SECURE; iOS: screenshot + recording obscuring. Applied
+  # per-screen via core/security/secure_screen.dart (auth today).
+  screen_protector: ^1.4.2
+  # Biometric unlock (Face ID / fingerprint) — gates app re-entry on resume
+  # and cold start while a session exists. Uses device-credential fallback
+  # (biometricOnly: false) so the user is never stranded: biometrics OR the
+  # device PIN/passcode. Wrapped behind core/security/biometric_auth_service.
+  local_auth: ^3.0.1
+
+  # Platform & misc
+  connectivity_plus: ^7.1.1
+  # ProHealth holds this at 9.x because of a file_picker/win32 conflict;
+  # Plexaverse has no file_picker, so the 10.x line resolves cleanly here.
+  package_info_plus: ^10.0.0
+
+  # Firebase — FCM + Crashlytics + Analytics. Crashlytics is initialized in
+  # `bootstrap()` and the AppLogger forwards `error()` calls to `recordError`.
+  # Analytics is a deliberate Plexaverse addition (product analytics), exposed
+  # through the thin `core/logging/analytics.dart` adapter gated on
+  # firebaseReady + !kDebugMode.
+  firebase_core: ^4.9.0
+  firebase_messaging: ^16.2.2
+  firebase_crashlytics: ^5.2.2
+  firebase_analytics: ^12.0.0
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  integration_test:
+    sdk: flutter
+
+  flutter_lints: ^6.0.0
+
+  # Codegen — the remaining hold-back:
+  #   • `drift_dev`            2.31.0 → 2.32+ requires sqlite3 ^3.0.0
+  #                            and `sqlcipher_flutter_libs 0.7.0+eol`
+  #                            (the +eol tag is literal — 0.6.8 is the
+  #                            actively-maintained line). Held to keep
+  #                            production crypto on the maintained line.
+  #                            Also caps analyzer at `<11`, which in turn
+  #                            caps json_serializable at 6.13.x.
+  # No `go_router_builder` — routes use the `RoutePaths` string-constant
+  # pattern, no `@TypedGoRoute`. Re-add if/when the router adopts typed routes.
+  build_runner: ^2.15.0
+  freezed: ^3.2.5
+  json_serializable: ^6.13.0
+  drift_dev: ^2.31.0
+  riverpod_generator: ^4.0.2
+
+  # Testing
+  mocktail: ^1.0.5
+
+  # Native splash generator (build-time only). Run after changing the
+  # `flutter_native_splash:` config below:
+  #   dart run flutter_native_splash:create
+  flutter_native_splash: ^2.4.3
+
+# The following section is specific to Flutter packages.
+flutter:
+
+  # The following line ensures that the Material Icons font is
+  # included with your application, so that you can use the icons in
+  # the material Icons class.
+  uses-material-design: true
+  generate: true
+
+  assets:
+    - assets/images/
+    - assets/icons/
+    - assets/animations/
+    - assets/tenants/
+    # Per-tenant subfolders are added as tenants are onboarded:
+    - assets/tenants/plexaverse/
+    # Dummy JSON for the fake repositories (one dir per feature). Asset
+    # directories are non-recursive, so add each feature subfolder here
+    # as its slice lands.
+    - assets/mock/auth/
+    - assets/mock/home/
+    - assets/mock/posts/
+    - assets/mock/odyssey/
+    - assets/mock/analytics/
+    - assets/mock/notifications/
+    - assets/mock/settings/
+    - assets/mock/videos/
+    - assets/mock/avatars/
+    - assets/mock/timeline/
+
+# Native splash (brand-dark, colour-only) so there's no white first-frame
+# flash before the Flutter SplashPage — both are #0F0F1E, so the hand-off is
+# seamless. Regenerate native assets after editing:
+#   dart run flutter_native_splash:create
+flutter_native_splash:
+  color: "#0F0F1E"
+  color_dark: "#0F0F1E"
+  android_12:
+    color: "#0F0F1E"
+    color_dark: "#0F0F1E"

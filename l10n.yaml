@@ -1,0 +1,13 @@
+# Localization codegen config (flutter gen-l10n). Codifies the committed
+# lib/l10n/gen layout so regeneration is deterministic. Plexaverse ships
+# en/es/fr; adding a language is config-only — drop in app_<locale>.arb
+# (e.g. app_de.arb for German) and re-run gen-l10n. Keys missing from a
+# locale ARB fall back to the English template and are listed in
+# l10n_untranslated.txt (gitignored) on each run.
+arb-dir: lib/l10n
+template-arb-file: app_en.arb
+output-dir: lib/l10n/gen
+output-localization-file: app_localizations.dart
+output-class: AppL10n
+nullable-getter: false
+untranslated-messages-file: l10n_untranslated.txt

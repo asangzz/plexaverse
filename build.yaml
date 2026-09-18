@@ -1,0 +1,23 @@
+targets:
+  $default:
+    builders:
+      drift_dev:
+        options: {}
+      riverpod_generator:
+        options: {}
+      json_serializable:
+        options:
+          # The Plexaverse mobile API is camelCase on the wire (accessToken,
+          # refreshToken, expiresIn, serverTime, …). Dart field names are
+          # already camelCase, so NO rename — `field_rename: snake` (ProHealth's
+          # convention for its snake_case backend) made every multi-word field
+          # deserialise to null and throw. Explicit `@JsonKey(name: …)`
+          # annotations still override per-field where the wire name differs
+          # (e.g. AuthUser.avatarUrl ← `image`).
+          field_rename: none
+          explicit_to_json: true
+      freezed:
+        options:
+          map: true
+          when: true
+          copy_with: true

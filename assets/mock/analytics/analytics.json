@@ -1,0 +1,23 @@
+{
+  "totalImpressions": 48200,
+  "totalEngagements": 3140,
+  "totalFollowers": 1820,
+  "impressionsDelta": 21.9,
+  "engagementsDelta": 14.0,
+  "followersDelta": 6.5,
+  "reactions": 1980,
+  "comments": 742,
+  "reposts": 418,
+  "reactionsDelta": 22.0,
+  "commentsDelta": 8.0,
+  "repostsDelta": 31.0,
+  "impressionSeries": [0.32, 0.58, 0.47, 0.81, 0.69, 1.0, 0.74],
+  "topPost": {
+    "postId": 4821,
+    "preview": "The one habit that 10x'd my reach on LinkedIn (it took me 6 months to figure out)",
+    "impressions": 12400,
+    "engagements": 1180,
+    "engagementRate": 0.0952
+  },
+  "weekdayImpressions": [5200, 7100, 6400, 9800, 8300, 6900, 4500]
+}

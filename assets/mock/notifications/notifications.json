@@ -1,0 +1,64 @@
+[
+  {
+    "id": "ntf-1001",
+    "title": "Your post is live",
+    "body": "\"5 lessons from scaling a design team\" just went out on LinkedIn.",
+    "category": "post_published",
+    "createdAt": "2026-07-05T09:12:00.000Z",
+    "read": false,
+    "route": "/posts"
+  },
+  {
+    "id": "ntf-1002",
+    "title": "Post scheduled",
+    "body": "Your carousel is queued for tomorrow at 8:00 AM.",
+    "category": "post_scheduled",
+    "createdAt": "2026-07-05T08:40:00.000Z",
+    "read": false,
+    "route": "/schedule"
+  },
+  {
+    "id": "ntf-1003",
+    "title": "Mission complete",
+    "body": "You finished \"Post 3 days in a row\" and earned a badge.",
+    "category": "mission_complete",
+    "createdAt": "2026-07-04T19:05:00.000Z",
+    "read": false,
+    "route": "/odyssey"
+  },
+  {
+    "id": "ntf-1004",
+    "title": "+150 XP earned",
+    "body": "Your engagement streak pushed you toward the next level.",
+    "category": "xp_earned",
+    "createdAt": "2026-07-04T18:30:00.000Z",
+    "read": true,
+    "route": "/odyssey"
+  },
+  {
+    "id": "ntf-1005",
+    "title": "Weekly analytics ready",
+    "body": "Impressions are up 24% week over week. Tap to see the breakdown.",
+    "category": "analytics",
+    "createdAt": "2026-07-04T07:00:00.000Z",
+    "read": true,
+    "route": "/analytics"
+  },
+  {
+    "id": "ntf-1006",
+    "title": "Couldn't publish your post",
+    "body": "LinkedIn rejected the upload. Tap to review and retry.",
+    "category": "post_failed",
+    "createdAt": "2026-07-03T22:15:00.000Z",
+    "read": true,
+    "route": "/posts"
+  },
+  {
+    "id": "ntf-1007",
+    "title": "Welcome to Plexaverse",
+    "body": "Your account is ready. Create your first post to get started.",
+    "category": "general",
+    "createdAt": "2026-07-01T10:00:00.000Z",
+    "read": true
+  }
+]
