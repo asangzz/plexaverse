@@ -3,8 +3,6 @@ import 'package:flutter/foundation.dart' show kReleaseMode;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/config/env.dart';
-import '../../../core/network/api_paths.dart';
-import '../../../core/network/dio_client.dart';
 import '../../../core/platform/notifications_service.dart';
 import '../domain/notification_repository.dart';
 
@@ -31,28 +29,24 @@ class MockNotificationRepository implements NotificationRepository {
 /// neutral [AppNotification]s (which the controller mirrors into the Drift
 /// inbox + raises as an in-app banner).
 class ApiNotificationRepository implements NotificationRepository {
-  const ApiNotificationRepository(this._client, this._push);
+  const ApiNotificationRepository(this._push);
 
-  final DioClient _client;
   final NotificationsService _push;
 
-  // Device registration is best-effort: the caller (PushRegistration)
-  // swallows failures so a flaky network never blocks sign-in/sign-out.
+  // Both of these intentionally do nothing.
+  //
+  // The mobile API has NO device-registration endpoint. These used to POST and
+  // DELETE against `/notifications/devices`, which meant every launch fired a
+  // request that 404ed — swallowed by the caller's best-effort catch, so the
+  // app looked like it had push registered when it never did.
+  //
+  // Push notifications cannot work until that route is added server-side. Doing
+  // nothing is the honest behaviour until then; a silent 404 per launch is not.
   @override
-  Future<void> registerDevice(String token, {String platform = 'android'}) async {
-    await _client.post<void>(
-      ApiPaths.notificationDevices,
-      data: <String, dynamic>{'token': token, 'platform': platform},
-    );
-  }
+  Future<void> registerDevice(String token, {String platform = 'android'}) async {}
 
   @override
-  Future<void> unregisterDevice(String token) async {
-    await _client.delete<void>(
-      ApiPaths.notificationDevices,
-      queryParameters: <String, dynamic>{'token': token},
-    );
-  }
+  Future<void> unregisterDevice(String token) async {}
 
   @override
   Stream<AppNotification> get incoming => _push.incomingMessages.map(fromPush);
@@ -84,8 +78,5 @@ final notificationRepositoryProvider = Provider<NotificationRepository>((ref) {
   if (useFake && !kReleaseMode) {
     return const MockNotificationRepository();
   }
-  return ApiNotificationRepository(
-    ref.watch(dioClientProvider),
-    ref.watch(notificationsServiceProvider),
-  );
+  return ApiNotificationRepository(ref.watch(notificationsServiceProvider));
 });

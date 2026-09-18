@@ -16,7 +16,7 @@ class ApiHomeRepository implements HomeRepository {
   Future<DashboardSummary> fetchDashboard() async {
     try {
       final response = await _client.get<Map<String, dynamic>>(
-        ApiPaths.homeDashboard,
+        ApiPaths.dashboard,
       );
       final data = response.data;
       if (data == null) throw const DashboardUnavailable();

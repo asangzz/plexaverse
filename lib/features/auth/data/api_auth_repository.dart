@@ -159,12 +159,15 @@ class ApiAuthRepository implements AuthRepository {
 
   @override
   Future<void> signOut() async {
-    try {
-      await _client.post<void>(ApiPaths.logout);
-    } on Object {
-      // Best-effort: local token clearing (SignOutController) is the real
-      // sign-out; a failed server call must not block it.
-    }
+    // Intentionally does nothing on the wire.
+    //
+    // There is no `/auth/logout` route on the mobile API. This used to POST to
+    // one and swallow the resulting 404 on every single sign-out. Sign-out is
+    // local: SignOutController clears the session store, which is what
+    // actually ends the session — the access token then simply expires.
+    //
+    // If server-side token revocation is ever wanted, add the route in the web
+    // repo first and call it here.
   }
 
   // --- Parsing helpers -------------------------------------------------------

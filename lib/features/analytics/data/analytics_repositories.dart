@@ -45,7 +45,7 @@ class ApiAnalyticsRepository implements AnalyticsRepository {
   Future<AnalyticsEntity> fetchAnalytics() async {
     try {
       final response =
-          await _client.get<Map<String, dynamic>>(ApiPaths.analytics);
+          await _client.get<Map<String, dynamic>>(ApiPaths.linkedInAnalytics);
       final data = response.data;
       if (data == null) throw const AnalyticsUnavailable();
       return AnalyticsEntity.fromJson(data);

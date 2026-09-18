@@ -354,6 +354,17 @@ void registerPostsMutationHandlers({
   required bool useFake,
   required DioClient Function() clientOf,
 }) {
+
+  /// Resolves the SERVER id (a cuid) for a local post row.
+  ///
+  /// Every `/posts/{id}/...` route keys on the server id. The previous code
+  /// interpolated `localId` — the Drift autoincrement — straight into those
+  /// paths, so every publish, schedule and retry 404ed. A post with no
+  /// `remoteId` has never reached the server, so acting on it server-side is
+  /// not a transient failure to retry; it is permanent until it syncs.
+  Future<String?> remoteIdOf(int localId) async =>
+      (await dao.getById(localId))?.remoteId;
+
   Future<MutationOutcome> handlePublish(
     String mutationId,
     Map<String, dynamic> payload,
@@ -368,8 +379,16 @@ void registerPostsMutationHandlers({
       if (useFake) {
         await Future<void>.delayed(const Duration(milliseconds: 400));
       } else {
+        final remoteId = await remoteIdOf(localId);
+        if (remoteId == null) {
+          return MutationOutcome.permanent(
+            const SyncPermanentFailure(
+              message: 'publishPost: post has not synced to the server yet',
+            ),
+          );
+        }
         await clientOf().post<Map<String, dynamic>>(
-          ApiPaths.postPublish('$localId'),
+          ApiPaths.postPublish(remoteId),
         );
       }
       // Confirmed published — clear any stale error the UI may have shown.
@@ -402,9 +421,22 @@ void registerPostsMutationHandlers({
       if (useFake) {
         await Future<void>.delayed(const Duration(milliseconds: 400));
       } else {
+        // There is no `/posts/{id}/schedule` route. Scheduling is its own
+        // resource: POST /schedules, keyed by the post's SERVER id.
+        final remoteId = await remoteIdOf(localId);
+        if (remoteId == null) {
+          return MutationOutcome.permanent(
+            const SyncPermanentFailure(
+              message: 'schedulePost: post has not synced to the server yet',
+            ),
+          );
+        }
         await clientOf().post<Map<String, dynamic>>(
-          ApiPaths.postSchedule('$localId'),
-          data: <String, dynamic>{'scheduledAt': scheduledAt},
+          ApiPaths.schedules,
+          data: <String, dynamic>{
+            'postId': remoteId,
+            'scheduledAt': scheduledAt,
+          },
         );
       }
       return MutationOutcome.succeeded;
@@ -427,8 +459,18 @@ void registerPostsMutationHandlers({
       if (useFake) {
         await Future<void>.delayed(const Duration(milliseconds: 400));
       } else {
+        // There is no `/posts/{id}/retry` route. Retrying a failed post is
+        // simply publishing it again.
+        final remoteId = await remoteIdOf(localId);
+        if (remoteId == null) {
+          return MutationOutcome.permanent(
+            const SyncPermanentFailure(
+              message: 'retryPost: post has not synced to the server yet',
+            ),
+          );
+        }
         await clientOf().post<Map<String, dynamic>>(
-          ApiPaths.postRetry('$localId'),
+          ApiPaths.postPublish(remoteId),
         );
       }
       return MutationOutcome.succeeded;

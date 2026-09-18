@@ -1,54 +1,155 @@
-/// All API endpoint paths live here. Call sites read from this — the
-/// `hardcoded_endpoint` lint (§2.5) flags raw URL literals.
+/// Every mobile API path, transcribed from the route handlers under
+/// `app/api/mobile/v1/**` in the web repo.
 ///
-/// Paths use `static const` for fixed endpoints and
-/// `static String Function(String id)` helpers for parameterised ones.
-/// Feature agents ADD the endpoints their slice needs here; this file is
-/// shared across the whole network layer. Only the auth/product paths the
-/// current migration has confirmed are listed today — never inline a URL at
-/// a call site.
+/// ## Read this before adding a constant
+///
+/// The previous version of this file was **invented independently of the real
+/// API**. It named `/home/dashboard`, `/odyssey/stats`, `/odyssey/missions`,
+/// `/notifications/read-all`, `/media` and `/auth/logout` — none of which
+/// exist. Of the 88 verb+path combinations the server exposes, exactly three
+/// were correctly wired. Every other screen rendered bundled fixtures while
+/// appearing to be online.
+///
+/// So: **a constant here must correspond to a `route.ts` that exists.** If the
+/// screen you are building needs an endpoint that is not in this file, the
+/// endpoint does not exist — add it to the web repo under
+/// `app/api/mobile/v1/`, in the same change. Do not invent a path and let the
+/// 404 be swallowed by a `catch`.
+///
+/// Paths are relative to the `/api/mobile/v1` base URL in `AppConfig`.
+/// Fixed paths are `static const`; parameterised ones are `static String fn()`.
 class ApiPaths {
   const ApiPaths._();
 
-  // Auth (§8) — only /auth/login and /auth/refresh are public.
+  // ── Auth ────────────────────────────────────────────────────────────────
+  // There is deliberately no `logout`: the server has no such route. Signing
+  // out is purely local (clear the session store); the old client POSTed to
+  // /auth/logout and swallowed the 404 on every sign-out.
   static const String login = '/auth/login';
   static const String register = '/auth/register';
   static const String refresh = '/auth/refresh';
-  static const String logout = '/auth/logout';
+
+  /// Warm-boot check — validates the stored token AND returns fresh role /
+  /// subscription state that is deliberately not in the token payload.
   static const String me = '/auth/me';
 
-  // LinkedIn OAuth hand-off (wrapped by the core web-auth adapter seam).
+  // ── User ────────────────────────────────────────────────────────────────
+  /// GET returns the row, or `{exists: false}` when the user has none yet.
+  /// PATCH is a partial upsert — send only what changed. There is no PUT on
+  /// mobile, by design.
+  static const String userPreferences = '/user/preferences';
+  static const String userXp = '/user/xp';
+
+  // ── Home ────────────────────────────────────────────────────────────────
+  static const String dashboard = '/dashboard';
+
+  /// GET returns roadmap progress; POST records a completed step.
+  static const String roadmapProgress = '/roadmap/progress';
+
+  // ── Posts ───────────────────────────────────────────────────────────────
+  static const String posts = '/posts';
+
+  /// `id` is the SERVER id (a cuid), never the local Drift autoincrement.
+  /// Sending the local int is what made every publish 404.
+  static String post(String id) => '/posts/$id';
+  static String postPublish(String id) => '/posts/$id/publish';
+
+  // ── Scheduling ──────────────────────────────────────────────────────────
+  static const String schedules = '/schedules';
+  static String schedule(String id) => '/schedules/$id';
+
+  static const String topics = '/topics';
+  static String topic(String id) => '/topics/$id';
+
+  // ── LinkedIn ────────────────────────────────────────────────────────────
+  static const String linkedInAccounts = '/linkedin/accounts';
+  static const String linkedInAnalytics = '/linkedin/analytics';
   static const String linkedInAuthUrl = '/linkedin/auth-url';
   static const String linkedInExchange = '/linkedin/exchange';
+  static const String linkedInPosts = '/linkedin/posts';
+  static const String linkedInComments = '/linkedin/comments';
+  static const String linkedInCommentsReact = '/linkedin/comments/react';
+  static const String linkedInOrganizations = '/linkedin/organizations';
+  static const String linkedInCompanyPost = '/linkedin/company-post';
+  static const String linkedInCompanyBanner = '/linkedin/company-banner';
+  static const String linkedInAdvocacy = '/linkedin/posts/advocacy';
+  static const String linkedInReshare = '/linkedin/posts/reshare';
 
-  // Home / dashboard
-  static const String homeDashboard = '/home/dashboard';
-
-  // Posts
-  static const String posts = '/posts';
-  static String postById(String id) => '/posts/$id';
-  static String postSchedule(String id) => '/posts/$id/schedule';
-  static String postPublish(String id) => '/posts/$id/publish';
-  static String postRetry(String id) => '/posts/$id/retry';
-  static String postMetrics(String id) => '/posts/$id/metrics';
-
-  // Analytics
-  static const String analytics = '/analytics';
-  static const String analyticsRange = '/analytics/range';
-
-  // Odyssey / gamification
-  static const String odysseyStats = '/odyssey/stats';
-  static const String odysseyMissions = '/odyssey/missions';
-  static const String odysseyAwardXp = '/odyssey/xp';
-
-  // Notifications (inbox — the push counterpart of FCM)
+  // ── Notifications ───────────────────────────────────────────────────────
+  // NOTE: there is no device-registration endpoint. The old client POSTed to
+  // `/notifications/devices` on every launch and 404ed silently. Push cannot
+  // work until that route is added server-side.
   static const String notifications = '/notifications';
-  static const String notificationsReadAll = '/notifications/read-all';
-  static String notificationRead(String id) => '/notifications/$id/read';
+  static const String notificationsUnreadCount = '/notifications/unread-count';
+  static const String notificationsMarkAllRead = '/notifications/mark-all-read';
 
-  // FCM device registration (idempotent on the server).
-  static const String notificationDevices = '/notifications/devices';
+  /// PATCH with an EMPTY body marks it read. Idempotent; 404 when not owned.
+  static String notification(String id) => '/notifications/$id';
 
-  // Media — single multipart endpoint. Returns a canonical `id`.
-  static const String media = '/media';
+  // ── AI ──────────────────────────────────────────────────────────────────
+  static const String aiGenerate = '/ai/generate';
+  static const String aiImage = '/ai/image';
+  static const String aiPoster = '/ai/poster';
+  static const String aiCarousel = '/ai/carousel';
+  static const String aiHeadshot = '/ai/headshot';
+  static const String aiComments = '/ai/comments';
+  static const String aiGenerateComment = '/ai/generate-comment';
+  static const String aiGeneratePoll = '/ai/generate-poll';
+  static const String aiGenerateAbout = '/ai/generate-about';
+  static const String aiConnections = '/ai/connections';
+  static const String aiConnectionMessage = '/ai/connection-message';
+  static const String aiRecommendationRequest = '/ai/recommendation-request';
+  static const String aiSuggestTopics = '/ai/suggest-topics';
+  static const String aiSuggestTitle = '/ai/suggest-title';
+  static const String aiSuggestSkills = '/ai/suggest-skills';
+  static const String aiSuggestGroups = '/ai/suggest-groups';
+  static const String aiAnalyzePost = '/ai/analyze-post';
+  static const String aiAnalyzeProfession = '/ai/analyze-profession';
+  static const String aiAnalyzeStyleScreenshot = '/ai/analyze-style-screenshot';
+  static const String aiLinkedInProfile = '/ai/linkedin-profile';
+  static const String aiParseCv = '/ai/parse-cv';
+  static const String aiStyleMemory = '/ai/style-memory';
+  static const String aiTrendingPosts = '/ai/trending-posts';
+
+  /// The only GET under /ai.
+  static const String aiStrategy = '/ai/strategy';
+
+  // ── Studio ──────────────────────────────────────────────────────────────
+  static const String studioAccess = '/studio/access';
+  static const String studioDesigns = '/studio/designs';
+  static String studioDesign(String id) => '/studio/designs/$id';
+  static const String studioTemplates = '/studio/templates';
+  static const String studioAiDesigner = '/studio/ai-designer';
+  static const String studioCopy = '/studio/copy';
+
+  // ── Festive ─────────────────────────────────────────────────────────────
+  static const String festiveTemplates = '/festive/templates';
+  static const String festiveGenerate = '/festive/generate';
+
+  // ── Integrations ────────────────────────────────────────────────────────
+  static const String slackStatus = '/slack/status';
+  static const String slackAuthUrl = '/slack/auth-url';
+  static const String slackExchange = '/slack/exchange';
+
+  /// DELETE disconnects.
+  static const String slack = '/slack';
+
+  static const String googleCalendarStatus = '/google-calendar/status';
+  static const String googleCalendarAuthUrl = '/google-calendar/auth-url';
+  static const String googleCalendarExchange = '/google-calendar/exchange';
+
+  /// DELETE disconnects.
+  static const String googleCalendar = '/google-calendar';
+
+  // ── Money ───────────────────────────────────────────────────────────────
+  static const String geoPricing = '/geo/pricing';
+  static const String paymentCreateOrder = '/payment/create-order';
+  static const String paymentVerify = '/payment/verify';
+  static const String subscriptionCreate = '/subscription/create';
+  static const String subscriptionVerify = '/subscription/verify';
+  static const String referral = '/referral';
+  static const String referralApply = '/referral/apply';
+
+  // ── Media ───────────────────────────────────────────────────────────────
+  static const String uploadImage = '/upload/image';
 }
