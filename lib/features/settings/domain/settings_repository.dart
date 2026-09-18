@@ -55,6 +55,16 @@ abstract class SettingsRepository {
   /// 400 rather than being ignored.
   Future<UserPreferences> updatePreferences(Map<String, dynamic> patch);
 
+  /// Flips the auto-post kill switch. Returns the new value.
+  ///
+  /// Its own call rather than a field on [updatePreferences], because it is not
+  /// a preference: enabling stamps a resume time (giving the server's
+  /// auto-pause engine a clean slate), re-arms the next generation task, and
+  /// clears stale "Auto-post paused" notifications. `autoPostEnabled` is
+  /// deliberately absent from the preferences PATCH schema for that reason —
+  /// it is a state machine, not a column you set.
+  Future<bool> setAutoPostEnabled(bool enabled);
+
   /// Identity + billing state. See [AccountSnapshot].
   Future<AccountSnapshot> fetchAccount();
 

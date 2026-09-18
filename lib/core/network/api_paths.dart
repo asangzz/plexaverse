@@ -40,6 +40,32 @@ class ApiPaths {
   static const String userPreferences = '/user/preferences';
   static const String userXp = '/user/xp';
 
+  /// The auto-post kill switch. PATCH `{enabled: bool}`.
+  ///
+  /// Deliberately NOT a field on [userPreferences]: enabling it stamps a
+  /// resume time, re-arms the next Cloud Task and clears stale "paused"
+  /// notifications. It is a state machine, not a preference.
+  static const String userAutoPostToggle = '/user/autopost-toggle';
+
+  // ── Onboarding finalise chain ───────────────────────────────────────────
+  // Called in order when onboarding completes. Skipping them is why a
+  // mobile-onboarded user used to reach the dashboard with no roadmap and the
+  // planner with no week.
+  static const String onboardingDeriveAudience = '/onboarding/derive-audience';
+  static const String aiInitWeekPlan = '/ai/init-week-plan';
+  static const String aiGenerateRoadmap = '/ai/generate-roadmap';
+
+  // ── Persona ─────────────────────────────────────────────────────────────
+  /// Everything Plexa knows about the user: identity + the Substance Bank.
+  static const String persona = '/persona';
+  static const String personaHarvest = '/persona/harvest';
+  static const String personaAudience = '/persona/audience';
+  static const String personaChat = '/persona/chat';
+
+  /// Applies proposals the user accepted from a chat turn. A chat turn never
+  /// writes on its own.
+  static const String personaApply = '/persona/apply';
+
   // ── Home ────────────────────────────────────────────────────────────────
   static const String dashboard = '/dashboard';
 

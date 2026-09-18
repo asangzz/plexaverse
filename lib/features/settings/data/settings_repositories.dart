@@ -68,6 +68,15 @@ class ApiSettingsRepository implements SettingsRepository {
   }
 
   @override
+  Future<bool> setAutoPostEnabled(bool enabled) async {
+    final response = await _client.patch<Map<String, dynamic>>(
+      ApiPaths.userAutoPostToggle,
+      data: <String, dynamic>{'enabled': enabled},
+    );
+    return (response.data?['autoPostEnabled'] as bool?) ?? enabled;
+  }
+
+  @override
   Future<AccountSnapshot> fetchAccount() async {
     try {
       final response = await _client.get<Map<String, dynamic>>(ApiPaths.me);
@@ -273,6 +282,13 @@ class FakeSettingsRepository implements SettingsRepository {
       'exists': true,
     });
     return _preferences;
+  }
+
+  @override
+  Future<bool> setAutoPostEnabled(bool enabled) async {
+    await Future<void>.delayed(const Duration(milliseconds: 200));
+    _preferences = _preferences.copyWith(autoPostEnabled: enabled);
+    return enabled;
   }
 
   @override

@@ -37,6 +37,32 @@ class PreferencesController extends _$PreferencesController {
     'headline': headline,
   });
 
+  /// The auto-post kill switch.
+  ///
+  /// Optimistic: the toggle flips immediately and is reconciled from the
+  /// server's answer. A switch that waits on a round-trip before moving reads
+  /// as broken, and this one is the most consequential control on the screen.
+  Future<void> setAutoPost(bool enabled) async {
+    final UserPreferences? current = state.value;
+    if (current == null) return;
+
+    state = AsyncData<UserPreferences>(
+      current.copyWith(autoPostEnabled: enabled),
+    );
+    try {
+      final bool applied = await ref
+          .read(settingsRepositoryProvider)
+          .setAutoPostEnabled(enabled);
+      state = AsyncData<UserPreferences>(
+        current.copyWith(autoPostEnabled: applied),
+      );
+    } on Object {
+      // Put the server's truth back. A failed pause that still shows "paused"
+      // would have the user believe they stopped spending AI budget.
+      ref.invalidateSelf();
+    }
+  }
+
   /// Which brand the user runs. Changing it re-shapes navigation, the compose
   /// screen and half of this page, so it is deliberately its own save rather
   /// than a field inside a bigger form.

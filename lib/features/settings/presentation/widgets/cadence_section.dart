@@ -210,19 +210,21 @@ class _CadenceSectionState extends ConsumerState<CadenceSection> {
 
 /// **Auto-Post Generation** — the daily-generation kill switch.
 ///
-/// Read-only here, and that is not an oversight. `autoPostEnabled` is a real
-/// column and `GET /user/preferences` returns it, but the mobile PATCH schema
-/// is `.strict()` and does not list it — so a write would be rejected whole,
-/// taking any field sent alongside it down too. A switch that looks live and
-/// silently fails is the exact failure this rebuild exists to end, so the
-/// control shows the truth and says why it cannot be changed.
-class AutoPostSection extends StatelessWidget {
+/// Live, via `PATCH /user/autopost-toggle`.
+///
+/// It goes through its own endpoint rather than the preferences PATCH because
+/// it is not a preference: enabling stamps a resume time so the server's
+/// auto-pause engine starts from a clean slate, re-arms the next generation
+/// task, and clears stale "Auto-post paused" notifications. That is also why
+/// `autoPostEnabled` is deliberately absent from the preferences schema — it
+/// was not an oversight there, and adding it would skip all of the above.
+class AutoPostSection extends ConsumerWidget {
   const AutoPostSection({required this.preferences, super.key});
 
   final UserPreferences preferences;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final bool enabled = preferences.autoPostEnabled;
 
     return SettingsSection(
@@ -244,19 +246,12 @@ class AutoPostSection extends StatelessWidget {
               SizedBox(width: ZaveSpace.lg),
               ZaveSwitch(
                 value: enabled,
-                // Null disables it. See the class doc.
-                onChanged: null,
+                onChanged: (bool next) => ref
+                    .read(preferencesControllerProvider.notifier)
+                    .setAutoPost(next),
                 semanticLabel: 'Auto-post generation',
               ),
             ],
-          ),
-          SizedBox(height: ZaveSpace.lg),
-          UnavailableNote(
-            title: enabled ? 'Auto-post is on' : 'Auto-post is paused',
-            message:
-                'Pausing or resuming auto-post is not available in the app '
-                'yet — the mobile preferences endpoint does not accept the '
-                'field. Use the web app’s Settings page, or ask us to add it.',
           ),
         ],
       ),

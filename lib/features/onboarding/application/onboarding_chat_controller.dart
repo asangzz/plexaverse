@@ -262,7 +262,17 @@ class OnboardingChatController extends _$OnboardingChatController {
     }
     if (_disposed) return;
 
-    unawaited(_repo.seedTopics());
+    // The post-finalise fan-out: grounding, audience, week one, the roadmap and
+    // topics. It runs in the background so the handover is not held up, but
+    // each piece matters — without the roadmap the home screen is empty, and
+    // without the week plan the planner is.
+    unawaited(
+      _repo.seedAfterOnboarding(
+        profession: state.answers.profession,
+        industry: state.answers.industry,
+        brandType: (state.answers.brand ?? BrandChoice.personal).name,
+      ),
+    );
 
     await _sendBot(
       'Your dashboard is ready — taking you there now.',

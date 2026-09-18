@@ -57,12 +57,34 @@ abstract class OnboardingRepository {
   /// outcome the user has to see.
   Future<void> completeOnboarding(Map<String, dynamic> patch);
 
-  /// `POST /ai/suggest-topics` — seeds the user's topics from the profile they
-  /// just described.
+  /// The post-finalise fan-out — everything the account needs before the
+  /// dashboard is worth looking at.
   ///
-  /// This stands in for the web's post-finalise fan-out (`init-week-plan`,
-  /// `generate-roadmap`, `persona/harvest`, `derive-audience`), none of which
-  /// exists on the mobile API. Like those, it is fire-and-forget and never
-  /// blocks the redirect.
-  Future<void> seedTopics();
+  /// Runs the web's chain, in the web's order, because the order is
+  /// load-bearing:
+  ///
+  ///   1. `POST /persona/harvest` — seeds the Substance Bank from the CV and
+  ///      past posts, so the first weeks are grounded in something real.
+  ///      Fire-and-forget.
+  ///   2. `POST /onboarding/derive-audience` — **AWAITED**, unlike everything
+  ///      around it. Nobody is asked who they want reading their posts any
+  ///      more, so the audience is inferred here, and the very next call plans
+  ///      their first week by reading that audience. Fired alongside
+  ///      init-week-plan instead, the race is lost about half the time and week
+  ///      one is aimed at nobody.
+  ///   3. `POST /ai/init-week-plan` — seeds week one.
+  ///   4. `POST /ai/generate-roadmap` — builds the Season 1 roadmap, which IS
+  ///      the home screen.
+  ///   5. `POST /ai/suggest-topics` — seeds topics from the new profile.
+  ///
+  /// Every step swallows its own failure: none of them may block the handover
+  /// to the dashboard. Until these routes existed on the mobile API this method
+  /// could only do step 5, which is why a mobile-onboarded user used to arrive
+  /// at an empty roadmap and an empty planner.
+  Future<void> seedAfterOnboarding({
+    String? profession,
+    String? industry,
+    String? brandType,
+    bool usedCvUpload = false,
+  });
 }

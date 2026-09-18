@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:dio/dio.dart' show DioException;
 import 'package:flutter/foundation.dart' show kReleaseMode;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -89,15 +90,48 @@ class ApiOnboardingRepository implements OnboardingRepository {
   }
 
   @override
-  Future<void> seedTopics() async {
-    try {
-      // No body: the server reads profession / industry / headline / summary
-      // from the preferences row this flow has just written, which is why this
-      // runs AFTER completeOnboarding and not beside it.
-      await _client.post<Map<String, dynamic>>(ApiPaths.aiSuggestTopics);
-    } on Object {
-      // Fire-and-forget, exactly like the web's post-finalise fan-out.
+  Future<void> seedAfterOnboarding({
+    String? profession,
+    String? industry,
+    String? brandType,
+    bool usedCvUpload = false,
+  }) async {
+    // Each step swallows its own failure — none may block the handover.
+    Future<void> attempt(String path, [Object? body]) async {
+      try {
+        await _client.post<Map<String, dynamic>>(path, data: body);
+      } on Object {
+        // Fire-and-forget, exactly like the web's post-finalise fan-out.
+      }
     }
+
+    // Grounding first. Idempotent server-side.
+    unawaited(attempt(ApiPaths.personaHarvest));
+
+    // AWAITED. The next call plans week one by reading the audience this one
+    // infers; racing them leaves week one aimed at nobody. It cannot fail the
+    // flow — attempt() swallows — so the worst case is the seconds it costs.
+    await attempt(ApiPaths.onboardingDeriveAudience);
+
+    unawaited(attempt(ApiPaths.aiInitWeekPlan));
+    unawaited(
+      attempt(ApiPaths.aiGenerateRoadmap, <String, dynamic>{
+        'profession': ?profession,
+        'industry': ?industry,
+        // The web sends the profession as expertise too.
+        'expertise': ?profession,
+        'goals': <String>[
+          brandType == 'company' ? 'brand_building' : 'thought_leadership',
+        ],
+        'usedCVUpload': usedCvUpload,
+        'brandType': ?brandType,
+      }),
+    );
+
+    // No body: the server reads profession / industry / headline / summary
+    // from the preferences row this flow has just written, which is why this
+    // runs AFTER completeOnboarding and not beside it.
+    unawaited(attempt(ApiPaths.aiSuggestTopics));
   }
 
   /// The backend's own message when it sent one, so the chat can quote it the
@@ -154,7 +188,12 @@ class FakeOnboardingRepository implements OnboardingRepository {
   }
 
   @override
-  Future<void> seedTopics() async {}
+  Future<void> seedAfterOnboarding({
+    String? profession,
+    String? industry,
+    String? brandType,
+    bool usedCvUpload = false,
+  }) async {}
 }
 
 /// Mock ↔ real switch on `useFakeBackend`. A release build can never resolve
