@@ -61,6 +61,13 @@ abstract class UserPreferences with _$UserPreferences {
 
     /// Self-reported; nothing syncs it because nothing can. Null means "no
     /// newsletter yet", which is what triggers the first-article naming flow.
+    /// The consultant-practice audience fields. Real preferences columns that
+    /// the mobile PATCH accepts, and what the persona screen's audience
+    /// section reads and writes.
+    String? serveRole,
+    String? serveIndustry,
+    String? problemSolved,
+
     String? newsletterName,
 
     // ── Company brand (all null for a personal brand) ──

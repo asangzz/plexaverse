@@ -7,6 +7,15 @@ import '../../application/onboarding_controller.dart';
 
 /// First-run onboarding carousel (pre-auth gate).
 ///
+/// **SUPERSEDED — pending an orchestrator change.** The web has no first-run
+/// carousel; its `/onboarding` is the post-auth Plexa Setup chat, which now
+/// lives beside this file as `OnboardingChatPage`. This page and its
+/// [OnboardingController] flag are still here only because `core/router/`
+/// (which this slice does not own) points `/onboarding` at them and gates them
+/// ahead of the auth guard. Once the router points the route at the chat and
+/// moves the gate onto `UserPreferences.onboardingCompleted`, this file and the
+/// three marketing slides below go with it.
+///
 /// Ported from `lib/presentation/features/onboarding/pages/onboarding_page.dart`.
 /// Visuals are unchanged (three-slide `PageView`, animated dots, skip / next /
 /// get-started controls) per the ruling that product UI stays; the file is
@@ -75,10 +84,7 @@ class _OnboardingPageState extends ConsumerState<OnboardingPage> {
                 mainAxisAlignment: MainAxisAlignment.end,
                 children: <Widget>[
                   if (!isLast)
-                    TextButton(
-                      onPressed: _skip,
-                      child: Text(l10n.skip),
-                    ),
+                    TextButton(onPressed: _skip, child: Text(l10n.skip)),
                 ],
               ),
             ),
@@ -95,10 +101,7 @@ class _OnboardingPageState extends ConsumerState<OnboardingPage> {
               padding: EdgeInsets.symmetric(horizontal: 24.w, vertical: 32.h),
               child: Column(
                 children: <Widget>[
-                  _DotsIndicator(
-                    count: _pages.length,
-                    current: _currentPage,
-                  ),
+                  _DotsIndicator(count: _pages.length, current: _currentPage),
                   SizedBox(height: 24.h),
                   FilledButton(
                     onPressed: _next,
@@ -133,11 +136,7 @@ class _OnboardingSlide extends StatelessWidget {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: <Widget>[
-          Icon(
-            data.icon,
-            size: 96.r,
-            color: theme.colorScheme.primary,
-          ),
+          Icon(data.icon, size: 96.r, color: theme.colorScheme.primary),
           SizedBox(height: 40.h),
           Text(
             data.title,

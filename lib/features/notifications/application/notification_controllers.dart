@@ -3,7 +3,7 @@ import 'package:drift/drift.dart' show Value;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
-import '../../../core/router/route_paths.dart';
+import '../../../core/router/zave_routes.dart';
 import '../../../core/storage/app_database.dart';
 import '../../../core/ui/widgets/in_app_notification_overlay.dart';
 import '../data/notification_repositories.dart';
@@ -94,14 +94,16 @@ class NotificationIngestor extends _$NotificationIngestor {
     return ingest(
       AppNotification(
         id: 'sim-${now.microsecondsSinceEpoch}',
-        title: 'Your video is ready',
-        body: 'Your avatar video just finished rendering.',
+        // Plexaverse copy. This used to read "Your video is ready / Your
+        // avatar video just finished rendering" and deep-link to a videos tab
+        // — leftover from the skin this app was cloned from, in a dev action
+        // that is the quickest way to eyeball the notification pipeline.
+        title: 'Your post is live',
+        body: 'Today\'s post just published to LinkedIn.',
         category: NotificationCategory.postPublished,
         createdAt: now,
         read: false,
-        // Deep-link to a LIVE shell branch — '/posts' is no longer routed
-        // (HeyGen re-skin shell: home/videos/avatars only).
-        route: RoutePaths.videos,
+        route: ZaveRoutes.posts,
       ),
     );
   }

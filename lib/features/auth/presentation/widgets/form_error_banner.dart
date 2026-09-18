@@ -1,42 +1,48 @@
 import 'package:flutter/material.dart';
-import 'package:plexaverse/core/theme/plexaverse_colors.dart';
-import 'package:plexaverse/core/theme/app_text_theme.dart';
 
+import '../../../../core/ui/zave/zave_kit.dart';
+
+/// The form-level error banner above the auth form ("Incorrect email or
+/// password", "Something went wrong").
+///
+/// **Amber, not red — Zave has no red.** The pre-alignment banner used
+/// `PlexaversePalette.error` (a red) with a 3px left rail. In Zave a negative
+/// or failed state is [ZaveColors.amber] ("points, waiting" is the token's
+/// primary meaning; it is also the palette's only warning colour, and
+/// `ZaveField` already uses it for its own error border, so the banner and the
+/// field it explains now agree).
+///
+/// Depth is a fill step, never a shadow: the banner sits on [ZaveGlass.rest]
+/// with an amber hairline rather than an amber wash, so the colour reads as a
+/// status marker and not as a second surface.
 class FormErrorBanner extends StatelessWidget {
-  final String message;
-  final bool isDark;
+  const FormErrorBanner({required this.message, super.key});
 
-  const FormErrorBanner({
-    super.key,
-    required this.message,
-    this.isDark = true,
-  });
+  final String message;
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      margin: const EdgeInsets.only(bottom: 16),
+      padding: ZaveSpace.rowPad,
       decoration: BoxDecoration(
-        color: PlexaversePalette.error.withValues(alpha: 0.10),
-        borderRadius: BorderRadius.circular(12),
-        border: Border(
-          left: const BorderSide(color: PlexaversePalette.error, width: 3),
-          right: BorderSide(color: PlexaversePalette.error.withValues(alpha: 0.20)),
-          top: BorderSide(color: PlexaversePalette.error.withValues(alpha: 0.20)),
-          bottom: BorderSide(color: PlexaversePalette.error.withValues(alpha: 0.20)),
-        ),
+        color: ZaveGlass.rest,
+        border: Border.all(color: ZaveColors.amber, width: 1),
+        borderRadius: BorderRadius.circular(ZaveRadius.cardSm),
       ),
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       child: Row(
-        children: [
-          const Icon(Icons.error_outline, color: PlexaversePalette.error, size: 18),
-          const SizedBox(width: 10),
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: <Widget>[
+          Padding(
+            // Nudge the dot onto the first line's optical centre. The dot is
+            // 9px against a 17px line, so half the difference is the inset.
+            padding: EdgeInsets.only(top: ZaveSpace.xs),
+            child: const ZaveDot(ZaveColors.amber),
+          ),
+          SizedBox(width: ZaveSpace.md),
           Expanded(
             child: Text(
               message,
-              style: AppTextTheme.bodyMedium.copyWith(
-                color: isDark ? PlexaversePalette.grey50 : PlexaversePalette.grey900,
-              ),
+              style: ZaveType.body.copyWith(color: ZaveColors.ink85),
             ),
           ),
         ],

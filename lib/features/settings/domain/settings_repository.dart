@@ -1,53 +1,89 @@
-import 'dart:ui' show Locale;
+import '../../preferences/domain/user_preferences.dart';
+import 'settings_entities.dart';
 
-import 'package:plexaverse/core/theme/app_theme_mode.dart';
-import 'settings_profile.dart';
-import 'subscription_info.dart';
+export '../../preferences/domain/user_preferences.dart';
+export 'settings_entities.dart';
 
-export 'settings_profile.dart';
-export 'subscription_info.dart';
-
-/// Thrown when the profile header can't be loaded (fixture missing/corrupt or,
-/// in a future API-backed build, transport failure). The Settings screen maps
-/// it to a compact retry — theme/locale controls stay usable regardless, since
-/// they are local-only and never depend on this fetch.
-class SettingsProfileUnavailable implements Exception {
-  const SettingsProfileUnavailable();
-}
-
-/// Thrown when the subscription snapshot can't be loaded (fixture missing/
-/// corrupt or, in a future billing-API build, transport failure). The
-/// Account page and Subscription sheet map it to a compact inline retry.
-class SubscriptionInfoUnavailable implements Exception {
-  const SubscriptionInfoUnavailable();
-}
-
-/// Seam between the Settings module and its storage.
+/// Thrown when a Settings read or write can't be satisfied.
 ///
-/// Settings is **local-only**: theme mode and locale persist to
-/// `SharedPreferences` (a preference, not a secret — same store ProHealth uses
-/// for `BiometricPrefs`). The profile header is display data read from the
-/// bundled mock fixture. There is no real backend for this feature in v1, so a
-/// single prefs-backed implementation ([PrefsSettingsRepository]) serves every
-/// flavor; the fixture read is gated only by asset availability.
+/// One const sentinel for the whole feature, per the slice convention — the UI
+/// never branches on a typed error taxonomy, only on "this section couldn't
+/// load", and each section renders its own retry.
+class SettingsUnavailable implements Exception {
+  const SettingsUnavailable();
+}
+
+/// Seam between the Settings / Accounts screens and the mobile API.
+///
+/// This replaces the previous local-only repository, which read a bundled
+/// fixture (`assets/mock/settings/profile.json`) and a "Digital Twin" quota
+/// object that has no counterpart anywhere in Plexaverse — it was inherited
+/// wholesale from the skin this app was cloned from. Every method below
+/// corresponds to a route that actually exists in
+/// `core/network/api_paths.dart`.
+///
+/// ## What is deliberately absent
+///
+/// The web's Settings page also edits the avatar, the display name, the Studio
+/// API token, the privacy/consent ledger and the account-deletion flow. None of
+/// those have a mobile route (`/user/profile`, `/user/avatar`, `/studio/token`,
+/// `/user/data-export`, the DPDP consent endpoints), so there is nothing to put
+/// behind a method here. The screens surface an explicit unavailable state
+/// instead of a button that would 404 — the failure mode this whole file exists
+/// to avoid.
+///
+/// ## Why there is no `connectSlack` / `connectCalendar`
+///
+/// `POST /slack/auth-url` and `POST /google-calendar/auth-url` both exist, and
+/// both bake in the **web** callback (`/api/slack/callback`,
+/// `/api/google/callback`). An https redirect is not interceptable by
+/// `flutter_web_auth_2` without verified App/Universal Links, so the browser
+/// genuinely loads it and the hand-off dead-ends — precisely the bug the
+/// LinkedIn work fixed by adding `/api/linkedin/mobile-callback`, a bridge that
+/// forwards `code`/`state` on to `plexaverse://`. Slack and Google have no such
+/// bridge. A Connect button that opens a browser the app can never be handed
+/// back from is worse than saying so, so those rows read status and disconnect
+/// only.
 abstract class SettingsRepository {
-  /// The persisted theme mode, defaulting to [AppThemeMode.dark] when nothing
-  /// has been stored (Plexaverse default-dark ruling).
-  Future<AppThemeMode> loadThemeMode();
+  /// The preferences row. The server answers `{exists: false}` for a user who
+  /// has never completed onboarding; that is a value, not an error.
+  Future<UserPreferences> fetchPreferences();
 
-  /// Persist the chosen theme mode.
-  Future<void> saveThemeMode(AppThemeMode mode);
+  /// Partial upsert. **Send only what changed** — the server strips undefined
+  /// fields so a small write cannot null out an unrelated column, and its zod
+  /// schema is `.strict()`, so an unknown key rejects the WHOLE payload with a
+  /// 400 rather than being ignored.
+  Future<UserPreferences> updatePreferences(Map<String, dynamic> patch);
 
-  /// The persisted locale, defaulting to `en` when nothing has been stored.
-  Future<Locale> loadLocale();
+  /// Identity + billing state. See [AccountSnapshot].
+  Future<AccountSnapshot> fetchAccount();
 
-  /// Persist the chosen locale (stored by `languageCode`: en/es/fr).
-  Future<void> saveLocale(Locale locale);
+  /// The XP balance shown beside the plan.
+  Future<XpSummary> fetchXp();
 
-  /// The profile display bits shown in the Settings header.
-  Future<SettingsProfile> fetchProfile();
+  /// Every connected LinkedIn profile, personal and company.
+  Future<List<LinkedinAccount>> fetchLinkedinAccounts();
 
-  /// The plan + quota snapshot shown on the Account page (2374) and in the
-  /// Subscription sheet (2375). Fixture-backed in v1, like [fetchProfile].
-  Future<SubscriptionInfo> fetchSubscription();
+  /// Runs the whole LinkedIn hand-off for [type] (`personal` | `company`):
+  /// fetch the authorize URL, open the system browser, exchange the returned
+  /// code. Never throws — the failure is the returned [ConnectOutcome].
+  ///
+  /// There is no popup branch. The web keeps one for desktop and falls back to
+  /// a same-tab redirect on a coarse pointer; a phone only ever had the second
+  /// branch, and this is it.
+  Future<ConnectOutcome> connectLinkedin({required String type});
+
+  Future<SlackConnection> fetchSlack();
+
+  /// Disconnects Slack. `DELETE /slack`.
+  Future<void> disconnectSlack();
+
+  Future<CalendarConnection> fetchCalendar();
+
+  /// Disconnects Google Calendar. `DELETE /google-calendar`.
+  Future<void> disconnectCalendar();
+
+  /// Localised plan pricing. [countryCode] is the device's region; the server
+  /// defaults to `IN` when it is absent or unrecognised.
+  Future<GeoPricing> fetchPricing({String? countryCode});
 }

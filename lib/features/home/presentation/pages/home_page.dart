@@ -1,141 +1,322 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:google_fonts/google_fonts.dart';
 
-import '../../../../core/responsive/screen_util.dart';
-import '../../../../core/router/route_paths.dart';
-import '../../../../core/theme/skin_colors.dart';
-import '../../../../core/ui/motion/spring_press.dart';
-import '../../../../core/ui/skin/home_background.dart';
-import '../../../../core/ui/skin/pill_tab_bar.dart';
-import '../widgets/make_video_tab.dart';
-import '../widgets/translate_video_tab.dart';
-import '../widgets/video_tools_tab.dart';
+import '../../../../core/ui/zave/zave_kit.dart';
+import '../../../preferences/domain/user_preferences.dart';
+import '../../application/home_controllers.dart';
+import '../../domain/home_repository.dart';
+import '../../domain/roadmap_level.dart';
+import '../widgets/home_states.dart';
+import '../widgets/levels_panel.dart';
+import '../widgets/roadmap_timeline.dart';
+import '../widgets/season_two_view.dart';
 
-/// Home — HeyGen-style re-skin (screenshots 2353 / 2372 / 2373).
+/// **Home** — the web's `/dashboard`.
 ///
-/// Full-screen [HomeBackground] (fitted three-layer gradient: indigo→black
-/// base + violet top-right glow + teal-blue left glow, see the painter);
-/// "Home" 28sp bold with a gear
-/// button (translucent 40 circle) that pushes [RoutePaths.account]; a
-/// [SkinPillTabBar] with three tabs whose bodies swap instantly with a
-/// subtle cross-fade: [MakeVideoTab], [TranslateVideoTab], [VideoToolsTab].
+/// The landing surface, and the screen the product is actually about. It
+/// renders **exactly one of two things**, chosen by `UserPreferences
+/// .currentSeason`:
 ///
-/// The old dashboard content (streak hero / KPI grid / recent posts) is
-/// replaced wholesale; `dashboard_controller.dart` and the home repository
-/// remain on disk but are no longer referenced by this page. Static
-/// presentation config only — no provider behind the tabs.
-class HomePage extends StatefulWidget {
+/// * **Season 1** (the default, and what nearly every user sees) — the 66-day
+///   planet timeline with its mission sheet.
+/// * **Season 2** — the black hole and its four-phase weekly cycle.
+///
+/// There is deliberately **no stat grid and no recent-posts list**. The web
+/// used to fire an eight-query dashboard fetch here whose result was never
+/// drawn, and blocked first paint on it; it was removed, and re-adding one on
+/// mobile would re-import the same mistake. What this screen asks the server
+/// for is the roadmap, the preferences that choose between the two seasons, and
+/// the XP balance in the header — nothing else.
+class HomePage extends StatelessWidget {
   const HomePage({super.key});
 
   @override
-  State<HomePage> createState() => _HomePageState();
+  Widget build(BuildContext context) {
+    return const ZaveScaffold(
+      // No title: the screen carries its own heading inside the timeline
+      // ("Your 66-day plan"), and Zave screens never wear both.
+      actions: <Widget>[_XpPill()],
+      body: _HomeBody(),
+    );
+  }
 }
 
-class _HomePageState extends State<HomePage> {
-  static const List<String> _tabs = [
-    'Make video',
-    'Translate video',
-    'Video tools',
-  ];
-
-  int _selectedTab = 0;
+/// The XP balance, where the web puts it — up in the mobile header.
+///
+/// Amber because amber is Zave's word for points. (Blue is "the XP *path*" and
+/// belongs to the buttons that lead to buying or earning it, not to a readout
+/// of how much you already have.)
+class _XpPill extends ConsumerWidget {
+  const _XpPill();
 
   @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: SkinColors.deepNavy,
-      body: Stack(
-        children: [
-          // Full-screen fitted background (2353): vertical indigo→black base
-          // + elliptical violet glow (top-right) + teal-blue glow (left).
-          // Painter constants are least-squares fitted to the reference PNG —
-          // see HomeBackgroundPainter. Content scrolls over it.
-          const Positioned.fill(child: HomeBackground()),
-          SafeArea(
-            bottom: false,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const _HomeHeader(),
-                SizedBox(height: 14.h),
-                SkinPillTabBar(
-                  tabs: _tabs,
-                  selectedIndex: _selectedTab,
-                  onChanged: (i) => setState(() => _selectedTab = i),
-                ),
-                SizedBox(height: 14.h),
-                // Instant swap with a subtle cross-fade between tab bodies.
-                Expanded(
-                  child: AnimatedSwitcher(
-                    duration: const Duration(milliseconds: 180),
-                    switchInCurve: Curves.easeOut,
-                    switchOutCurve: Curves.easeIn,
-                    layoutBuilder: (currentChild, previousChildren) => Stack(
-                      alignment: Alignment.topCenter,
-                      children: [...previousChildren, ?currentChild],
-                    ),
-                    child: KeyedSubtree(
-                      key: ValueKey<int>(_selectedTab),
-                      child: switch (_selectedTab) {
-                        1 => const TranslateVideoTab(),
-                        2 => const VideoToolsTab(),
-                        _ => const MakeVideoTab(),
-                      },
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
+  Widget build(BuildContext context, WidgetRef ref) {
+    final AsyncValue<XpBalance> xp = ref.watch(xpBalanceProvider);
+
+    return xp.when(
+      // A failed XP read must never take the home screen with it — the balance
+      // is decoration on a screen whose job is the roadmap.
+      error: (Object _, StackTrace _) => const SizedBox.shrink(),
+      loading: () => const SizedBox.shrink(),
+      data: (XpBalance value) => Padding(
+        padding: EdgeInsets.only(right: ZaveSpace.sm),
+        child: ZavePill(
+          label: '${value.balance} XP',
+          color: ZaveColors.amber,
+          leading: const ZaveDot(ZaveColors.amber),
+        ),
       ),
     );
   }
 }
 
-/// "Home" 28sp bold on the left (H20) + gear in a translucent 40 circle on
-/// the right, navigating to the Account page (2353).
-class _HomeHeader extends StatelessWidget {
-  const _HomeHeader();
+/// Picks the season, and owns every loading and error state on this screen.
+///
+/// Built as its own widget rather than inline in [HomePage] so that
+/// [ZaveScaffold.contentTop] resolves: the inset is published *below* the
+/// scaffold, and a screen that reads it from its own `build` silently gets the
+/// status-bar height instead and renders its first line under the header.
+class _HomeBody extends ConsumerWidget {
+  const _HomeBody();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final double topInset = ZaveScaffold.contentTop(context);
+    final AsyncValue<UserPreferences> prefs = ref.watch(
+      homeUserPreferencesProvider,
+    );
+
+    return prefs.when(
+      loading: () => HomeSkeleton(topInset: topInset),
+      error: (Object _, StackTrace _) => HomeError(
+        topInset: topInset,
+        onRetry: () => ref.invalidate(homeUserPreferencesProvider),
+      ),
+      data: (UserPreferences preferences) => preferences.isSeason2
+          ? _SeasonTwoBody(preferences: preferences, topInset: topInset)
+          : _SeasonOneBody(topInset: topInset),
+    );
+  }
+}
+
+/// Opens a task's screen.
+///
+/// The link is a web route path verbatim (`/planner?slot=3`, `/comments`,
+/// `/roadmap/headline-hook`). That is the whole point of the byte-identical
+/// route table: the roadmap does not need a translation layer, and a task that
+/// works on the web works here.
+void _start(BuildContext context, String link) {
+  if (link.isEmpty) return;
+  context.push(link);
+}
+
+/// Season 1 — the 66-day timeline over a draggable mission sheet.
+class _SeasonOneBody extends ConsumerWidget {
+  const _SeasonOneBody({required this.topInset});
+
+  final double topInset;
+
+  /// The web's mobile split: a `58vh` scroll column with a `40vh` sheet over
+  /// it, expanding to `82vh`. Kept as ratios rather than viewport heights so
+  /// they survive whatever chrome the shell puts above and below.
+  static const double _timelineFraction = 0.58;
+  static const double _sheetCollapsed = 0.42;
+  static const double _sheetExpanded = 0.82;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final AsyncValue<List<RoadmapLevel>> levels = ref.watch(
+      roadmapLevelsProvider,
+    );
+    final AsyncValue<int> activeDay = ref.watch(activeRoadmapDayProvider);
+
+    if (levels.isLoading || activeDay.isLoading) {
+      return HomeSkeleton(topInset: topInset);
+    }
+    if (levels.hasError || activeDay.hasError) {
+      return HomeError(
+        topInset: topInset,
+        onRetry: () =>
+            ref.read(roadmapProgressControllerProvider.notifier).refresh(),
+      );
+    }
+
+    final List<RoadmapLevel> days = levels.requireValue;
+    // The roadmap is synthetic and always 66 days long, so this cannot happen
+    // — but reading `.first` off an empty list would take the whole screen
+    // down, and the error card is the honest answer either way.
+    if (days.isEmpty) {
+      return HomeError(
+        topInset: topInset,
+        onRetry: () =>
+            ref.read(roadmapProgressControllerProvider.notifier).refresh(),
+      );
+    }
+
+    final int selected = activeDay.requireValue;
+    final RoadmapLevel level = days.firstWhere(
+      (RoadmapLevel l) => l.id == selected,
+      orElse: () => days.first,
+    );
+
+    return LayoutBuilder(
+      builder: (BuildContext context, BoxConstraints constraints) {
+        final double height = constraints.maxHeight;
+
+        return Stack(
+          children: <Widget>[
+            Positioned(
+              top: 0,
+              left: 0,
+              right: 0,
+              height: height * _timelineFraction,
+              child: RoadmapTimeline(
+                levels: days,
+                selectedDay: selected,
+                topInset: topInset,
+                onSelectDay: (int day) =>
+                    ref.read(selectedRoadmapDayProvider.notifier).select(day),
+              ),
+            ),
+            DraggableScrollableSheet(
+              initialChildSize: _sheetCollapsed,
+              minChildSize: _sheetCollapsed,
+              maxChildSize: _sheetExpanded,
+              snap: true,
+              builder: (BuildContext context, ScrollController controller) =>
+                  _MissionSheet(
+                    level: level,
+                    controller: controller,
+                    onRefresh: () async {
+                      ref
+                          .read(roadmapProgressControllerProvider.notifier)
+                          .refresh();
+                      await ref.read(roadmapProgressControllerProvider.future);
+                    },
+                  ),
+            ),
+          ],
+        );
+      },
+    );
+  }
+}
+
+/// The mission surface, as a sheet.
+///
+/// The web renders this as a sticky right-hand card on desktop and a fixed
+/// 40vh/82vh sheet on mobile, expanding once its content is scrolled. A
+/// [DraggableScrollableSheet] is the same object with the drag handled by the
+/// platform instead of by a scroll listener.
+///
+/// One deliberate move: the web floats the "Open planner" button OUTSIDE the
+/// sheet, just above it. With a draggable sheet there is no stable "just above"
+/// — the button would slide under the sheet as it opens — so it rides at the
+/// top of the sheet's own content instead, which is where it reads in the same
+/// order.
+class _MissionSheet extends StatelessWidget {
+  const _MissionSheet({
+    required this.level,
+    required this.controller,
+    required this.onRefresh,
+  });
+
+  final RoadmapLevel level;
+  final ScrollController controller;
+  final Future<void> Function() onRefresh;
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: EdgeInsets.fromLTRB(20.w, 10.h, 16.w, 0),
-      child: Row(
-        children: [
-          Expanded(
-            child: Text(
-              'Home',
-              style: GoogleFonts.sora(
-                fontSize: 28.sp,
-                fontWeight: FontWeight.w700,
-                color: Colors.white,
-                height: 1.2,
-              ),
+    return Container(
+      decoration: BoxDecoration(
+        gradient: ZaveGround.base,
+        border: const Border(
+          top: BorderSide(color: ZaveGlass.headerBorder, width: 1),
+        ),
+        borderRadius: BorderRadius.vertical(
+          top: Radius.circular(ZaveRadius.cardLg),
+        ),
+      ),
+      child: ClipRRect(
+        borderRadius: BorderRadius.vertical(
+          top: Radius.circular(ZaveRadius.cardLg),
+        ),
+        child: RefreshIndicator(
+          color: ZaveColors.white,
+          backgroundColor: ZaveColors.deep,
+          onRefresh: onRefresh,
+          child: ListView(
+            controller: controller,
+            padding: EdgeInsets.fromLTRB(
+              ZaveSpace.gutter,
+              ZaveSpace.md,
+              ZaveSpace.gutter,
+              // Clears the shell's bottom bar, which the body extends behind.
+              ZaveSpace.section,
             ),
-          ),
-          SpringPress(
-            child: GestureDetector(
-              onTap: () => context.push(RoutePaths.account),
-              behavior: HitTestBehavior.opaque,
-              child: Container(
-                width: 40.r,
-                height: 40.r,
-                decoration: BoxDecoration(
-                  color: Colors.white.withValues(alpha: 0.10),
-                  shape: BoxShape.circle,
-                ),
-                child: Icon(
-                  Icons.settings_rounded,
-                  size: 20.r,
-                  color: Colors.white,
+            children: <Widget>[
+              // The sheet's grab handle, at the same metrics the planner
+              // sheet uses so the two read as one component.
+              Center(
+                child: Container(
+                  height: 4,
+                  width: 40,
+                  decoration: BoxDecoration(
+                    color: ZaveColors.rule,
+                    borderRadius: ZaveRadius.pillBr,
+                  ),
                 ),
               ),
-            ),
+              SizedBox(height: ZaveSpace.lg),
+              Align(
+                alignment: Alignment.centerRight,
+                child: ZaveButton(
+                  label: 'Open planner',
+                  trailing: const Icon(Icons.arrow_forward),
+                  onPressed: () => _start(context, '/planner'),
+                ),
+              ),
+              SizedBox(height: ZaveSpace.lg),
+              LevelsPanel(
+                level: level,
+                onStart: (String link) => _start(context, link),
+              ),
+            ],
           ),
-        ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Season 2 — the black hole and the day's habits.
+class _SeasonTwoBody extends ConsumerWidget {
+  const _SeasonTwoBody({required this.preferences, required this.topInset});
+
+  final UserPreferences preferences;
+  final double topInset;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final AsyncValue<RoadmapProgress> progress = ref.watch(
+      roadmapProgressControllerProvider,
+    );
+
+    return progress.when(
+      loading: () => HomeSkeleton(topInset: topInset),
+      error: (Object _, StackTrace _) => HomeError(
+        topInset: topInset,
+        onRetry: () =>
+            ref.read(roadmapProgressControllerProvider.notifier).refresh(),
+      ),
+      data: (RoadmapProgress value) => SeasonTwoView(
+        progress: value,
+        contentMode: preferences.contentMode,
+        seasonStartedAt: preferences.seasonStartedAt,
+        roadmapStartedAt: preferences.roadmapStartedAt,
+        topInset: topInset,
+        onStart: (String link) => _start(context, link),
       ),
     );
   }

@@ -125,7 +125,12 @@ class ZaveScaffold extends StatelessWidget {
           // back from MediaQuery: Scaffold's own inset bookkeeping does not
           // survive the SafeArea below, and a screen silently rendering its
           // title under the header is not a failure anyone notices in review.
-          top: hasHeader ? _ZaveHeader._height + topInset : topInset,
+          // With a header the body extends BEHIND it (SafeArea top is off), so
+          // content must clear the header AND the status bar. Without one,
+          // SafeArea(top: true) already consumes the status bar, so the inset
+          // is zero — publishing it again double-padded every headerless
+          // screen by the notch height.
+          top: hasHeader ? _ZaveHeader._height + topInset : 0,
           child: SafeArea(top: !hasHeader, bottom: safeBottom, child: body),
         ),
         bottomNavigationBar: bottomBar,

@@ -1,26 +1,30 @@
 import 'package:flutter/material.dart';
-import 'package:plexaverse/core/theme/plexaverse_colors.dart';
-import 'package:plexaverse/core/theme/app_text_theme.dart';
+import 'package:flutter/services.dart';
 
-/// Collapsible referral code input.
+import '../../../../core/ui/zave/zave_kit.dart';
+
+/// The collapsible referral-code input on the create-account form.
 ///
-/// Shows a "+ Have a referral code?" link that expands into an outlined
-/// TextField with a validity indicator.
+/// Mobile-only by necessity: the web takes the code from the `?ref=` query
+/// parameter on `/login` and never shows a field, which a phone app opened from
+/// the store has no way to receive. The affordance therefore has no web
+/// counterpart to match — only Zave's grammar to obey, which it does by being a
+/// full-pill ghost button that expands into an ordinary [ZaveField].
+///
+/// Behaviour is unchanged from the pre-alignment widget; only the skin moved.
 class ReferralCodeField extends StatefulWidget {
-  final TextEditingController controller;
-  final String? errorText;
-  final ValueChanged<String>? onChanged;
-  final bool autoExpand;
-  final bool isDark;
-
   const ReferralCodeField({
-    super.key,
     required this.controller,
     this.errorText,
     this.onChanged,
     this.autoExpand = false,
-    this.isDark = true,
+    super.key,
   });
+
+  final TextEditingController controller;
+  final String? errorText;
+  final ValueChanged<String>? onChanged;
+  final bool autoExpand;
 
   @override
   State<ReferralCodeField> createState() => _ReferralCodeFieldState();
@@ -28,140 +32,77 @@ class ReferralCodeField extends StatefulWidget {
 
 class _ReferralCodeFieldState extends State<ReferralCodeField>
     with SingleTickerProviderStateMixin {
-  late bool _expanded;
-  late AnimationController _animCtrl;
-  late Animation<double> _sizeAnim;
-  late Animation<double> _fadeAnim;
+  late bool _expanded = widget.autoExpand;
 
-  @override
-  void initState() {
-    super.initState();
-    _expanded = widget.autoExpand;
-    _animCtrl = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 220),
-      value: _expanded ? 1.0 : 0.0,
-    );
-    _sizeAnim = CurvedAnimation(parent: _animCtrl, curve: Curves.easeOut);
-    _fadeAnim = CurvedAnimation(parent: _animCtrl, curve: Curves.easeIn);
-  }
+  late final AnimationController _anim = AnimationController(
+    vsync: this,
+    duration: ZaveMotion.fast,
+    value: _expanded ? 1 : 0,
+  );
+
+  late final Animation<double> _curve = CurvedAnimation(
+    parent: _anim,
+    curve: ZaveMotion.curve,
+  );
 
   @override
   void dispose() {
-    _animCtrl.dispose();
+    _anim.dispose();
     super.dispose();
   }
 
-  void _toggle() {
-    setState(() => _expanded = !_expanded);
-    if (_expanded) {
-      _animCtrl.forward();
-    } else {
-      _animCtrl.reverse();
-    }
+  void _expand() {
+    if (_expanded) return;
+    setState(() => _expanded = true);
+    _anim.forward();
   }
+
+  /// Uppercases as the user types. The old field used
+  /// `textCapitalization: characters`, which only hints the soft keyboard —
+  /// a hardware keyboard or a paste slipped lower case through, and the codes
+  /// are compared case-sensitively server-side.
+  static final TextInputFormatter _upperCase = TextInputFormatter.withFunction(
+    (TextEditingValue _, TextEditingValue next) =>
+        next.copyWith(text: next.text.toUpperCase()),
+  );
 
   @override
   Widget build(BuildContext context) {
-    final code = widget.controller.text;
-    final hasValidCode = code.length >= 4 && widget.errorText == null;
-    final hasInvalidCode = code.isNotEmpty && widget.errorText != null;
+    final String code = widget.controller.text;
+    final bool valid = code.length >= 4 && widget.errorText == null;
+    final bool invalid = code.isNotEmpty && widget.errorText != null;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
+      children: <Widget>[
         if (!_expanded)
-          TextButton.icon(
-            onPressed: _toggle,
-            icon: const Icon(
-              Icons.card_giftcard_outlined,
-              size: 16,
-              color: PlexaversePalette.primary,
-            ),
-            label: Text(
-              'Have a referral code?',
-              style: AppTextTheme.labelLarge.copyWith(
-                color: PlexaversePalette.primary,
-              ),
-            ),
-            style: TextButton.styleFrom(
-              padding: EdgeInsets.zero,
-              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-            ),
+          ZaveButton(
+            label: 'Have a referral code?',
+            onPressed: _expand,
+            icon: const Icon(Icons.card_giftcard_outlined),
           ),
         SizeTransition(
-          sizeFactor: _sizeAnim,
+          sizeFactor: _curve,
           child: FadeTransition(
-            opacity: _fadeAnim,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                TextField(
-                  controller: widget.controller,
-                  onChanged: widget.onChanged,
-                  textCapitalization: TextCapitalization.characters,
-                  style: AppTextTheme.bodyLarge.copyWith(
-                    color: widget.isDark ? PlexaversePalette.grey50 : PlexaversePalette.grey900,
-                  ),
-                  decoration: InputDecoration(
-                    labelText: 'Referral code (optional)',
-                    floatingLabelBehavior: widget.isDark
-                        ? null
-                        : FloatingLabelBehavior.always,
-                    hintText: widget.isDark ? null : 'e.g. FRIEND2024',
-                    hintStyle: AppTextTheme.bodyLarge
-                        .copyWith(color: PlexaversePalette.grey400),
-                    prefixIcon:
-                        const Icon(Icons.card_giftcard_outlined, size: 20),
-                    prefixIconColor: PlexaversePalette.grey400,
-                    suffixIcon: hasValidCode
-                        ? const Icon(Icons.check_circle_outline,
-                            color: PlexaversePalette.success)
-                        : hasInvalidCode
-                            ? const Icon(Icons.cancel_outlined,
-                                color: PlexaversePalette.error)
-                            : null,
-                    errorText: widget.errorText,
-                    filled: true,
-                    fillColor: widget.isDark
-                        ? Colors.white.withValues(alpha: 0.04)
-                        : Colors.white,
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
-                      borderSide: BorderSide(
-                        color: widget.isDark
-                            ? Colors.white.withValues(alpha: 0.20)
-                            : const Color(0x1F000000),
-                      ),
-                    ),
-                    enabledBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
-                      borderSide: BorderSide(
-                        color: widget.isDark
-                            ? Colors.white.withValues(alpha: 0.20)
-                            : const Color(0x1F000000),
-                      ),
-                    ),
-                    focusedBorder: const OutlineInputBorder(
-                      borderRadius: BorderRadius.all(Radius.circular(12)),
-                      borderSide:
-                          BorderSide(color: PlexaversePalette.primary, width: 2),
-                    ),
-                    errorBorder: const OutlineInputBorder(
-                      borderRadius: BorderRadius.all(Radius.circular(12)),
-                      borderSide:
-                          BorderSide(color: PlexaversePalette.error, width: 2),
-                    ),
-                    labelStyle: AppTextTheme.bodySmall.copyWith(
-                      color: widget.isDark
-                          ? PlexaversePalette.grey400
-                          : PlexaversePalette.grey600,
-                    ),
-                    contentPadding:
-                        const EdgeInsets.symmetric(horizontal: 16, vertical: 18),
-                  ),
-                ),
-              ],
+            opacity: _curve,
+            child: ZaveField(
+              controller: widget.controller,
+              label: 'Referral code (optional)',
+              hint: 'e.g. FRIEND2024',
+              error: widget.errorText,
+              onChanged: widget.onChanged,
+              inputFormatters: <TextInputFormatter>[_upperCase],
+              prefix: const Icon(Icons.card_giftcard_outlined),
+              suffix: valid
+                  // Green is "done" in Zave; amber carries the failure,
+                  // because the palette has no red.
+                  ? const Icon(
+                      Icons.check_circle_outline,
+                      color: ZaveColors.green,
+                    )
+                  : invalid
+                  ? const Icon(Icons.error_outline, color: ZaveColors.amber)
+                  : null,
             ),
           ),
         ),

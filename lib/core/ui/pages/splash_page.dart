@@ -4,19 +4,22 @@ import 'package:flutter/services.dart';
 import '../../../l10n/gen/app_localizations.dart';
 import '../../responsive/screen_util.dart';
 import '../../theme/app_spacing.dart';
-import '../../theme/plexaverse_colors.dart';
+import '../zave/zave_ground.dart';
 
-/// Cold-start splash on the full-bleed brand violet. Shown while the session,
-/// app-lock and onboarding state resolve; the **router redirect owns all
-/// navigation** — this page never pushes/pops.
+/// Cold-start splash on the Zave ground. Shown while the session, app-lock and
+/// onboarding state resolve; the **router redirect owns all navigation** —
+/// this page never pushes/pops.
 ///
 /// A soft halo behind the wordmark with three pulsing dots below. Under
 /// Reduce Motion the dots are swapped for a static localized label so nothing
 /// animates. Sets a light status bar via [AnnotatedRegion] since the violet
 /// surface is dark.
 ///
-/// Ported from the ProHealth reference (`core/ui/pages/splash_page.dart`),
-/// re-skinned to the Plexaverse brand (violet `#6C63FF`, `appName` wordmark).
+/// It used to paint a full-bleed violet `#6C63FF` gradient, inherited from the
+/// skin this app was cloned from — which meant the very first frame a user saw
+/// was a colour that appears nowhere in the product. It now paints the same
+/// midnight ground and top-left glow as every other screen, so the app opens
+/// into itself rather than into a flash of a different brand.
 class SplashPage extends StatefulWidget {
   const SplashPage({super.key});
 
@@ -53,20 +56,11 @@ class _SplashPageState extends State<SplashPage>
   Widget build(BuildContext context) {
     final reduceMotion =
         MediaQuery.maybeOf(context)?.disableAnimations ?? false;
-    const brandStart = PlexaversePalette.primary;
-    const brandEnd = PlexaversePalette.primaryDark;
-
     return AnnotatedRegion<SystemUiOverlayStyle>(
       value: SystemUiOverlayStyle.light,
       child: Scaffold(
-        body: DecoratedBox(
-          decoration: const BoxDecoration(
-            gradient: LinearGradient(
-              colors: <Color>[brandStart, brandEnd],
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-            ),
-          ),
+        backgroundColor: Colors.transparent,
+        body: ZaveGroundBox(
           child: Center(
             child: Column(
               mainAxisSize: MainAxisSize.min,

@@ -1,0 +1,323 @@
+import 'package:flutter/foundation.dart' show kReleaseMode;
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+
+import '../../../core/config/env.dart';
+import '../../../core/network/api_paths.dart';
+import '../../../core/network/dio_client.dart';
+// `post_library_repository.dart` re-exports `library_post.dart`, so the
+// entities come in with the interface.
+import '../domain/post_library_repository.dart';
+
+/// Dio-backed [PostLibraryRepository] — the real mobile API.
+///
+/// [DioClient] unwraps the `{data, error, meta}` envelope, so on success
+/// `response.data` is the inner payload: a `List` for the collection, a `Map`
+/// for a single post.
+class ApiPostLibraryRepository implements PostLibraryRepository {
+  const ApiPostLibraryRepository(this._client);
+
+  final DioClient _client;
+
+  @override
+  Future<PostPage> fetchPage({
+    String? status,
+    String? cursor,
+    int limit = kPostPageLimit,
+  }) async {
+    // `dynamic`, not `List`: the body on the wire is the envelope MAP, and Dio
+    // casts the decoded body to `T` before DioClient ever sees it. Asking for
+    // `List` here throws on the envelope instead of on the payload.
+    final response = await _client.get<dynamic>(
+      ApiPaths.posts,
+      queryParameters: <String, dynamic>{
+        'limit': limit,
+        'status': ?status,
+        'cursor': ?cursor,
+      },
+    );
+
+    final dynamic data = response.data;
+    if (data is! List) return const PostPage();
+
+    final List<LibraryPost> posts = <LibraryPost>[
+      for (final dynamic row in data)
+        if (row is Map<String, dynamic>) LibraryPost.fromJson(row),
+    ];
+
+    // The server reports `hasMore` and `nextCursor` in the envelope's `meta`,
+    // but DioClient's parse seam replaces the whole envelope with its `data`
+    // and the meta is gone by the time we get here. Rather than reach around
+    // the seam, both values are re-derived from the window itself — the cursor
+    // IS the last post's id (the server's own keyset rule), and a full window
+    // means there may be another.
+    //
+    // The cost of deriving rather than reading: when the total is an exact
+    // multiple of the page size, the last "Load more" fetches an empty page and
+    // then disappears. That is one wasted request at the end of a scroll, and
+    // it is preferable to a client that silently stops at 20 posts. Ask the
+    // orchestrator for meta pass-through if this becomes worth fixing.
+    final bool hasMore = posts.length >= limit;
+
+    return PostPage(
+      posts: posts,
+      nextCursor: hasMore && posts.isNotEmpty ? posts.last.id : null,
+      hasMore: hasMore,
+    );
+  }
+
+  @override
+  Future<LibraryPost> fetchOne(String id) async {
+    final response = await _client.get<Map<String, dynamic>>(ApiPaths.post(id));
+    final Map<String, dynamic>? data = response.data;
+    if (data == null) throw StateError('posts/$id returned no body');
+    return LibraryPost.fromJson(data);
+  }
+
+  @override
+  Future<LibraryPost> create({
+    required String content,
+    String? title,
+    DateTime? scheduledFor,
+    PostLibraryStatus status = PostLibraryStatus.draft,
+  }) async {
+    final response = await _client.post<Map<String, dynamic>>(
+      ApiPaths.posts,
+      data: <String, dynamic>{
+        'content': content,
+        'title': ?title,
+        'status': status.wire,
+        if (scheduledFor != null)
+          'scheduledFor': scheduledFor.toUtc().toIso8601String(),
+      },
+    );
+    final Map<String, dynamic>? data = response.data;
+    if (data == null) throw StateError('posts POST returned no body');
+    return LibraryPost.fromJson(data);
+  }
+
+  @override
+  Future<LibraryPost> update(
+    String id, {
+    String? title,
+    String? content,
+    PostLibraryStatus? status,
+    DateTime? scheduledFor,
+    bool clearSchedule = false,
+  }) async {
+    final Map<String, dynamic> body = <String, dynamic>{
+      'title': ?title,
+      'content': ?content,
+      'status': ?status?.wire,
+    };
+
+    // `scheduledFor` is the one field where null is a VALUE (it unschedules)
+    // rather than "unchanged", so it is set explicitly rather than folded into
+    // the literal above — the API's PATCH merges only the keys it receives.
+    //
+    // Explicit UTC, not the web's naive `2026-09-18T09:00:00`. That string is
+    // parsed by `new Date()` in the SERVER's timezone, which is a different
+    // instant from the one the user picked unless the two happen to agree. A
+    // phone knows its own offset, so it sends something unambiguous.
+    if (clearSchedule) {
+      body['scheduledFor'] = null;
+    } else if (scheduledFor != null) {
+      body['scheduledFor'] = scheduledFor.toUtc().toIso8601String();
+    }
+
+    final response = await _client.patch<Map<String, dynamic>>(
+      ApiPaths.post(id),
+      data: body,
+    );
+    final Map<String, dynamic>? data = response.data;
+    if (data == null) throw StateError('posts/$id PATCH returned no body');
+    return LibraryPost.fromJson(data);
+  }
+
+  @override
+  Future<String?> publish(String id) async {
+    final response = await _client.post<Map<String, dynamic>>(
+      ApiPaths.postPublish(id),
+    );
+    return response.data?['linkedinUrl'] as String?;
+  }
+
+  @override
+  Future<void> delete(String id) =>
+      _client.delete<Map<String, dynamic>>(ApiPaths.post(id));
+}
+
+/// In-memory [PostLibraryRepository] for the `mock` flavor.
+///
+/// Seeded so that every state the screen can render is reachable without a
+/// server: one published post with metrics, one approved, one awaiting
+/// approval, one plain draft, one scheduled and one failed. A mock that only
+/// produces happy rows is how the failed/needs-attention treatment goes
+/// unreviewed until a user hits it.
+class FakePostLibraryRepository implements PostLibraryRepository {
+  FakePostLibraryRepository();
+
+  static final DateTime _now = DateTime.now();
+
+  final List<LibraryPost> _posts = <LibraryPost>[
+    LibraryPost(
+      id: 'mock-post-1',
+      title: 'The first week decides the year',
+      content:
+          'Most teams treat onboarding as a documentation exercise. Write '
+          'enough down, the thinking goes, and a new joiner will find their '
+          'way.\n\nIt does not work, and the reason is not effort.\n\n'
+          'The first week is where someone decides whether this place is '
+          'organised or improvised, and no amount of documentation written '
+          'afterwards changes that first read.',
+      status: PostLibraryStatus.published,
+      linkedinUrl: 'https://www.linkedin.com/feed/update/urn:li:share:mock1',
+      createdAt: _now.subtract(const Duration(days: 3)),
+      publishedAt: _now.subtract(const Duration(days: 3)),
+      metrics: const PostMetrics(
+        impressions: 4821,
+        comments: 37,
+        shares: 9,
+        reactions: 214,
+      ),
+      account: const PostAuthor(id: 'mock-acct', profileName: 'Asang Borkar'),
+    ),
+    LibraryPost(
+      id: 'mock-post-2',
+      title: 'Three onboarding metrics nobody tracks',
+      content:
+          'Time-to-first-commit is the only onboarding metric most teams '
+          'measure, and it is the least interesting of the three.',
+      status: PostLibraryStatus.approved,
+      createdAt: _now.subtract(const Duration(days: 1)),
+      scheduledFor: _now.add(const Duration(hours: 18)),
+    ),
+    LibraryPost(
+      id: 'mock-post-3',
+      title: 'What a good day one actually looks like',
+      content:
+          'A good first day has exactly one goal, and it is not to explain '
+          'the architecture.',
+      status: PostLibraryStatus.pendingApproval,
+      createdAt: _now.subtract(const Duration(hours: 6)),
+      scheduledFor: _now.add(const Duration(days: 1, hours: 3)),
+    ),
+    LibraryPost(
+      id: 'mock-post-4',
+      content:
+          'Rough note: the handover problem is really a documentation-ownership '
+          'problem. Nobody owns the handover, so nobody improves it.',
+      status: PostLibraryStatus.draft,
+      createdAt: _now.subtract(const Duration(hours: 2)),
+    ),
+    LibraryPost(
+      id: 'mock-post-5',
+      title: 'A checklist you can steal',
+      content: 'Seven things to do before a new joiner opens their laptop.',
+      status: PostLibraryStatus.failed,
+      createdAt: _now.subtract(const Duration(days: 5)),
+    ),
+  ];
+
+  @override
+  Future<PostPage> fetchPage({
+    String? status,
+    String? cursor,
+    int limit = kPostPageLimit,
+  }) async {
+    await Future<void>.delayed(const Duration(milliseconds: 350));
+    final List<LibraryPost> filtered = status == null
+        ? _posts
+        : _posts
+              .where((LibraryPost p) => p.status.wire == status)
+              .toList(growable: false);
+    // The mock holds one page; a cursor therefore always means "the end".
+    if (cursor != null) return const PostPage();
+    return PostPage(posts: List<LibraryPost>.of(filtered));
+  }
+
+  @override
+  Future<LibraryPost> fetchOne(String id) async {
+    await Future<void>.delayed(const Duration(milliseconds: 250));
+    return _posts.firstWhere(
+      (LibraryPost p) => p.id == id,
+      orElse: () => throw StateError('mock post $id not found'),
+    );
+  }
+
+  @override
+  Future<LibraryPost> create({
+    required String content,
+    String? title,
+    DateTime? scheduledFor,
+    PostLibraryStatus status = PostLibraryStatus.draft,
+  }) async {
+    await Future<void>.delayed(const Duration(milliseconds: 400));
+    final LibraryPost created = LibraryPost(
+      id: 'mock-post-${DateTime.now().microsecondsSinceEpoch}',
+      title: title,
+      content: content,
+      status: status,
+      scheduledFor: scheduledFor,
+      createdAt: DateTime.now(),
+    );
+    _posts.insert(0, created);
+    return created;
+  }
+
+  @override
+  Future<LibraryPost> update(
+    String id, {
+    String? title,
+    String? content,
+    PostLibraryStatus? status,
+    DateTime? scheduledFor,
+    bool clearSchedule = false,
+  }) async {
+    await Future<void>.delayed(const Duration(milliseconds: 250));
+    final int index = _posts.indexWhere((LibraryPost p) => p.id == id);
+    if (index < 0) throw StateError('mock post $id not found');
+    final LibraryPost updated = _posts[index].copyWith(
+      title: title ?? _posts[index].title,
+      content: content ?? _posts[index].content,
+      status: status ?? _posts[index].status,
+      scheduledFor: clearSchedule
+          ? null
+          : (scheduledFor ?? _posts[index].scheduledFor),
+    );
+    _posts[index] = updated;
+    return updated;
+  }
+
+  @override
+  Future<String?> publish(String id) async {
+    await Future<void>.delayed(const Duration(milliseconds: 600));
+    final int index = _posts.indexWhere((LibraryPost p) => p.id == id);
+    if (index < 0) throw StateError('mock post $id not found');
+    _posts[index] = _posts[index].copyWith(
+      status: PostLibraryStatus.published,
+      publishedAt: DateTime.now(),
+      scheduledFor: null,
+      linkedinUrl: 'https://www.linkedin.com/feed/update/urn:li:share:$id',
+    );
+    return _posts[index].linkedinUrl;
+  }
+
+  @override
+  Future<void> delete(String id) async {
+    await Future<void>.delayed(const Duration(milliseconds: 250));
+    _posts.removeWhere((LibraryPost p) => p.id == id);
+  }
+}
+
+/// Mock ↔ real switch on `useFakeBackend`. A release build can never resolve
+/// the fake — the assert mirrors every other slice.
+final Provider<PostLibraryRepository> postLibraryRepositoryProvider =
+    Provider<PostLibraryRepository>((Ref ref) {
+      final bool useFake = ref.watch(useFakeBackendProvider);
+      assert(
+        !(kReleaseMode && useFake),
+        'useFakeBackend must be false in release builds.',
+      );
+      if (useFake && !kReleaseMode) return FakePostLibraryRepository();
+      return ApiPostLibraryRepository(ref.watch(dioClientProvider));
+    });

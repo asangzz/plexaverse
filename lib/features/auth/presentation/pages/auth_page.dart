@@ -2,12 +2,10 @@ import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import 'package:plexaverse/core/extensions/string_extensions.dart';
-import 'package:plexaverse/core/router/auth_gate.dart';
-import 'package:plexaverse/core/storage/session_store.dart';
-import 'package:plexaverse/core/theme/plexaverse_colors.dart';
-import 'package:plexaverse/core/theme/app_text_theme.dart';
-
+import '../../../../core/extensions/string_extensions.dart';
+import '../../../../core/router/auth_gate.dart';
+import '../../../../core/storage/session_store.dart';
+import '../../../../core/ui/zave/zave_kit.dart';
 import '../../data/auth_repository_providers.dart';
 import '../../domain/auth_repository.dart';
 import '../widgets/auth_divider.dart';
@@ -18,23 +16,37 @@ import '../widgets/social_auth_button.dart';
 
 enum _AuthMode { signIn, createAccount }
 
-/// Combined Sign In + Create Account screen (WF-02, AUTH-01).
+/// `/login` — sign in and create account on one screen.
 ///
-/// **Light mode** → Clean grid-paper aesthetic:
-///   • Warm parchment (#F5F4EF) + 24 px grid overlay.
-///   • Rounded fields (12 px), labels always float above, thin grey borders.
-///   • Purple (#6C63FF) accent: tab selection, CTA, focus rings, links.
-///   • Standard pill (stadium) CTA button.
+/// The web counterpart is `app/login/page.tsx`: one page with an `isLogin`
+/// flag, a heading that swaps between **Sign in** and **Create an account**, a
+/// Google button above a hairline rule, the email form, one filled CTA, and a
+/// footer line that flips the mode. Every string on this screen is that page's
+/// string. The web's desktop split-screen (a photo panel on `lg:`) has no
+/// mobile branch at all — the phone renders the right-hand column alone, which
+/// is what this is.
 ///
-/// **Dark mode** → Glassmorphism:
-///   • #121212 background, purple gradient glow, glass fields.
+/// ## What changed, and what deliberately did not
 ///
-/// Migration note: this is the pre-migration `AuthPage`, converted verbatim
-/// from `HookConsumerWidget` to `ConsumerStatefulWidget` (RULINGS ruling 18 —
-/// flutter_hooks is removed). The visual tree is unchanged; only the state
-/// plumbing (hooks → controllers/setState) and the backend seam (the old
-/// `authProvider`/`ApiEndpoints`/`dioClient` flow → `authRepositoryProvider`
-/// sealed results + `SessionStore` + `authGateProvider`) were rewritten.
+/// **Skin only.** The previous version of this file was the pre-alignment
+/// skin — `#6C63FF` violet pills on `#121212`, a Material [SegmentedButton]
+/// mode toggle, a light/dark fork with a hand-painted grid-paper backdrop, and
+/// its own hex literals throughout. All of that is gone and every value now
+/// comes from a Zave token. The state, the validators, the sealed-result
+/// switches and the `SessionStore` → `authGateProvider` success tail are
+/// untouched: the auth data and application layers are correct and this pass
+/// was presentation only.
+///
+/// Three Zave rules drive the layout:
+///
+///  * **One solid-white button per screen.** That is the email CTA. The social
+///    buttons are therefore `ghost`, which also matches the web's hierarchy.
+///  * **Selected inverts to solid white.** The mode toggle is a [ZaveChip]
+///    pair, not a `SegmentedButton` — a segmented control would bring Material's
+///    own selection language (a tinted fill and a check glyph) onto a surface
+///    whose whole selection grammar is the inversion.
+///  * **Dark only.** Zave has one appearance, so the `isDark` fork every child
+///    widget used to carry is removed rather than defaulted.
 class AuthPage extends ConsumerStatefulWidget {
   const AuthPage({super.key});
 
@@ -46,41 +58,63 @@ class _AuthPageState extends ConsumerState<AuthPage>
     with SingleTickerProviderStateMixin {
   _AuthMode _mode = _AuthMode.signIn;
 
-  final _emailCtrl = TextEditingController();
-  final _passwordCtrl = TextEditingController();
-  final _nameCtrl = TextEditingController();
-  final _referralCtrl = TextEditingController();
+  final TextEditingController _emailCtrl = TextEditingController();
+  final TextEditingController _passwordCtrl = TextEditingController();
+  final TextEditingController _nameCtrl = TextEditingController();
+  final TextEditingController _referralCtrl = TextEditingController();
 
   String? _nameError;
   String? _emailError;
   String? _passwordError;
   String? _formError;
 
-  // Submission flags. `_submitting` is the primary CTA spinner; the two social
-  // flags drive the social-button spinners. Guarded so only one runs at a time.
+  // Submission flags. `_submitting` drives the primary CTA spinner; the two
+  // social flags drive theirs. Guarded so only one runs at a time.
   bool _submitting = false;
   // Google sign-in is a "coming soon" placeholder (see the button's onPressed);
   // the flow is not wired yet, so this stays constant until it lands.
   final bool _googleLoading = false;
   bool _linkedInLoading = false;
 
-  late final AnimationController _shakeCtrl;
-  late final Animation<double> _shakeAnim;
+  late final AnimationController _shakeCtrl = AnimationController(
+    vsync: this,
+    duration: const Duration(milliseconds: 400),
+  );
 
-  @override
-  void initState() {
-    super.initState();
-    _shakeCtrl = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 400),
-    );
-    _shakeAnim = TweenSequence<double>([
-      TweenSequenceItem(tween: Tween(begin: 0, end: -4), weight: 1),
-      TweenSequenceItem(tween: Tween(begin: -4, end: 4), weight: 2),
-      TweenSequenceItem(tween: Tween(begin: 4, end: -4), weight: 2),
-      TweenSequenceItem(tween: Tween(begin: -4, end: 0), weight: 1),
-    ]).animate(CurvedAnimation(parent: _shakeCtrl, curve: Curves.easeInOut));
-  }
+  /// The rejected-form shake.
+  ///
+  /// Zave's motion rule is "short and physical. Nothing bounces", which bans
+  /// springs with overshoot — not this. A shake is a single eased ±4px pass
+  /// that ends exactly where it started; there is no release overshoot and no
+  /// elastic curve, and it is the one thing on the screen that tells a user
+  /// who tapped a disabled-looking button that the tap WAS received. It uses
+  /// [ZaveMotion.curve] like everything else.
+  late final Animation<double> _shakeAnim =
+      TweenSequence<double>(<TweenSequenceItem<double>>[
+        TweenSequenceItem<double>(
+          tween: Tween<double>(begin: 0, end: -4),
+          weight: 1,
+        ),
+        TweenSequenceItem<double>(
+          tween: Tween<double>(begin: -4, end: 4),
+          weight: 2,
+        ),
+        TweenSequenceItem<double>(
+          tween: Tween<double>(begin: 4, end: -4),
+          weight: 2,
+        ),
+        TweenSequenceItem<double>(
+          tween: Tween<double>(begin: -4, end: 0),
+          weight: 1,
+        ),
+      ]).animate(CurvedAnimation(parent: _shakeCtrl, curve: ZaveMotion.curve));
+
+  /// Owned here rather than built inline so they are disposed. A recognizer
+  /// created in `build` leaks one per rebuild.
+  late final TapGestureRecognizer _switchModeTap = TapGestureRecognizer()
+    ..onTap = _toggleMode;
+  late final TapGestureRecognizer _termsTap = TapGestureRecognizer();
+  late final TapGestureRecognizer _privacyTap = TapGestureRecognizer();
 
   @override
   void dispose() {
@@ -89,6 +123,9 @@ class _AuthPageState extends ConsumerState<AuthPage>
     _nameCtrl.dispose();
     _referralCtrl.dispose();
     _shakeCtrl.dispose();
+    _switchModeTap.dispose();
+    _termsTap.dispose();
+    _privacyTap.dispose();
     super.dispose();
   }
 
@@ -107,7 +144,7 @@ class _AuthPageState extends ConsumerState<AuthPage>
 
   Future<void> _submitSignIn() async {
     setState(_clearErrors);
-    var valid = true;
+    bool valid = true;
     if (_emailCtrl.text.trim().isEmpty) {
       _emailError = 'Email address is required';
       valid = false;
@@ -125,14 +162,13 @@ class _AuthPageState extends ConsumerState<AuthPage>
     }
 
     setState(() => _submitting = true);
-    final result = await ref.read(authRepositoryProvider).signIn(
-          email: _emailCtrl.text.trim(),
-          password: _passwordCtrl.text,
-        );
+    final SignInResult result = await ref
+        .read(authRepositoryProvider)
+        .signIn(email: _emailCtrl.text.trim(), password: _passwordCtrl.text);
     if (!mounted) return;
 
     switch (result) {
-      case SignInSuccess(:final tokens):
+      case SignInSuccess(:final AuthTokens tokens):
         await _onAuthenticated(tokens);
       case SignInInvalidCredentials():
         setState(() {
@@ -150,7 +186,7 @@ class _AuthPageState extends ConsumerState<AuthPage>
 
   Future<void> _submitRegister() async {
     setState(_clearErrors);
-    var valid = true;
+    bool valid = true;
     if (_nameCtrl.text.trim().isEmpty) {
       _nameError = 'Please enter your full name';
       valid = false;
@@ -172,8 +208,10 @@ class _AuthPageState extends ConsumerState<AuthPage>
     }
 
     setState(() => _submitting = true);
-    final referral = _referralCtrl.text.trim();
-    final result = await ref.read(authRepositoryProvider).register(
+    final String referral = _referralCtrl.text.trim();
+    final RegisterResult result = await ref
+        .read(authRepositoryProvider)
+        .register(
           name: _nameCtrl.text.trim(),
           email: _emailCtrl.text.trim(),
           password: _passwordCtrl.text,
@@ -182,9 +220,12 @@ class _AuthPageState extends ConsumerState<AuthPage>
     if (!mounted) return;
 
     switch (result) {
-      case RegisterSuccess(:final tokens):
+      case RegisterSuccess(:final AuthTokens tokens):
         await _onAuthenticated(tokens);
-      case RegisterInvalid(:final message, :final fieldErrors):
+      case RegisterInvalid(
+        :final String? message,
+        :final Map<String, String> fieldErrors,
+      ):
         setState(() {
           _submitting = false;
           _nameError = fieldErrors['name'];
@@ -206,11 +247,13 @@ class _AuthPageState extends ConsumerState<AuthPage>
       _formError = null;
       _linkedInLoading = true;
     });
-    final result = await ref.read(authRepositoryProvider).signInWithLinkedIn();
+    final LinkedInResult result = await ref
+        .read(authRepositoryProvider)
+        .signInWithLinkedIn();
     if (!mounted) return;
 
     switch (result) {
-      case LinkedInSuccess(:final tokens):
+      case LinkedInSuccess(:final AuthTokens tokens):
         await _onAuthenticated(tokens);
       case LinkedInCancelled():
         setState(() => _linkedInLoading = false);
@@ -223,11 +266,12 @@ class _AuthPageState extends ConsumerState<AuthPage>
   }
 
   /// Shared success tail: persist the session, then drive the auth gate so the
-  /// router's redirect to `/home` fires. `SessionStore` is the single session
-  /// source of truth (RULINGS ruling 8) — no navigation call here; the router
-  /// owns the redirect (feature-auth.md invalidate + read(.future) pattern).
+  /// router's redirect fires. `SessionStore` is the single session source of
+  /// truth — no navigation call here; the router owns the redirect.
   Future<void> _onAuthenticated(AuthTokens tokens) async {
-    await ref.read(sessionStoreProvider).writeTokens(
+    await ref
+        .read(sessionStoreProvider)
+        .writeTokens(
           accessToken: tokens.accessToken,
           refreshToken: tokens.refreshToken,
         );
@@ -241,211 +285,199 @@ class _AuthPageState extends ConsumerState<AuthPage>
     }
   }
 
-  void _onSwitchMode(_AuthMode newMode) {
-    if (_mode == newMode) return;
+  void _setMode(_AuthMode next) {
+    if (_mode == next) return;
     setState(() {
       _clearErrors();
-      _mode = newMode;
+      _mode = next;
     });
   }
 
+  void _toggleMode() =>
+      _setMode(_isSignIn ? _AuthMode.createAccount : _AuthMode.signIn);
+
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final isSignIn = _isSignIn;
+    final bool isSignIn = _isSignIn;
 
-    return Scaffold(
-      backgroundColor:
-          isDark ? PlexaversePalette.backgroundDark : PlexaversePalette.brutalistBg,
-      resizeToAvoidBottomInset: true,
-      body: SafeArea(
-        child: GestureDetector(
-          onTap: () => FocusScope.of(context).unfocus(),
-          behavior: HitTestBehavior.opaque,
-          // Light mode: CustomPaint draws 24 px grid behind content.
-          // Dark mode: painter is null → no-op.
-          child: CustomPaint(
-            painter: isDark ? null : _GridPainter(),
-            child: Column(
-              children: [
-                // ── Scrollable form area ──────────────────────────────────
-                Expanded(
-                  child: SingleChildScrollView(
-                    keyboardDismissBehavior:
-                        ScrollViewKeyboardDismissBehavior.onDrag,
-                    padding: const EdgeInsets.fromLTRB(24, 0, 24, 24),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      children: [
-                        const SizedBox(height: 72),
-                        _LogoLockup(isDark: isDark),
-                        const SizedBox(height: 24),
+    return ZaveScaffold(
+      // No title: the screen carries its own `.h2` heading inside the scroll
+      // view, and ZaveScaffold's doc is explicit that a screen never has both.
+      body: GestureDetector(
+        onTap: () => FocusScope.of(context).unfocus(),
+        behavior: HitTestBehavior.translucent,
+        child: ZaveScrollView(
+          children: <Widget>[
+            const _PlexaLockup(),
+            SizedBox(height: ZaveSpace.xl),
 
-                        _AuthTabToggle(
-                          mode: _mode,
-                          isDark: isDark,
-                          onChanged: _onSwitchMode,
-                        ),
-                        const SizedBox(height: 32),
+            Text(
+              isSignIn ? 'Sign in' : 'Create an account',
+              style: ZaveType.h2,
+            ),
+            SizedBox(height: ZaveSpace.md),
+            Text(
+              isSignIn
+                  ? 'Continue to your LinkedIn automation dashboard'
+                  : 'Start automating your LinkedIn presence with AI',
+              style: ZaveType.lead,
+            ),
+            SizedBox(height: ZaveSpace.xl),
 
-                        // Form-level error banner
-                        AnimatedSwitcher(
-                          duration: const Duration(milliseconds: 200),
-                          transitionBuilder: (child, anim) => SizeTransition(
-                            sizeFactor: anim,
-                            child:
-                                FadeTransition(opacity: anim, child: child),
-                          ),
-                          child: _formError != null
-                              ? Padding(
-                                  key: ValueKey(_formError),
-                                  padding: const EdgeInsets.only(bottom: 12),
-                                  child: Semantics(
-                                    liveRegion: true,
-                                    child: FormErrorBanner(
-                                      message: _formError!,
-                                      isDark: isDark,
-                                    ),
-                                  ),
-                                )
-                              : const SizedBox.shrink(),
-                        ),
+            _ModeToggle(mode: _mode, onChanged: _setMode),
+            SizedBox(height: ZaveSpace.xl),
 
-                        // Social auth buttons
-                        SocialAuthButton(
-                          provider: SocialButtonProvider.google,
-                          isDark: isDark,
-                          isSignIn: isSignIn,
-                          isLoading: _googleLoading,
-                          onPressed: _busy
-                              ? null
-                              : () => ScaffoldMessenger.of(context)
-                                  .showSnackBar(
-                                    const SnackBar(
-                                      content:
-                                          Text('Google sign-in coming soon'),
-                                    ),
-                                  ),
-                        ),
-                        const SizedBox(height: 12),
-                        SocialAuthButton(
-                          provider: SocialButtonProvider.linkedIn,
-                          isDark: isDark,
-                          isSignIn: isSignIn,
-                          isLoading: _linkedInLoading,
-                          onPressed: _busy ? null : _startLinkedIn,
-                        ),
-
-                        const SizedBox(height: 20),
-                        AuthDivider(isDark: isDark),
-                        const SizedBox(height: 20),
-
-                        // Tab switch — M3 shared-axis horizontal slide, 300 ms
-                        AnimatedSwitcher(
-                          duration: const Duration(milliseconds: 300),
-                          switchInCurve: Curves.easeOutCubic,
-                          switchOutCurve: Curves.easeInCubic,
-                          transitionBuilder: (child, anim) {
-                            final entering = child.key ==
-                                ValueKey(isSignIn
-                                    ? _AuthMode.signIn
-                                    : _AuthMode.createAccount);
-                            final dx = entering
-                                ? (isSignIn ? 0.12 : -0.12)
-                                : (isSignIn ? -0.12 : 0.12);
-                            return ClipRect(
-                              child: SlideTransition(
-                                position: Tween<Offset>(
-                                  begin: Offset(dx, 0),
-                                  end: Offset.zero,
-                                ).animate(anim),
-                                child:
-                                    FadeTransition(opacity: anim, child: child),
-                              ),
-                            );
-                          },
-                          layoutBuilder: (currentChild, previousChildren) {
-                            return Stack(
-                              alignment: Alignment.topCenter,
-                              children: [
-                                ...previousChildren,
-                                ?currentChild,
-                              ],
-                            );
-                          },
-                          child: isSignIn
-                              ? _SignInFields(
-                                  key: const ValueKey(_AuthMode.signIn),
-                                  emailCtrl: _emailCtrl,
-                                  passwordCtrl: _passwordCtrl,
-                                  emailError: _emailError,
-                                  passwordError: _passwordError,
-                                  shakeOffset: _shakeAnim,
-                                  isDark: isDark,
-                                  onEmailChanged: (_) =>
-                                      setState(() => _emailError = null),
-                                  onPasswordChanged: (_) =>
-                                      setState(() => _passwordError = null),
-                                )
-                              : _RegisterFields(
-                                  key: const ValueKey(_AuthMode.createAccount),
-                                  nameCtrl: _nameCtrl,
-                                  emailCtrl: _emailCtrl,
-                                  passwordCtrl: _passwordCtrl,
-                                  referralCtrl: _referralCtrl,
-                                  nameError: _nameError,
-                                  emailError: _emailError,
-                                  passwordError: _passwordError,
-                                  shakeOffset: _shakeAnim,
-                                  isDark: isDark,
-                                  onNameChanged: (_) =>
-                                      setState(() => _nameError = null),
-                                  onEmailChanged: (_) =>
-                                      setState(() => _emailError = null),
-                                  onPasswordChanged: (_) =>
-                                      setState(() => _passwordError = null),
-                                ),
-                        ),
-
-                        const SizedBox(height: 24),
-
-                        _AuthCtaButton(
-                          mode: _mode,
-                          isLoading: _submitting,
-                          onPressed: _busy
-                              ? null
-                              : isSignIn
-                                  ? _submitSignIn
-                                  : _submitRegister,
-                        ),
-
-                        // Terms line — register mode only
-                        AnimatedSwitcher(
-                          duration: const Duration(milliseconds: 200),
-                          child: isSignIn
-                              ? const SizedBox.shrink()
-                              : Padding(
-                                  key: const ValueKey('terms'),
-                                  padding: const EdgeInsets.only(top: 16),
-                                  child: _TermsLine(isDark: isDark),
-                                ),
-                        ),
-                      ],
+            // Form-level error. Sized-in rather than faded so the buttons below
+            // move once, not twice.
+            AnimatedSwitcher(
+              duration: ZaveMotion.fast,
+              switchInCurve: ZaveMotion.curve,
+              switchOutCurve: ZaveMotion.curve,
+              transitionBuilder: (Widget child, Animation<double> anim) =>
+                  SizeTransition(
+                    sizeFactor: anim,
+                    child: FadeTransition(opacity: anim, child: child),
+                  ),
+              child: _formError == null
+                  ? const SizedBox(width: double.infinity)
+                  : Padding(
+                      key: ValueKey<String>(_formError!),
+                      padding: EdgeInsets.only(bottom: ZaveSpace.lg),
+                      child: Semantics(
+                        liveRegion: true,
+                        child: FormErrorBanner(message: _formError!),
+                      ),
                     ),
-                  ),
-                ),
+            ),
 
-                // Sticky switch-mode link — always thumb-reachable
-                _SwitchModeRow(
-                  mode: _mode,
-                  isDark: isDark,
-                  onSwitch: () => _onSwitchMode(
-                    isSignIn ? _AuthMode.createAccount : _AuthMode.signIn,
+            SocialAuthButton(
+              provider: SocialButtonProvider.google,
+              isSignIn: isSignIn,
+              isLoading: _googleLoading,
+              onPressed: _busy
+                  ? null
+                  : () => ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('Google sign-in coming soon'),
+                      ),
+                    ),
+            ),
+            SizedBox(height: ZaveSpace.md),
+            SocialAuthButton(
+              provider: SocialButtonProvider.linkedIn,
+              isSignIn: isSignIn,
+              isLoading: _linkedInLoading,
+              onPressed: _busy ? null : _startLinkedIn,
+            ),
+
+            SizedBox(height: ZaveSpace.xl),
+            const AuthDivider(),
+            SizedBox(height: ZaveSpace.xl),
+
+            // Mode switch — a short horizontal slide in the direction of
+            // travel. No spring: Zave does not overshoot.
+            AnimatedSwitcher(
+              duration: ZaveMotion.page,
+              switchInCurve: ZaveMotion.curve,
+              switchOutCurve: ZaveMotion.curve,
+              transitionBuilder: (Widget child, Animation<double> anim) {
+                final bool entering =
+                    child.key ==
+                    ValueKey<_AuthMode>(
+                      isSignIn ? _AuthMode.signIn : _AuthMode.createAccount,
+                    );
+                final double dx = entering
+                    ? (isSignIn ? 0.12 : -0.12)
+                    : (isSignIn ? -0.12 : 0.12);
+                return ClipRect(
+                  child: SlideTransition(
+                    position: Tween<Offset>(
+                      begin: Offset(dx, 0),
+                      end: Offset.zero,
+                    ).animate(anim),
+                    child: FadeTransition(opacity: anim, child: child),
                   ),
+                );
+              },
+              layoutBuilder:
+                  (Widget? currentChild, List<Widget> previousChildren) =>
+                      Stack(
+                        alignment: Alignment.topCenter,
+                        children: <Widget>[...previousChildren, ?currentChild],
+                      ),
+              child: isSignIn
+                  ? _SignInFields(
+                      key: const ValueKey<_AuthMode>(_AuthMode.signIn),
+                      emailCtrl: _emailCtrl,
+                      passwordCtrl: _passwordCtrl,
+                      emailError: _emailError,
+                      passwordError: _passwordError,
+                      shake: _shakeAnim,
+                      onEmailChanged: (_) => setState(() => _emailError = null),
+                      onPasswordChanged: (_) =>
+                          setState(() => _passwordError = null),
+                    )
+                  : _RegisterFields(
+                      key: const ValueKey<_AuthMode>(_AuthMode.createAccount),
+                      nameCtrl: _nameCtrl,
+                      emailCtrl: _emailCtrl,
+                      passwordCtrl: _passwordCtrl,
+                      referralCtrl: _referralCtrl,
+                      nameError: _nameError,
+                      emailError: _emailError,
+                      passwordError: _passwordError,
+                      shake: _shakeAnim,
+                      onNameChanged: (_) => setState(() => _nameError = null),
+                      onEmailChanged: (_) => setState(() => _emailError = null),
+                      onPasswordChanged: (_) =>
+                          setState(() => _passwordError = null),
+                    ),
+            ),
+
+            SizedBox(height: ZaveSpace.xl),
+
+            // The one solid-white button on this screen.
+            ZaveButton.primary(
+              label: isSignIn ? 'Continue' : 'Create account',
+              expand: true,
+              busy: _submitting,
+              onPressed: _busy
+                  ? null
+                  : (isSignIn ? _submitSignIn : _submitRegister),
+            ),
+
+            if (!isSignIn) ...<Widget>[
+              SizedBox(height: ZaveSpace.lg),
+              _TermsLine(termsTap: _termsTap, privacyTap: _privacyTap),
+            ],
+          ],
+        ),
+      ),
+      // Thumb-reachable, and outside the scroll view so it never scrolls away.
+      bottomBar: SafeArea(
+        top: false,
+        child: Padding(
+          padding: EdgeInsets.symmetric(
+            horizontal: ZaveSpace.gutter,
+            vertical: ZaveSpace.lg,
+          ),
+          child: Text.rich(
+            TextSpan(
+              text: isSignIn
+                  ? "Don't have an account? "
+                  : 'Already have an account? ',
+              style: ZaveType.bodyMuted,
+              children: <InlineSpan>[
+                TextSpan(
+                  text: isSignIn ? 'Create one' : 'Sign in',
+                  // `--zv-peri` is Zave's link colour. This is the one place a
+                  // tinted word is correct: it is a link, not a control.
+                  style: ZaveType.body.copyWith(color: ZaveColors.peri),
+                  recognizer: _switchModeTap,
                 ),
-                const SizedBox(height: 16),
               ],
             ),
+            textAlign: TextAlign.center,
           ),
         ),
       ),
@@ -454,86 +486,69 @@ class _AuthPageState extends ConsumerState<AuthPage>
 }
 
 // ════════════════════════════════════════════════════════════════════════════
-// Grid backdrop — light mode only
+// The lockup
 // ════════════════════════════════════════════════════════════════════════════
 
-class _GridPainter extends CustomPainter {
-  @override
-  void paint(Canvas canvas, Size size) {
-    final paint = Paint()
-      ..color = const Color(0x0A000000) // rgba(0,0,0,0.04) — subtle grid
-      ..strokeWidth = 1.0;
-    const step = 24.0;
-    for (var x = 0.0; x <= size.width; x += step) {
-      canvas.drawLine(Offset(x, 0), Offset(x, size.height), paint);
-    }
-    for (var y = 0.0; y <= size.height; y += step) {
-      canvas.drawLine(Offset(0, y), Offset(size.width, y), paint);
-    }
-  }
-
-  @override
-  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
-}
-
-// ════════════════════════════════════════════════════════════════════════════
-// Logo lockup
-// ════════════════════════════════════════════════════════════════════════════
-
-class _LogoLockup extends StatelessWidget {
-  final bool isDark;
-  const _LogoLockup({required this.isDark});
+/// The Plexaverse mark and wordmark.
+///
+/// The pre-alignment lockup was a violet→purple gradient tile under a coloured
+/// drop shadow. Zave has neither decorative gradients nor shadows — depth is a
+/// fill step — so the mark is the [ZaveGlass.now] step (the "this is the one"
+/// surface) with the letter in white.
+class _PlexaLockup extends StatelessWidget {
+  const _PlexaLockup();
 
   @override
   Widget build(BuildContext context) {
     return Row(
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: [
+      children: <Widget>[
         Container(
-          width: 40,
-          height: 40,
-          decoration: BoxDecoration(
-            gradient: const LinearGradient(
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-              colors: [PlexaversePalette.primary, Color(0xFF9C27B0)],
-            ),
-            borderRadius: BorderRadius.circular(10),
-            boxShadow: isDark
-                ? [
-                    BoxShadow(
-                      color: PlexaversePalette.primary.withValues(alpha: 0.40),
-                      blurRadius: 14,
-                      offset: const Offset(0, 4),
-                    ),
-                  ]
-                : [
-                    BoxShadow(
-                      color: PlexaversePalette.primary.withValues(alpha: 0.20),
-                      blurRadius: 8,
-                      offset: const Offset(0, 3),
-                    ),
-                  ],
-          ),
+          height: ZaveSpace.iconBtn,
+          width: ZaveSpace.iconBtn,
           alignment: Alignment.center,
-          child: const Text(
-            'P',
-            style: TextStyle(
-              color: Colors.white,
-              fontWeight: FontWeight.w800,
-              fontSize: 22,
-              height: 1.0,
-            ),
+          decoration: BoxDecoration(
+            color: ZaveGlass.now,
+            border: Border.all(color: ZaveGlass.nowBorder, width: 1),
+            shape: BoxShape.circle,
           ),
+          child: Text('P', style: ZaveType.h3),
         ),
-        const SizedBox(width: 12),
-        Text(
-          'Plexaverse',
-          style: AppTextTheme.headlineSmall.copyWith(
-            color: isDark ? PlexaversePalette.grey50 : PlexaversePalette.grey900,
-            fontWeight: FontWeight.w700,
-            letterSpacing: -0.4,
-          ),
+        SizedBox(width: ZaveSpace.md),
+        Text('Plexaverse', style: ZaveType.h3),
+      ],
+    );
+  }
+}
+
+// ════════════════════════════════════════════════════════════════════════════
+// Mode toggle — a chip pair, never a SegmentedButton
+// ════════════════════════════════════════════════════════════════════════════
+
+/// Sign in / Create account.
+///
+/// Two [ZaveChip]s. The selected one inverts to solid white with ink letters,
+/// which is the entire selection language of this system — a tinted pill or an
+/// underline would read as a different product.
+class _ModeToggle extends StatelessWidget {
+  const _ModeToggle({required this.mode, required this.onChanged});
+
+  final _AuthMode mode;
+  final ValueChanged<_AuthMode> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: <Widget>[
+        ZaveChip(
+          label: 'Sign in',
+          selected: mode == _AuthMode.signIn,
+          onTap: () => onChanged(_AuthMode.signIn),
+        ),
+        SizedBox(width: ZaveSpace.sm),
+        ZaveChip(
+          label: 'Create account',
+          selected: mode == _AuthMode.createAccount,
+          onTap: () => onChanged(_AuthMode.createAccount),
         ),
       ],
     );
@@ -541,140 +556,53 @@ class _LogoLockup extends StatelessWidget {
 }
 
 // ════════════════════════════════════════════════════════════════════════════
-// Tab toggle — M3 SegmentedButton, purple selection, mode-aware colours
-// ════════════════════════════════════════════════════════════════════════════
-
-class _AuthTabToggle extends StatelessWidget {
-  final _AuthMode mode;
-  final bool isDark;
-  final ValueChanged<_AuthMode> onChanged;
-
-  const _AuthTabToggle({
-    required this.mode,
-    required this.isDark,
-    required this.onChanged,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return SizedBox(
-      height: 48,
-      child: SegmentedButton<_AuthMode>(
-        segments: const [
-          ButtonSegment(value: _AuthMode.signIn, label: Text('Sign In')),
-          ButtonSegment(
-            value: _AuthMode.createAccount,
-            label: Text('Create Account'),
-          ),
-        ],
-        selected: {mode},
-        showSelectedIcon: false,
-        onSelectionChanged: (s) => onChanged(s.first),
-        style: ButtonStyle(
-          visualDensity: VisualDensity.standard,
-          tapTargetSize: MaterialTapTargetSize.padded,
-          textStyle: WidgetStateProperty.all(
-            AppTextTheme.labelLarge.copyWith(fontWeight: FontWeight.w600),
-          ),
-          backgroundColor: WidgetStateProperty.resolveWith((states) {
-            if (states.contains(WidgetState.selected)) {
-              return PlexaversePalette.primary;
-            }
-            return Colors.transparent;
-          }),
-          foregroundColor: WidgetStateProperty.resolveWith((states) {
-            if (states.contains(WidgetState.selected)) return Colors.white;
-            return isDark ? PlexaversePalette.grey400 : PlexaversePalette.grey600;
-          }),
-          side: WidgetStateProperty.all(
-            BorderSide(
-              color: isDark
-                  ? Colors.white.withValues(alpha: 0.15)
-                  : const Color(0xFFD0D0D0),
-            ),
-          ),
-          shape: WidgetStateProperty.all(const StadiumBorder()),
-          padding: WidgetStateProperty.all(
-            const EdgeInsets.symmetric(horizontal: 16),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-// ════════════════════════════════════════════════════════════════════════════
-// Sign In fields
+// Field sets
 // ════════════════════════════════════════════════════════════════════════════
 
 class _SignInFields extends StatelessWidget {
+  const _SignInFields({
+    required this.emailCtrl,
+    required this.passwordCtrl,
+    required this.shake,
+    this.emailError,
+    this.passwordError,
+    this.onEmailChanged,
+    this.onPasswordChanged,
+    super.key,
+  });
+
   final TextEditingController emailCtrl;
   final TextEditingController passwordCtrl;
   final String? emailError;
   final String? passwordError;
-  final Animation<double> shakeOffset;
-  final bool isDark;
+  final Animation<double> shake;
   final ValueChanged<String>? onEmailChanged;
   final ValueChanged<String>? onPasswordChanged;
 
-  const _SignInFields({
-    super.key,
-    required this.emailCtrl,
-    required this.passwordCtrl,
-    this.emailError,
-    this.passwordError,
-    required this.shakeOffset,
-    required this.isDark,
-    this.onEmailChanged,
-    this.onPasswordChanged,
-  });
-
   @override
   Widget build(BuildContext context) {
-    return AnimatedBuilder(
-      animation: shakeOffset,
-      builder: (context, child) => Transform.translate(
-        offset: Offset(shakeOffset.value, 0),
-        child: child,
-      ),
+    return _Shake(
+      shake: shake,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          _AuthField(
+        children: <Widget>[
+          ZaveField(
             controller: emailCtrl,
             label: 'Email address',
-            hintText: 'you@example.com',
-            prefixIcon: Icons.mail_outline,
+            hint: 'you@example.com',
+            error: emailError,
             keyboardType: TextInputType.emailAddress,
-            autofillHints: const [AutofillHints.email],
-            errorText: emailError,
-            isDark: isDark,
+            textInputAction: TextInputAction.next,
+            autofillHints: const <String>[AutofillHints.email],
+            prefix: const Icon(Icons.mail_outline),
             onChanged: onEmailChanged,
           ),
-          const SizedBox(height: 16),
-          _AuthPasswordField(
+          SizedBox(height: ZaveSpace.lg),
+          _PasswordField(
             controller: passwordCtrl,
-            label: 'Password',
             autofillHint: AutofillHints.password,
-            errorText: passwordError,
-            isDark: isDark,
+            error: passwordError,
             onChanged: onPasswordChanged,
-          ),
-          Align(
-            alignment: Alignment.centerRight,
-            child: TextButton(
-              onPressed: () {},
-              style: TextButton.styleFrom(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
-                tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                foregroundColor: PlexaversePalette.primary,
-                textStyle: AppTextTheme.labelLarge.copyWith(
-                  fontWeight: FontWeight.w500,
-                ),
-              ),
-              child: const Text('Forgot password?'),
-            ),
           ),
         ],
       ),
@@ -682,11 +610,22 @@ class _SignInFields extends StatelessWidget {
   }
 }
 
-// ════════════════════════════════════════════════════════════════════════════
-// Register fields
-// ════════════════════════════════════════════════════════════════════════════
-
 class _RegisterFields extends StatefulWidget {
+  const _RegisterFields({
+    required this.nameCtrl,
+    required this.emailCtrl,
+    required this.passwordCtrl,
+    required this.referralCtrl,
+    required this.shake,
+    this.nameError,
+    this.emailError,
+    this.passwordError,
+    this.onNameChanged,
+    this.onEmailChanged,
+    this.onPasswordChanged,
+    super.key,
+  });
+
   final TextEditingController nameCtrl;
   final TextEditingController emailCtrl;
   final TextEditingController passwordCtrl;
@@ -694,35 +633,17 @@ class _RegisterFields extends StatefulWidget {
   final String? nameError;
   final String? emailError;
   final String? passwordError;
-  final Animation<double> shakeOffset;
-  final bool isDark;
+  final Animation<double> shake;
   final ValueChanged<String>? onNameChanged;
   final ValueChanged<String>? onEmailChanged;
   final ValueChanged<String>? onPasswordChanged;
-
-  const _RegisterFields({
-    super.key,
-    required this.nameCtrl,
-    required this.emailCtrl,
-    required this.passwordCtrl,
-    required this.referralCtrl,
-    this.nameError,
-    this.emailError,
-    this.passwordError,
-    required this.shakeOffset,
-    required this.isDark,
-    this.onNameChanged,
-    this.onEmailChanged,
-    this.onPasswordChanged,
-  });
 
   @override
   State<_RegisterFields> createState() => _RegisterFieldsState();
 }
 
 class _RegisterFieldsState extends State<_RegisterFields> {
-  // Mirrors the password controller so the strength bar rebuilds live — the
-  // hooks version used a HookBuilder + useEffect listener for the same effect.
+  // Mirrors the password controller so the strength bar rebuilds live.
   late String _passwordText = widget.passwordCtrl.text;
 
   @override
@@ -745,367 +666,158 @@ class _RegisterFieldsState extends State<_RegisterFields> {
 
   @override
   Widget build(BuildContext context) {
-    return AnimatedBuilder(
-      animation: widget.shakeOffset,
-      builder: (context, child) => Transform.translate(
-        offset: Offset(widget.shakeOffset.value, 0),
-        child: child,
-      ),
+    return _Shake(
+      shake: widget.shake,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          _AuthField(
+        children: <Widget>[
+          ZaveField(
             controller: widget.nameCtrl,
             label: 'Full name',
-            hintText: 'John Doe',
-            prefixIcon: Icons.person_outline,
-            autofillHints: const [AutofillHints.name],
-            errorText: widget.nameError,
-            isDark: widget.isDark,
+            hint: 'John Doe',
+            error: widget.nameError,
+            textInputAction: TextInputAction.next,
+            autofillHints: const <String>[AutofillHints.name],
+            prefix: const Icon(Icons.person_outline),
             onChanged: widget.onNameChanged,
           ),
-          const SizedBox(height: 16),
-          _AuthField(
+          SizedBox(height: ZaveSpace.lg),
+          ZaveField(
             controller: widget.emailCtrl,
             label: 'Email address',
-            hintText: 'you@example.com',
-            prefixIcon: Icons.mail_outline,
+            hint: 'you@example.com',
+            error: widget.emailError,
             keyboardType: TextInputType.emailAddress,
-            autofillHints: const [AutofillHints.email],
-            errorText: widget.emailError,
-            isDark: widget.isDark,
+            textInputAction: TextInputAction.next,
+            autofillHints: const <String>[AutofillHints.email],
+            prefix: const Icon(Icons.mail_outline),
             onChanged: widget.onEmailChanged,
           ),
-          const SizedBox(height: 16),
-          _AuthPasswordField(
+          SizedBox(height: ZaveSpace.lg),
+          _PasswordField(
             controller: widget.passwordCtrl,
-            label: 'Password',
             autofillHint: AutofillHints.newPassword,
-            errorText: widget.passwordError,
-            isDark: widget.isDark,
-            onChanged: (v) {
+            error: widget.passwordError,
+            onChanged: (String v) {
               widget.onPasswordChanged?.call(v);
               setState(() => _passwordText = v);
             },
           ),
-          PasswordStrengthBar(
-            password: _passwordText,
-            isDark: widget.isDark,
-          ),
-          const SizedBox(height: 16),
-          ReferralCodeField(
-            controller: widget.referralCtrl,
-            isDark: widget.isDark,
-          ),
+          PasswordStrengthBar(password: _passwordText),
+          SizedBox(height: ZaveSpace.lg),
+          ReferralCodeField(controller: widget.referralCtrl),
         ],
       ),
     );
   }
 }
-// end register fields
 
-// ════════════════════════════════════════════════════════════════════════════
-// Shared field widgets
-// ════════════════════════════════════════════════════════════════════════════
-
-class _AuthField extends StatelessWidget {
-  final TextEditingController controller;
-  final String label;
-  final String? hintText;
-  final IconData prefixIcon;
-  final TextInputType keyboardType;
-  final List<String>? autofillHints;
-  final String? errorText;
-  final bool isDark;
-  final ValueChanged<String>? onChanged;
-
-  const _AuthField({
+/// A [ZaveField] with an eye toggle. Split out because the obscure flag is
+/// local state and both field sets need it.
+class _PasswordField extends StatefulWidget {
+  const _PasswordField({
     required this.controller,
-    required this.label,
-    required this.prefixIcon,
-    required this.isDark,
-    this.hintText,
-    this.keyboardType = TextInputType.text,
-    this.autofillHints,
-    this.errorText,
-    this.onChanged,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return TextField(
-      controller: controller,
-      keyboardType: keyboardType,
-      autofillHints: autofillHints,
-      onChanged: onChanged,
-      style: AppTextTheme.bodyLarge.copyWith(
-        color: isDark ? PlexaversePalette.grey50 : PlexaversePalette.grey900,
-      ),
-      decoration:
-          _fieldDecoration(label, prefixIcon, errorText, isDark, hintText: hintText),
-    );
-  }
-}
-
-class _AuthPasswordField extends StatefulWidget {
-  final TextEditingController controller;
-  final String label;
-  final String autofillHint;
-  final String? errorText;
-  final bool isDark;
-  final ValueChanged<String>? onChanged;
-
-  const _AuthPasswordField({
-    required this.controller,
-    required this.label,
     required this.autofillHint,
-    required this.isDark,
-    this.errorText,
+    this.error,
     this.onChanged,
   });
 
+  final TextEditingController controller;
+  final String autofillHint;
+  final String? error;
+  final ValueChanged<String>? onChanged;
+
   @override
-  State<_AuthPasswordField> createState() => _AuthPasswordFieldState();
+  State<_PasswordField> createState() => _PasswordFieldState();
 }
 
-class _AuthPasswordFieldState extends State<_AuthPasswordField> {
+class _PasswordFieldState extends State<_PasswordField> {
   bool _obscure = true;
 
   @override
   Widget build(BuildContext context) {
-    return TextField(
+    return ZaveField(
       controller: widget.controller,
-      obscureText: _obscure,
-      autofillHints: [widget.autofillHint],
-      onChanged: widget.onChanged,
-      style: AppTextTheme.bodyLarge.copyWith(
-        color: widget.isDark ? PlexaversePalette.grey50 : PlexaversePalette.grey900,
-      ),
-      decoration: _fieldDecoration(
-        widget.label,
-        Icons.lock_outline,
-        widget.errorText,
-        widget.isDark,
-        suffixIcon: IconButton(
-          icon: Icon(
+      label: 'Password',
+      // The web renders a dot placeholder rather than prose.
+      hint: '••••••••',
+      error: widget.error,
+      obscure: _obscure,
+      textInputAction: TextInputAction.done,
+      autofillHints: <String>[widget.autofillHint],
+      prefix: const Icon(Icons.lock_outline),
+      suffix: Semantics(
+        button: true,
+        label: _obscure ? 'Show password' : 'Hide password',
+        child: GestureDetector(
+          onTap: () => setState(() => _obscure = !_obscure),
+          behavior: HitTestBehavior.opaque,
+          child: Icon(
             _obscure
                 ? Icons.visibility_off_outlined
                 : Icons.visibility_outlined,
-            color: widget.isDark ? PlexaversePalette.grey400 : PlexaversePalette.grey400,
-            size: 20,
           ),
-          onPressed: () => setState(() => _obscure = !_obscure),
         ),
       ),
+      onChanged: widget.onChanged,
     );
   }
 }
 
-InputDecoration _fieldDecoration(
-  String label,
-  IconData icon,
-  String? errorText,
-  bool isDark, {
-  Widget? suffixIcon,
-  String? hintText,
-}) {
-  if (isDark) {
-    return InputDecoration(
-      labelText: label,
-      labelStyle: AppTextTheme.bodySmall.copyWith(color: PlexaversePalette.grey400),
-      floatingLabelStyle:
-          AppTextTheme.bodySmall.copyWith(color: PlexaversePalette.primary),
-      prefixIcon: Icon(icon, color: PlexaversePalette.grey400, size: 20),
-      prefixIconConstraints:
-          const BoxConstraints(minWidth: 48, minHeight: 56),
-      suffixIcon: suffixIcon,
-      errorText: errorText,
-      errorStyle: AppTextTheme.labelSmall.copyWith(color: PlexaversePalette.error),
-      isDense: true,
-      filled: true,
-      fillColor: Colors.white.withValues(alpha: 0.04),
-      border: _border(Colors.white.withValues(alpha: 0.20)),
-      enabledBorder: _border(Colors.white.withValues(alpha: 0.20)),
-      focusedBorder: _border(PlexaversePalette.primary, width: 2),
-      errorBorder: _border(PlexaversePalette.error, width: 2),
-      focusedErrorBorder: _border(PlexaversePalette.error, width: 2),
-      contentPadding:
-          const EdgeInsets.symmetric(horizontal: 16, vertical: 18),
-    );
-  }
+/// Wraps a field set in the rejected-form shake. See [_AuthPageState._shakeAnim]
+/// for why this is inside Zave's motion rule rather than outside it.
+class _Shake extends StatelessWidget {
+  const _Shake({required this.shake, required this.child});
 
-  // Light mode — white fill, rounded 12 px, thin grey border, label always above
-  return InputDecoration(
-    labelText: label,
-    floatingLabelBehavior: FloatingLabelBehavior.always,
-    labelStyle: AppTextTheme.bodySmall.copyWith(color: PlexaversePalette.grey600),
-    floatingLabelStyle:
-        AppTextTheme.bodySmall.copyWith(color: PlexaversePalette.grey600),
-    hintText: hintText,
-    hintStyle: AppTextTheme.bodyLarge.copyWith(color: PlexaversePalette.grey400),
-    prefixIcon: Icon(icon, color: PlexaversePalette.grey400, size: 20),
-    prefixIconConstraints:
-        const BoxConstraints(minWidth: 48, minHeight: 56),
-    suffixIcon: suffixIcon,
-    errorText: errorText,
-    errorStyle: AppTextTheme.labelSmall.copyWith(color: PlexaversePalette.error),
-    isDense: true,
-    filled: true,
-    fillColor: Colors.white,
-    border: _border(const Color(0x1F000000)),
-    enabledBorder: _border(const Color(0x1F000000)),
-    focusedBorder: _border(PlexaversePalette.primary, width: 2),
-    errorBorder: _border(PlexaversePalette.error, width: 2),
-    focusedErrorBorder: _border(PlexaversePalette.error, width: 2),
-    contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 18),
-  );
-}
-
-OutlineInputBorder _border(Color color, {double width = 1}) =>
-    OutlineInputBorder(
-      borderRadius: BorderRadius.circular(12),
-      borderSide: BorderSide(color: color, width: width),
-    );
-
-// ════════════════════════════════════════════════════════════════════════════
-// Primary CTA — purple pill, same shape in both modes
-// ════════════════════════════════════════════════════════════════════════════
-
-class _AuthCtaButton extends StatelessWidget {
-  final _AuthMode mode;
-  final bool isLoading;
-  final VoidCallback? onPressed;
-
-  const _AuthCtaButton({
-    required this.mode,
-    required this.isLoading,
-    required this.onPressed,
-  });
+  final Animation<double> shake;
+  final Widget child;
 
   @override
   Widget build(BuildContext context) {
-    final label = mode == _AuthMode.signIn ? 'Sign In' : 'Create Account';
-
-    return SizedBox(
-      height: 52,
-      child: FilledButton(
-        onPressed: onPressed,
-        style: FilledButton.styleFrom(
-          backgroundColor: PlexaversePalette.primary,
-          foregroundColor: Colors.white,
-          disabledBackgroundColor: PlexaversePalette.primary.withValues(alpha: 0.55),
-          disabledForegroundColor: Colors.white.withValues(alpha: 0.85),
-          shape: const StadiumBorder(),
-          minimumSize: const Size(double.infinity, 52),
-          textStyle:
-              AppTextTheme.labelLarge.copyWith(fontWeight: FontWeight.w600),
-        ),
-        child: isLoading
-            ? const SizedBox(
-                height: 20,
-                width: 20,
-                child: CircularProgressIndicator(
-                  strokeWidth: 2,
-                  color: Colors.white,
-                ),
-              )
-            : Text(label),
-      ),
+    return AnimatedBuilder(
+      animation: shake,
+      builder: (BuildContext context, Widget? built) =>
+          Transform.translate(offset: Offset(shake.value, 0), child: built),
+      child: child,
     );
   }
 }
 
 // ════════════════════════════════════════════════════════════════════════════
-// Sticky switch-mode row
+// Terms — create-account only
 // ════════════════════════════════════════════════════════════════════════════
 
-class _SwitchModeRow extends StatelessWidget {
-  final _AuthMode mode;
-  final bool isDark;
-  final VoidCallback onSwitch;
-
-  const _SwitchModeRow({
-    required this.mode,
-    required this.isDark,
-    required this.onSwitch,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final isSignIn = mode == _AuthMode.signIn;
-    final prefixText =
-        isSignIn ? "Don't have an account? " : 'Already have an account? ';
-    final linkText = isSignIn ? 'Create one' : 'Sign in';
-
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-      child: RichText(
-        textAlign: TextAlign.center,
-        text: TextSpan(
-          text: prefixText,
-          style: AppTextTheme.bodyMedium.copyWith(
-            color: isDark ? PlexaversePalette.grey400 : PlexaversePalette.grey600,
-          ),
-          children: [
-            TextSpan(
-              text: linkText,
-              style: AppTextTheme.bodyMedium.copyWith(
-                color: PlexaversePalette.primary,
-                fontWeight: FontWeight.w600,
-              ),
-              recognizer: TapGestureRecognizer()..onTap = onSwitch,
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-// ════════════════════════════════════════════════════════════════════════════
-// Terms line — register mode only
-// ════════════════════════════════════════════════════════════════════════════
-
+/// The terms / privacy line.
+///
+/// The web's create-account form carries a DPDP s6 consent CHECKBOX that is
+/// unticked by default and required to submit — a passive "by signing up you
+/// agree" line is explicitly not the clear affirmative act the Act asks for
+/// (see `app/login/page.tsx`). This screen still shows the passive line
+/// because the mobile register endpoint takes no `acceptedNotice` field, so a
+/// checkbox here would collect a consent nothing records. That gap is reported
+/// rather than papered over.
 class _TermsLine extends StatelessWidget {
-  final bool isDark;
-  const _TermsLine({required this.isDark});
+  const _TermsLine({required this.termsTap, required this.privacyTap});
+
+  final TapGestureRecognizer termsTap;
+  final TapGestureRecognizer privacyTap;
 
   @override
   Widget build(BuildContext context) {
-    const baseColor = PlexaversePalette.grey600;
+    final TextStyle link = ZaveType.caption.copyWith(color: ZaveColors.peri);
 
-    return RichText(
-      textAlign: TextAlign.center,
-      text: TextSpan(
+    return Text.rich(
+      TextSpan(
         text: 'By creating an account, you agree to our ',
-        style: AppTextTheme.bodySmall.copyWith(color: baseColor),
-        children: [
-          TextSpan(
-            text: 'Terms of Service',
-            style: AppTextTheme.bodySmall.copyWith(
-              color: PlexaversePalette.primary,
-              fontWeight: FontWeight.w500,
-            ),
-            recognizer: TapGestureRecognizer()..onTap = () {},
-          ),
-          TextSpan(
-            text: ' and ',
-            style: AppTextTheme.bodySmall.copyWith(color: baseColor),
-          ),
-          TextSpan(
-            text: 'Privacy Policy',
-            style: AppTextTheme.bodySmall.copyWith(
-              color: PlexaversePalette.primary,
-              fontWeight: FontWeight.w500,
-            ),
-            recognizer: TapGestureRecognizer()..onTap = () {},
-          ),
-          TextSpan(
-            text: '.',
-            style: AppTextTheme.bodySmall.copyWith(color: baseColor),
-          ),
+        style: ZaveType.caption,
+        children: <InlineSpan>[
+          TextSpan(text: 'Terms of Service', style: link, recognizer: termsTap),
+          TextSpan(text: ' and ', style: ZaveType.caption),
+          TextSpan(text: 'Privacy Policy', style: link, recognizer: privacyTap),
+          TextSpan(text: '.', style: ZaveType.caption),
         ],
       ),
+      textAlign: TextAlign.center,
     );
   }
 }

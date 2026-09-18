@@ -48,6 +48,9 @@ _UserPreferences _$UserPreferencesFromJson(Map<String, dynamic> json) =>
               ?.map((e) => e as String)
               .toList() ??
           const <String>[],
+      serveRole: json['serveRole'] as String?,
+      serveIndustry: json['serveIndustry'] as String?,
+      problemSolved: json['problemSolved'] as String?,
       newsletterName: json['newsletterName'] as String?,
       companyPageId: json['companyPageId'] as String?,
       companyPageName: json['companyPageName'] as String?,
@@ -88,6 +91,9 @@ Map<String, dynamic> _$UserPreferencesToJson(_UserPreferences instance) =>
       'goals': instance.goals,
       'postCategories': instance.postCategories,
       'skills': instance.skills,
+      'serveRole': instance.serveRole,
+      'serveIndustry': instance.serveIndustry,
+      'problemSolved': instance.problemSolved,
       'newsletterName': instance.newsletterName,
       'companyPageId': instance.companyPageId,
       'companyPageName': instance.companyPageName,

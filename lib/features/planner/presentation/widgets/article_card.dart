@@ -147,7 +147,11 @@ class ArticleCard extends StatelessWidget {
           SizedBox(height: ZaveSpace.lg),
           Row(
             children: <Widget>[
+              // Flex 3 / 2: the primary action is the wider of the two. Giving
+              // both an equal Expanded squeezed the icon+label pair until its
+              // label wrapped.
               Expanded(
+                flex: 3,
                 child: ZaveButton(
                   label: 'Copy article',
                   kind: ZaveButtonKind.primarySmall,
@@ -162,9 +166,13 @@ class ArticleCard extends StatelessWidget {
               ),
               if (!article.isPublished) ...<Widget>[
                 SizedBox(width: ZaveSpace.md),
-                ZaveButton(
-                  label: 'I published it',
-                  onPressed: onMarkPublished,
+                Expanded(
+                  flex: 2,
+                  child: ZaveButton(
+                    label: 'I published it',
+                    expand: true,
+                    onPressed: onMarkPublished,
+                  ),
                 ),
               ],
             ],

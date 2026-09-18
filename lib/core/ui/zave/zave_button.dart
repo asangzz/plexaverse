@@ -126,7 +126,17 @@ class ZaveButton extends StatelessWidget {
             width: (style.fontSize ?? 16) + 4,
             child: CircularProgressIndicator(strokeWidth: 2, color: fg),
           )
-        : Text(label, style: style, textAlign: TextAlign.center);
+        : Text(
+            label,
+            style: style,
+            textAlign: TextAlign.center,
+            // A pill never wraps. Without this, a button squeezed by a Row
+            // wraps its label one character per line rather than shrinking,
+            // because the Flexible below hands it an arbitrarily narrow box.
+            maxLines: 1,
+            softWrap: false,
+            overflow: TextOverflow.ellipsis,
+          );
 
     if (icon != null || trailing != null) {
       content = Row(

@@ -119,7 +119,7 @@ final class PlannerControllerProvider
   PlannerController create() => PlannerController();
 }
 
-String _$plannerControllerHash() => r'55b447d18b5146a5cb92640c0335f3808e366f3b';
+String _$plannerControllerHash() => r'9ba759674fc341ab9265964b59a98b66ed42310d';
 
 /// The week plan.
 
@@ -181,7 +181,7 @@ final class ArticleControllerProvider
   ArticleController create() => ArticleController();
 }
 
-String _$articleControllerHash() => r'58f0263b8e55ec6310274f30f6e7c6f736110bab';
+String _$articleControllerHash() => r'3512b4541af17ab96f25d6e464eab759f2e6a1b9';
 
 /// The week's Sunday article.
 ///

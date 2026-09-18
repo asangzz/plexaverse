@@ -62,7 +62,7 @@ class ZaveBottomBar extends StatelessWidget {
     final int mid = items.length ~/ 2;
     for (int i = 0; i < items.length; i++) {
       if (compose != null && i == mid) {
-        children.add(SizedBox(width: ZaveSpace.xxl + ZaveSpace.lg));
+        children.add(SizedBox(width: _gapWidth));
       }
       final ZaveBarItem item = items[i];
       children.add(
@@ -98,17 +98,35 @@ class ZaveBottomBar extends StatelessWidget {
 
     if (compose == null) return bar;
 
-    // The compose button overhangs the bar's top edge, so the stack must not
-    // clip it.
-    return Stack(
-      clipBehavior: Clip.none,
-      alignment: Alignment.topCenter,
-      children: <Widget>[
-        bar,
-        Positioned(top: -18, child: compose!),
-      ],
+    // The compose button overhangs the bar's top edge, so it cannot live
+    // inside the ClipRect the backdrop blur needs. It is drawn over the bar
+    // instead — but positioned against the GAP, not the bar's centre.
+    //
+    // Those are not the same place. With an odd number of tabs the gap is off
+    // centre (five tabs put it at x≈132..204 while the bar centres at 201), so
+    // a centre-aligned button sat squarely on top of the neighbouring tab.
+    return LayoutBuilder(
+      builder: (BuildContext context, BoxConstraints constraints) {
+        final double tabWidth =
+            (constraints.maxWidth - _gapWidth) / items.length;
+        final double gapLeft = mid * tabWidth;
+        final double left =
+            gapLeft + (_gapWidth - ZaveComposeButton.size) / 2;
+
+        return Stack(
+          clipBehavior: Clip.none,
+          children: <Widget>[
+            bar,
+            Positioned(top: -18, left: left, child: compose!),
+          ],
+        );
+      },
     );
   }
+
+  /// The slot the compose button sits in — wider than the button so it never
+  /// touches a neighbouring tab.
+  static double get _gapWidth => ZaveComposeButton.size + ZaveSpace.lg;
 }
 
 class _ZaveTab extends StatelessWidget {
@@ -177,7 +195,8 @@ class ZaveComposeButton extends StatelessWidget {
 
   final VoidCallback onPressed;
 
-  static const double _size = 56;
+  /// The button's diameter. The bar reserves a gap wider than this.
+  static const double size = 56;
 
   @override
   Widget build(BuildContext context) {
@@ -192,8 +211,8 @@ class ZaveComposeButton extends StatelessWidget {
           child: InkWell(
             onTap: onPressed,
             child: Container(
-              height: _size,
-              width: _size,
+              height: size,
+              width: size,
               decoration: const BoxDecoration(
                 color: ZaveColors.white,
                 shape: BoxShape.circle,

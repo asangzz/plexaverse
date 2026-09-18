@@ -186,15 +186,10 @@ flutter:
     # directories are non-recursive, so add each feature subfolder here
     # as its slice lands.
     - assets/mock/auth/
-    - assets/mock/home/
     - assets/mock/posts/
     - assets/mock/odyssey/
     - assets/mock/analytics/
     - assets/mock/notifications/
-    - assets/mock/settings/
-    - assets/mock/videos/
-    - assets/mock/avatars/
-    - assets/mock/timeline/
 
 # Native splash (brand-dark, colour-only) so there's no white first-frame
 # flash before the Flutter SplashPage — both are #0F0F1E, so the hand-off is

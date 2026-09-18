@@ -7,43 +7,62 @@ import '../security/secure_screen.dart';
 import '../tenant/tenant_controller.dart';
 import '../ui/pages/splash_page.dart';
 import '../ui/pages/zave_styleguide_page.dart';
-import '../ui/widgets/app_scaffold.dart';
+import '../ui/zave/zave_shell_host.dart';
 import 'auth_gate.dart';
 import 'redirect.dart';
 import 'route_paths.dart';
+import 'zave_routes.dart';
 
-// Feature pages live at their feature-first manifest paths.
 import '../../features/auth/application/app_lock_controller.dart';
 import '../../features/auth/presentation/pages/auth_page.dart';
 import '../../features/auth/presentation/pages/unlock_page.dart';
-import '../../features/onboarding/application/onboarding_controller.dart';
-import '../../features/onboarding/presentation/pages/onboarding_page.dart';
+import '../../features/calendar/presentation/pages/calendar_page.dart';
+import '../../features/calendar/presentation/pages/schedules_page.dart';
+import '../../features/compose/presentation/pages/compose_page.dart';
 import '../../features/home/presentation/pages/home_page.dart';
-import '../../features/videos/presentation/pages/videos_page.dart';
-import '../../features/avatars/presentation/pages/avatars_page.dart';
-import '../../features/timeline/presentation/pages/global_timeline_page.dart';
-import '../../features/settings/presentation/pages/account_page.dart';
+import '../../features/onboarding/application/onboarding_controller.dart';
+import '../../features/onboarding/presentation/pages/onboarding_chat_page.dart';
+import '../../features/persona/presentation/pages/persona_page.dart';
+import '../../features/planner/presentation/pages/planner_page.dart';
+import '../../features/posts/presentation/pages/post_detail_page.dart';
+import '../../features/posts/presentation/pages/posts_page.dart';
+import '../../features/settings/presentation/pages/accounts_page.dart';
+import '../../features/settings/presentation/pages/settings_page.dart';
 
 part 'app_router.g.dart';
 
-/// Top-level router shape (§14).
+/// The app's route tree.
 ///
-///   /            — cold-start splash while the session + onboarding resolve
-///   /onboarding  — first-run carousel (pre-auth gate)
-///   /login       — auth entry point (dual-mode sign-in / create-account)
-///   /unlock      — biometric re-auth gate for a locked signed-in session
-///   /home        — post-auth landing, branch 0 of the three-tab shell
-///   /styleguide  — design-system reference (public, dev aid)
+/// **Paths are the web app's paths, byte for byte** (see [ZaveRoutes]). A deep
+/// link, a push payload or a support instruction resolves to the same screen on
+/// both platforms, and a route that exists on one side and not the other shows
+/// up as a missing constant rather than as silent drift.
 ///
-/// `refreshListenable` re-runs the guard chain when any of:
-///   - the tenant resolves / changes,
-///   - the auth gate transitions (sign-in, sign-out, idle expiry),
-///   - the app locks / unlocks (background-resume re-auth gate),
-///   - onboarding is completed,
-///   - the auth pipeline emits a forced sign-out (401 refresh failure).
+/// Shape:
 ///
-/// Root navigator — full-screen routes (account) are parented here so they
-/// cover the tab bar.
+///   /            — cold-start splash while session + onboarding resolve
+///   /onboarding  — the Plexa Setup chat (pre-dashboard gate)
+///   /login       — auth entry point (sign-in / create-account in one screen)
+///   /unlock      — biometric re-auth for a locked signed-in session
+///   /styleguide  — the Zave reference (public)
+///
+///   ── the signed-in shell (bottom bar) ──
+///   /dashboard   — Season 1 roadmap or Season 2 dashboard
+///   /planner     — the week
+///   /calendar    — the month
+///   /posts       — the library
+///
+///   ── pushed over the shell (no bottom bar) ──
+///   /create · /company-post · /posts/:id · /schedules · /persona ·
+///   /settings · /accounts
+///
+/// The four shell branches match [tabRoutes]; the bottom bar is built from the
+/// same list, so the bar and the router cannot disagree.
+///
+/// `refreshListenable` re-runs the guard whenever the tenant, auth gate, app
+/// lock or onboarding state changes, or the network layer forces a sign-out.
+
+/// Root navigator — routes parented here cover the bottom bar.
 final GlobalKey<NavigatorState> _rootNavigatorKey = GlobalKey<NavigatorState>(
   debugLabel: 'root',
 );
@@ -61,25 +80,22 @@ GoRouter appRouter(Ref ref) {
     redirect: (context, state) => appRedirect(ref, state),
     routes: <RouteBase>[
       // Cold-start splash. No page-level navigation — the redirect owns it.
-      GoRoute(path: RoutePaths.splash, builder: (_, _) => const SplashPage()),
+      GoRoute(path: ZaveRoutes.splash, builder: (_, _) => const SplashPage()),
 
-      // First-run onboarding (pre-auth gate). Fade entrance preserved from the
-      // legacy router.
+      // The onboarding chat. Held ahead of the dashboard until completed.
       GoRoute(
-        path: RoutePaths.onboarding,
+        path: ZaveRoutes.onboarding,
         pageBuilder: (context, state) => CustomTransitionPage<void>(
           key: state.pageKey,
-          child: const OnboardingPage(),
+          child: const OnboardingChatPage(),
           transitionsBuilder: _fadeTransition,
         ),
       ),
 
-      // Auth entry point. Wrapped in `SecureScreen` so screenshots / screen
-      // recording are blocked on the sensitive sign-in / create-account
-      // screen (the page itself stays plain + testable). Fade entrance
-      // preserved from the legacy router.
+      // Auth. Wrapped in SecureScreen so screenshots / screen recording are
+      // blocked on the sign-in screen; the page itself stays plain + testable.
       GoRoute(
-        path: RoutePaths.login,
+        path: ZaveRoutes.login,
         pageBuilder: (context, state) => CustomTransitionPage<void>(
           key: state.pageKey,
           child: const SecureScreen(child: AuthPage()),
@@ -87,27 +103,24 @@ GoRouter appRouter(Ref ref) {
         ),
       ),
 
-      // Biometric / device-credential unlock gate. Sensitive → SecureScreen,
-      // like the sign-in screen. Shown over everything when a signed-in
-      // session is locked.
+      // Biometric / device-credential unlock gate. Sensitive → SecureScreen.
       GoRoute(
-        path: RoutePaths.unlock,
+        path: ZaveRoutes.unlock,
         builder: (_, _) => const SecureScreen(child: UnlockPage()),
       ),
 
-      // The signed-in four-tab shell (HeyGen re-skin). Branch order is
-      // canonical (Home 0 · Videos 1 · Avatars 2 · Timeline 3) and MUST match
-      // the bottom navigation in AppScaffold. Tab switches use
-      // NoTransitionPage (instant) — the shell owns any tab-switch animation.
+      // ── The signed-in shell ───────────────────────────────────────────────
+      // Branch order is canonical and MUST match `tabRoutes`; ZaveShellHost
+      // indexes into that list to name the current route. Tab switches use
+      // NoTransitionPage — the shell owns any tab-switch animation.
       StatefulShellRoute.indexedStack(
         builder: (_, _, navigationShell) =>
-            AppScaffold(navigationShell: navigationShell),
+            ZaveShellHost(navigationShell: navigationShell),
         branches: <StatefulShellBranch>[
-          // Branch 0 — Home.
           StatefulShellBranch(
             routes: <RouteBase>[
               GoRoute(
-                path: RoutePaths.home,
+                path: ZaveRoutes.dashboard,
                 pageBuilder: (context, state) => NoTransitionPage<void>(
                   key: state.pageKey,
                   child: const HomePage(),
@@ -115,38 +128,35 @@ GoRouter appRouter(Ref ref) {
               ),
             ],
           ),
-          // Branch 1 — Videos.
           StatefulShellBranch(
             routes: <RouteBase>[
               GoRoute(
-                path: RoutePaths.videos,
+                path: ZaveRoutes.planner,
                 pageBuilder: (context, state) => NoTransitionPage<void>(
                   key: state.pageKey,
-                  child: const VideosPage(),
+                  child: const PlannerPage(),
                 ),
               ),
             ],
           ),
-          // Branch 2 — Avatars.
           StatefulShellBranch(
             routes: <RouteBase>[
               GoRoute(
-                path: RoutePaths.avatars,
+                path: ZaveRoutes.calendar,
                 pageBuilder: (context, state) => NoTransitionPage<void>(
                   key: state.pageKey,
-                  child: const AvatarsPage(),
+                  child: const CalendarPage(),
                 ),
               ),
             ],
           ),
-          // Branch 3 — Global Timeline.
           StatefulShellBranch(
             routes: <RouteBase>[
               GoRoute(
-                path: RoutePaths.timeline,
+                path: ZaveRoutes.posts,
                 pageBuilder: (context, state) => NoTransitionPage<void>(
                   key: state.pageKey,
-                  child: const GlobalTimelinePage(),
+                  child: const PostsPage(),
                 ),
               ),
             ],
@@ -154,29 +164,30 @@ GoRouter appRouter(Ref ref) {
         ],
       ),
 
-      // Full-screen routes OUTSIDE the shell — no bottom nav. Parented to the
-      // root navigator so they cover the tab bar. Account (screenshot 2374)
-      // is opened from the Home header gear; horizontal-slide entrance.
+      // ── Full-screen routes, parented to the root navigator so they cover
+      // the bottom bar. Horizontal-slide entrance.
+      // Compose. Two paths, one widget: it derives company mode from
+      // preferences, mirroring the web's two nav items both labelled "Write".
+      _fullScreen(ZaveRoutes.create, const ComposePage()),
+      _fullScreen(ZaveRoutes.companyPost, const ComposePage()),
+      _fullScreen(ZaveRoutes.schedules, const SchedulesPage()),
+      _fullScreen(ZaveRoutes.persona, const PersonaPage()),
+      _fullScreen(ZaveRoutes.settings, const SettingsPage()),
+      _fullScreen(ZaveRoutes.accounts, const AccountsPage()),
+
+      // A single post. Mirrors the web's /posts/[id].
       GoRoute(
-        path: RoutePaths.account,
+        path: '${ZaveRoutes.posts}/:id',
         parentNavigatorKey: _rootNavigatorKey,
         pageBuilder: (context, state) => CustomTransitionPage<void>(
           key: state.pageKey,
-          child: const AccountPage(),
+          child: PostDetailPage(postId: state.pathParameters['id']!),
           transitionsBuilder: _slideTransition,
         ),
       ),
 
-      // Design-system style guide — public (see the exemption in
-      // `redirect.dart`) so it opens without signing in.
-      GoRoute(
-        path: RoutePaths.styleguide,
-        pageBuilder: (context, state) => CustomTransitionPage<void>(
-          key: state.pageKey,
-          child: const ZaveStyleguidePage(),
-          transitionsBuilder: _slideTransition,
-        ),
-      ),
+      // The Zave design-system reference. Public (exempted in redirect.dart).
+      _fullScreen(ZaveRoutes.styleguide, const ZaveStyleguidePage()),
     ],
     errorBuilder: (context, state) =>
         Scaffold(body: Center(child: Text('Page not found: ${state.error}'))),
@@ -248,4 +259,16 @@ Widget _slideTransition(
     ).chain(CurveTween(curve: Curves.easeInOut)),
   ),
   child: child,
+);
+
+/// A full-screen route: parented to the root navigator so it covers the bottom
+/// bar, with the horizontal-slide entrance the app uses for pushed screens.
+GoRoute _fullScreen(String path, Widget child) => GoRoute(
+  path: path,
+  parentNavigatorKey: _rootNavigatorKey,
+  pageBuilder: (context, state) => CustomTransitionPage<void>(
+    key: state.pageKey,
+    child: child,
+    transitionsBuilder: _slideTransition,
+  ),
 );

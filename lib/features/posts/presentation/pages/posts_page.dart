@@ -1,24 +1,46 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart' show Clipboard, ClipboardData;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:google_fonts/google_fonts.dart';
-import 'package:intl/intl.dart';
+import 'package:go_router/go_router.dart';
 
-import '../../../../core/responsive/screen_util.dart';
-import '../../../../core/theme/plexaverse_colors.dart';
-import '../../../../core/ui/widgets/glass_card.dart';
-import '../../../../core/ui/widgets/status_badge.dart';
-import '../../application/posts_controllers.dart';
-import '../../domain/post_entity.dart';
-import '../posts_context_ext.dart';
-import '../post_status_ui.dart';
-import '../widgets/post_detail_sheet.dart';
+import '../../../../core/router/zave_routes.dart';
+import '../../../../core/ui/zave/zave_kit.dart';
+import '../../application/post_library_controllers.dart';
+import '../../domain/library_post.dart';
+import '../widgets/post_card.dart';
+import '../widgets/post_confirm_sheet.dart';
+import '../widgets/post_states.dart';
 
-// ── Page ──────────────────────────────────────────────────────────────────────
-
-/// The Posts tab (shell branch 1). Watches the reactive Drift-backed posts
-/// stream and post counts; filters are pure client-side state (no pagination,
-/// per `feature-orders-products.md`). Visuals ported verbatim from the
-/// layer-first `presentation/features/posts/pages/posts_page.dart`.
+/// **Posts** — the post library. The web's `/posts`.
+///
+/// ## What this screen is
+///
+/// The server's list of everything the user has written, whether they wrote it
+/// or the auto-post chain did. It is NOT the offline Drift mirror the rest of
+/// this feature uses: a library that only showed locally-created posts would be
+/// empty on a fresh install for a user whose posts are all generated
+/// server-side, which is most of them.
+///
+/// ## What is ported, and what is restated
+///
+/// The web ships two layouts for a row (stacked below `sm`, three columns
+/// above). A phone gets the stacked one, which is the web's own mobile
+/// rendering rather than a mobile-specific invention.
+///
+/// The tab strip, the five tab labels, the server-side status filter, the
+/// client-side search over loaded pages, and the rule that "Load more" hides
+/// while a search is active are all the web's behaviour exactly. What changes
+/// is the language: the web's `.dark-card` list with `divide-y` hairlines
+/// becomes separate Zave cards, and a selected tab INVERTS to solid white with
+/// ink letters rather than taking a `bg-white/10` tint.
+///
+/// ## The one white button
+///
+/// "New Post" is a ghost, not the white primary, even though the web gives it
+/// the accent pill. On a phone the compose action already has a dedicated
+/// button in the bottom bar, and the primary action of THIS screen is approving
+/// the post that is waiting — which is the white button on the card that needs
+/// it.
 class PostsPage extends ConsumerStatefulWidget {
   const PostsPage({super.key});
 
@@ -27,408 +49,225 @@ class PostsPage extends ConsumerStatefulWidget {
 }
 
 class _PostsPageState extends ConsumerState<PostsPage> {
-  // 0=All, 1=Published, 2=Scheduled, 3=Draft, 4=Failed
-  int _selectedFilter = 0;
+  final TextEditingController _search = TextEditingController();
 
-  static const _filterStatuses = <PostStatus?>[
-    null, // All
-    PostStatus.published,
-    PostStatus.scheduled,
-    PostStatus.draft,
-    PostStatus.failed,
-  ];
-
-  static const _filterLabels = <String>[
-    'All',
-    'Published',
-    'Scheduled',
-    'Drafts',
-    'Failed',
-  ];
-
-  List<PostEntity> _filtered(List<PostEntity> all) {
-    final status = _filterStatuses[_selectedFilter];
-    if (status == null) return all;
-    return all.where((p) => p.status == status).toList();
-  }
+  /// Kept in widget state rather than in a provider: it is a text box, it never
+  /// leaves this screen, and it must not survive a tab change.
+  String _query = '';
 
   @override
-  Widget build(BuildContext context) {
-    final allPostsAsync = ref.watch(allPostsProvider);
-    final countsAsync = ref.watch(postCountsProvider);
-
-    return Scaffold(
-      backgroundColor: Theme.of(context).colorScheme.surface,
-      body: allPostsAsync.when(
-        loading: () => _buildShell(context, countsAsync, [], loading: true),
-        error: (err, _) =>
-            _buildShell(context, countsAsync, [], error: err.toString()),
-        data: (posts) => _buildShell(context, countsAsync, posts),
-      ),
-    );
+  void dispose() {
+    _search.dispose();
+    super.dispose();
   }
 
-  Widget _buildShell(
-    BuildContext context,
-    AsyncValue<Map<PostStatus, int>> countsAsync,
-    List<PostEntity> allPosts, {
-    bool loading = false,
-    String? error,
-  }) {
-    final counts = countsAsync.maybeWhen(
-      data: (c) => c,
-      orElse: () => <PostStatus, int>{},
-    );
-    final total = counts.values.fold(0, (a, b) => a + b);
-    final visible = _filtered(allPosts);
+  bool get _isSearching => _query.trim().isNotEmpty;
 
-    return CustomScrollView(
-      slivers: [
-        // ── App bar ──────────────────────────────────────────────────────────
-        SliverAppBar(
-          pinned: true,
-          elevation: 0,
-          scrolledUnderElevation: 0,
-          titleSpacing: 16,
-          title: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(
-                'Posts',
-                style: GoogleFonts.sora(
-                  fontSize: 20.sp,
-                  fontWeight: FontWeight.w700,
-                  color: context.colors.onSurface,
-                  height: 1.1,
-                ),
-              ),
-              Text(
-                loading ? 'Loading…' : '$total total',
-                style: TextStyle(
-                  fontSize: 12.sp,
-                  color: context.colors.onSurface.withValues(alpha: 0.5),
-                  fontWeight: FontWeight.w400,
-                ),
-              ),
-            ],
-          ),
-          actions: [
-            IconButton(
-              icon: Icon(Icons.search_rounded, size: 22.r),
-              color: context.colors.onSurface.withValues(alpha: 0.7),
-              onPressed: () => context.showSnackBar('Search coming soon'),
-            ),
-            IconButton(
-              icon: Icon(Icons.tune_rounded, size: 22.r),
-              color: context.colors.onSurface.withValues(alpha: 0.7),
-              onPressed: () => context.showSnackBar('Filters coming soon'),
-            ),
-            SizedBox(width: 4.w),
-          ],
-          bottom: PreferredSize(
-            preferredSize: Size.fromHeight(52.h),
-            child: _FilterChipsRow(
-              labels: List.generate(
-                _filterLabels.length,
-                (i) {
-                  final label = _filterLabels[i];
-                  final status = _filterStatuses[i];
-                  final count = status == null ? total : (counts[status] ?? 0);
-                  return '$label ($count)';
-                },
-              ),
-              selectedIndex: _selectedFilter,
-              onSelected: (i) => setState(() => _selectedFilter = i),
-            ),
-          ),
+  /// Client-side, over the pages already loaded — exactly what the web does.
+  /// Matching `title || content`, lower-cased, substring.
+  List<LibraryPost> _filter(List<LibraryPost> posts) {
+    if (!_isSearching) return posts;
+    final String needle = _query.toLowerCase().trim();
+    return posts
+        .where(
+          (LibraryPost p) =>
+              '${p.title ?? ''} ${p.content}'.toLowerCase().contains(needle),
+        )
+        .toList(growable: false);
+  }
+
+  void _notify(String message) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context)
+      ..hideCurrentSnackBar()
+      ..showSnackBar(
+        SnackBar(
+          // Zave has no toast component; the platform's is used with Zave's own
+          // ground colour and type so it at least belongs to the same app.
+          backgroundColor: ZaveColors.deep,
+          behavior: SnackBarBehavior.floating,
+          content: Text(message, style: ZaveType.body),
         ),
-
-        // ── Body ─────────────────────────────────────────────────────────────
-        if (loading)
-          SliverPadding(
-            padding: EdgeInsets.fromLTRB(16.w, 16.h, 16.w, 24.h),
-            sliver: const SliverToBoxAdapter(
-              child: Center(child: CircularProgressIndicator()),
-            ),
-          )
-        else if (error != null)
-          SliverToBoxAdapter(
-            child: Padding(
-              padding: EdgeInsets.all(32.r),
-              child: Text(
-                'Failed to load posts\n$error',
-                textAlign: TextAlign.center,
-                style:
-                    TextStyle(fontSize: 13.sp, color: PlexaversePalette.error),
-              ),
-            ),
-          )
-        else if (visible.isEmpty)
-          SliverToBoxAdapter(
-            child: Padding(
-              padding: EdgeInsets.all(32.r),
-              child: GlassCard(
-                padding: EdgeInsets.all(24.r),
-                child: Column(
-                  children: [
-                    Text('✍️', style: TextStyle(fontSize: 32.sp)),
-                    SizedBox(height: 8.h),
-                    Text(
-                      'No ${_filterLabels[_selectedFilter].toLowerCase()} posts',
-                      style: GoogleFonts.sora(
-                          fontSize: 15.sp, fontWeight: FontWeight.w700),
-                    ),
-                    SizedBox(height: 4.h),
-                    Text(
-                      'Create your first post and earn +50 XP',
-                      style: TextStyle(
-                          fontSize: 13.sp,
-                          color: context.colors.onSurface
-                              .withValues(alpha: 0.55)),
-                      textAlign: TextAlign.center,
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          )
-        else
-          SliverPadding(
-            padding: EdgeInsets.fromLTRB(16.w, 16.h, 16.w, 24.h),
-            sliver: SliverGrid(
-              delegate: SliverChildBuilderDelegate(
-                (context, index) => _PostCard(post: visible[index]),
-                childCount: visible.length,
-              ),
-              gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                crossAxisCount: 2,
-                crossAxisSpacing: 10.w,
-                mainAxisSpacing: 10.h,
-                childAspectRatio: 0.78,
-              ),
-            ),
-          ),
-      ],
-    );
+      );
   }
-}
 
-// ── Filter chips row ──────────────────────────────────────────────────────────
+  Future<void> _approve(LibraryPost post) async {
+    try {
+      await ref.read(postLibraryProvider.notifier).approve(post.id);
+      _notify('Post approved.');
+    } on Object {
+      _notify('Could not approve that post.');
+    }
+  }
 
-class _FilterChipsRow extends StatelessWidget {
-  final List<String> labels;
-  final int selectedIndex;
-  final ValueChanged<int> onSelected;
+  Future<void> _delete(LibraryPost post) async {
+    final bool confirmed = await confirmDestructive(
+      context,
+      title: 'Delete this post?',
+      message:
+          'It is removed from your library and, if it was scheduled, it will '
+          'not go out.',
+      confirmLabel: 'Delete post',
+    );
+    if (!confirmed) return;
+    try {
+      await ref.read(postLibraryProvider.notifier).delete(post.id);
+      _notify('Post deleted.');
+    } on Object {
+      _notify('Could not delete that post.');
+    }
+  }
 
-  const _FilterChipsRow({
-    required this.labels,
-    required this.selectedIndex,
-    required this.onSelected,
-  });
+  Future<void> _copyLink(LibraryPost post) async {
+    final String? url = post.linkedinUrl;
+    if (url == null) return;
+    await Clipboard.setData(ClipboardData(text: url));
+    _notify('LinkedIn link copied.');
+  }
 
   @override
   Widget build(BuildContext context) {
-    final isDark = context.isDark;
-    final borderColor =
-        isDark ? const Color(0x1FFFFFFF) : const Color(0x1A000000);
+    final AsyncValue<PostLibraryState> library = ref.watch(postLibraryProvider);
+    final PostLibraryFilter filter = ref.watch(postFilterProvider);
 
-    return Container(
-      height: 52.h,
-      decoration: BoxDecoration(
-        border: Border(top: BorderSide(color: borderColor, width: 0.5)),
-      ),
-      child: ListView.separated(
-        scrollDirection: Axis.horizontal,
-        padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 10.h),
-        itemCount: labels.length,
-        separatorBuilder: (_, _) => SizedBox(width: 8.w),
-        itemBuilder: (context, index) {
-          final isSelected = selectedIndex == index;
-          return GestureDetector(
-            onTap: () => onSelected(index),
-            child: AnimatedContainer(
-              duration: const Duration(milliseconds: 180),
-              padding: EdgeInsets.symmetric(horizontal: 14.w, vertical: 6.h),
-              decoration: BoxDecoration(
-                color: isSelected
-                    ? PlexaversePalette.primary
-                    : (isDark
-                        ? const Color(0x14FFFFFF)
-                        : const Color(0x0D000000)),
-                borderRadius: BorderRadius.circular(20.r),
-                border: Border.all(
-                  color: isSelected ? PlexaversePalette.primary : borderColor,
-                  width: 1,
-                ),
-              ),
-              child: Text(
-                labels[index],
-                style: TextStyle(
-                  fontSize: 12.sp,
-                  fontWeight: isSelected ? FontWeight.w600 : FontWeight.w400,
-                  color: isSelected
-                      ? Colors.white
-                      : context.colors.onSurface.withValues(alpha: 0.7),
-                ),
-              ),
-            ),
-          );
+    return ZaveScaffold(
+      title: 'Posts',
+      body: RefreshIndicator(
+        color: ZaveColors.white,
+        backgroundColor: ZaveColors.deep,
+        onRefresh: () async {
+          ref.invalidate(postLibraryProvider);
+          await ref.read(postLibraryProvider.future);
         },
+        child: ZaveScrollView(
+          children: <Widget>[
+            Text('Manage all your LinkedIn posts', style: ZaveType.lead),
+            SizedBox(height: ZaveSpace.lg),
+            ZaveButton(
+              label: 'New Post',
+              icon: const Icon(Icons.add),
+              expand: true,
+              onPressed: () => context.push(ZaveRoutes.create),
+            ),
+
+            SizedBox(height: ZaveSpace.xl),
+            _FilterStrip(
+              selected: filter,
+              onSelect: (PostLibraryFilter next) =>
+                  ref.read(postFilterProvider.notifier).select(next),
+            ),
+
+            SizedBox(height: ZaveSpace.lg),
+            ZaveField(
+              controller: _search,
+              pill: true,
+              hint: 'Search posts...',
+              prefix: const Icon(Icons.search),
+              onChanged: (String value) => setState(() => _query = value),
+            ),
+
+            SizedBox(height: ZaveSpace.xl),
+            ...library.when(
+              loading: () => <Widget>[const PostListSkeleton()],
+              error: (Object error, StackTrace _) => <Widget>[
+                PostsError(
+                  title: 'Your posts did not load.',
+                  detail: 'Check your connection and try again.',
+                  onRetry: () => ref.invalidate(postLibraryProvider),
+                ),
+              ],
+              data: (PostLibraryState state) => _rows(state, filter),
+            ),
+          ],
+        ),
       ),
     );
   }
-}
 
-// ── Post card ─────────────────────────────────────────────────────────────────
+  List<Widget> _rows(PostLibraryState state, PostLibraryFilter filter) {
+    final List<LibraryPost> visible = _filter(state.posts);
 
-class _PostCard extends StatelessWidget {
-  final PostEntity post;
-  const _PostCard({required this.post});
+    if (visible.isEmpty) {
+      // The web's "Create your first post" link. Withheld while a search or a
+      // tab is what emptied the list — the posts exist, they are just not
+      // these ones, and offering to write another answers a question the user
+      // did not ask.
+      final bool trulyEmpty = !_isSearching && filter == PostLibraryFilter.all;
 
-  static List<Color> _gradientForStatus(PostStatus status) => switch (status) {
-        PostStatus.published => [
-            const Color(0xFF6C63FF),
-            const Color(0xFF4B44CC)
-          ],
-        PostStatus.scheduled => [
-            const Color(0xFFFFC107),
-            const Color(0xFFFF8F00)
-          ],
-        PostStatus.draft => [const Color(0xFF757575), const Color(0xFF424242)],
-        PostStatus.failed => [const Color(0xFFE53935), const Color(0xFFB71C1C)],
-      };
-
-  @override
-  Widget build(BuildContext context) {
-    return Stack(
-      children: [
-        GlassCard(
-          radius: 16,
-          padding: EdgeInsets.all(12.r),
-          onTap: () => showPostDetail(context, post),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Type icon
-              Container(
-                width: 40.r,
-                height: 40.r,
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    colors: _gradientForStatus(post.status),
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                  ),
-                  borderRadius: BorderRadius.circular(10.r),
-                ),
-                child: Center(
-                  child: Text(
-                    post.initials,
-                    style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 14.sp,
-                        fontWeight: FontWeight.w700),
-                  ),
-                ),
-              ),
-              SizedBox(height: 8.h),
-              Expanded(
-                child: Text(
-                  post.preview,
-                  style: TextStyle(
-                      fontSize: 12.sp,
-                      color: context.colors.onSurface.withValues(alpha: 0.85),
-                      height: 1.45),
-                  maxLines: 5,
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ),
-              SizedBox(height: 8.h),
-              _cardBottom(context, post),
-            ],
-          ),
+      return <Widget>[
+        PostsEmpty(
+          message: _isSearching
+              ? 'No post matches "${_query.trim()}".'
+              : 'No posts found',
+          action: trulyEmpty
+              ? ZaveButton.primary(
+                  label: 'Create your first post',
+                  expand: true,
+                  onPressed: () => context.push(ZaveRoutes.create),
+                )
+              : null,
         ),
-        // Status badge overlay
-        Positioned(
-          top: 10.h,
-          right: 10.w,
-          child: StatusBadge(
-            label: post.status.label,
-            variant: postStatusVariant(post.status),
+      ];
+    }
+
+    return <Widget>[
+      for (final LibraryPost post in visible) ...<Widget>[
+        PostCard(
+          post: post,
+          busy: state.isBusy(post.id),
+          onOpen: () => context.push(ZaveRoutes.post(post.id)),
+          onApprove: post.canApprove ? () => _approve(post) : null,
+          onDelete: () => _delete(post),
+          onCopyLink: () => _copyLink(post),
+        ),
+        SizedBox(height: ZaveSpace.md),
+      ],
+
+      // Hidden while searching, because the search only covers the pages
+      // already in hand — the web does the same, for the same reason.
+      if (state.hasMore && !_isSearching) ...<Widget>[
+        SizedBox(height: ZaveSpace.sm),
+        Center(
+          child: ZaveButton(
+            label: 'Load more',
+            icon: const Icon(Icons.keyboard_arrow_down),
+            busy: state.loadingMore,
+            onPressed: () => ref.read(postLibraryProvider.notifier).loadMore(),
           ),
         ),
       ],
-    );
+    ];
   }
+}
 
-  Widget _cardBottom(BuildContext context, PostEntity post) {
-    final muted = context.colors.onSurface.withValues(alpha: 0.45);
-    return switch (post.status) {
-      PostStatus.published => Row(
-          children: [
-            Icon(Icons.visibility_outlined, size: 12.r, color: muted),
-            SizedBox(width: 3.w),
-            Text(
-              post.metrics?.impressionsFormatted ?? '—',
-              style: TextStyle(
-                  fontSize: 11.sp, color: muted, fontWeight: FontWeight.w500),
+/// The five status tabs.
+///
+/// Chips, and a selected chip INVERTS to solid white with ink letters — that
+/// inversion is the whole selection language of Zave and the thing most likely
+/// to be "improved" into a tint or an underline by accident.
+class _FilterStrip extends StatelessWidget {
+  const _FilterStrip({required this.selected, required this.onSelect});
+
+  final PostLibraryFilter selected;
+  final ValueChanged<PostLibraryFilter> onSelect;
+
+  @override
+  Widget build(BuildContext context) {
+    return SingleChildScrollView(
+      scrollDirection: Axis.horizontal,
+      child: Row(
+        children: <Widget>[
+          for (final PostLibraryFilter filter
+              in PostLibraryFilter.values) ...<Widget>[
+            ZaveChip(
+              label: filter.label,
+              selected: filter == selected,
+              onTap: () => onSelect(filter),
             ),
-            SizedBox(width: 10.w),
-            Icon(Icons.thumb_up_outlined, size: 12.r, color: muted),
-            SizedBox(width: 3.w),
-            Text(
-              post.metrics?.engagementsFormatted ?? '—',
-              style: TextStyle(
-                  fontSize: 11.sp, color: muted, fontWeight: FontWeight.w500),
-            ),
+            SizedBox(width: ZaveSpace.sm),
           ],
-        ),
-      PostStatus.scheduled => Row(
-          children: [
-            Icon(Icons.calendar_today_outlined,
-                size: 11.r, color: PlexaversePalette.warning),
-            SizedBox(width: 4.w),
-            Flexible(
-              child: Text(
-                post.scheduledAt != null
-                    ? DateFormat('EEE h:mma').format(post.scheduledAt!)
-                    : 'Scheduled',
-                style: TextStyle(
-                    fontSize: 11.sp,
-                    color: PlexaversePalette.warning,
-                    fontWeight: FontWeight.w600),
-                overflow: TextOverflow.ellipsis,
-              ),
-            ),
-          ],
-        ),
-      PostStatus.draft => Row(
-          children: [
-            Icon(Icons.edit_outlined, size: 11.r, color: muted),
-            SizedBox(width: 4.w),
-            Text('Draft',
-                style: TextStyle(
-                    fontSize: 11.sp,
-                    color: muted,
-                    fontWeight: FontWeight.w500)),
-          ],
-        ),
-      PostStatus.failed => TextButton(
-          onPressed: () => showPostDetail(context, post),
-          style: TextButton.styleFrom(
-            padding: EdgeInsets.zero,
-            minimumSize: Size.zero,
-            tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-          ),
-          child: Text(
-            'Retry →',
-            style: TextStyle(
-                fontSize: 11.sp,
-                color: PlexaversePalette.error,
-                fontWeight: FontWeight.w700),
-          ),
-        ),
-    };
+        ],
+      ),
+    );
   }
 }

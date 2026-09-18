@@ -1,36 +1,33 @@
-import 'package:flutter/material.dart';
-import 'package:plexaverse/core/theme/plexaverse_colors.dart';
-import 'package:plexaverse/core/theme/app_text_theme.dart';
+import 'package:flutter/widgets.dart';
 
+import '../../../../core/ui/zave/zave_kit.dart';
+
+/// The "or continue with email" rule between the social buttons and the form.
+///
+/// Zave build: two [ZaveColors.rule] hairlines with a [ZaveType.kicker] label
+/// between them. The kicker is uppercased at the call site because Flutter has
+/// no `text-transform` (see [ZaveType.kicker]).
+///
+/// The pre-alignment version took an `isDark` flag and picked between a white
+/// and a black hairline. Zave is dark-only by design (see `ZaveTheme`), so the
+/// flag is gone rather than defaulted.
 class AuthDivider extends StatelessWidget {
-  final String label;
-  final bool isDark;
+  const AuthDivider({this.label = 'or continue with email', super.key});
 
-  const AuthDivider({
-    super.key,
-    this.label = 'or continue with email',
-    this.isDark = true,
-  });
+  final String label;
 
   @override
   Widget build(BuildContext context) {
-    final lineColor = isDark
-        ? Colors.white.withValues(alpha: 0.12)
-        : const Color(0x1F000000); // black/12 %
+    final Widget line = Container(height: 1, color: ZaveColors.rule);
 
     return Row(
-      children: [
-        Expanded(child: Container(height: 1, color: lineColor)),
+      children: <Widget>[
+        Expanded(child: line),
         Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 12),
-          child: Text(
-            label,
-            style: AppTextTheme.labelSmall.copyWith(
-              color: isDark ? PlexaversePalette.grey600 : PlexaversePalette.grey400,
-            ),
-          ),
+          padding: EdgeInsets.symmetric(horizontal: ZaveSpace.md),
+          child: Text(label.toUpperCase(), style: ZaveType.kicker),
         ),
-        Expanded(child: Container(height: 1, color: lineColor)),
+        Expanded(child: line),
       ],
     );
   }
