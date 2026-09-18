@@ -16,18 +16,36 @@ import 'zave_routes.dart';
 import '../../features/auth/application/app_lock_controller.dart';
 import '../../features/auth/presentation/pages/auth_page.dart';
 import '../../features/auth/presentation/pages/unlock_page.dart';
+import '../../features/aitools/presentation/pages/festive_page.dart';
+import '../../features/aitools/presentation/pages/headshots_page.dart';
+import '../../features/aitools/presentation/pages/reimagine_page.dart';
 import '../../features/calendar/presentation/pages/calendar_page.dart';
 import '../../features/calendar/presentation/pages/schedules_page.dart';
+import '../../features/company/presentation/pages/company_advocacy_page.dart';
+import '../../features/company/presentation/pages/company_analytics_page.dart';
+import '../../features/company/presentation/pages/company_banner_page.dart';
+import '../../features/company/presentation/pages/company_inbox_page.dart';
 import '../../features/compose/presentation/pages/compose_page.dart';
+import '../../features/engagement/presentation/pages/comments_page.dart';
+import '../../features/engagement/presentation/pages/connections_page.dart';
 import '../../features/home/presentation/pages/home_page.dart';
 import '../../features/onboarding/application/onboarding_controller.dart';
 import '../../features/onboarding/presentation/pages/onboarding_chat_page.dart';
+import '../../features/missions/presentation/pages/about_odyssey_page.dart';
+import '../../features/missions/presentation/pages/banner_blueprint_page.dart';
+import '../../features/missions/presentation/pages/headline_hook_page.dart';
+import '../../features/missions/presentation/pages/season_complete_page.dart';
 import '../../features/persona/presentation/pages/persona_page.dart';
 import '../../features/planner/presentation/pages/planner_page.dart';
 import '../../features/posts/presentation/pages/post_detail_page.dart';
 import '../../features/posts/presentation/pages/posts_page.dart';
 import '../../features/settings/presentation/pages/accounts_page.dart';
+import '../../features/pricing/presentation/pages/pricing_page.dart';
 import '../../features/settings/presentation/pages/settings_page.dart';
+import '../../features/studio/presentation/pages/studio_page.dart';
+import '../../features/studio/presentation/pages/template_creator_page.dart';
+import '../../features/studio/presentation/pages/title_creator_page.dart';
+import '../../features/topics/presentation/pages/topics_page.dart';
 
 part 'app_router.g.dart';
 
@@ -174,6 +192,61 @@ GoRouter appRouter(Ref ref) {
       _fullScreen(ZaveRoutes.persona, const PersonaPage()),
       _fullScreen(ZaveRoutes.settings, const SettingsPage()),
       _fullScreen(ZaveRoutes.accounts, const AccountsPage()),
+
+      // ── Reached from the roadmap's step rows, not from the nav ──────────
+      // /comments carries query params: the golden-hour deep link passes the
+      // topic straight to the generator, so it cannot use the plain helper.
+      GoRoute(
+        path: ZaveRoutes.comments,
+        parentNavigatorKey: _rootNavigatorKey,
+        pageBuilder: (context, state) => CustomTransitionPage<void>(
+          key: state.pageKey,
+          child: CommentsPage(
+            goldenHour: state.uri.queryParameters['context'] == 'golden_hour',
+            topic: state.uri.queryParameters['topic'],
+          ),
+          transitionsBuilder: _slideTransition,
+        ),
+      ),
+      _fullScreen(ZaveRoutes.connections, const ConnectionsPage()),
+      _fullScreen(ZaveRoutes.topics, const TopicsPage()),
+      _fullScreen(ZaveRoutes.pricing, const PricingPage()),
+      _fullScreen(ZaveRoutes.seasonComplete, const SeasonCompletePage()),
+      _fullScreen(ZaveRoutes.roadmapAboutOdyssey, const AboutOdysseyPage()),
+      _fullScreen(ZaveRoutes.roadmapHeadlineHook, const HeadlineHookPage()),
+      _fullScreen(ZaveRoutes.roadmapBannerBlueprint, const BannerBlueprintPage()),
+
+      // ── Company mode. Analytics and Inbox are nav-visible to company
+      // brands; Advocacy and Banner are admin-only in v1. The nav gates them
+      // (core/access/feature_access.dart) — the routes themselves are open, so
+      // a deep link from a roadmap task still lands.
+      _fullScreen(ZaveRoutes.companyAnalytics, const CompanyAnalyticsPage()),
+      _fullScreen(ZaveRoutes.companyAutoComment, const CompanyInboxPage()),
+      _fullScreen(ZaveRoutes.companyAdvocacy, const CompanyAdvocacyPage()),
+      _fullScreen(ZaveRoutes.companyBanner, const CompanyBannerPage()),
+
+      // ── Admin-only creation tools (v1). Same story as above.
+      _fullScreen(ZaveRoutes.reimagine, const ReimaginePage()),
+      _fullScreen(ZaveRoutes.festive, const FestivePage()),
+      _fullScreen(ZaveRoutes.headshots, const HeadshotsPage()),
+      _fullScreen(ZaveRoutes.templateCreator, const TemplateCreatorPage()),
+      _fullScreen(ZaveRoutes.titleCreator, const TitleCreatorPage()),
+
+      // Studio opens a specific design via ?project=, so it reads the query.
+      //
+      // /studio/fabric is deliberately NOT routed: on the web it is a dead
+      // standalone Fabric.js prototype that nothing links to and that persists
+      // nothing. Porting it would mean shipping a canvas editor the product
+      // decision explicitly excluded.
+      GoRoute(
+        path: ZaveRoutes.studio,
+        parentNavigatorKey: _rootNavigatorKey,
+        pageBuilder: (context, state) => CustomTransitionPage<void>(
+          key: state.pageKey,
+          child: StudioPage(designId: state.uri.queryParameters['project']),
+          transitionsBuilder: _slideTransition,
+        ),
+      ),
 
       // A single post. Mirrors the web's /posts/[id].
       GoRoute(

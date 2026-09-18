@@ -123,7 +123,7 @@ final class NotificationIngestorProvider
 }
 
 String _$notificationIngestorHash() =>
-    r'8e3bafdc3f6fdbfaf87712aebf8b2d0bcbc8392b';
+    r'7d50e41c9df80c91a11c5d4393444286c883b172';
 
 /// Bridges a live [AppNotification] (from FCM foreground, or the dev
 /// "simulate" action) into both product surfaces:

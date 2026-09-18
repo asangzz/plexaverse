@@ -52,7 +52,7 @@ final class PreferencesControllerProvider
 }
 
 String _$preferencesControllerHash() =>
-    r'e82c99a633ffd6f40ce0f29255c7b413450d43fc';
+    r'3db4b71617c6f58b26d74f9a56f0dccb56e87127';
 
 /// The preferences row — the keystone the whole screen branches on.
 ///
@@ -290,7 +290,7 @@ final class PersonalLinkedinAccountProvider
 }
 
 String _$personalLinkedinAccountHash() =>
-    r'5ee19f08ee25f0ff6f1b4f13943ed97202ff20fc';
+    r'e8641530f236952e627281da692a8b46329373b9';
 
 /// The company LinkedIn account, or null.
 
@@ -342,7 +342,7 @@ final class CompanyLinkedinAccountProvider
 }
 
 String _$companyLinkedinAccountHash() =>
-    r'33988de6d96c42395d05e249850a7ce2ef46c3e4';
+    r'63614ee85ae271f67ce1830e14fb250ad7e24de4';
 
 /// Slack connection status + disconnect.
 
