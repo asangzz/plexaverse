@@ -31,11 +31,11 @@ class ZaveSurface {
   static BoxDecoration get cardLg =>
       _glass(ZaveGlass.rest, ZaveGlass.restBorder, ZaveRadius.cardLg);
 
-  /// `.zv-card` — the compact in-app card. r20.
+  /// `.zv-row` — the compact in-app row. r20.
   static BoxDecoration get cardCompact =>
       _glass(ZaveGlass.rest, ZaveGlass.restBorder, ZaveRadius.cardCompact);
 
-  /// `.listRow` at rest — r22.
+  /// `.zv-panel` / `.listRow` at rest — r22. The canonical in-app panel.
   static BoxDecoration get listRow =>
       _glass(ZaveGlass.rest, ZaveGlass.restBorder, ZaveRadius.cardMd);
 

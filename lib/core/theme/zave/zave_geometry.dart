@@ -19,10 +19,11 @@ class ZaveRadius {
   /// `.card` — 24. The default card.
   static double get card => 24.r;
 
-  /// `.listRow` / `.cardMd` — 22. List rows, day rows.
+  /// `.zv-panel` (globals) / `.listRow` / `.cardMd` — 22. The canonical in-app
+  /// panel, and the list/day row.
   static double get cardMd => 22.r;
 
-  /// `.zv-card` (globals) — 20. The compact card used in-app.
+  /// `.zv-row` (globals) — 20. The compact in-app row.
   static double get cardCompact => 20.r;
 
   /// `.cardSm` / `.field` / `.row` — 18. Tasks, cells, fields, rows.
@@ -71,7 +72,8 @@ class ZaveSpace {
   /// `.section` — 72px of vertical breathing room between major blocks.
   static double get section => 72.h;
 
-  /// `.zv-card` padding — 20 vertical / 24 horizontal, 18 gap.
+  /// `.zv-row` padding — 20 vertical / 24 horizontal, 18 gap. The default
+  /// padding for an in-app panel too; `.zv-panel` sets no padding of its own.
   static EdgeInsets get cardPad =>
       EdgeInsets.symmetric(vertical: 20.h, horizontal: 24.w);
   static double get cardGap => 18.w;
