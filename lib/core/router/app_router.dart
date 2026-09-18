@@ -6,7 +6,7 @@ import '../network/interceptors/auth_signal.dart';
 import '../security/secure_screen.dart';
 import '../tenant/tenant_controller.dart';
 import '../ui/pages/splash_page.dart';
-import '../ui/pages/styleguide_page.dart';
+import '../ui/pages/zave_styleguide_page.dart';
 import '../ui/widgets/app_scaffold.dart';
 import 'auth_gate.dart';
 import 'redirect.dart';
@@ -173,7 +173,7 @@ GoRouter appRouter(Ref ref) {
         path: RoutePaths.styleguide,
         pageBuilder: (context, state) => CustomTransitionPage<void>(
           key: state.pageKey,
-          child: const StyleguidePage(),
+          child: const ZaveStyleguidePage(),
           transitionsBuilder: _slideTransition,
         ),
       ),
