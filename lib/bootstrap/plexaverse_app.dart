@@ -10,7 +10,7 @@ import '../core/security/privacy_mask_overlay.dart';
 import '../core/sync/sync_engine.dart';
 import '../core/tenant/tenant_config.dart';
 import '../core/tenant/tenant_controller.dart';
-import '../core/theme/app_theme.dart';
+import '../core/theme/zave/zave_theme.dart';
 import '../core/ui/widgets/in_app_notification_overlay.dart';
 import '../core/ui/widgets/offline_overlay.dart';
 import '../l10n/gen/app_localizations.dart';
@@ -141,10 +141,16 @@ class _PlexaverseAppState extends ConsumerState<PlexaverseApp>
       // lands, watch its theme-mode + locale providers here and drive
       // `themeMode` / `locale` from them; until then dark is forced and the
       // system locale (within supportedLocales) is used.
-      theme: AppTheme.light,
-      darkTheme: AppTheme.dark,
-      highContrastTheme: AppTheme.highContrastLight,
-      highContrastDarkTheme: AppTheme.highContrastDark,
+      // Zave is dark-only, because the web app is. There is no light surface
+      // to align to, so every slot gets the same theme and themeMode is
+      // pinned — an OS light/contrast setting must not invent an appearance
+      // the web does not have. (The pre-alignment app shipped five modes,
+      // inherited from the skin it was cloned from; dropping them is part of
+      // the alignment.)
+      theme: ZaveTheme.dark,
+      darkTheme: ZaveTheme.dark,
+      highContrastTheme: ZaveTheme.dark,
+      highContrastDarkTheme: ZaveTheme.dark,
       themeMode: ThemeMode.dark,
       localizationsDelegates: AppL10n.localizationsDelegates,
       supportedLocales: AppL10n.supportedLocales,

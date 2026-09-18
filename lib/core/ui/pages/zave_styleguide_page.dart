@@ -35,13 +35,7 @@ class _ZaveStyleguidePageState extends State<ZaveStyleguidePage> {
         onPressed: () => Navigator.of(context).maybePop(),
         tooltip: 'Back',
       ),
-      body: ListView(
-        padding: EdgeInsets.fromLTRB(
-          ZaveSpace.gutter,
-          ZaveSpace.xl,
-          ZaveSpace.gutter,
-          ZaveSpace.section,
-        ),
+      body: ZaveScrollView(
         children: <Widget>[
           Text('Design\nsystem', style: ZaveType.hero),
           SizedBox(height: ZaveSpace.lg),

@@ -122,8 +122,8 @@ class ZaveButton extends StatelessWidget {
 
     Widget content = busy
         ? SizedBox(
-            height: style.fontSize,
-            width: style.fontSize,
+            height: (style.fontSize ?? 16) + 4,
+            width: (style.fontSize ?? 16) + 4,
             child: CircularProgressIndicator(strokeWidth: 2, color: fg),
           )
         : Text(label, style: style, textAlign: TextAlign.center);
@@ -159,8 +159,10 @@ class ZaveButton extends StatelessWidget {
       child: ZavePress(
         enabled: _enabled,
         child: Opacity(
-          // `.btnPrimary:disabled { opacity: 0.5 }`
-          opacity: _enabled ? 1 : 0.5,
+          // `.btnPrimary:disabled { opacity: 0.5 }` — keyed to onPressed, NOT
+          // to _enabled. A busy button is not taking taps, but it is working,
+          // and dimming it to 50% made its spinner nearly invisible.
+          opacity: onPressed == null ? 0.5 : 1,
           child: Material(
             color: Colors.transparent,
             child: InkWell(

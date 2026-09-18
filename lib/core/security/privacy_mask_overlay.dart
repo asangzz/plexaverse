@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../l10n/gen/app_localizations.dart';
+import '../theme/zave/zave_colors.dart';
 import '../responsive/screen_util.dart';
 import '../theme/app_spacing.dart';
 
@@ -64,14 +65,17 @@ class _PrivacyMask extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
     final l = AppL10n.of(context);
     return Semantics(
       label: l.appName,
       // Announce the cover the moment it appears (app backgrounded).
       liveRegion: true,
+      // The app ground, NOT colorScheme.primary. Under Zave, `primary` is
+      // solid white (Zave reserves white for the one primary action on a
+      // screen), so painting the cover with it turned the whole mask into a
+      // white sheet. A privacy cover wants the brand's dark surface.
       child: ColoredBox(
-        color: scheme.primary,
+        color: ZaveColors.midnight,
         child: Center(
           child: Padding(
             padding: EdgeInsets.all(AppSpacing.xl.w),
@@ -81,13 +85,13 @@ class _PrivacyMask extends StatelessWidget {
                 Icon(
                   Icons.lock_outline,
                   size: 40.r,
-                  color: scheme.onPrimary,
+                  color: ZaveColors.white,
                 ),
                 SizedBox(height: AppSpacing.md.h),
                 Text(
                   l.appName,
                   style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                        color: scheme.onPrimary,
+                        color: ZaveColors.white,
                         fontWeight: FontWeight.w700,
                       ),
                 ),
@@ -99,7 +103,7 @@ class _PrivacyMask extends StatelessWidget {
                   'Hidden while the app is in the background',
                   textAlign: TextAlign.center,
                   style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: scheme.onPrimary.withValues(alpha: 0.85),
+                        color: ZaveColors.ink85,
                       ),
                 ),
               ],
