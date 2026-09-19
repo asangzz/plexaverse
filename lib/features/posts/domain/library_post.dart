@@ -12,7 +12,7 @@ part 'library_post.g.dart';
 /// [draft], which is exactly what the web does (its `statusConfig[...]` lookup
 /// misses and it renders the grey/neutral treatment).
 ///
-/// This is NOT the same enum as `PostStatus` in `post_entity.dart`. That one
+/// This is NOT the same enum as the Drift mirror's old `PostStatus`. That one
 /// describes the OFFLINE Drift mirror, which only ever holds four states. This
 /// one is the server's vocabulary, and the two must not be conflated — the
 /// server's `pending_approval` and `approved` have no Drift equivalent and are
@@ -100,7 +100,7 @@ abstract class PostAuthor with _$PostAuthor {
 /// `lib/services/post.service.ts`.
 ///
 /// **[id] is the server id (a cuid).** It is never the local Drift
-/// autoincrement that [PostEntity] carries. Every `/posts/{id}` route keys on
+/// autoincrement the deleted Drift mirror carried. Every `/posts/{id}` route keys on
 /// this value, and interpolating the local int is what made every publish,
 /// schedule and retry 404 in the previous version of this app. The two models
 /// are kept apart precisely so the wrong id cannot be passed by accident: there

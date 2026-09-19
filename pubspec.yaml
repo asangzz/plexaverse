@@ -197,8 +197,6 @@ flutter:
     # directories are non-recursive, so add each feature subfolder here
     # as its slice lands.
     - assets/mock/auth/
-    - assets/mock/posts/
-    - assets/mock/odyssey/
     - assets/mock/analytics/
     - assets/mock/notifications/
 

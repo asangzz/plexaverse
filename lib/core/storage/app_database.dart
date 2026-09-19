@@ -63,11 +63,12 @@ class AppDatabase extends _$AppDatabase {
   /// posts and 16,200 impressions of engagement into the user's own encrypted
   /// database before they had done anything.
   ///
-  /// Nothing rendered those rows — both readers (`OdysseyPage`,
-  /// `posts_controllers.dart`) were unrouted legacy code, and they are deleted
-  /// in the same change — but the seed is gated rather than removed because it
-  /// is what makes the mock flavor a usable demo. A future screen reading
-  /// these DAOs must inherit an empty database, not someone else's numbers.
+  /// Nothing rendered those rows — both readers were unrouted legacy code,
+  /// since deleted along with the rest of that island. The seed is gated
+  /// rather than removed because these DAOs outlive it: the Drift tables are
+  /// schema v1 and `onUpgrade` throws by design, so dropping them is a
+  /// migration, not a cleanup. A future screen reading them must inherit an
+  /// empty database, not someone else's numbers.
   final bool seedDemoData;
 
   @override
