@@ -54,6 +54,21 @@ class ApiPaths {
   /// the browser hand-off is identical, only the destination differs.
   static const String linkGoogle = '/user/link-google';
 
+  /// GET / PATCH — the DPDP s6 consent ledger. GET answers
+  /// `{noticeVersion, consents[]}`; PATCH takes `{purpose, granted}`.
+  static const String userConsent = '/user/consent';
+
+  /// GET — DPDP s11. Everything held about the user, including the identities
+  /// of the recipients it has been shared with.
+  static const String userDataExport = '/user/data-export';
+
+  /// DELETE — DPDP s12 erasure. Irreversible. Body
+  /// `{confirm: 'DELETE MY ACCOUNT', password?}`.
+  static const String userAccount = '/user/account';
+
+  /// POST — starts Season 2. `{choice, targetRole?}`. Idempotent.
+  static const String seasonAdvance = '/season/advance';
+
   /// Warm-boot check — validates the stored token AND returns fresh role /
   /// subscription state that is deliberately not in the token payload.
   static const String me = '/auth/me';

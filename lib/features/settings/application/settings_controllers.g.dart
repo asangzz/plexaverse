@@ -501,3 +501,69 @@ abstract class _$CompanyPagesController
     element.handleCreate(ref, build);
   }
 }
+
+/// The DPDP s6 consent ledger.
+///
+/// Its own provider because consent is the one thing on this screen a user
+/// may come specifically to change, often in a hurry — it should load and
+/// fail independently of whether LinkedIn or Razorpay are reachable.
+
+@ProviderFor(ConsentController)
+final consentControllerProvider = ConsentControllerProvider._();
+
+/// The DPDP s6 consent ledger.
+///
+/// Its own provider because consent is the one thing on this screen a user
+/// may come specifically to change, often in a hurry — it should load and
+/// fail independently of whether LinkedIn or Razorpay are reachable.
+final class ConsentControllerProvider
+    extends $AsyncNotifierProvider<ConsentController, ConsentLedger> {
+  /// The DPDP s6 consent ledger.
+  ///
+  /// Its own provider because consent is the one thing on this screen a user
+  /// may come specifically to change, often in a hurry — it should load and
+  /// fail independently of whether LinkedIn or Razorpay are reachable.
+  ConsentControllerProvider._()
+    : super(
+        from: null,
+        argument: null,
+        retry: null,
+        name: r'consentControllerProvider',
+        isAutoDispose: true,
+        dependencies: null,
+        $allTransitiveDependencies: null,
+      );
+
+  @override
+  String debugGetCreateSourceHash() => _$consentControllerHash();
+
+  @$internal
+  @override
+  ConsentController create() => ConsentController();
+}
+
+String _$consentControllerHash() => r'6c68efcfc9637170653a02df3c28c9c08348ccac';
+
+/// The DPDP s6 consent ledger.
+///
+/// Its own provider because consent is the one thing on this screen a user
+/// may come specifically to change, often in a hurry — it should load and
+/// fail independently of whether LinkedIn or Razorpay are reachable.
+
+abstract class _$ConsentController extends $AsyncNotifier<ConsentLedger> {
+  FutureOr<ConsentLedger> build();
+  @$mustCallSuper
+  @override
+  void runBuild() {
+    final ref = this.ref as $Ref<AsyncValue<ConsentLedger>, ConsentLedger>;
+    final element =
+        ref.element
+            as $ClassProviderElement<
+              AnyNotifier<AsyncValue<ConsentLedger>, ConsentLedger>,
+              AsyncValue<ConsentLedger>,
+              Object?,
+              Object?
+            >;
+    element.handleCreate(ref, build);
+  }
+}

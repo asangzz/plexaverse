@@ -104,6 +104,30 @@ abstract class SettingsRepository {
   /// /linkedin/organizations`.
   Future<void> setCompanyPage(String orgId);
 
+  /// The DPDP s6 consent ledger — every purpose with its current decision.
+  Future<ConsentLedger> fetchConsents();
+
+  /// Records one consent decision. Returns the updated ledger.
+  ///
+  /// The server refuses to withdraw a REQUIRED purpose while the account
+  /// exists, because there would be no lawful basis to keep serving it — the
+  /// honest answer is deletion, not a withdrawal nobody honours.
+  Future<ConsentLedger> setConsent({
+    required String purpose,
+    required bool granted,
+  });
+
+  /// DPDP s11 — everything held about the user, as a JSON map the app can
+  /// render and share.
+  Future<Map<String, dynamic>> fetchDataExport();
+
+  /// DPDP s12 erasure. Irreversible.
+  ///
+  /// Returns what SURVIVED — some records are kept under a statutory
+  /// carve-out, and reporting a clean deletion when that is untrue misleads
+  /// the person exercising the right.
+  Future<List<String>> deleteAccount({required String password});
+
   /// Localised plan pricing. [countryCode] is the device's region; the server
   /// defaults to `IN` when it is absent or unrecognised.
   Future<GeoPricing> fetchPricing({String? countryCode});
@@ -147,4 +171,43 @@ class CompanyPageOptions {
 
   /// The server's own explanation, written to be shown.
   final String? message;
+}
+
+
+/// One thing the user can agree to, independently.
+class ConsentPurposeState {
+  const ConsentPurposeState({
+    required this.purpose,
+    required this.label,
+    required this.granted,
+    required this.required_,
+    required this.stale,
+  });
+
+  factory ConsentPurposeState.fromJson(Map<String, dynamic> json) =>
+      ConsentPurposeState(
+        purpose: (json['purpose'] as String?) ?? '',
+        label: (json['label'] as String?) ?? '',
+        granted: json['granted'] == true,
+        required_: json['required'] == true,
+        stale: json['stale'] == true,
+      );
+
+  final String purpose;
+  final String label;
+  final bool granted;
+
+  /// Cannot be withdrawn while the account exists.
+  final bool required_;
+
+  /// A decision exists but predates the current notice, so it is not a
+  /// current yes. The UI asks again rather than showing it as granted.
+  final bool stale;
+}
+
+class ConsentLedger {
+  const ConsentLedger({required this.noticeVersion, required this.purposes});
+
+  final String noticeVersion;
+  final List<ConsentPurposeState> purposes;
 }

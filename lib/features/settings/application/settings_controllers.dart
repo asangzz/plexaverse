@@ -163,3 +163,36 @@ class CompanyPagesController extends _$CompanyPagesController {
     return null;
   }
 }
+
+/// The DPDP s6 consent ledger.
+///
+/// Its own provider because consent is the one thing on this screen a user
+/// may come specifically to change, often in a hurry — it should load and
+/// fail independently of whether LinkedIn or Razorpay are reachable.
+@riverpod
+class ConsentController extends _$ConsentController {
+  @override
+  Future<ConsentLedger> build() =>
+      ref.watch(settingsRepositoryProvider).fetchConsents();
+
+  /// Records a decision. Returns the failure message, or null on success.
+  ///
+  /// The server answers with the whole ledger, and that answer replaces local
+  /// state rather than a locally-toggled guess: it is the only thing that
+  /// knows whether a withdrawal was accepted, and a switch that flips before
+  /// the server agrees is a switch that can lie about consent.
+  Future<String?> set(String purpose, bool granted) async {
+    try {
+      final ConsentLedger updated = await ref
+          .read(settingsRepositoryProvider)
+          .setConsent(purpose: purpose, granted: granted);
+      state = AsyncData<ConsentLedger>(updated);
+      return null;
+    } on Object {
+      // Re-read rather than assume: a refused withdrawal has to show as
+      // still-granted, not as whatever the user tapped.
+      ref.invalidateSelf();
+      return "We couldn't record that. Your previous choice still stands.";
+    }
+  }
+}

@@ -8,6 +8,9 @@ import '../../../auth/domain/auth_repository.dart';
 import '../../application/settings_controllers.dart';
 import '../../domain/settings_repository.dart';
 import 'settings_section.dart';
+import 'dart:convert';
+import 'package:flutter/services.dart';
+import '../../data/settings_repositories.dart';
 
 /// **Account** — who you are signed in as, and the way out.
 ///
@@ -362,32 +365,310 @@ class NotificationsSection extends StatelessWidget {
 /// of it has a mobile route. That is worth stating plainly rather than omitting
 /// the section: a data-protection right the user cannot find is, from their
 /// side, a right they do not have.
-class DataPrivacySection extends StatelessWidget {
+class DataPrivacySection extends ConsumerStatefulWidget {
   const DataPrivacySection({super.key});
 
   @override
+  ConsumerState<DataPrivacySection> createState() => _DataPrivacySectionState();
+}
+
+class _DataPrivacySectionState extends ConsumerState<DataPrivacySection> {
+  bool _busy = false;
+
+  void _say(String message) {
+    if (!mounted) return;
+    showSettingsMessage(context, message);
+  }
+
+  Future<void> _export() async {
+    setState(() => _busy = true);
+    try {
+      final Map<String, dynamic> data =
+          await ref.read(settingsRepositoryProvider).fetchDataExport();
+      if (!mounted) return;
+      // Shown, not downloaded: the app has no file-save path wired up, and a
+      // body the user can read and share beats a file they cannot open.
+      await showModalBottomSheet<void>(
+        context: context,
+        backgroundColor: Colors.transparent,
+        isScrollControlled: true,
+        builder: (BuildContext ctx) => _ExportSheet(json: data),
+      );
+    } on Object {
+      _say("We couldn't build your export. Try again.");
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
+  Future<void> _confirmDelete() async {
+    final bool? confirmed = await showDialog<bool>(
+      context: context,
+      builder: (BuildContext ctx) => const _DeleteAccountDialog(),
+    );
+    if (confirmed != true || !mounted) return;
+
+    setState(() => _busy = true);
+    try {
+      final List<String> retained = await ref
+          .read(settingsRepositoryProvider)
+          .deleteAccount(password: _password);
+      if (!mounted) return;
+      _say(
+        retained.isEmpty
+            ? 'Your account and data have been deleted.'
+            : 'Account deleted. Kept for legal reasons: ${retained.join(', ')}.',
+      );
+      // The account is gone; the session has nothing left to point at.
+      await ref.read(signOutControllerProvider.notifier).signOut();
+    } on Object {
+      _say("We couldn't delete your account. Nothing was changed.");
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
+  final String _password = '';
+
+  @override
   Widget build(BuildContext context) {
+    final AsyncValue<ConsentLedger> consents =
+        ref.watch(consentControllerProvider);
+
     return SettingsSection(
       title: 'Your data',
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: <Widget>[
           Text(
-            'You can download everything we hold about you, change what you '
-            'have consented to, name someone to act for you, raise a concern, '
-            'or delete your account.',
+            'What you have agreed to, everything we hold about you, and the '
+            'way out.',
             style: ZaveType.caption,
           ),
           SizedBox(height: ZaveSpace.lg),
+          switch (consents) {
+            AsyncError<ConsentLedger>() => SectionError(
+              message: "We couldn't load your consent settings.",
+              onRetry: () => ref.invalidate(consentControllerProvider),
+            ),
+            AsyncData<ConsentLedger>(:final ConsentLedger value) => Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: <Widget>[
+                for (final ConsentPurposeState p in value.purposes)
+                  _ConsentRow(
+                    purpose: p,
+                    onChanged: p.required_
+                        ? null
+                        : (bool next) async {
+                            final String? failure = await ref
+                                .read(consentControllerProvider.notifier)
+                                .set(p.purpose, next);
+                            if (failure != null) _say(failure);
+                          },
+                  ),
+              ],
+            ),
+            _ => const SectionSkeleton(lines: 3),
+          },
+          const SettingsDivider(),
+          Align(
+            alignment: Alignment.centerLeft,
+            child: ZaveButton(
+              label: 'Download my data',
+              icon: const Icon(Icons.download_outlined),
+              busy: _busy,
+              onPressed: _busy ? null : _export,
+            ),
+          ),
+          SizedBox(height: ZaveSpace.lg),
+          Align(
+            alignment: Alignment.centerLeft,
+            child: ZaveButton(
+              label: 'Delete my account',
+              icon: const Icon(Icons.person_remove_outlined),
+              busy: _busy,
+              onPressed: _busy ? null : _confirmDelete,
+            ),
+          ),
+          SizedBox(height: ZaveSpace.md),
           const UnavailableNote(
-            title: 'Available in the web app',
             message:
-                'These controls are not in the app yet — the mobile API has '
-                'no route for consent, export, nomination, grievances or '
-                'account deletion. Open Plexaverse on the web and go to '
-                'Settings to use them.',
+                'Naming someone to act for you, and raising a concern with '
+                'our grievance officer, are still web-only.',
           ),
         ],
+      ),
+    );
+  }
+}
+
+/// One purpose and its switch.
+///
+/// A REQUIRED purpose renders disabled with the reason, rather than being
+/// hidden: the user is entitled to see everything being done with their data,
+/// including the part they cannot switch off.
+///
+/// `stale` means a decision exists but predates the current notice, so it is
+/// not a current yes — the row says so rather than showing it as granted.
+class _ConsentRow extends StatelessWidget {
+  const _ConsentRow({required this.purpose, required this.onChanged});
+
+  final ConsentPurposeState purpose;
+  final ValueChanged<bool>? onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: EdgeInsets.only(bottom: ZaveSpace.lg),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: <Widget>[
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: <Widget>[
+                Text(purpose.label, style: ZaveType.body),
+                if (purpose.required_) ...<Widget>[
+                  SizedBox(height: ZaveSpace.xs),
+                  Text(
+                    'Required to run your account. To stop this, delete the '
+                    'account.',
+                    style: ZaveType.caption,
+                  ),
+                ] else if (purpose.stale) ...<Widget>[
+                  SizedBox(height: ZaveSpace.xs),
+                  Text(
+                    'Our notice changed since you answered — please choose '
+                    'again.',
+                    style: ZaveType.caption.copyWith(color: ZaveColors.amber),
+                  ),
+                ],
+              ],
+            ),
+          ),
+          SizedBox(width: ZaveSpace.lg),
+          ZaveSwitch(
+            value: purpose.granted,
+            onChanged: onChanged,
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// The typed confirmation. Erasure is irreversible and a phone is easy to
+/// mis-tap, so the gate is a phrase the user has to mean.
+class _DeleteAccountDialog extends StatefulWidget {
+  const _DeleteAccountDialog();
+
+  @override
+  State<_DeleteAccountDialog> createState() => _DeleteAccountDialogState();
+}
+
+class _DeleteAccountDialogState extends State<_DeleteAccountDialog> {
+  static const String _phrase = 'DELETE MY ACCOUNT';
+  final TextEditingController _typed = TextEditingController();
+
+  @override
+  void dispose() {
+    _typed.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final bool ready = _typed.text.trim() == _phrase;
+    return AlertDialog(
+      title: const Text('Delete your account?'),
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: <Widget>[
+          const Text(
+            'This erases your posts, schedules, connections and plans. It '
+            'cannot be undone. Some records are kept where the law requires '
+            'it, and we will tell you which.',
+          ),
+          SizedBox(height: ZaveSpace.lg),
+          Text('Type $_phrase to confirm', style: ZaveType.caption),
+          SizedBox(height: ZaveSpace.sm),
+          ZaveField(
+            controller: _typed,
+            hint: _phrase,
+            onChanged: (_) => setState(() {}),
+          ),
+        ],
+      ),
+      actions: <Widget>[
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(false),
+          child: Text(
+            'Keep my account',
+            style: ZaveType.button.copyWith(color: ZaveColors.ink62),
+          ),
+        ),
+        TextButton(
+          onPressed: ready ? () => Navigator.of(context).pop(true) : null,
+          child: Text(
+            'Delete',
+            // Amber, not red. Zave has no red, including here.
+            style: ZaveType.button.copyWith(
+              color: ready ? ZaveColors.amber : ZaveColors.ink35,
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+/// The s11 export, rendered rather than downloaded.
+class _ExportSheet extends StatelessWidget {
+  const _ExportSheet({required this.json});
+
+  final Map<String, dynamic> json;
+
+  @override
+  Widget build(BuildContext context) {
+    final String pretty = const JsonEncoder.withIndent('  ').convert(json);
+    return DraggableScrollableSheet(
+      initialChildSize: 0.8,
+      expand: false,
+      builder: (BuildContext ctx, ScrollController scroll) => Container(
+        decoration: ZaveSurface.cardLg,
+        padding: EdgeInsets.all(ZaveSpace.lg),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: <Widget>[
+            Row(
+              children: <Widget>[
+                Text('YOUR DATA', style: ZaveType.kicker),
+                const Spacer(),
+                ZaveButton(
+                  label: 'Copy',
+                  onPressed: () {
+                    Clipboard.setData(ClipboardData(text: pretty));
+                    ScaffoldMessenger.of(ctx)
+                      ..hideCurrentSnackBar()
+                      ..showSnackBar(
+                        SnackBar(
+                          content: Text('Copied.', style: ZaveType.body),
+                        ),
+                      );
+                  },
+                ),
+              ],
+            ),
+            SizedBox(height: ZaveSpace.lg),
+            Expanded(
+              child: SingleChildScrollView(
+                controller: scroll,
+                child: SelectableText(pretty, style: ZaveType.caption),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

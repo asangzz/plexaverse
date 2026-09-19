@@ -7,6 +7,8 @@ import '../../../core/network/dio_client.dart';
 import '../../../core/platform/web_auth.dart';
 // Re-exports `UserPreferences` alongside the Settings entities.
 import '../domain/settings_repository.dart';
+import 'package:dio/dio.dart';
+import '../../../core/consent/notice.dart';
 
 /// Dio-backed [SettingsRepository].
 ///
@@ -214,6 +216,82 @@ class ApiSettingsRepository implements SettingsRepository {
   }
 
   @override
+  Future<ConsentLedger> fetchConsents() => _readLedger(
+        () => _client.get<Map<String, dynamic>>(ApiPaths.userConsent),
+      );
+
+  @override
+  Future<ConsentLedger> setConsent({
+    required String purpose,
+    required bool granted,
+  }) =>
+      _readLedger(
+        () => _client.patch<Map<String, dynamic>>(
+          ApiPaths.userConsent,
+          data: <String, dynamic>{'purpose': purpose, 'granted': granted},
+        ),
+      );
+
+  /// Both verbs answer with the whole ledger, so both parse the same way —
+  /// and a PATCH therefore returns the server's view rather than the app's
+  /// guess at what the toggle did.
+  Future<ConsentLedger> _readLedger(
+    Future<Response<Map<String, dynamic>>> Function() send,
+  ) async {
+    try {
+      final response = await send();
+      final Map<String, dynamic>? data = response.data;
+      if (data == null) throw const SettingsUnavailable();
+      final List<dynamic> raw =
+          (data['consents'] as List<dynamic>?) ?? const <dynamic>[];
+      return ConsentLedger(
+        noticeVersion: (data['noticeVersion'] as String?) ?? '',
+        purposes: raw
+            .whereType<Map<String, dynamic>>()
+            .map(ConsentPurposeState.fromJson)
+            .toList(growable: false),
+      );
+    } on SettingsUnavailable {
+      rethrow;
+    } on Object {
+      throw const SettingsUnavailable();
+    }
+  }
+
+  @override
+  Future<Map<String, dynamic>> fetchDataExport() async {
+    try {
+      final response = await _client.get<Map<String, dynamic>>(
+        ApiPaths.userDataExport,
+      );
+      final Map<String, dynamic>? data = response.data;
+      if (data == null) throw const SettingsUnavailable();
+      return data;
+    } on SettingsUnavailable {
+      rethrow;
+    } on Object {
+      throw const SettingsUnavailable();
+    }
+  }
+
+  @override
+  Future<List<String>> deleteAccount({required String password}) async {
+    final response = await _client.delete<Map<String, dynamic>>(
+      ApiPaths.userAccount,
+      data: <String, dynamic>{
+        // The exact phrase the server demands. Not user-typed here: the app
+        // makes the user type it into the confirm dialog, and passing
+        // anything else through would turn a deliberate gate into a relay.
+        'confirm': 'DELETE MY ACCOUNT',
+        if (password.isNotEmpty) 'password': password,
+      },
+    );
+    final List<dynamic> retained =
+        (response.data?['retained'] as List<dynamic>?) ?? const <dynamic>[];
+    return retained.map((Object? e) => e.toString()).toList(growable: false);
+  }
+
+  @override
   Future<GeoPricing> fetchPricing({String? countryCode}) async {
     try {
       final response = await _client.get<Map<String, dynamic>>(
@@ -387,6 +465,78 @@ class FakeSettingsRepository implements SettingsRepository {
   @override
   Future<void> setCompanyPage(String orgId) async {
     await Future<void>.delayed(_latency);
+  }
+
+  @override
+  Future<ConsentLedger> fetchConsents() async {
+    await Future<void>.delayed(_latency);
+    return const ConsentLedger(
+      noticeVersion: kNoticeVersion,
+      purposes: <ConsentPurposeState>[
+        ConsentPurposeState(
+          purpose: 'essential',
+          label: 'Run your account — sign-in, billing and service messages',
+          granted: true,
+          required_: true,
+          stale: false,
+        ),
+        ConsentPurposeState(
+          purpose: 'style_learning',
+          label: 'Read your existing LinkedIn posts to learn your writing voice',
+          granted: true,
+          required_: false,
+          stale: false,
+        ),
+        ConsentPurposeState(
+          purpose: 'marketing',
+          label: 'Send product updates and tips',
+          granted: false,
+          required_: false,
+          stale: false,
+        ),
+      ],
+    );
+  }
+
+  @override
+  Future<ConsentLedger> setConsent({
+    required String purpose,
+    required bool granted,
+  }) async {
+    await Future<void>.delayed(_latency);
+    final ConsentLedger current = await fetchConsents();
+    return ConsentLedger(
+      noticeVersion: current.noticeVersion,
+      purposes: <ConsentPurposeState>[
+        for (final ConsentPurposeState p in current.purposes)
+          if (p.purpose == purpose)
+            ConsentPurposeState(
+              purpose: p.purpose,
+              label: p.label,
+              granted: granted,
+              required_: p.required_,
+              stale: false,
+            )
+          else
+            p,
+      ],
+    );
+  }
+
+  @override
+  Future<Map<String, dynamic>> fetchDataExport() async {
+    await Future<void>.delayed(_latency);
+    return <String, dynamic>{
+      'exportedAt': '2026-09-19T00:00:00.000Z',
+      'note': 'Mock export — the real one walks every user-keyed table.',
+    };
+  }
+
+  @override
+  Future<List<String>> deleteAccount({required String password}) async {
+    await Future<void>.delayed(_latency);
+    // The mock never actually erases; it reports the shape the real one does.
+    return const <String>['payment records (statutory retention)'];
   }
 
   @override
