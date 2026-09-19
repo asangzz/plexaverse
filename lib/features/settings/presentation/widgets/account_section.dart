@@ -380,6 +380,47 @@ class _DataPrivacySectionState extends ConsumerState<DataPrivacySection> {
     showSettingsMessage(context, message);
   }
 
+  /// DPDP s14 — who may act for the user if they cannot act for themselves.
+  Future<void> _nominate() async {
+    final Nominee? existing = await ref
+        .read(settingsRepositoryProvider)
+        .fetchNomination()
+        .catchError((_) => null);
+    if (!mounted) return;
+
+    final Nominee? next = await showDialog<Nominee>(
+      context: context,
+      builder: (BuildContext ctx) => _NominationDialog(existing: existing),
+    );
+    if (next == null || !mounted) return;
+
+    final String? failure =
+        await ref.read(settingsRepositoryProvider).saveNomination(next);
+    _say(failure ?? 'Saved. ${next.name} can act for you.');
+  }
+
+  /// DPDP s13 — raise a concern, and report the deadline it carries.
+  Future<void> _raiseGrievance() async {
+    final ({String category, String message})? entry =
+        await showDialog<({String category, String message})>(
+      context: context,
+      builder: (BuildContext ctx) => const _GrievanceDialog(),
+    );
+    if (entry == null || !mounted) return;
+
+    try {
+      final int days = await ref
+          .read(settingsRepositoryProvider)
+          .raiseGrievance(category: entry.category, message: entry.message);
+      // The deadline comes from the server — it is stamped on the row, and
+      // quoting a constant here could promise a date the record disagrees
+      // with.
+      _say('Raised. We will respond within $days days.');
+    } on Object {
+      _say("We couldn't submit that. Try again.");
+    }
+  }
+
   Future<void> _export() async {
     setState(() => _busy = true);
     try {
@@ -490,11 +531,23 @@ class _DataPrivacySectionState extends ConsumerState<DataPrivacySection> {
               onPressed: _busy ? null : _confirmDelete,
             ),
           ),
-          SizedBox(height: ZaveSpace.md),
-          const UnavailableNote(
-            message:
-                'Naming someone to act for you, and raising a concern with '
-                'our grievance officer, are still web-only.',
+          const SettingsDivider(),
+          Align(
+            alignment: Alignment.centerLeft,
+            child: ZaveButton(
+              label: 'Name someone to act for me',
+              icon: const Icon(Icons.person_add_alt_outlined),
+              onPressed: _busy ? null : _nominate,
+            ),
+          ),
+          SizedBox(height: ZaveSpace.lg),
+          Align(
+            alignment: Alignment.centerLeft,
+            child: ZaveButton(
+              label: 'Raise a concern',
+              icon: const Icon(Icons.flag_outlined),
+              onPressed: _busy ? null : _raiseGrievance,
+            ),
           ),
         ],
       ),
@@ -670,6 +723,188 @@ class _ExportSheet extends StatelessWidget {
           ],
         ),
       ),
+    );
+  }
+}
+
+
+/// Naming a nominee. Email is validated server-side too; the check here is
+/// so the user is told before a round trip, not instead of one.
+class _NominationDialog extends StatefulWidget {
+  const _NominationDialog({required this.existing});
+
+  final Nominee? existing;
+
+  @override
+  State<_NominationDialog> createState() => _NominationDialogState();
+}
+
+class _NominationDialogState extends State<_NominationDialog> {
+  late final TextEditingController _name =
+      TextEditingController(text: widget.existing?.name ?? '');
+  late final TextEditingController _email =
+      TextEditingController(text: widget.existing?.email ?? '');
+  late final TextEditingController _relationship =
+      TextEditingController(text: widget.existing?.relationship ?? '');
+
+  static final RegExp _emailPattern = RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$');
+
+  @override
+  void dispose() {
+    _name.dispose();
+    _email.dispose();
+    _relationship.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final bool ready = _name.text.trim().isNotEmpty &&
+        _emailPattern.hasMatch(_email.text.trim());
+
+    return AlertDialog(
+      title: const Text('Name someone to act for you'),
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: <Widget>[
+          const Text(
+            'If you die or cannot act for yourself, this person may exercise '
+            'your rights over your data on your behalf.',
+          ),
+          SizedBox(height: ZaveSpace.lg),
+          ZaveField(
+            controller: _name,
+            hint: 'Their name',
+            onChanged: (_) => setState(() {}),
+          ),
+          SizedBox(height: ZaveSpace.md),
+          ZaveField(
+            controller: _email,
+            hint: 'Their email',
+            keyboardType: TextInputType.emailAddress,
+            onChanged: (_) => setState(() {}),
+          ),
+          SizedBox(height: ZaveSpace.md),
+          ZaveField(
+            controller: _relationship,
+            hint: 'Relationship (optional)',
+          ),
+        ],
+      ),
+      actions: <Widget>[
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(),
+          child: Text(
+            'Cancel',
+            style: ZaveType.button.copyWith(color: ZaveColors.ink62),
+          ),
+        ),
+        TextButton(
+          onPressed: ready
+              ? () => Navigator.of(context).pop(
+                    Nominee(
+                      name: _name.text.trim(),
+                      email: _email.text.trim(),
+                      relationship: _relationship.text.trim().isEmpty
+                          ? null
+                          : _relationship.text.trim(),
+                    ),
+                  )
+              : null,
+          child: Text(
+            'Save',
+            style: ZaveType.button.copyWith(
+              color: ready ? ZaveColors.white : ZaveColors.ink35,
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+/// Raising a concern. The 10-character floor mirrors the server's, so the
+/// user is told while typing rather than after submitting.
+class _GrievanceDialog extends StatefulWidget {
+  const _GrievanceDialog();
+
+  @override
+  State<_GrievanceDialog> createState() => _GrievanceDialogState();
+}
+
+class _GrievanceDialogState extends State<_GrievanceDialog> {
+  /// Mirrors the server's list. An unrecognised value becomes `other` there
+  /// rather than being refused, so this list going stale degrades gently.
+  static const Map<String, String> _categories = <String, String>{
+    'data_access': 'Getting my data',
+    'data_correction': 'Correcting my data',
+    'data_erasure': 'Deleting my data',
+    'consent': 'Consent',
+    'other': 'Something else',
+  };
+
+  String _category = 'other';
+  final TextEditingController _message = TextEditingController();
+
+  @override
+  void dispose() {
+    _message.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final bool ready = _message.text.trim().length >= 10;
+
+    return AlertDialog(
+      title: const Text('Raise a concern'),
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: <Widget>[
+          Wrap(
+            spacing: ZaveSpace.sm,
+            runSpacing: ZaveSpace.sm,
+            children: <Widget>[
+              for (final MapEntry<String, String> e in _categories.entries)
+                ZaveChip(
+                  label: e.value,
+                  selected: _category == e.key,
+                  onTap: () => setState(() => _category = e.key),
+                ),
+            ],
+          ),
+          SizedBox(height: ZaveSpace.lg),
+          ZaveField(
+            controller: _message,
+            hint: 'What happened?',
+            maxLines: 4,
+            onChanged: (_) => setState(() {}),
+          ),
+        ],
+      ),
+      actions: <Widget>[
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(),
+          child: Text(
+            'Cancel',
+            style: ZaveType.button.copyWith(color: ZaveColors.ink62),
+          ),
+        ),
+        TextButton(
+          onPressed: ready
+              ? () => Navigator.of(context)
+                  .pop((category: _category, message: _message.text.trim()))
+              : null,
+          child: Text(
+            'Send',
+            style: ZaveType.button.copyWith(
+              color: ready ? ZaveColors.white : ZaveColors.ink35,
+            ),
+          ),
+        ),
+      ],
     );
   }
 }

@@ -9,6 +9,7 @@ import '../../../core/platform/web_auth.dart';
 import '../domain/settings_repository.dart';
 import 'package:dio/dio.dart';
 import '../../../core/consent/notice.dart';
+import '../../../core/network/failure.dart';
 
 /// Dio-backed [SettingsRepository].
 ///
@@ -304,6 +305,69 @@ class ApiSettingsRepository implements SettingsRepository {
   }
 
   @override
+  Future<Nominee?> fetchNomination() async {
+    try {
+      final response = await _client.get<Map<String, dynamic>>(
+        ApiPaths.userNomination,
+      );
+      final Object? raw = response.data?['nomination'];
+      return raw is Map<String, dynamic> ? Nominee.fromJson(raw) : null;
+    } on Object {
+      throw const SettingsUnavailable();
+    }
+  }
+
+  @override
+  Future<String?> saveNomination(Nominee nominee) async {
+    try {
+      await _client.put<Map<String, dynamic>>(
+        ApiPaths.userNomination,
+        data: <String, dynamic>{
+          'nomineeName': nominee.name,
+          'nomineeEmail': nominee.email,
+          'relationship': ?nominee.relationship,
+        },
+      );
+      return null;
+    } on DioException catch (e) {
+      // The server validates the email and says why — passing its words on
+      // beats "something went wrong" for a field the user can fix.
+      final Object? failure = e.error;
+      if (failure is Failure) {
+        final String? m = failure.message;
+        if (m != null && m.isNotEmpty) return m;
+      }
+      return "We couldn't save that nomination.";
+    } on Object {
+      return "We couldn't save that nomination.";
+    }
+  }
+
+  @override
+  Future<void> clearNomination() async {
+    try {
+      await _client.delete<Map<String, dynamic>>(ApiPaths.userNomination);
+    } on Object {
+      throw const SettingsUnavailable();
+    }
+  }
+
+  @override
+  Future<int> raiseGrievance({
+    required String category,
+    required String message,
+  }) async {
+    final response = await _client.post<Map<String, dynamic>>(
+      ApiPaths.userGrievance,
+      data: <String, dynamic>{'category': category, 'message': message},
+    );
+    // The deadline comes from the server, never from a constant here — it is
+    // stamped onto the row at creation, and the app must report the one the
+    // user actually got.
+    return (response.data?['responseDays'] as num?)?.toInt() ?? 30;
+  }
+
+  @override
   Future<ConsentLedger> fetchConsents() => _readLedger(
         () => _client.get<Map<String, dynamic>>(ApiPaths.userConsent),
       );
@@ -576,6 +640,32 @@ class FakeSettingsRepository implements SettingsRepository {
   Future<String> uploadImage(String dataUri) async {
     await Future<void>.delayed(_latency);
     return 'https://example.invalid/mock-logo.png';
+  }
+
+  @override
+  Future<Nominee?> fetchNomination() async {
+    await Future<void>.delayed(_latency);
+    return null;
+  }
+
+  @override
+  Future<String?> saveNomination(Nominee nominee) async {
+    await Future<void>.delayed(_latency);
+    return null;
+  }
+
+  @override
+  Future<void> clearNomination() async {
+    await Future<void>.delayed(_latency);
+  }
+
+  @override
+  Future<int> raiseGrievance({
+    required String category,
+    required String message,
+  }) async {
+    await Future<void>.delayed(_latency);
+    return 30;
   }
 
   @override

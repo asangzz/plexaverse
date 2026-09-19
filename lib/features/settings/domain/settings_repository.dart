@@ -150,6 +150,19 @@ abstract class SettingsRepository {
   /// the person exercising the right.
   Future<List<String>> deleteAccount({required String password});
 
+  /// DPDP s14 — the person nominated to act for the user. Null when none.
+  Future<Nominee?> fetchNomination();
+
+  /// Saves the nomination. Returns the failure message, or null.
+  Future<String?> saveNomination(Nominee nominee);
+
+  Future<void> clearNomination();
+
+  /// DPDP s13 — raises a concern. Returns the days the Fiduciary has to
+  /// respond, which is stamped server-side at creation so a later policy
+  /// change cannot move a deadline already given.
+  Future<int> raiseGrievance({required String category, required String message});
+
   /// Localised plan pricing. [countryCode] is the device's region; the server
   /// defaults to `IN` when it is absent or unrecognised.
   Future<GeoPricing> fetchPricing({String? countryCode});
@@ -232,4 +245,24 @@ class ConsentLedger {
 
   final String noticeVersion;
   final List<ConsentPurposeState> purposes;
+}
+
+
+/// The person who may act for the user if they cannot act for themselves.
+class Nominee {
+  const Nominee({
+    required this.name,
+    required this.email,
+    this.relationship,
+  });
+
+  factory Nominee.fromJson(Map<String, dynamic> json) => Nominee(
+    name: (json['nomineeName'] as String?) ?? '',
+    email: (json['nomineeEmail'] as String?) ?? '',
+    relationship: json['relationship'] as String?,
+  );
+
+  final String name;
+  final String email;
+  final String? relationship;
 }

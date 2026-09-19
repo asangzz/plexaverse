@@ -66,6 +66,12 @@ class ApiPaths {
   /// `{confirm: 'DELETE MY ACCOUNT', password?}`.
   static const String userAccount = '/user/account';
 
+  /// GET / PUT / DELETE — DPDP s14. Who may act for the user if they cannot.
+  static const String userNomination = '/user/nomination';
+
+  /// GET / POST — DPDP s13. Raise a concern, and see the deadline it carries.
+  static const String userGrievance = '/user/grievance';
+
   /// POST — starts Season 2. `{choice, targetRole?}`. Idempotent.
   static const String seasonAdvance = '/season/advance';
 
