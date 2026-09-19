@@ -266,10 +266,10 @@ class _TemplateSheet extends ConsumerWidget {
         const AiToolNoteRow(
           title: 'Editing happens on the web',
           message:
-              'The copy lands in your Studio designs. The canvas editor and '
-              'the template customizer are not in the app yet — the mobile '
-              'API has no route for either — so open Plexaverse on the web to '
-              'change the text and images.',
+              'The copy lands in your Studio designs. The canvas editor is '
+              'web-only by design — Plexa Studio is a Fabric.js canvas, and '
+              'a phone port of it was ruled out rather than half-built — so '
+              'open Plexaverse on the web to move and restyle elements.',
         ),
       ],
     );
