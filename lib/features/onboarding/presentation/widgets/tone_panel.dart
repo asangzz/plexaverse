@@ -28,12 +28,17 @@ class TonePanel extends StatefulWidget {
     required this.value,
     required this.onChanged,
     required this.onSubmit,
+    this.onUseScreenshot,
     super.key,
   });
 
   final String value;
   final ValueChanged<String> onChanged;
   final ValueChanged<String> onSubmit;
+
+  /// Offered alongside typing, not instead of it. Some people have a post
+  /// they like to hand over; some would rather write two sentences.
+  final VoidCallback? onUseScreenshot;
 
   @override
   State<TonePanel> createState() => _TonePanelState();
@@ -99,19 +104,30 @@ class _TonePanelState extends State<TonePanel> {
           },
         ),
         SizedBox(height: ZaveSpace.md),
-        Align(
-          alignment: Alignment.centerRight,
-          child: ZaveButton(
-            // The panel's only forward action. There is no skip beside it, and
-            // that is the point: this is the last place the user's own voice
-            // can be captured, and "skip — learn from my posts" was a promise
-            // the product cannot keep without the r_member_social scope.
-            kind: ZaveButtonKind.primarySmall,
-            label: 'Send',
-            onPressed: _canSend
-                ? () => widget.onSubmit(_controller.text)
-                : null,
-          ),
+        Row(
+          children: <Widget>[
+            // The web's other branch, not a skip. Both paths end in a real
+            // sample — one typed, one read out of a screenshot — which is
+            // why this sits beside Send rather than under it.
+            if (widget.onUseScreenshot != null)
+              ZaveButton(
+                label: 'Use a screenshot',
+                icon: const Icon(Icons.image_outlined),
+                onPressed: widget.onUseScreenshot,
+              ),
+            const Spacer(),
+            ZaveButton(
+              // There is still no SKIP, and that is the point: this is the
+              // last place the user's own voice can be captured, and
+              // "skip — learn from my posts" was a promise the product
+              // cannot keep without the r_member_social scope.
+              kind: ZaveButtonKind.primarySmall,
+              label: 'Send',
+              onPressed: _canSend
+                  ? () => widget.onSubmit(_controller.text)
+                  : null,
+            ),
+          ],
         ),
       ],
     );

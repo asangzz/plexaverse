@@ -306,6 +306,9 @@ class _DockControl extends ConsumerWidget {
         value: chat.voiceDraft,
         onChanged: controller().setVoiceDraft,
         onSubmit: (String text) => controller().submitVoiceSample(text),
+        // The web's other branch: read the voice out of a screenshot rather
+        // than have the user type one.
+        onUseScreenshot: controller().useStyleScreenshots,
       ),
       OnboardingStep.finish =>
         chat.finaliseError

@@ -22,7 +22,7 @@
 /// | — | [OnboardingStep.goal] | **Added.** See the note on [OnboardingStep.goal]. |
 /// | `connect-linkedin` | [OnboardingStep.connect] | Present. It was omitted on the grounds that OAuth "belongs to the accounts surface" — true in isolation, and wrong in consequence: a user who onboarded on their phone reached the dashboard with no LinkedIn account, so nothing could publish and the entire product was inert for them. |
 /// | `cv-upload`, `company-doc` | absent | Both take a PDF, which needs `file_picker`; `image_picker` cannot open documents. |
-/// | `style-screenshots` | absent | The route exists (`/ai/analyze-style-screenshot`) and the picker now does too — this is client work, not a gap in the API. |
+/// | `style-screenshots` | folded into [OnboardingStep.voice] | Present as the second branch of the voice step rather than a step of its own — the web splits them only because its choice screen has to ask which one you want first, and a button beside the text box asks the same question in less space. |
 /// | `company-page` | [OnboardingStep.companyPage] | Present. |
 /// | `company-about`, `company-details` | [OnboardingStep.companyDetails] | Collapsed to one form. The web splits them because it parses an uploaded company document first and asks the user to confirm what it read; there is no document picker here yet, so there is nothing to confirm — only fields to fill. |
 /// | `company-logo`, `poster-style` | absent | Need an upload route (`/upload/asset`) and a poster-style analyser that the mobile API does not expose. |
@@ -46,7 +46,10 @@ enum OnboardingStep {
   /// so nothing downstream sees a value it cannot handle.
   goal,
 
-  /// The web's `style-choice` → `style-write`, collapsed.
+  /// The web's `style-choice`, `style-write` AND `style-screenshots`,
+  /// collapsed into one panel: type a sample, or hand over a screenshot and
+  /// let `/ai/analyze-style-screenshot` read the voice out of it. Both
+  /// branches end in a real sample, so neither is a skip.
   voice,
 
   /// The web's `connect-linkedin`, and the one step whose absence broke the

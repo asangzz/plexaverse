@@ -1,5 +1,5 @@
 import 'dart:async';
-import 'package:dio/dio.dart' show DioException;
+import 'package:dio/dio.dart' show DioException, FormData, MultipartFile;
 import 'package:flutter/foundation.dart' show kReleaseMode;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -8,6 +8,7 @@ import '../../../core/network/api_paths.dart';
 import '../../../core/network/dio_client.dart';
 import '../../../core/network/failure.dart';
 import '../domain/onboarding_repository.dart';
+import '../../../core/platform/image_picking.dart';
 
 /// Dio-backed [OnboardingRepository].
 ///
@@ -51,6 +52,35 @@ class ApiOnboardingRepository implements OnboardingRepository {
       );
       final Map<String, dynamic>? data = response.data;
       return data == null ? null : ProfessionAnalysis.fromJson(data);
+    } on Object {
+      // Best-effort by contract — see OnboardingRepository.
+      return null;
+    }
+  }
+
+  @override
+  Future<String?> analyzeStyleScreenshots(List<PickedImage> images) async {
+    if (images.isEmpty) return null;
+    try {
+      final FormData form = FormData();
+      for (final PickedImage image in images) {
+        // The route reads repeated `files` fields, so each image is appended
+        // under the same name rather than files[0], files[1].
+        form.files.add(
+          MapEntry<String, MultipartFile>(
+            'files',
+            // No explicit contentType: Dio derives it from the filename,
+            // and the route accepts any image type.
+            MultipartFile.fromBytes(image.bytes, filename: image.name),
+          ),
+        );
+      }
+      final response = await _client.sendMultipart<Map<String, dynamic>>(
+        ApiPaths.aiAnalyzeStyleScreenshot,
+        form,
+      );
+      final String? text = response.data?['analyzedStyleText'] as String?;
+      return (text == null || text.trim().isEmpty) ? null : text.trim();
     } on Object {
       // Best-effort by contract — see OnboardingRepository.
       return null;
@@ -174,6 +204,14 @@ class FakeOnboardingRepository implements OnboardingRepository {
       expertise: headline,
       roadmapTitle: 'Your Growth Roadmap',
     );
+  }
+
+  @override
+  Future<String?> analyzeStyleScreenshots(List<PickedImage> images) async {
+    await Future<void>.delayed(const Duration(milliseconds: 1400));
+    if (images.isEmpty) return null;
+    return 'Short sentences. One idea per line. No throat-clearing — the '
+        'first line says the thing, and the rest earns it.';
   }
 
   @override

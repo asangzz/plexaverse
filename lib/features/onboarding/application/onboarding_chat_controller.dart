@@ -8,6 +8,7 @@ import '../../settings/domain/settings_repository.dart';
 import '../data/onboarding_repositories.dart';
 import '../domain/onboarding_repository.dart';
 import 'onboarding_chat_state.dart';
+import '../../../core/platform/image_picking.dart';
 
 export 'onboarding_chat_state.dart';
 
@@ -192,6 +193,43 @@ class OnboardingChatController extends _$OnboardingChatController {
     _echoUser(goal.label);
     state = state.copyWith(answers: state.answers.copyWith(goal: goal));
     await _enter(OnboardingStep.voice);
+  }
+
+  /// The web's `style-screenshots` branch: read the voice out of pictures
+  /// of posts instead of typing a sample.
+  ///
+  /// Restored because it was only ever missing for want of a picker. The
+  /// extracted text becomes the sample and goes through the SAME
+  /// [submitVoiceSample] path — it is saved, echoed and advanced from
+  /// identically, so the two branches cannot diverge on what happens after.
+  Future<void> useStyleScreenshots() async {
+    if (state.step != OnboardingStep.voice) return;
+    final ImagePickResult picked =
+        await ref.read(imagePickingProvider).pick(ImageSourceKind.gallery);
+    if (picked is! PickedImage) {
+      // Cancelled, or the picker failed. Backing out is a decision; a real
+      // failure still leaves the typing box, which is the other way through.
+      return;
+    }
+
+    _echoUser('A screenshot of how I write');
+    state = state.copyWith(isBotTyping: true);
+    final String? extracted = await _repo.analyzeStyleScreenshots(
+      <PickedImage>[picked],
+    );
+    if (_disposed) return;
+    state = state.copyWith(isBotTyping: false);
+
+    if (extracted == null) {
+      await _sendBot(
+        "I couldn't read a writing style out of that one. Try another "
+        'screenshot, or just type a couple of sentences.',
+      );
+      return;
+    }
+
+    await _sendBot('Got it — this is what I picked up:\n\n$extracted');
+    await submitVoiceSample(extracted);
   }
 
   /// Keeps the composer's text, so a rejected draft survives the typing hint.

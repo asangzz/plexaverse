@@ -1,4 +1,5 @@
 import 'profession_analysis.dart';
+import '../../../core/platform/image_picking.dart';
 
 export 'chat_message.dart';
 export 'onboarding_answers.dart';
@@ -51,6 +52,18 @@ abstract class OnboardingRepository {
   /// retrieve it. Returns the failure reason, or null on success, so the caller
   /// can quote it in the chat the way the web does.
   Future<String?> saveStyleSample(String text);
+
+  /// Reads the user's writing voice out of screenshots of posts they wrote
+  /// or admire, and seeds the style memory from it.
+  ///
+  /// The web's `style-choice` step offers this as the alternative to typing
+  /// a sample; mobile collapsed the two because there was no picker. There
+  /// is one now, so the choice is back.
+  ///
+  /// Returns the extracted sample, or null when nothing usable came back —
+  /// a screenshot of something that is not a post is the ordinary case, not
+  /// an error.
+  Future<String?> analyzeStyleScreenshots(List<PickedImage> images);
 
   /// `PATCH /user/preferences` — the single write that ends onboarding.
   /// Throws [OnboardingUnavailable] on failure; this is the one call whose
