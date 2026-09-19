@@ -1,3 +1,4 @@
+import '../../../../core/ui/zave/zave_kit.dart';
 import 'package:flutter/material.dart';
 
 import '../../domain/persona_repository.dart';
@@ -15,9 +16,16 @@ import 'persona_chrome.dart';
 /// printing a zero — "learned from 0 samples" and "we cannot see how many
 /// samples you have" are different claims, and only the second is true.
 class IdentitySection extends StatelessWidget {
-  const IdentitySection({required this.identity, super.key});
+  const IdentitySection({
+    required this.identity,
+    required this.voiceSampleCount,
+    super.key,
+  });
 
   final PersonaIdentity identity;
+
+  /// How many writing samples the style memory holds.
+  final int voiceSampleCount;
 
   @override
   Widget build(BuildContext context) {
@@ -28,14 +36,15 @@ class IdentitySection extends StatelessWidget {
         children: <Widget>[
           ...(identity.isCompany ? _companyFields() : _personalFields()),
           const PersonaDivider(),
-          const PersonaField(
+          PersonaField(
             label: 'Voice',
-            child: PersonaUnavailableNote(
-              title: 'Not readable from the app',
-              message:
-                  'How many of your own writing samples Plexa has learnt from '
-                  'is not exposed to the app yet. Teaching it new samples '
-                  'still happens on the web.',
+            child: Text(
+              voiceSampleCount == 0
+                  ? 'No writing samples yet — Plexa is writing in a general '
+                        'voice until you give it one.'
+                  : 'Learned from $voiceSampleCount of your own '
+                        '${voiceSampleCount == 1 ? 'sample' : 'samples'}.',
+              style: ZaveType.body,
             ),
           ),
         ],

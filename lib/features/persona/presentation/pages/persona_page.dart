@@ -128,9 +128,12 @@ class _PersonaTab extends StatelessWidget {
         SizedBox(height: gap),
         const _ReachSection(),
         SizedBox(height: gap),
-        IdentitySection(identity: snapshot.identity),
+        IdentitySection(
+          identity: snapshot.identity,
+          voiceSampleCount: snapshot.voiceSampleCount,
+        ),
         SizedBox(height: gap),
-        const _MaterialSection(),
+        _MaterialSection(bank: snapshot.bank),
       ],
     );
   }
@@ -170,44 +173,267 @@ class _ReachSection extends StatelessWidget {
 /// description: Plexa writes from these and only these, and when the bank runs
 /// empty it writes general posts instead of inventing a story.
 class _MaterialSection extends StatelessWidget {
-  const _MaterialSection();
+  const _MaterialSection({required this.bank});
+
+  final SubstanceBank bank;
 
   @override
   Widget build(BuildContext context) {
-    return const PersonaSection(
+    return PersonaSection(
       title: 'Your material',
       lead:
           'Real things that happened to you. Plexa writes posts from these — '
           'and only these. When this runs empty it writes general posts '
           'instead of inventing a story.',
-      child: PersonaUnavailableNote(
-        title: 'Not readable from the app',
+      child: _body(),
+    );
+  }
+
+  Widget _body() {
+    // A bank that could not be READ is not an empty bank, and must never wear
+    // the empty state's face. The empty copy is a promise ("Plexa won't invent
+    // a story"); showing it after a failed read is a lie that would push the
+    // user to re-enter material they already gave us.
+    if (bank.unavailable) {
+      return const PersonaUnavailableNote(
+        title: 'Could not read your material',
         message:
-            'The material bank has no mobile route yet, so this is NOT an '
-            'empty bank — it is a bank the app cannot see. Nothing of yours '
-            'has been lost. Add and review material in the web app.',
+            'This is NOT an empty bank — it is a bank we failed to load. '
+            'Nothing of yours has been lost. Pull to refresh, or try again in '
+            'a moment.',
+      );
+    }
+
+    if (bank.isEmpty) {
+      return Text(
+        'Nothing here yet. Tell Plexa about something that actually happened '
+        'and it will write from that instead of writing in general.',
+        style: ZaveType.bodyMuted,
+      );
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: <Widget>[
+        Row(
+          children: <Widget>[
+            ZavePill(
+              label: '${bank.availableCount} ready',
+              color: ZaveColors.green,
+              leading: const ZaveDot(ZaveColors.green),
+            ),
+            SizedBox(width: ZaveSpace.sm),
+            ZavePill(
+              label: '${bank.usedCount} used',
+              color: ZaveColors.ink50,
+              leading: const ZaveDot(ZaveColors.ink35),
+            ),
+          ],
+        ),
+        SizedBox(height: ZaveSpace.lg),
+        for (final SubstanceItem item in bank.available) ...<Widget>[
+          _MaterialRow(item: item),
+          SizedBox(height: ZaveSpace.sm),
+        ],
+        if (bank.used.isNotEmpty) ...<Widget>[
+          SizedBox(height: ZaveSpace.md),
+          Text('ALREADY WRITTEN ABOUT', style: ZaveType.kicker),
+          SizedBox(height: ZaveSpace.md),
+          for (final SubstanceItem item in bank.used) ...<Widget>[
+            _MaterialRow(item: item),
+            SizedBox(height: ZaveSpace.sm),
+          ],
+        ],
+      ],
+    );
+  }
+}
+
+/// One item of material.
+class _MaterialRow extends StatelessWidget {
+  const _MaterialRow({required this.item});
+
+  final SubstanceItem item;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: ZaveSpace.rowPad,
+      decoration: ZaveSurface.row,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: <Widget>[
+          Row(
+            children: <Widget>[
+              ZaveDot(item.isUsed ? ZaveColors.ink35 : ZaveColors.green),
+              SizedBox(width: ZaveSpace.sm),
+              Text(item.kind.toUpperCase(), style: ZaveType.kicker),
+              const Spacer(),
+              // A figure in the material is worth flagging: it is what makes a
+              // grounded post concrete rather than merely true.
+              if (item.hasNumber)
+                Text(
+                  'HAS A NUMBER',
+                  style: ZaveType.kicker.copyWith(color: ZaveColors.mint),
+                ),
+            ],
+          ),
+          SizedBox(height: ZaveSpace.sm),
+          Text(
+            item.text,
+            style: item.isUsed ? ZaveType.bodyMuted : ZaveType.body,
+          ),
+        ],
       ),
     );
   }
 }
 
 /// **Talk to Plexa** — the chat that fills the bank.
-class _ChatTab extends StatelessWidget {
+class _ChatTab extends ConsumerStatefulWidget {
   const _ChatTab();
 
   @override
+  ConsumerState<_ChatTab> createState() => _ChatTabState();
+}
+
+class _ChatTabState extends ConsumerState<_ChatTab> {
+  final TextEditingController _input = TextEditingController();
+
+  @override
+  void dispose() {
+    _input.dispose();
+    super.dispose();
+  }
+
+  Future<void> _send() async {
+    final String text = _input.text;
+    if (text.trim().isEmpty) return;
+    _input.clear();
+    await ref.read(personaChatProvider.notifier).send(text);
+  }
+
+  @override
   Widget build(BuildContext context) {
-    return const PersonaSection(
+    final List<PersonaTurn> turns = ref.watch(personaChatProvider);
+
+    return PersonaSection(
       title: 'Talk to Plexa',
       lead: 'Free — never costs XP.',
-      child: PersonaUnavailableNote(
-        title: 'Not in the app yet',
-        message:
-            'Telling Plexa what you shipped, broke or argued about — and '
-            'having it turn that into posts — runs on a route the mobile API '
-            'does not expose. Use the web app; anything you tell it there '
-            'feeds the same posts you see here.',
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: <Widget>[
+          if (turns.isEmpty)
+            Text(
+              'Tell Plexa what you shipped, broke or argued about this week. '
+              'It turns that into material your posts are written from.',
+              style: ZaveType.bodyMuted,
+            ),
+          for (int i = 0; i < turns.length; i++) ...<Widget>[
+            _Turn(
+              turn: turns[i],
+              onAccept: () async {
+                await ref
+                    .read(personaControllerProvider.notifier)
+                    .applyProposals(turns[i].proposals);
+                ref.read(personaChatProvider.notifier).clearProposals(i);
+              },
+              onDismiss: () =>
+                  ref.read(personaChatProvider.notifier).clearProposals(i),
+            ),
+            SizedBox(height: ZaveSpace.md),
+          ],
+          SizedBox(height: ZaveSpace.md),
+          ZaveField(
+            controller: _input,
+            hint: 'What happened this week?',
+            maxLines: 3,
+            minLines: 1,
+            onSubmitted: (_) => _send(),
+          ),
+          SizedBox(height: ZaveSpace.md),
+          ZaveButton.primary(label: 'Send', expand: true, onPressed: _send),
+        ],
       ),
+    );
+  }
+}
+
+/// One line of the conversation.
+///
+/// A Plexa reply may carry PROPOSALS — suggested edits to the user's persona.
+/// They render as an explicit accept/dismiss pair and are never applied by the
+/// reply itself: a conversation must not silently rewrite who the user says
+/// they are.
+class _Turn extends StatelessWidget {
+  const _Turn({
+    required this.turn,
+    required this.onAccept,
+    required this.onDismiss,
+  });
+
+  final PersonaTurn turn;
+  final VoidCallback onAccept;
+  final VoidCallback onDismiss;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: turn.fromUser
+          ? CrossAxisAlignment.end
+          : CrossAxisAlignment.start,
+      children: <Widget>[
+        Container(
+          padding: ZaveSpace.rowPad,
+          decoration: turn.fromUser
+              ? ZaveSurface.rowNow
+              : ZaveSurface.row,
+          child: Text(turn.text, style: ZaveType.body),
+        ),
+        if (turn.proposals.isNotEmpty) ...<Widget>[
+          SizedBox(height: ZaveSpace.sm),
+          Container(
+            padding: ZaveSpace.rowPad,
+            decoration: ZaveSurface.card,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: <Widget>[
+                Text('PLEXA SUGGESTS', style: ZaveType.kicker),
+                SizedBox(height: ZaveSpace.sm),
+                for (final PersonaProposal p in turn.proposals)
+                  Padding(
+                    padding: EdgeInsets.only(bottom: ZaveSpace.xs),
+                    child: Text(
+                      '${p.label ?? p.field}: ${p.to}',
+                      style: ZaveType.body,
+                    ),
+                  ),
+                SizedBox(height: ZaveSpace.md),
+                Row(
+                  children: <Widget>[
+                    Expanded(
+                      child: ZaveButton(
+                        label: 'Apply',
+                        kind: ZaveButtonKind.primarySmall,
+                        expand: true,
+                        onPressed: onAccept,
+                      ),
+                    ),
+                    SizedBox(width: ZaveSpace.md),
+                    Expanded(
+                      child: ZaveButton(
+                        label: 'Not now',
+                        expand: true,
+                        onPressed: onDismiss,
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ],
+      ],
     );
   }
 }

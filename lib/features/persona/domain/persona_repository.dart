@@ -10,24 +10,14 @@ class PersonaUnavailable implements Exception {
 
 /// Seam between the Persona screen and the mobile API.
 ///
-/// ## The screen exists; most of its data does not
+/// Reads `GET /persona`, which returns everything Plexa knows about the user:
+/// the stable identity, the Substance Bank, and the reach the user has
+/// reported. Writes go to the narrower routes below.
 ///
-/// The web's `/persona` is served by a `getPersona()` service returning
-/// `{identity, bank, reach}` and is fed by a fistful of mutations. The mobile
-/// API has **none** of it: no `/persona`, no substance-bank read or write, no
-/// reach import, no audience suggestion, no persona chat, and no voice-sample
-/// count.
-///
-/// What it does have is `/user/preferences` and `/auth/me`, and between them
-/// they carry the whole "Who you are" block and all three audience columns
-/// (`serveRole`, `serveIndustry`, `problemSolved`). So this repository composes
-/// that much honestly, and the screen states the rest as unavailable instead of
-/// rendering it as empty.
-///
-/// That distinction is a product decision copied from the web, where the empty
-/// material bank promises "Plexa won't invent a story" — a promise that becomes
-/// a lie if a failed read wears the same face, and that would push a user to
-/// re-enter material they already have.
+/// This slice was originally built WITHOUT any of it — `/persona` had no mobile
+/// counterpart, so the repository composed what it could from
+/// `/user/preferences` + `/auth/me` and the screen honestly reported the rest
+/// as unavailable. Those routes exist now, so it reads the real thing.
 abstract class PersonaRepository {
   Future<PersonaSnapshot> fetchPersona();
 
@@ -39,4 +29,23 @@ abstract class PersonaRepository {
     String? industry,
     String? problem,
   });
+
+  /// `POST /persona/harvest` — seeds the Substance Bank from the CV and past
+  /// posts. Idempotent server-side. Spends real model budget, so it is a
+  /// deliberate user action rather than something the screen does on open.
+  Future<PersonaSnapshot> harvest();
+
+  /// `POST /persona/audience` — asks the model who this user should write for.
+  /// Returns candidates; choosing one is a separate [saveAudience].
+  Future<List<PersonaAudience>> suggestAudiences();
+
+  /// `POST /persona/chat` — one turn of the Plexa conversation.
+  ///
+  /// The reply may carry proposals. They are NOT applied here.
+  Future<PersonaReply> chat(String message);
+
+  /// `POST /persona/apply` — applies proposals the user accepted.
+  ///
+  /// The only path that writes a model-suggested persona change.
+  Future<PersonaSnapshot> applyProposals(List<PersonaProposal> proposals);
 }

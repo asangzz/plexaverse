@@ -51,7 +51,7 @@ final class PersonaControllerProvider
   PersonaController create() => PersonaController();
 }
 
-String _$personaControllerHash() => r'7b1a6ba911b6b844f9456be98bf00260d9cb6fa5';
+String _$personaControllerHash() => r'b25b56aa435bcbff01bf5a7298edbfccbd336663';
 
 /// The persona screen's state.
 ///
@@ -71,6 +71,84 @@ abstract class _$PersonaController extends $AsyncNotifier<PersonaSnapshot> {
             as $ClassProviderElement<
               AnyNotifier<AsyncValue<PersonaSnapshot>, PersonaSnapshot>,
               AsyncValue<PersonaSnapshot>,
+              Object?,
+              Object?
+            >;
+    element.handleCreate(ref, build);
+  }
+}
+
+/// The Plexa conversation.
+///
+/// Held separately from [PersonaController] because the transcript is UI state
+/// with no server counterpart: `/persona/chat` is a single request/response
+/// and keeps no history, so reloading the persona must not wipe what the user
+/// is in the middle of saying.
+
+@ProviderFor(PersonaChat)
+final personaChatProvider = PersonaChatProvider._();
+
+/// The Plexa conversation.
+///
+/// Held separately from [PersonaController] because the transcript is UI state
+/// with no server counterpart: `/persona/chat` is a single request/response
+/// and keeps no history, so reloading the persona must not wipe what the user
+/// is in the middle of saying.
+final class PersonaChatProvider
+    extends $NotifierProvider<PersonaChat, List<PersonaTurn>> {
+  /// The Plexa conversation.
+  ///
+  /// Held separately from [PersonaController] because the transcript is UI state
+  /// with no server counterpart: `/persona/chat` is a single request/response
+  /// and keeps no history, so reloading the persona must not wipe what the user
+  /// is in the middle of saying.
+  PersonaChatProvider._()
+    : super(
+        from: null,
+        argument: null,
+        retry: null,
+        name: r'personaChatProvider',
+        isAutoDispose: true,
+        dependencies: null,
+        $allTransitiveDependencies: null,
+      );
+
+  @override
+  String debugGetCreateSourceHash() => _$personaChatHash();
+
+  @$internal
+  @override
+  PersonaChat create() => PersonaChat();
+
+  /// {@macro riverpod.override_with_value}
+  Override overrideWithValue(List<PersonaTurn> value) {
+    return $ProviderOverride(
+      origin: this,
+      providerOverride: $SyncValueProvider<List<PersonaTurn>>(value),
+    );
+  }
+}
+
+String _$personaChatHash() => r'48b857c55fe558224f1a94423b4ca09b13242f7c';
+
+/// The Plexa conversation.
+///
+/// Held separately from [PersonaController] because the transcript is UI state
+/// with no server counterpart: `/persona/chat` is a single request/response
+/// and keeps no history, so reloading the persona must not wipe what the user
+/// is in the middle of saying.
+
+abstract class _$PersonaChat extends $Notifier<List<PersonaTurn>> {
+  List<PersonaTurn> build();
+  @$mustCallSuper
+  @override
+  void runBuild() {
+    final ref = this.ref as $Ref<List<PersonaTurn>, List<PersonaTurn>>;
+    final element =
+        ref.element
+            as $ClassProviderElement<
+              AnyNotifier<List<PersonaTurn>, List<PersonaTurn>>,
+              List<PersonaTurn>,
               Object?,
               Object?
             >;

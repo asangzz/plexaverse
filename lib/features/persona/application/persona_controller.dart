@@ -32,6 +32,104 @@ class PersonaController extends _$PersonaController {
         .saveAudience(role: role, industry: industry, problem: problem);
     state = AsyncData<PersonaSnapshot>(updated);
   }
+
+  /// Seeds the Substance Bank from the CV and past posts.
+  ///
+  /// Spends real model budget, so it is a button the user presses rather than
+  /// something the screen does on open. Idempotent server-side.
+  Future<void> harvest() async {
+    final PersonaSnapshot updated = await ref
+        .read(personaRepositoryProvider)
+        .harvest();
+    state = AsyncData<PersonaSnapshot>(updated);
+  }
+
+  /// Applies proposals the user accepted from a chat turn.
+  Future<void> applyProposals(List<PersonaProposal> proposals) async {
+    if (proposals.isEmpty) return;
+    final PersonaSnapshot updated = await ref
+        .read(personaRepositoryProvider)
+        .applyProposals(proposals);
+    state = AsyncData<PersonaSnapshot>(updated);
+  }
+}
+
+/// One line of the Plexa conversation.
+class PersonaTurn {
+  const PersonaTurn({
+    required this.text,
+    required this.fromUser,
+    this.proposals = const <PersonaProposal>[],
+  });
+
+  final String text;
+  final bool fromUser;
+
+  /// Suggested persona edits attached to a Plexa reply. Rendered as an
+  /// explicit accept — a chat turn never writes on its own.
+  final List<PersonaProposal> proposals;
+}
+
+/// The Plexa conversation.
+///
+/// Held separately from [PersonaController] because the transcript is UI state
+/// with no server counterpart: `/persona/chat` is a single request/response
+/// and keeps no history, so reloading the persona must not wipe what the user
+/// is in the middle of saying.
+@riverpod
+class PersonaChat extends _$PersonaChat {
+  @override
+  List<PersonaTurn> build() => const <PersonaTurn>[];
+
+  bool _sending = false;
+  bool get isSending => _sending;
+
+  Future<void> send(String message) async {
+    final String text = message.trim();
+    if (text.isEmpty || _sending) return;
+
+    _sending = true;
+    state = <PersonaTurn>[
+      ...state,
+      PersonaTurn(text: text, fromUser: true),
+    ];
+
+    try {
+      final PersonaReply reply = await ref
+          .read(personaRepositoryProvider)
+          .chat(text);
+      state = <PersonaTurn>[
+        ...state,
+        PersonaTurn(
+          text: reply.reply,
+          fromUser: false,
+          proposals: reply.proposals,
+        ),
+      ];
+    } on Object {
+      state = <PersonaTurn>[
+        ...state,
+        const PersonaTurn(
+          text: "Plexa couldn't reply just now. Try again in a moment.",
+          fromUser: false,
+        ),
+      ];
+    } finally {
+      _sending = false;
+    }
+  }
+
+  /// Drops the proposals off a turn once the user has accepted or dismissed
+  /// them, so the accept row does not linger after it has been acted on.
+  void clearProposals(int index) {
+    if (index < 0 || index >= state.length) return;
+    final List<PersonaTurn> next = List<PersonaTurn>.of(state);
+    next[index] = PersonaTurn(
+      text: next[index].text,
+      fromUser: next[index].fromUser,
+    );
+    state = next;
+  }
 }
 
 /// Which persona tab is showing.

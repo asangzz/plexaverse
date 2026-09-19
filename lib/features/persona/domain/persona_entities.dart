@@ -1,6 +1,7 @@
 import 'package:freezed_annotation/freezed_annotation.dart';
 
 part 'persona_entities.freezed.dart';
+part 'persona_entities.g.dart';
 
 /// Who Plexa thinks you are — the read-only "Who you are" block of the web's
 /// `/persona`.
@@ -83,7 +84,60 @@ abstract class PersonaAudience with _$PersonaAudience {
   ].join(' · ');
 }
 
-/// Everything the persona screen can actually read.
+/// One piece of real material Plexa can ground a post in.
+///
+/// The bank is what keeps generated posts from being invented. An item is
+/// "used" once a post has spent it.
+@freezed
+abstract class SubstanceItem with _$SubstanceItem {
+  const SubstanceItem._();
+
+  const factory SubstanceItem({
+    required String id,
+    @Default('') String kind,
+    @Default('') String text,
+    @Default(<String>[]) List<String> entities,
+    @Default(false) bool hasNumber,
+    @Default('') String source,
+    DateTime? happenedAt,
+    DateTime? usedAt,
+    String? usedInPostId,
+  }) = _SubstanceItem;
+
+  factory SubstanceItem.fromJson(Map<String, dynamic> json) =>
+      _$SubstanceItemFromJson(json);
+
+  bool get isUsed => usedAt != null;
+}
+
+/// The Substance Bank, split by whether each item has been spent.
+@freezed
+abstract class SubstanceBank with _$SubstanceBank {
+  const SubstanceBank._();
+
+  const factory SubstanceBank({
+    @Default(<SubstanceItem>[]) List<SubstanceItem> available,
+    @Default(<SubstanceItem>[]) List<SubstanceItem> used,
+    @Default(0) int availableCount,
+    @Default(0) int usedCount,
+
+    /// The bank could not be READ — a DB blip, not an empty bank.
+    ///
+    /// Distinct from empty **on purpose**, and the distinction is the product
+    /// promise: an empty bank tells the user "Plexa won't invent a story to
+    /// fill the gap", which is true and actionable. Showing that when the read
+    /// simply failed is a lie, and it pushes the user to re-enter material
+    /// they already gave us.
+    @Default(false) bool unavailable,
+  }) = _SubstanceBank;
+
+  factory SubstanceBank.fromJson(Map<String, dynamic> json) =>
+      _$SubstanceBankFromJson(json);
+
+  bool get isEmpty => !unavailable && availableCount == 0 && usedCount == 0;
+}
+
+/// Everything the persona screen can read.
 @freezed
 abstract class PersonaSnapshot with _$PersonaSnapshot {
   const PersonaSnapshot._();
@@ -91,5 +145,44 @@ abstract class PersonaSnapshot with _$PersonaSnapshot {
   const factory PersonaSnapshot({
     required PersonaIdentity identity,
     @Default(PersonaAudience()) PersonaAudience audience,
+    @Default(SubstanceBank()) SubstanceBank bank,
+
+    /// How many writing samples the style memory holds. Drives the Voice row's
+    /// "Learned from N samples".
+    @Default(0) int voiceSampleCount,
   }) = _PersonaSnapshot;
+}
+
+/// One turn of the Plexa conversation.
+@freezed
+abstract class PersonaReply with _$PersonaReply {
+  const PersonaReply._();
+
+  const factory PersonaReply({
+    @Default('') String reply,
+
+    /// Suggested edits to the persona. **Never applied by the chat turn** —
+    /// the user accepts them explicitly, which is why `apply` is its own call.
+    /// A conversation must not silently rewrite who the user says they are.
+    @Default(<PersonaProposal>[]) List<PersonaProposal> proposals,
+  }) = _PersonaReply;
+
+  factory PersonaReply.fromJson(Map<String, dynamic> json) =>
+      _$PersonaReplyFromJson(json);
+}
+
+/// A single proposed field change.
+@freezed
+abstract class PersonaProposal with _$PersonaProposal {
+  const PersonaProposal._();
+
+  const factory PersonaProposal({
+    required String field,
+    @Default('') String to,
+    String? from,
+    String? label,
+  }) = _PersonaProposal;
+
+  factory PersonaProposal.fromJson(Map<String, dynamic> json) =>
+      _$PersonaProposalFromJson(json);
 }

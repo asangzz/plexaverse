@@ -596,10 +596,606 @@ as String?,
 
 }
 
+
+/// @nodoc
+mixin _$SubstanceItem {
+
+ String get id; String get kind; String get text; List<String> get entities; bool get hasNumber; String get source; DateTime? get happenedAt; DateTime? get usedAt; String? get usedInPostId;
+/// Create a copy of SubstanceItem
+/// with the given fields replaced by the non-null parameter values.
+@JsonKey(includeFromJson: false, includeToJson: false)
+@pragma('vm:prefer-inline')
+$SubstanceItemCopyWith<SubstanceItem> get copyWith => _$SubstanceItemCopyWithImpl<SubstanceItem>(this as SubstanceItem, _$identity);
+
+  /// Serializes this SubstanceItem to a JSON map.
+  Map<String, dynamic> toJson();
+
+
+@override
+bool operator ==(Object other) {
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is SubstanceItem&&(identical(other.id, id) || other.id == id)&&(identical(other.kind, kind) || other.kind == kind)&&(identical(other.text, text) || other.text == text)&&const DeepCollectionEquality().equals(other.entities, entities)&&(identical(other.hasNumber, hasNumber) || other.hasNumber == hasNumber)&&(identical(other.source, source) || other.source == source)&&(identical(other.happenedAt, happenedAt) || other.happenedAt == happenedAt)&&(identical(other.usedAt, usedAt) || other.usedAt == usedAt)&&(identical(other.usedInPostId, usedInPostId) || other.usedInPostId == usedInPostId));
+}
+
+@JsonKey(includeFromJson: false, includeToJson: false)
+@override
+int get hashCode => Object.hash(runtimeType,id,kind,text,const DeepCollectionEquality().hash(entities),hasNumber,source,happenedAt,usedAt,usedInPostId);
+
+@override
+String toString() {
+  return 'SubstanceItem(id: $id, kind: $kind, text: $text, entities: $entities, hasNumber: $hasNumber, source: $source, happenedAt: $happenedAt, usedAt: $usedAt, usedInPostId: $usedInPostId)';
+}
+
+
+}
+
+/// @nodoc
+abstract mixin class $SubstanceItemCopyWith<$Res>  {
+  factory $SubstanceItemCopyWith(SubstanceItem value, $Res Function(SubstanceItem) _then) = _$SubstanceItemCopyWithImpl;
+@useResult
+$Res call({
+ String id, String kind, String text, List<String> entities, bool hasNumber, String source, DateTime? happenedAt, DateTime? usedAt, String? usedInPostId
+});
+
+
+
+
+}
+/// @nodoc
+class _$SubstanceItemCopyWithImpl<$Res>
+    implements $SubstanceItemCopyWith<$Res> {
+  _$SubstanceItemCopyWithImpl(this._self, this._then);
+
+  final SubstanceItem _self;
+  final $Res Function(SubstanceItem) _then;
+
+/// Create a copy of SubstanceItem
+/// with the given fields replaced by the non-null parameter values.
+@pragma('vm:prefer-inline') @override $Res call({Object? id = null,Object? kind = null,Object? text = null,Object? entities = null,Object? hasNumber = null,Object? source = null,Object? happenedAt = freezed,Object? usedAt = freezed,Object? usedInPostId = freezed,}) {
+  return _then(_self.copyWith(
+id: null == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
+as String,kind: null == kind ? _self.kind : kind // ignore: cast_nullable_to_non_nullable
+as String,text: null == text ? _self.text : text // ignore: cast_nullable_to_non_nullable
+as String,entities: null == entities ? _self.entities : entities // ignore: cast_nullable_to_non_nullable
+as List<String>,hasNumber: null == hasNumber ? _self.hasNumber : hasNumber // ignore: cast_nullable_to_non_nullable
+as bool,source: null == source ? _self.source : source // ignore: cast_nullable_to_non_nullable
+as String,happenedAt: freezed == happenedAt ? _self.happenedAt : happenedAt // ignore: cast_nullable_to_non_nullable
+as DateTime?,usedAt: freezed == usedAt ? _self.usedAt : usedAt // ignore: cast_nullable_to_non_nullable
+as DateTime?,usedInPostId: freezed == usedInPostId ? _self.usedInPostId : usedInPostId // ignore: cast_nullable_to_non_nullable
+as String?,
+  ));
+}
+
+}
+
+
+/// Adds pattern-matching-related methods to [SubstanceItem].
+extension SubstanceItemPatterns on SubstanceItem {
+/// A variant of `map` that fallback to returning `orElse`.
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case final Subclass value:
+///     return ...;
+///   case _:
+///     return orElse();
+/// }
+/// ```
+
+@optionalTypeArgs TResult maybeMap<TResult extends Object?>(TResult Function( _SubstanceItem value)?  $default,{required TResult orElse(),}){
+final _that = this;
+switch (_that) {
+case _SubstanceItem() when $default != null:
+return $default(_that);case _:
+  return orElse();
+
+}
+}
+/// A `switch`-like method, using callbacks.
+///
+/// Callbacks receives the raw object, upcasted.
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case final Subclass value:
+///     return ...;
+///   case final Subclass2 value:
+///     return ...;
+/// }
+/// ```
+
+@optionalTypeArgs TResult map<TResult extends Object?>(TResult Function( _SubstanceItem value)  $default,){
+final _that = this;
+switch (_that) {
+case _SubstanceItem():
+return $default(_that);case _:
+  throw StateError('Unexpected subclass');
+
+}
+}
+/// A variant of `map` that fallback to returning `null`.
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case final Subclass value:
+///     return ...;
+///   case _:
+///     return null;
+/// }
+/// ```
+
+@optionalTypeArgs TResult? mapOrNull<TResult extends Object?>(TResult? Function( _SubstanceItem value)?  $default,){
+final _that = this;
+switch (_that) {
+case _SubstanceItem() when $default != null:
+return $default(_that);case _:
+  return null;
+
+}
+}
+/// A variant of `when` that fallback to an `orElse` callback.
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case Subclass(:final field):
+///     return ...;
+///   case _:
+///     return orElse();
+/// }
+/// ```
+
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String id,  String kind,  String text,  List<String> entities,  bool hasNumber,  String source,  DateTime? happenedAt,  DateTime? usedAt,  String? usedInPostId)?  $default,{required TResult orElse(),}) {final _that = this;
+switch (_that) {
+case _SubstanceItem() when $default != null:
+return $default(_that.id,_that.kind,_that.text,_that.entities,_that.hasNumber,_that.source,_that.happenedAt,_that.usedAt,_that.usedInPostId);case _:
+  return orElse();
+
+}
+}
+/// A `switch`-like method, using callbacks.
+///
+/// As opposed to `map`, this offers destructuring.
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case Subclass(:final field):
+///     return ...;
+///   case Subclass2(:final field2):
+///     return ...;
+/// }
+/// ```
+
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String id,  String kind,  String text,  List<String> entities,  bool hasNumber,  String source,  DateTime? happenedAt,  DateTime? usedAt,  String? usedInPostId)  $default,) {final _that = this;
+switch (_that) {
+case _SubstanceItem():
+return $default(_that.id,_that.kind,_that.text,_that.entities,_that.hasNumber,_that.source,_that.happenedAt,_that.usedAt,_that.usedInPostId);case _:
+  throw StateError('Unexpected subclass');
+
+}
+}
+/// A variant of `when` that fallback to returning `null`
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case Subclass(:final field):
+///     return ...;
+///   case _:
+///     return null;
+/// }
+/// ```
+
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String id,  String kind,  String text,  List<String> entities,  bool hasNumber,  String source,  DateTime? happenedAt,  DateTime? usedAt,  String? usedInPostId)?  $default,) {final _that = this;
+switch (_that) {
+case _SubstanceItem() when $default != null:
+return $default(_that.id,_that.kind,_that.text,_that.entities,_that.hasNumber,_that.source,_that.happenedAt,_that.usedAt,_that.usedInPostId);case _:
+  return null;
+
+}
+}
+
+}
+
+/// @nodoc
+@JsonSerializable()
+
+class _SubstanceItem extends SubstanceItem {
+  const _SubstanceItem({required this.id, this.kind = '', this.text = '', final  List<String> entities = const <String>[], this.hasNumber = false, this.source = '', this.happenedAt, this.usedAt, this.usedInPostId}): _entities = entities,super._();
+  factory _SubstanceItem.fromJson(Map<String, dynamic> json) => _$SubstanceItemFromJson(json);
+
+@override final  String id;
+@override@JsonKey() final  String kind;
+@override@JsonKey() final  String text;
+ final  List<String> _entities;
+@override@JsonKey() List<String> get entities {
+  if (_entities is EqualUnmodifiableListView) return _entities;
+  // ignore: implicit_dynamic_type
+  return EqualUnmodifiableListView(_entities);
+}
+
+@override@JsonKey() final  bool hasNumber;
+@override@JsonKey() final  String source;
+@override final  DateTime? happenedAt;
+@override final  DateTime? usedAt;
+@override final  String? usedInPostId;
+
+/// Create a copy of SubstanceItem
+/// with the given fields replaced by the non-null parameter values.
+@override @JsonKey(includeFromJson: false, includeToJson: false)
+@pragma('vm:prefer-inline')
+_$SubstanceItemCopyWith<_SubstanceItem> get copyWith => __$SubstanceItemCopyWithImpl<_SubstanceItem>(this, _$identity);
+
+@override
+Map<String, dynamic> toJson() {
+  return _$SubstanceItemToJson(this, );
+}
+
+@override
+bool operator ==(Object other) {
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is _SubstanceItem&&(identical(other.id, id) || other.id == id)&&(identical(other.kind, kind) || other.kind == kind)&&(identical(other.text, text) || other.text == text)&&const DeepCollectionEquality().equals(other._entities, _entities)&&(identical(other.hasNumber, hasNumber) || other.hasNumber == hasNumber)&&(identical(other.source, source) || other.source == source)&&(identical(other.happenedAt, happenedAt) || other.happenedAt == happenedAt)&&(identical(other.usedAt, usedAt) || other.usedAt == usedAt)&&(identical(other.usedInPostId, usedInPostId) || other.usedInPostId == usedInPostId));
+}
+
+@JsonKey(includeFromJson: false, includeToJson: false)
+@override
+int get hashCode => Object.hash(runtimeType,id,kind,text,const DeepCollectionEquality().hash(_entities),hasNumber,source,happenedAt,usedAt,usedInPostId);
+
+@override
+String toString() {
+  return 'SubstanceItem(id: $id, kind: $kind, text: $text, entities: $entities, hasNumber: $hasNumber, source: $source, happenedAt: $happenedAt, usedAt: $usedAt, usedInPostId: $usedInPostId)';
+}
+
+
+}
+
+/// @nodoc
+abstract mixin class _$SubstanceItemCopyWith<$Res> implements $SubstanceItemCopyWith<$Res> {
+  factory _$SubstanceItemCopyWith(_SubstanceItem value, $Res Function(_SubstanceItem) _then) = __$SubstanceItemCopyWithImpl;
+@override @useResult
+$Res call({
+ String id, String kind, String text, List<String> entities, bool hasNumber, String source, DateTime? happenedAt, DateTime? usedAt, String? usedInPostId
+});
+
+
+
+
+}
+/// @nodoc
+class __$SubstanceItemCopyWithImpl<$Res>
+    implements _$SubstanceItemCopyWith<$Res> {
+  __$SubstanceItemCopyWithImpl(this._self, this._then);
+
+  final _SubstanceItem _self;
+  final $Res Function(_SubstanceItem) _then;
+
+/// Create a copy of SubstanceItem
+/// with the given fields replaced by the non-null parameter values.
+@override @pragma('vm:prefer-inline') $Res call({Object? id = null,Object? kind = null,Object? text = null,Object? entities = null,Object? hasNumber = null,Object? source = null,Object? happenedAt = freezed,Object? usedAt = freezed,Object? usedInPostId = freezed,}) {
+  return _then(_SubstanceItem(
+id: null == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
+as String,kind: null == kind ? _self.kind : kind // ignore: cast_nullable_to_non_nullable
+as String,text: null == text ? _self.text : text // ignore: cast_nullable_to_non_nullable
+as String,entities: null == entities ? _self._entities : entities // ignore: cast_nullable_to_non_nullable
+as List<String>,hasNumber: null == hasNumber ? _self.hasNumber : hasNumber // ignore: cast_nullable_to_non_nullable
+as bool,source: null == source ? _self.source : source // ignore: cast_nullable_to_non_nullable
+as String,happenedAt: freezed == happenedAt ? _self.happenedAt : happenedAt // ignore: cast_nullable_to_non_nullable
+as DateTime?,usedAt: freezed == usedAt ? _self.usedAt : usedAt // ignore: cast_nullable_to_non_nullable
+as DateTime?,usedInPostId: freezed == usedInPostId ? _self.usedInPostId : usedInPostId // ignore: cast_nullable_to_non_nullable
+as String?,
+  ));
+}
+
+
+}
+
+
+/// @nodoc
+mixin _$SubstanceBank {
+
+ List<SubstanceItem> get available; List<SubstanceItem> get used; int get availableCount; int get usedCount;/// The bank could not be READ — a DB blip, not an empty bank.
+///
+/// Distinct from empty **on purpose**, and the distinction is the product
+/// promise: an empty bank tells the user "Plexa won't invent a story to
+/// fill the gap", which is true and actionable. Showing that when the read
+/// simply failed is a lie, and it pushes the user to re-enter material
+/// they already gave us.
+ bool get unavailable;
+/// Create a copy of SubstanceBank
+/// with the given fields replaced by the non-null parameter values.
+@JsonKey(includeFromJson: false, includeToJson: false)
+@pragma('vm:prefer-inline')
+$SubstanceBankCopyWith<SubstanceBank> get copyWith => _$SubstanceBankCopyWithImpl<SubstanceBank>(this as SubstanceBank, _$identity);
+
+  /// Serializes this SubstanceBank to a JSON map.
+  Map<String, dynamic> toJson();
+
+
+@override
+bool operator ==(Object other) {
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is SubstanceBank&&const DeepCollectionEquality().equals(other.available, available)&&const DeepCollectionEquality().equals(other.used, used)&&(identical(other.availableCount, availableCount) || other.availableCount == availableCount)&&(identical(other.usedCount, usedCount) || other.usedCount == usedCount)&&(identical(other.unavailable, unavailable) || other.unavailable == unavailable));
+}
+
+@JsonKey(includeFromJson: false, includeToJson: false)
+@override
+int get hashCode => Object.hash(runtimeType,const DeepCollectionEquality().hash(available),const DeepCollectionEquality().hash(used),availableCount,usedCount,unavailable);
+
+@override
+String toString() {
+  return 'SubstanceBank(available: $available, used: $used, availableCount: $availableCount, usedCount: $usedCount, unavailable: $unavailable)';
+}
+
+
+}
+
+/// @nodoc
+abstract mixin class $SubstanceBankCopyWith<$Res>  {
+  factory $SubstanceBankCopyWith(SubstanceBank value, $Res Function(SubstanceBank) _then) = _$SubstanceBankCopyWithImpl;
+@useResult
+$Res call({
+ List<SubstanceItem> available, List<SubstanceItem> used, int availableCount, int usedCount, bool unavailable
+});
+
+
+
+
+}
+/// @nodoc
+class _$SubstanceBankCopyWithImpl<$Res>
+    implements $SubstanceBankCopyWith<$Res> {
+  _$SubstanceBankCopyWithImpl(this._self, this._then);
+
+  final SubstanceBank _self;
+  final $Res Function(SubstanceBank) _then;
+
+/// Create a copy of SubstanceBank
+/// with the given fields replaced by the non-null parameter values.
+@pragma('vm:prefer-inline') @override $Res call({Object? available = null,Object? used = null,Object? availableCount = null,Object? usedCount = null,Object? unavailable = null,}) {
+  return _then(_self.copyWith(
+available: null == available ? _self.available : available // ignore: cast_nullable_to_non_nullable
+as List<SubstanceItem>,used: null == used ? _self.used : used // ignore: cast_nullable_to_non_nullable
+as List<SubstanceItem>,availableCount: null == availableCount ? _self.availableCount : availableCount // ignore: cast_nullable_to_non_nullable
+as int,usedCount: null == usedCount ? _self.usedCount : usedCount // ignore: cast_nullable_to_non_nullable
+as int,unavailable: null == unavailable ? _self.unavailable : unavailable // ignore: cast_nullable_to_non_nullable
+as bool,
+  ));
+}
+
+}
+
+
+/// Adds pattern-matching-related methods to [SubstanceBank].
+extension SubstanceBankPatterns on SubstanceBank {
+/// A variant of `map` that fallback to returning `orElse`.
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case final Subclass value:
+///     return ...;
+///   case _:
+///     return orElse();
+/// }
+/// ```
+
+@optionalTypeArgs TResult maybeMap<TResult extends Object?>(TResult Function( _SubstanceBank value)?  $default,{required TResult orElse(),}){
+final _that = this;
+switch (_that) {
+case _SubstanceBank() when $default != null:
+return $default(_that);case _:
+  return orElse();
+
+}
+}
+/// A `switch`-like method, using callbacks.
+///
+/// Callbacks receives the raw object, upcasted.
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case final Subclass value:
+///     return ...;
+///   case final Subclass2 value:
+///     return ...;
+/// }
+/// ```
+
+@optionalTypeArgs TResult map<TResult extends Object?>(TResult Function( _SubstanceBank value)  $default,){
+final _that = this;
+switch (_that) {
+case _SubstanceBank():
+return $default(_that);case _:
+  throw StateError('Unexpected subclass');
+
+}
+}
+/// A variant of `map` that fallback to returning `null`.
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case final Subclass value:
+///     return ...;
+///   case _:
+///     return null;
+/// }
+/// ```
+
+@optionalTypeArgs TResult? mapOrNull<TResult extends Object?>(TResult? Function( _SubstanceBank value)?  $default,){
+final _that = this;
+switch (_that) {
+case _SubstanceBank() when $default != null:
+return $default(_that);case _:
+  return null;
+
+}
+}
+/// A variant of `when` that fallback to an `orElse` callback.
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case Subclass(:final field):
+///     return ...;
+///   case _:
+///     return orElse();
+/// }
+/// ```
+
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( List<SubstanceItem> available,  List<SubstanceItem> used,  int availableCount,  int usedCount,  bool unavailable)?  $default,{required TResult orElse(),}) {final _that = this;
+switch (_that) {
+case _SubstanceBank() when $default != null:
+return $default(_that.available,_that.used,_that.availableCount,_that.usedCount,_that.unavailable);case _:
+  return orElse();
+
+}
+}
+/// A `switch`-like method, using callbacks.
+///
+/// As opposed to `map`, this offers destructuring.
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case Subclass(:final field):
+///     return ...;
+///   case Subclass2(:final field2):
+///     return ...;
+/// }
+/// ```
+
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( List<SubstanceItem> available,  List<SubstanceItem> used,  int availableCount,  int usedCount,  bool unavailable)  $default,) {final _that = this;
+switch (_that) {
+case _SubstanceBank():
+return $default(_that.available,_that.used,_that.availableCount,_that.usedCount,_that.unavailable);case _:
+  throw StateError('Unexpected subclass');
+
+}
+}
+/// A variant of `when` that fallback to returning `null`
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case Subclass(:final field):
+///     return ...;
+///   case _:
+///     return null;
+/// }
+/// ```
+
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( List<SubstanceItem> available,  List<SubstanceItem> used,  int availableCount,  int usedCount,  bool unavailable)?  $default,) {final _that = this;
+switch (_that) {
+case _SubstanceBank() when $default != null:
+return $default(_that.available,_that.used,_that.availableCount,_that.usedCount,_that.unavailable);case _:
+  return null;
+
+}
+}
+
+}
+
+/// @nodoc
+@JsonSerializable()
+
+class _SubstanceBank extends SubstanceBank {
+  const _SubstanceBank({final  List<SubstanceItem> available = const <SubstanceItem>[], final  List<SubstanceItem> used = const <SubstanceItem>[], this.availableCount = 0, this.usedCount = 0, this.unavailable = false}): _available = available,_used = used,super._();
+  factory _SubstanceBank.fromJson(Map<String, dynamic> json) => _$SubstanceBankFromJson(json);
+
+ final  List<SubstanceItem> _available;
+@override@JsonKey() List<SubstanceItem> get available {
+  if (_available is EqualUnmodifiableListView) return _available;
+  // ignore: implicit_dynamic_type
+  return EqualUnmodifiableListView(_available);
+}
+
+ final  List<SubstanceItem> _used;
+@override@JsonKey() List<SubstanceItem> get used {
+  if (_used is EqualUnmodifiableListView) return _used;
+  // ignore: implicit_dynamic_type
+  return EqualUnmodifiableListView(_used);
+}
+
+@override@JsonKey() final  int availableCount;
+@override@JsonKey() final  int usedCount;
+/// The bank could not be READ — a DB blip, not an empty bank.
+///
+/// Distinct from empty **on purpose**, and the distinction is the product
+/// promise: an empty bank tells the user "Plexa won't invent a story to
+/// fill the gap", which is true and actionable. Showing that when the read
+/// simply failed is a lie, and it pushes the user to re-enter material
+/// they already gave us.
+@override@JsonKey() final  bool unavailable;
+
+/// Create a copy of SubstanceBank
+/// with the given fields replaced by the non-null parameter values.
+@override @JsonKey(includeFromJson: false, includeToJson: false)
+@pragma('vm:prefer-inline')
+_$SubstanceBankCopyWith<_SubstanceBank> get copyWith => __$SubstanceBankCopyWithImpl<_SubstanceBank>(this, _$identity);
+
+@override
+Map<String, dynamic> toJson() {
+  return _$SubstanceBankToJson(this, );
+}
+
+@override
+bool operator ==(Object other) {
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is _SubstanceBank&&const DeepCollectionEquality().equals(other._available, _available)&&const DeepCollectionEquality().equals(other._used, _used)&&(identical(other.availableCount, availableCount) || other.availableCount == availableCount)&&(identical(other.usedCount, usedCount) || other.usedCount == usedCount)&&(identical(other.unavailable, unavailable) || other.unavailable == unavailable));
+}
+
+@JsonKey(includeFromJson: false, includeToJson: false)
+@override
+int get hashCode => Object.hash(runtimeType,const DeepCollectionEquality().hash(_available),const DeepCollectionEquality().hash(_used),availableCount,usedCount,unavailable);
+
+@override
+String toString() {
+  return 'SubstanceBank(available: $available, used: $used, availableCount: $availableCount, usedCount: $usedCount, unavailable: $unavailable)';
+}
+
+
+}
+
+/// @nodoc
+abstract mixin class _$SubstanceBankCopyWith<$Res> implements $SubstanceBankCopyWith<$Res> {
+  factory _$SubstanceBankCopyWith(_SubstanceBank value, $Res Function(_SubstanceBank) _then) = __$SubstanceBankCopyWithImpl;
+@override @useResult
+$Res call({
+ List<SubstanceItem> available, List<SubstanceItem> used, int availableCount, int usedCount, bool unavailable
+});
+
+
+
+
+}
+/// @nodoc
+class __$SubstanceBankCopyWithImpl<$Res>
+    implements _$SubstanceBankCopyWith<$Res> {
+  __$SubstanceBankCopyWithImpl(this._self, this._then);
+
+  final _SubstanceBank _self;
+  final $Res Function(_SubstanceBank) _then;
+
+/// Create a copy of SubstanceBank
+/// with the given fields replaced by the non-null parameter values.
+@override @pragma('vm:prefer-inline') $Res call({Object? available = null,Object? used = null,Object? availableCount = null,Object? usedCount = null,Object? unavailable = null,}) {
+  return _then(_SubstanceBank(
+available: null == available ? _self._available : available // ignore: cast_nullable_to_non_nullable
+as List<SubstanceItem>,used: null == used ? _self._used : used // ignore: cast_nullable_to_non_nullable
+as List<SubstanceItem>,availableCount: null == availableCount ? _self.availableCount : availableCount // ignore: cast_nullable_to_non_nullable
+as int,usedCount: null == usedCount ? _self.usedCount : usedCount // ignore: cast_nullable_to_non_nullable
+as int,unavailable: null == unavailable ? _self.unavailable : unavailable // ignore: cast_nullable_to_non_nullable
+as bool,
+  ));
+}
+
+
+}
+
 /// @nodoc
 mixin _$PersonaSnapshot {
 
- PersonaIdentity get identity; PersonaAudience get audience;
+ PersonaIdentity get identity; PersonaAudience get audience; SubstanceBank get bank;/// How many writing samples the style memory holds. Drives the Voice row's
+/// "Learned from N samples".
+ int get voiceSampleCount;
 /// Create a copy of PersonaSnapshot
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
@@ -610,16 +1206,16 @@ $PersonaSnapshotCopyWith<PersonaSnapshot> get copyWith => _$PersonaSnapshotCopyW
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is PersonaSnapshot&&(identical(other.identity, identity) || other.identity == identity)&&(identical(other.audience, audience) || other.audience == audience));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is PersonaSnapshot&&(identical(other.identity, identity) || other.identity == identity)&&(identical(other.audience, audience) || other.audience == audience)&&(identical(other.bank, bank) || other.bank == bank)&&(identical(other.voiceSampleCount, voiceSampleCount) || other.voiceSampleCount == voiceSampleCount));
 }
 
 
 @override
-int get hashCode => Object.hash(runtimeType,identity,audience);
+int get hashCode => Object.hash(runtimeType,identity,audience,bank,voiceSampleCount);
 
 @override
 String toString() {
-  return 'PersonaSnapshot(identity: $identity, audience: $audience)';
+  return 'PersonaSnapshot(identity: $identity, audience: $audience, bank: $bank, voiceSampleCount: $voiceSampleCount)';
 }
 
 
@@ -630,11 +1226,11 @@ abstract mixin class $PersonaSnapshotCopyWith<$Res>  {
   factory $PersonaSnapshotCopyWith(PersonaSnapshot value, $Res Function(PersonaSnapshot) _then) = _$PersonaSnapshotCopyWithImpl;
 @useResult
 $Res call({
- PersonaIdentity identity, PersonaAudience audience
+ PersonaIdentity identity, PersonaAudience audience, SubstanceBank bank, int voiceSampleCount
 });
 
 
-$PersonaIdentityCopyWith<$Res> get identity;$PersonaAudienceCopyWith<$Res> get audience;
+$PersonaIdentityCopyWith<$Res> get identity;$PersonaAudienceCopyWith<$Res> get audience;$SubstanceBankCopyWith<$Res> get bank;
 
 }
 /// @nodoc
@@ -647,11 +1243,13 @@ class _$PersonaSnapshotCopyWithImpl<$Res>
 
 /// Create a copy of PersonaSnapshot
 /// with the given fields replaced by the non-null parameter values.
-@pragma('vm:prefer-inline') @override $Res call({Object? identity = null,Object? audience = null,}) {
+@pragma('vm:prefer-inline') @override $Res call({Object? identity = null,Object? audience = null,Object? bank = null,Object? voiceSampleCount = null,}) {
   return _then(_self.copyWith(
 identity: null == identity ? _self.identity : identity // ignore: cast_nullable_to_non_nullable
 as PersonaIdentity,audience: null == audience ? _self.audience : audience // ignore: cast_nullable_to_non_nullable
-as PersonaAudience,
+as PersonaAudience,bank: null == bank ? _self.bank : bank // ignore: cast_nullable_to_non_nullable
+as SubstanceBank,voiceSampleCount: null == voiceSampleCount ? _self.voiceSampleCount : voiceSampleCount // ignore: cast_nullable_to_non_nullable
+as int,
   ));
 }
 /// Create a copy of PersonaSnapshot
@@ -671,6 +1269,15 @@ $PersonaAudienceCopyWith<$Res> get audience {
   
   return $PersonaAudienceCopyWith<$Res>(_self.audience, (value) {
     return _then(_self.copyWith(audience: value));
+  });
+}/// Create a copy of PersonaSnapshot
+/// with the given fields replaced by the non-null parameter values.
+@override
+@pragma('vm:prefer-inline')
+$SubstanceBankCopyWith<$Res> get bank {
+  
+  return $SubstanceBankCopyWith<$Res>(_self.bank, (value) {
+    return _then(_self.copyWith(bank: value));
   });
 }
 }
@@ -754,10 +1361,10 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( PersonaIdentity identity,  PersonaAudience audience)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( PersonaIdentity identity,  PersonaAudience audience,  SubstanceBank bank,  int voiceSampleCount)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _PersonaSnapshot() when $default != null:
-return $default(_that.identity,_that.audience);case _:
+return $default(_that.identity,_that.audience,_that.bank,_that.voiceSampleCount);case _:
   return orElse();
 
 }
@@ -775,10 +1382,10 @@ return $default(_that.identity,_that.audience);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( PersonaIdentity identity,  PersonaAudience audience)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( PersonaIdentity identity,  PersonaAudience audience,  SubstanceBank bank,  int voiceSampleCount)  $default,) {final _that = this;
 switch (_that) {
 case _PersonaSnapshot():
-return $default(_that.identity,_that.audience);case _:
+return $default(_that.identity,_that.audience,_that.bank,_that.voiceSampleCount);case _:
   throw StateError('Unexpected subclass');
 
 }
@@ -795,10 +1402,10 @@ return $default(_that.identity,_that.audience);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( PersonaIdentity identity,  PersonaAudience audience)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( PersonaIdentity identity,  PersonaAudience audience,  SubstanceBank bank,  int voiceSampleCount)?  $default,) {final _that = this;
 switch (_that) {
 case _PersonaSnapshot() when $default != null:
-return $default(_that.identity,_that.audience);case _:
+return $default(_that.identity,_that.audience,_that.bank,_that.voiceSampleCount);case _:
   return null;
 
 }
@@ -810,11 +1417,15 @@ return $default(_that.identity,_that.audience);case _:
 
 
 class _PersonaSnapshot extends PersonaSnapshot {
-  const _PersonaSnapshot({required this.identity, this.audience = const PersonaAudience()}): super._();
+  const _PersonaSnapshot({required this.identity, this.audience = const PersonaAudience(), this.bank = const SubstanceBank(), this.voiceSampleCount = 0}): super._();
   
 
 @override final  PersonaIdentity identity;
 @override@JsonKey() final  PersonaAudience audience;
+@override@JsonKey() final  SubstanceBank bank;
+/// How many writing samples the style memory holds. Drives the Voice row's
+/// "Learned from N samples".
+@override@JsonKey() final  int voiceSampleCount;
 
 /// Create a copy of PersonaSnapshot
 /// with the given fields replaced by the non-null parameter values.
@@ -826,16 +1437,16 @@ _$PersonaSnapshotCopyWith<_PersonaSnapshot> get copyWith => __$PersonaSnapshotCo
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is _PersonaSnapshot&&(identical(other.identity, identity) || other.identity == identity)&&(identical(other.audience, audience) || other.audience == audience));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is _PersonaSnapshot&&(identical(other.identity, identity) || other.identity == identity)&&(identical(other.audience, audience) || other.audience == audience)&&(identical(other.bank, bank) || other.bank == bank)&&(identical(other.voiceSampleCount, voiceSampleCount) || other.voiceSampleCount == voiceSampleCount));
 }
 
 
 @override
-int get hashCode => Object.hash(runtimeType,identity,audience);
+int get hashCode => Object.hash(runtimeType,identity,audience,bank,voiceSampleCount);
 
 @override
 String toString() {
-  return 'PersonaSnapshot(identity: $identity, audience: $audience)';
+  return 'PersonaSnapshot(identity: $identity, audience: $audience, bank: $bank, voiceSampleCount: $voiceSampleCount)';
 }
 
 
@@ -846,11 +1457,11 @@ abstract mixin class _$PersonaSnapshotCopyWith<$Res> implements $PersonaSnapshot
   factory _$PersonaSnapshotCopyWith(_PersonaSnapshot value, $Res Function(_PersonaSnapshot) _then) = __$PersonaSnapshotCopyWithImpl;
 @override @useResult
 $Res call({
- PersonaIdentity identity, PersonaAudience audience
+ PersonaIdentity identity, PersonaAudience audience, SubstanceBank bank, int voiceSampleCount
 });
 
 
-@override $PersonaIdentityCopyWith<$Res> get identity;@override $PersonaAudienceCopyWith<$Res> get audience;
+@override $PersonaIdentityCopyWith<$Res> get identity;@override $PersonaAudienceCopyWith<$Res> get audience;@override $SubstanceBankCopyWith<$Res> get bank;
 
 }
 /// @nodoc
@@ -863,11 +1474,13 @@ class __$PersonaSnapshotCopyWithImpl<$Res>
 
 /// Create a copy of PersonaSnapshot
 /// with the given fields replaced by the non-null parameter values.
-@override @pragma('vm:prefer-inline') $Res call({Object? identity = null,Object? audience = null,}) {
+@override @pragma('vm:prefer-inline') $Res call({Object? identity = null,Object? audience = null,Object? bank = null,Object? voiceSampleCount = null,}) {
   return _then(_PersonaSnapshot(
 identity: null == identity ? _self.identity : identity // ignore: cast_nullable_to_non_nullable
 as PersonaIdentity,audience: null == audience ? _self.audience : audience // ignore: cast_nullable_to_non_nullable
-as PersonaAudience,
+as PersonaAudience,bank: null == bank ? _self.bank : bank // ignore: cast_nullable_to_non_nullable
+as SubstanceBank,voiceSampleCount: null == voiceSampleCount ? _self.voiceSampleCount : voiceSampleCount // ignore: cast_nullable_to_non_nullable
+as int,
   ));
 }
 
@@ -889,7 +1502,569 @@ $PersonaAudienceCopyWith<$Res> get audience {
   return $PersonaAudienceCopyWith<$Res>(_self.audience, (value) {
     return _then(_self.copyWith(audience: value));
   });
+}/// Create a copy of PersonaSnapshot
+/// with the given fields replaced by the non-null parameter values.
+@override
+@pragma('vm:prefer-inline')
+$SubstanceBankCopyWith<$Res> get bank {
+  
+  return $SubstanceBankCopyWith<$Res>(_self.bank, (value) {
+    return _then(_self.copyWith(bank: value));
+  });
 }
+}
+
+
+/// @nodoc
+mixin _$PersonaReply {
+
+ String get reply;/// Suggested edits to the persona. **Never applied by the chat turn** —
+/// the user accepts them explicitly, which is why `apply` is its own call.
+/// A conversation must not silently rewrite who the user says they are.
+ List<PersonaProposal> get proposals;
+/// Create a copy of PersonaReply
+/// with the given fields replaced by the non-null parameter values.
+@JsonKey(includeFromJson: false, includeToJson: false)
+@pragma('vm:prefer-inline')
+$PersonaReplyCopyWith<PersonaReply> get copyWith => _$PersonaReplyCopyWithImpl<PersonaReply>(this as PersonaReply, _$identity);
+
+  /// Serializes this PersonaReply to a JSON map.
+  Map<String, dynamic> toJson();
+
+
+@override
+bool operator ==(Object other) {
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is PersonaReply&&(identical(other.reply, reply) || other.reply == reply)&&const DeepCollectionEquality().equals(other.proposals, proposals));
+}
+
+@JsonKey(includeFromJson: false, includeToJson: false)
+@override
+int get hashCode => Object.hash(runtimeType,reply,const DeepCollectionEquality().hash(proposals));
+
+@override
+String toString() {
+  return 'PersonaReply(reply: $reply, proposals: $proposals)';
+}
+
+
+}
+
+/// @nodoc
+abstract mixin class $PersonaReplyCopyWith<$Res>  {
+  factory $PersonaReplyCopyWith(PersonaReply value, $Res Function(PersonaReply) _then) = _$PersonaReplyCopyWithImpl;
+@useResult
+$Res call({
+ String reply, List<PersonaProposal> proposals
+});
+
+
+
+
+}
+/// @nodoc
+class _$PersonaReplyCopyWithImpl<$Res>
+    implements $PersonaReplyCopyWith<$Res> {
+  _$PersonaReplyCopyWithImpl(this._self, this._then);
+
+  final PersonaReply _self;
+  final $Res Function(PersonaReply) _then;
+
+/// Create a copy of PersonaReply
+/// with the given fields replaced by the non-null parameter values.
+@pragma('vm:prefer-inline') @override $Res call({Object? reply = null,Object? proposals = null,}) {
+  return _then(_self.copyWith(
+reply: null == reply ? _self.reply : reply // ignore: cast_nullable_to_non_nullable
+as String,proposals: null == proposals ? _self.proposals : proposals // ignore: cast_nullable_to_non_nullable
+as List<PersonaProposal>,
+  ));
+}
+
+}
+
+
+/// Adds pattern-matching-related methods to [PersonaReply].
+extension PersonaReplyPatterns on PersonaReply {
+/// A variant of `map` that fallback to returning `orElse`.
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case final Subclass value:
+///     return ...;
+///   case _:
+///     return orElse();
+/// }
+/// ```
+
+@optionalTypeArgs TResult maybeMap<TResult extends Object?>(TResult Function( _PersonaReply value)?  $default,{required TResult orElse(),}){
+final _that = this;
+switch (_that) {
+case _PersonaReply() when $default != null:
+return $default(_that);case _:
+  return orElse();
+
+}
+}
+/// A `switch`-like method, using callbacks.
+///
+/// Callbacks receives the raw object, upcasted.
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case final Subclass value:
+///     return ...;
+///   case final Subclass2 value:
+///     return ...;
+/// }
+/// ```
+
+@optionalTypeArgs TResult map<TResult extends Object?>(TResult Function( _PersonaReply value)  $default,){
+final _that = this;
+switch (_that) {
+case _PersonaReply():
+return $default(_that);case _:
+  throw StateError('Unexpected subclass');
+
+}
+}
+/// A variant of `map` that fallback to returning `null`.
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case final Subclass value:
+///     return ...;
+///   case _:
+///     return null;
+/// }
+/// ```
+
+@optionalTypeArgs TResult? mapOrNull<TResult extends Object?>(TResult? Function( _PersonaReply value)?  $default,){
+final _that = this;
+switch (_that) {
+case _PersonaReply() when $default != null:
+return $default(_that);case _:
+  return null;
+
+}
+}
+/// A variant of `when` that fallback to an `orElse` callback.
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case Subclass(:final field):
+///     return ...;
+///   case _:
+///     return orElse();
+/// }
+/// ```
+
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String reply,  List<PersonaProposal> proposals)?  $default,{required TResult orElse(),}) {final _that = this;
+switch (_that) {
+case _PersonaReply() when $default != null:
+return $default(_that.reply,_that.proposals);case _:
+  return orElse();
+
+}
+}
+/// A `switch`-like method, using callbacks.
+///
+/// As opposed to `map`, this offers destructuring.
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case Subclass(:final field):
+///     return ...;
+///   case Subclass2(:final field2):
+///     return ...;
+/// }
+/// ```
+
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String reply,  List<PersonaProposal> proposals)  $default,) {final _that = this;
+switch (_that) {
+case _PersonaReply():
+return $default(_that.reply,_that.proposals);case _:
+  throw StateError('Unexpected subclass');
+
+}
+}
+/// A variant of `when` that fallback to returning `null`
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case Subclass(:final field):
+///     return ...;
+///   case _:
+///     return null;
+/// }
+/// ```
+
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String reply,  List<PersonaProposal> proposals)?  $default,) {final _that = this;
+switch (_that) {
+case _PersonaReply() when $default != null:
+return $default(_that.reply,_that.proposals);case _:
+  return null;
+
+}
+}
+
+}
+
+/// @nodoc
+@JsonSerializable()
+
+class _PersonaReply extends PersonaReply {
+  const _PersonaReply({this.reply = '', final  List<PersonaProposal> proposals = const <PersonaProposal>[]}): _proposals = proposals,super._();
+  factory _PersonaReply.fromJson(Map<String, dynamic> json) => _$PersonaReplyFromJson(json);
+
+@override@JsonKey() final  String reply;
+/// Suggested edits to the persona. **Never applied by the chat turn** —
+/// the user accepts them explicitly, which is why `apply` is its own call.
+/// A conversation must not silently rewrite who the user says they are.
+ final  List<PersonaProposal> _proposals;
+/// Suggested edits to the persona. **Never applied by the chat turn** —
+/// the user accepts them explicitly, which is why `apply` is its own call.
+/// A conversation must not silently rewrite who the user says they are.
+@override@JsonKey() List<PersonaProposal> get proposals {
+  if (_proposals is EqualUnmodifiableListView) return _proposals;
+  // ignore: implicit_dynamic_type
+  return EqualUnmodifiableListView(_proposals);
+}
+
+
+/// Create a copy of PersonaReply
+/// with the given fields replaced by the non-null parameter values.
+@override @JsonKey(includeFromJson: false, includeToJson: false)
+@pragma('vm:prefer-inline')
+_$PersonaReplyCopyWith<_PersonaReply> get copyWith => __$PersonaReplyCopyWithImpl<_PersonaReply>(this, _$identity);
+
+@override
+Map<String, dynamic> toJson() {
+  return _$PersonaReplyToJson(this, );
+}
+
+@override
+bool operator ==(Object other) {
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is _PersonaReply&&(identical(other.reply, reply) || other.reply == reply)&&const DeepCollectionEquality().equals(other._proposals, _proposals));
+}
+
+@JsonKey(includeFromJson: false, includeToJson: false)
+@override
+int get hashCode => Object.hash(runtimeType,reply,const DeepCollectionEquality().hash(_proposals));
+
+@override
+String toString() {
+  return 'PersonaReply(reply: $reply, proposals: $proposals)';
+}
+
+
+}
+
+/// @nodoc
+abstract mixin class _$PersonaReplyCopyWith<$Res> implements $PersonaReplyCopyWith<$Res> {
+  factory _$PersonaReplyCopyWith(_PersonaReply value, $Res Function(_PersonaReply) _then) = __$PersonaReplyCopyWithImpl;
+@override @useResult
+$Res call({
+ String reply, List<PersonaProposal> proposals
+});
+
+
+
+
+}
+/// @nodoc
+class __$PersonaReplyCopyWithImpl<$Res>
+    implements _$PersonaReplyCopyWith<$Res> {
+  __$PersonaReplyCopyWithImpl(this._self, this._then);
+
+  final _PersonaReply _self;
+  final $Res Function(_PersonaReply) _then;
+
+/// Create a copy of PersonaReply
+/// with the given fields replaced by the non-null parameter values.
+@override @pragma('vm:prefer-inline') $Res call({Object? reply = null,Object? proposals = null,}) {
+  return _then(_PersonaReply(
+reply: null == reply ? _self.reply : reply // ignore: cast_nullable_to_non_nullable
+as String,proposals: null == proposals ? _self._proposals : proposals // ignore: cast_nullable_to_non_nullable
+as List<PersonaProposal>,
+  ));
+}
+
+
+}
+
+
+/// @nodoc
+mixin _$PersonaProposal {
+
+ String get field; String get to; String? get from; String? get label;
+/// Create a copy of PersonaProposal
+/// with the given fields replaced by the non-null parameter values.
+@JsonKey(includeFromJson: false, includeToJson: false)
+@pragma('vm:prefer-inline')
+$PersonaProposalCopyWith<PersonaProposal> get copyWith => _$PersonaProposalCopyWithImpl<PersonaProposal>(this as PersonaProposal, _$identity);
+
+  /// Serializes this PersonaProposal to a JSON map.
+  Map<String, dynamic> toJson();
+
+
+@override
+bool operator ==(Object other) {
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is PersonaProposal&&(identical(other.field, field) || other.field == field)&&(identical(other.to, to) || other.to == to)&&(identical(other.from, from) || other.from == from)&&(identical(other.label, label) || other.label == label));
+}
+
+@JsonKey(includeFromJson: false, includeToJson: false)
+@override
+int get hashCode => Object.hash(runtimeType,field,to,from,label);
+
+@override
+String toString() {
+  return 'PersonaProposal(field: $field, to: $to, from: $from, label: $label)';
+}
+
+
+}
+
+/// @nodoc
+abstract mixin class $PersonaProposalCopyWith<$Res>  {
+  factory $PersonaProposalCopyWith(PersonaProposal value, $Res Function(PersonaProposal) _then) = _$PersonaProposalCopyWithImpl;
+@useResult
+$Res call({
+ String field, String to, String? from, String? label
+});
+
+
+
+
+}
+/// @nodoc
+class _$PersonaProposalCopyWithImpl<$Res>
+    implements $PersonaProposalCopyWith<$Res> {
+  _$PersonaProposalCopyWithImpl(this._self, this._then);
+
+  final PersonaProposal _self;
+  final $Res Function(PersonaProposal) _then;
+
+/// Create a copy of PersonaProposal
+/// with the given fields replaced by the non-null parameter values.
+@pragma('vm:prefer-inline') @override $Res call({Object? field = null,Object? to = null,Object? from = freezed,Object? label = freezed,}) {
+  return _then(_self.copyWith(
+field: null == field ? _self.field : field // ignore: cast_nullable_to_non_nullable
+as String,to: null == to ? _self.to : to // ignore: cast_nullable_to_non_nullable
+as String,from: freezed == from ? _self.from : from // ignore: cast_nullable_to_non_nullable
+as String?,label: freezed == label ? _self.label : label // ignore: cast_nullable_to_non_nullable
+as String?,
+  ));
+}
+
+}
+
+
+/// Adds pattern-matching-related methods to [PersonaProposal].
+extension PersonaProposalPatterns on PersonaProposal {
+/// A variant of `map` that fallback to returning `orElse`.
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case final Subclass value:
+///     return ...;
+///   case _:
+///     return orElse();
+/// }
+/// ```
+
+@optionalTypeArgs TResult maybeMap<TResult extends Object?>(TResult Function( _PersonaProposal value)?  $default,{required TResult orElse(),}){
+final _that = this;
+switch (_that) {
+case _PersonaProposal() when $default != null:
+return $default(_that);case _:
+  return orElse();
+
+}
+}
+/// A `switch`-like method, using callbacks.
+///
+/// Callbacks receives the raw object, upcasted.
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case final Subclass value:
+///     return ...;
+///   case final Subclass2 value:
+///     return ...;
+/// }
+/// ```
+
+@optionalTypeArgs TResult map<TResult extends Object?>(TResult Function( _PersonaProposal value)  $default,){
+final _that = this;
+switch (_that) {
+case _PersonaProposal():
+return $default(_that);case _:
+  throw StateError('Unexpected subclass');
+
+}
+}
+/// A variant of `map` that fallback to returning `null`.
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case final Subclass value:
+///     return ...;
+///   case _:
+///     return null;
+/// }
+/// ```
+
+@optionalTypeArgs TResult? mapOrNull<TResult extends Object?>(TResult? Function( _PersonaProposal value)?  $default,){
+final _that = this;
+switch (_that) {
+case _PersonaProposal() when $default != null:
+return $default(_that);case _:
+  return null;
+
+}
+}
+/// A variant of `when` that fallback to an `orElse` callback.
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case Subclass(:final field):
+///     return ...;
+///   case _:
+///     return orElse();
+/// }
+/// ```
+
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String field,  String to,  String? from,  String? label)?  $default,{required TResult orElse(),}) {final _that = this;
+switch (_that) {
+case _PersonaProposal() when $default != null:
+return $default(_that.field,_that.to,_that.from,_that.label);case _:
+  return orElse();
+
+}
+}
+/// A `switch`-like method, using callbacks.
+///
+/// As opposed to `map`, this offers destructuring.
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case Subclass(:final field):
+///     return ...;
+///   case Subclass2(:final field2):
+///     return ...;
+/// }
+/// ```
+
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String field,  String to,  String? from,  String? label)  $default,) {final _that = this;
+switch (_that) {
+case _PersonaProposal():
+return $default(_that.field,_that.to,_that.from,_that.label);case _:
+  throw StateError('Unexpected subclass');
+
+}
+}
+/// A variant of `when` that fallback to returning `null`
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case Subclass(:final field):
+///     return ...;
+///   case _:
+///     return null;
+/// }
+/// ```
+
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String field,  String to,  String? from,  String? label)?  $default,) {final _that = this;
+switch (_that) {
+case _PersonaProposal() when $default != null:
+return $default(_that.field,_that.to,_that.from,_that.label);case _:
+  return null;
+
+}
+}
+
+}
+
+/// @nodoc
+@JsonSerializable()
+
+class _PersonaProposal extends PersonaProposal {
+  const _PersonaProposal({required this.field, this.to = '', this.from, this.label}): super._();
+  factory _PersonaProposal.fromJson(Map<String, dynamic> json) => _$PersonaProposalFromJson(json);
+
+@override final  String field;
+@override@JsonKey() final  String to;
+@override final  String? from;
+@override final  String? label;
+
+/// Create a copy of PersonaProposal
+/// with the given fields replaced by the non-null parameter values.
+@override @JsonKey(includeFromJson: false, includeToJson: false)
+@pragma('vm:prefer-inline')
+_$PersonaProposalCopyWith<_PersonaProposal> get copyWith => __$PersonaProposalCopyWithImpl<_PersonaProposal>(this, _$identity);
+
+@override
+Map<String, dynamic> toJson() {
+  return _$PersonaProposalToJson(this, );
+}
+
+@override
+bool operator ==(Object other) {
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is _PersonaProposal&&(identical(other.field, field) || other.field == field)&&(identical(other.to, to) || other.to == to)&&(identical(other.from, from) || other.from == from)&&(identical(other.label, label) || other.label == label));
+}
+
+@JsonKey(includeFromJson: false, includeToJson: false)
+@override
+int get hashCode => Object.hash(runtimeType,field,to,from,label);
+
+@override
+String toString() {
+  return 'PersonaProposal(field: $field, to: $to, from: $from, label: $label)';
+}
+
+
+}
+
+/// @nodoc
+abstract mixin class _$PersonaProposalCopyWith<$Res> implements $PersonaProposalCopyWith<$Res> {
+  factory _$PersonaProposalCopyWith(_PersonaProposal value, $Res Function(_PersonaProposal) _then) = __$PersonaProposalCopyWithImpl;
+@override @useResult
+$Res call({
+ String field, String to, String? from, String? label
+});
+
+
+
+
+}
+/// @nodoc
+class __$PersonaProposalCopyWithImpl<$Res>
+    implements _$PersonaProposalCopyWith<$Res> {
+  __$PersonaProposalCopyWithImpl(this._self, this._then);
+
+  final _PersonaProposal _self;
+  final $Res Function(_PersonaProposal) _then;
+
+/// Create a copy of PersonaProposal
+/// with the given fields replaced by the non-null parameter values.
+@override @pragma('vm:prefer-inline') $Res call({Object? field = null,Object? to = null,Object? from = freezed,Object? label = freezed,}) {
+  return _then(_PersonaProposal(
+field: null == field ? _self.field : field // ignore: cast_nullable_to_non_nullable
+as String,to: null == to ? _self.to : to // ignore: cast_nullable_to_non_nullable
+as String,from: freezed == from ? _self.from : from // ignore: cast_nullable_to_non_nullable
+as String?,label: freezed == label ? _self.label : label // ignore: cast_nullable_to_non_nullable
+as String?,
+  ));
+}
+
+
 }
 
 // dart format on
