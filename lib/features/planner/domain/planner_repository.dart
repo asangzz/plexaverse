@@ -48,6 +48,30 @@ abstract class PlannerRepository {
     bool force = false,
   });
 
+  /// The carousel counterpart of [generateSlotPost], for a slot whose format
+  /// is `carousel`. Separate because the server route is separate; the caller
+  /// branches on the slot's format rather than the repository guessing.
+  Future<GeneratedSlot> generateSlotCarousel({
+    required String planId,
+    required int slotIndex,
+    bool force = false,
+  });
+
+  /// Replaces the week's topic and rewrites the unwritten days.
+  ///
+  /// Free, and non-destructive by design: days already generated, approved or
+  /// published keep the posts they have. Returns the re-planned week.
+  Future<WeekPlan> changeTopic({required String planId, required String topic});
+
+  /// Rewrites one day's title. Free. Returns the new title.
+  ///
+  /// Clears the server's `titleEditedByUser` flag, so a title the user typed
+  /// by hand is only ever replaced when they ask for it here.
+  Future<String> regenerateTitle({
+    required String planId,
+    required int slotIndex,
+  });
+
   /// The week's Sunday article.
   Future<ArticleState> fetchArticle({int? week, int? season});
 

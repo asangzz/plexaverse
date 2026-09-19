@@ -63,13 +63,22 @@ class PlannerController extends _$PlannerController {
     );
 
     try {
-      final GeneratedSlot result = await ref
-          .read(plannerRepositoryProvider)
-          .generateSlotPost(
-            planId: plan.id,
-            slotIndex: slotIndex,
-            force: force,
-          );
+      // The slot's own format decides which generator runs. Branching here
+      // rather than inside the repository keeps the two server routes
+      // visible as two routes — they claim and roll back independently.
+      final PlannerRepository repo = ref.read(plannerRepositoryProvider);
+      final bool isCarousel = plan.posts[slotIndex].format == 'carousel';
+      final GeneratedSlot result = isCarousel
+          ? await repo.generateSlotCarousel(
+              planId: plan.id,
+              slotIndex: slotIndex,
+              force: force,
+            )
+          : await repo.generateSlotPost(
+              planId: plan.id,
+              slotIndex: slotIndex,
+              force: force,
+            );
       ref.invalidateSelf();
       return result;
     } on PlannerGenerateFailure {
@@ -78,6 +87,40 @@ class PlannerController extends _$PlannerController {
     } on Object {
       ref.invalidateSelf();
       return null;
+    }
+  }
+
+  /// Replaces the week's topic and re-plans the unwritten days.
+  ///
+  /// Returns the failure message, or null on success. Non-destructive by
+  /// contract — days already generated keep their posts — which is why this
+  /// does not warn before running.
+  Future<String?> changeTopic(String topic) async {
+    final WeekPlan? plan = state.value?.plan;
+    if (plan == null) return 'No plan to change.';
+    try {
+      await ref
+          .read(plannerRepositoryProvider)
+          .changeTopic(planId: plan.id, topic: topic);
+      ref.invalidateSelf();
+      return null;
+    } on Object {
+      return "Couldn't re-plan the week. Try again.";
+    }
+  }
+
+  /// Rewrites one day's title. Returns the failure message, or null.
+  Future<String?> regenerateTitle(int slotIndex) async {
+    final WeekPlan? plan = state.value?.plan;
+    if (plan == null) return null;
+    try {
+      await ref
+          .read(plannerRepositoryProvider)
+          .regenerateTitle(planId: plan.id, slotIndex: slotIndex);
+      ref.invalidateSelf();
+      return null;
+    } on Object {
+      return "Couldn't rewrite that title. Try again.";
     }
   }
 

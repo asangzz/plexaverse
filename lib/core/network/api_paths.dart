@@ -116,6 +116,19 @@ class ApiPaths {
   /// answer, not a fault.
   static const String plannerGeneratePost = '/planner/generate-post';
 
+  /// POST — the carousel equivalent of [plannerGeneratePost], for a slot whose
+  /// `format` is `carousel`. Same claim and rollback; XP is charged inside the
+  /// carousel generator rather than by a gate in front of it.
+  static const String plannerGenerateCarousel = '/planner/generate-carousel';
+
+  /// POST `{planId, topic}` — replaces the week's topic and rewrites the days
+  /// that have not been written yet. Free; days already generated keep their
+  /// posts.
+  static const String plannerChangeTopic = '/planner/change-topic';
+
+  /// POST `{planId, slotIndex}` — rewrites one day's title. Free.
+  static const String plannerRegenerateTitle = '/planner/regenerate-title';
+
   // ── Posts ───────────────────────────────────────────────────────────────
   static const String posts = '/posts';
 

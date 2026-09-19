@@ -314,6 +314,30 @@ class _SlotSheet extends ConsumerStatefulWidget {
 
 class _SlotSheetState extends ConsumerState<_SlotSheet> {
   bool _busy = false;
+  bool _titleBusy = false;
+
+  Future<void> _rewriteTitle() async {
+    setState(() => _titleBusy = true);
+    String? failure;
+    try {
+      failure = await ref
+          .read(plannerControllerProvider.notifier)
+          .regenerateTitle(widget.slotIndex);
+    } finally {
+      if (mounted) setState(() => _titleBusy = false);
+    }
+    if (!mounted) return;
+    // The sheet holds a snapshot of the slot, so the new title lands on the
+    // week behind it rather than here. Closing is the honest move — leaving
+    // a stale title on screen after a successful rewrite reads as a no-op.
+    if (failure == null) {
+      Navigator.of(context).pop();
+      return;
+    }
+    ScaffoldMessenger.of(context)
+      ..hideCurrentSnackBar()
+      ..showSnackBar(SnackBar(content: Text(failure, style: ZaveType.body)));
+  }
 
   PlanSlot get slot => widget.slot;
 
@@ -416,6 +440,20 @@ class _SlotSheetState extends ConsumerState<_SlotSheet> {
         ),
         SizedBox(height: ZaveSpace.lg),
         Text(slot.title, style: ZaveType.h2),
+        // Free, so no confirm — and it clears the server's
+        // `titleEditedByUser`, which is what stops a later regenerate from
+        // quietly overwriting a title someone typed by hand.
+        if (slot.status != SlotStatus.published) ...<Widget>[
+          SizedBox(height: ZaveSpace.sm),
+          Align(
+            alignment: Alignment.centerLeft,
+            child: ZaveButton(
+              label: 'Rewrite the title',
+              busy: _titleBusy,
+              onPressed: _titleBusy ? null : _rewriteTitle,
+            ),
+          ),
+        ],
         if (slot.angle.isNotEmpty) ...<Widget>[
           SizedBox(height: ZaveSpace.lg),
           Text('ANGLE', style: ZaveType.kicker),
@@ -439,14 +477,18 @@ class _SlotSheetState extends ConsumerState<_SlotSheet> {
           SizedBox(height: ZaveSpace.xl),
           if (_canGenerate)
             ZaveButton.primary(
-              label: 'Write this post',
+              label: slot.format == 'carousel'
+                  ? 'Build this carousel'
+                  : 'Write this post',
               expand: true,
               busy: _busy,
               onPressed: _busy ? null : () => _run(force: false),
             )
           else
             ZaveButton(
-              label: 'Write it again',
+              label: slot.format == 'carousel'
+                  ? 'Build it again'
+                  : 'Write it again',
               expand: true,
               busy: _busy,
               onPressed: _busy ? null : () => _run(force: true),

@@ -114,6 +114,72 @@ class ApiPlannerRepository implements PlannerRepository {
   }
 
   @override
+  Future<GeneratedSlot> generateSlotCarousel({
+    required String planId,
+    required int slotIndex,
+    bool force = false,
+  }) async {
+    try {
+      final response = await _client.post<Map<String, dynamic>>(
+        ApiPaths.plannerGenerateCarousel,
+        data: <String, dynamic>{
+          'planId': planId,
+          'slotIndex': slotIndex,
+          'force': force,
+        },
+      );
+      final Map<String, dynamic>? data = response.data;
+      return GeneratedSlot(
+        postId: data?['postId'] as String?,
+        alreadyGenerated: data?['alreadyGenerated'] == true,
+      );
+    } on DioException catch (e) {
+      throw PlannerGenerateFailure(
+        kind: _generateKind(e),
+        message: _serverMessage(e),
+      );
+    } on Object {
+      throw const PlannerGenerateFailure(
+        kind: PlannerGenerateFailureKind.failed,
+      );
+    }
+  }
+
+  @override
+  Future<WeekPlan> changeTopic({
+    required String planId,
+    required String topic,
+  }) async {
+    final response = await _client.post<Map<String, dynamic>>(
+      ApiPaths.plannerChangeTopic,
+      data: <String, dynamic>{'planId': planId, 'topic': topic},
+    );
+    final Map<String, dynamic>? data = response.data;
+    // The service answers with the re-planned week, either bare or under a
+    // `plan` key depending on the shape it was given.
+    final Map<String, dynamic>? plan =
+        (data?['plan'] as Map<String, dynamic>?) ?? data;
+    if (plan == null) throw StateError('change-topic returned no plan');
+    return WeekPlan.fromJson(plan);
+  }
+
+  @override
+  Future<String> regenerateTitle({
+    required String planId,
+    required int slotIndex,
+  }) async {
+    final response = await _client.post<Map<String, dynamic>>(
+      ApiPaths.plannerRegenerateTitle,
+      data: <String, dynamic>{'planId': planId, 'slotIndex': slotIndex},
+    );
+    final String? title = response.data?['title'] as String?;
+    if (title == null || title.isEmpty) {
+      throw StateError('regenerate-title returned no title');
+    }
+    return title;
+  }
+
+  @override
   Future<WeekPlan> updateSlot({
     required String planId,
     required int slotIndex,
@@ -295,6 +361,42 @@ class FakePlannerRepository implements PlannerRepository {
       ],
     );
     return GeneratedSlot(postId: id);
+  }
+
+  @override
+  Future<GeneratedSlot> generateSlotCarousel({
+    required String planId,
+    required int slotIndex,
+    bool force = false,
+  }) => generateSlotPost(planId: planId, slotIndex: slotIndex, force: force);
+
+  @override
+  Future<WeekPlan> changeTopic({
+    required String planId,
+    required String topic,
+  }) async {
+    await Future<void>.delayed(const Duration(milliseconds: 900));
+    _plan = _plan.copyWith(topic: topic);
+    return _plan;
+  }
+
+  @override
+  Future<String> regenerateTitle({
+    required String planId,
+    required int slotIndex,
+  }) async {
+    await Future<void>.delayed(const Duration(milliseconds: 700));
+    final String title = 'A sharper line for ${_plan.posts[slotIndex].day}';
+    _plan = _plan.copyWith(
+      posts: <PlanSlot>[
+        for (int i = 0; i < _plan.posts.length; i++)
+          if (i == slotIndex)
+            _plan.posts[i].copyWith(title: title, titleEditedByUser: false)
+          else
+            _plan.posts[i],
+      ],
+    );
+    return title;
   }
 
   @override
