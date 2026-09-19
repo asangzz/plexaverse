@@ -83,5 +83,11 @@
 		<string>UIInterfaceOrientationLandscapeLeft</string>
 		<string>UIInterfaceOrientationLandscapeRight</string>
 	</array>
+	<!-- image_picker. iOS terminates the app on a picker launch when the
+	     matching usage string is absent, so these are required, not optional. -->
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>Plexaverse needs access to your photos so you can add an image to a post, set your profile picture, or upload your company logo.</string>
+	<key>NSCameraUsageDescription</key>
+	<string>Plexaverse needs access to your camera so you can take a photo for a post or a headshot.</string>
 </dict>
 </plist>

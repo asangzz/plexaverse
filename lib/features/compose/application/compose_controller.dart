@@ -1,3 +1,6 @@
+import 'dart:convert';
+import 'dart:typed_data';
+
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 import '../data/compose_repositories.dart';
@@ -8,6 +11,7 @@ import '../domain/compose_status.dart';
 import '../domain/linkedin_account.dart';
 import '../../preferences/application/preferences_controller.dart';
 import '../../preferences/domain/user_preferences.dart';
+import '../../../core/platform/image_picking.dart';
 
 part 'compose_controller.g.dart';
 
@@ -90,6 +94,49 @@ class ComposeDraftController extends _$ComposeDraftController {
   /// one-tap retry instead of a second trip through the AI sheet.
   void setPosterPrompt(PosterPrompt prompt) =>
       state = state.copyWith(lastPosterPrompt: prompt);
+
+  /// Attaches a photo from the device.
+  ///
+  /// Returns a message to show the user, or null when nothing needs saying —
+  /// which is the case for BOTH success and a cancelled picker. A dismissed
+  /// picker is a decision, not a failure, and must not raise a banner.
+  ///
+  /// The bytes become a data URI rather than being uploaded here. The save
+  /// path already uploads a data-URI image before it writes the post, so
+  /// uploading now would either duplicate that or orphan a file in storage
+  /// every time a user attaches a photo and then changes their mind.
+  Future<String?> pickImage(ImageSourceKind source) async {
+    final ImagePickResult result = await ref
+        .read(imagePickingProvider)
+        .pick(source);
+
+    switch (result) {
+      case PickedImage(:final Uint8List bytes, :final String name):
+        state = state.copyWith(
+          image: ComposeImage(
+            dataUri: 'data:${_mimeFor(name)};base64,${base64Encode(bytes)}',
+            // Not AI-generated, so no "AI generated" badge and no Regenerate:
+            // there is no brief to reproduce it from.
+            aiGenerated: false,
+          ),
+        );
+        return null;
+      case ImagePickCancelled():
+        return null;
+      case ImagePickFailure(:final String? message):
+        return message ?? 'Could not open your photos.';
+    }
+  }
+
+  /// The upload route keys off the data URI's media type, and defaulting
+  /// everything to PNG would mislabel every JPEG the camera produces.
+  static String _mimeFor(String name) {
+    final String n = name.toLowerCase();
+    if (n.endsWith('.png')) return 'image/png';
+    if (n.endsWith('.webp')) return 'image/webp';
+    if (n.endsWith('.gif')) return 'image/gif';
+    return 'image/jpeg';
+  }
 
   void removeImage() => state = state.copyWith(image: null);
 

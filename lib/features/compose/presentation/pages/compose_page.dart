@@ -12,6 +12,7 @@ import '../widgets/linkedin_connection_panel.dart';
 import '../widgets/linkedin_preview_card.dart';
 import '../widgets/post_optimizer_card.dart';
 import '../widgets/schedule_panel.dart';
+import '../../../../core/platform/image_picking.dart';
 
 /// **Write** — the composer. The web's `/create` and `/company-post`.
 ///
@@ -221,14 +222,7 @@ class _ComposePageState extends ConsumerState<ComposePage> {
           ZaveIconButton(
             icon: const Icon(Icons.image_outlined),
             tooltip: 'Attach an image',
-            // Deliberately inert. Picking a photo off the device needs an
-            // image-picker plugin this app does not ship, and the mobile
-            // upload route only accepts a file or a base64 string — neither of
-            // which a Flutter app can produce without one. The control is
-            // shown rather than hidden so the gap is visible instead of
-            // looking like a missing feature nobody noticed; the note below
-            // says what to do instead.
-            onPressed: null,
+            onPressed: () => _attach(context, ref),
           ),
           const Spacer(),
           Text(
@@ -242,15 +236,6 @@ class _ComposePageState extends ConsumerState<ComposePage> {
           ),
         ],
       ),
-
-      if (draft.image == null) ...<Widget>[
-        SizedBox(height: ZaveSpace.sm),
-        Text(
-          'Attaching a photo from this device is not available yet. '
-          'Use Write with AI to generate a poster.',
-          style: ZaveType.caption.copyWith(color: ZaveColors.amber),
-        ),
-      ],
 
       if (draft.image != null) ...<Widget>[
         SizedBox(height: ZaveSpace.xl),
@@ -549,5 +534,65 @@ class _ContextError extends StatelessWidget {
         ],
       ),
     );
+  }
+}
+
+/// Asks where the photo should come from, then attaches it.
+///
+/// A sheet rather than going straight to the gallery: the camera is the right
+/// answer for a headshot or a whiteboard, and guessing wrong costs the user a
+/// dismissed picker.
+Future<void> _attach(BuildContext context, WidgetRef ref) async {
+  final ImageSourceKind? source = await showModalBottomSheet<ImageSourceKind>(
+    context: context,
+    backgroundColor: Colors.transparent,
+    builder: (BuildContext ctx) => Container(
+      decoration: BoxDecoration(
+        gradient: ZaveGround.base,
+        border: const Border(
+          top: BorderSide(color: ZaveGlass.headerBorder, width: 1),
+        ),
+        borderRadius: BorderRadius.vertical(
+          top: Radius.circular(ZaveRadius.cardLg),
+        ),
+      ),
+      child: SafeArea(
+        top: false,
+        child: Padding(
+          padding: EdgeInsets.all(ZaveSpace.gutter),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: <Widget>[
+              Text('ADD AN IMAGE', style: ZaveType.kicker),
+              SizedBox(height: ZaveSpace.lg),
+              ZaveButton(
+                label: 'Choose a photo',
+                icon: const Icon(Icons.photo_library_outlined),
+                expand: true,
+                onPressed: () =>
+                    Navigator.of(ctx).pop(ImageSourceKind.gallery),
+              ),
+              SizedBox(height: ZaveSpace.md),
+              ZaveButton(
+                label: 'Take a photo',
+                icon: const Icon(Icons.photo_camera_outlined),
+                expand: true,
+                onPressed: () => Navigator.of(ctx).pop(ImageSourceKind.camera),
+              ),
+            ],
+          ),
+        ),
+      ),
+    ),
+  );
+
+  if (source == null) return;
+  final String? error = await ref
+      .read(composeDraftControllerProvider.notifier)
+      .pickImage(source);
+
+  if (error != null && context.mounted) {
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(error)));
   }
 }

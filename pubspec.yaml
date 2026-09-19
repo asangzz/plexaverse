@@ -76,6 +76,17 @@ dependencies:
   shimmer: ^3.0.0
   lottie: ^3.3.1
 
+  # Choosing a photo from the device. Five screens are blocked on this and
+  # nothing else — the avatar, the company logo, the composer's attach control,
+  # headshots and reimagine all have a working POST /upload/image behind them
+  # and no way to pick a file. Needs NSPhotoLibraryUsageDescription and
+  # NSCameraUsageDescription on iOS (set in ios/Runner/Info.plist).
+  image_picker: ^1.1.2
+
+  # Opening a URL outside the app — "View on LinkedIn" on a published post.
+  # Without it those actions can only copy a link to the clipboard.
+  url_launcher: ^6.3.1
+
   # Motion & expressive components — M3 Expressive tokens, springs, page
   # transitions (global PageTransitionsTheme), shape-morphing loaders.
   expressive_m3: ^0.2.0
