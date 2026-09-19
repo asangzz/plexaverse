@@ -1,20 +1,25 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
-  DEBUG BUILDS ONLY — this file lives in src/debug/, so it is not compiled into
-  a release APK/AAB at all.
+  DEBUG BUILDS ONLY — this file lives in src/debug/, so it is not compiled
+  into a release APK or AAB at all, and neither is the manifest attribute
+  that points at it (src/debug/AndroidManifest.xml). A release build has no
+  cleartext permission of any kind.
 
-  The dev flavor talks to a Next.js server on the developer's machine over
-  plain HTTP. Android blocks cleartext by default from API 28, so the two hosts
-  that can only ever mean "this developer's laptop" are allowed, and nothing
-  else is. 10.0.2.2 is the emulator's alias for the host loopback; localhost is
-  for a device tunnelled with `adb reverse`.
+  Why the whole of cleartext and not a host list:
 
-  A physical device on the LAN needs its own entry, or better,
-  --dart-define=API_BASE_URL pointing at an https tunnel.
+  The dev flavor talks to a Next.js server on the developer's machine. An
+  EMULATOR reaches it at 10.0.2.2 and a tunnelled device at localhost, and
+  both were listed here — but a PHYSICAL phone reaches it at the Mac's LAN
+  address, which changes with the network, the router's lease and whether
+  anyone is on a hotspot. Pinning that address means the config is wrong
+  again the next time someone moves desk, and the failure it produces is a
+  silent connection error that looks like the server being down.
+
+  So debug permits cleartext and release permits none. That is the honest
+  split: the risk of cleartext is what an attacker on the same network can
+  read, and a debug build pointed at a laptop has nothing in it that is not
+  already on that laptop.
 -->
 <network-security-config>
-    <domain-config cleartextTrafficPermitted="true">
-        <domain includeSubdomains="false">10.0.2.2</domain>
-        <domain includeSubdomains="false">localhost</domain>
-    </domain-config>
+    <base-config cleartextTrafficPermitted="true" />
 </network-security-config>

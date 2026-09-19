@@ -53,8 +53,12 @@ class ApiEnvironment {
   /// this wrong produces a connection-refused that looks exactly like a server
   /// that is not running.
   ///
-  /// On a PHYSICAL device neither works: pass your Mac's LAN address, e.g.
-  /// `--dart-define=API_BASE_URL=http://192.168.1.16:3000/api/mobile/v1`.
+  /// On a PHYSICAL device neither works — `localhost` is the phone and
+  /// `10.0.2.2` means nothing off an emulator — so pass the Mac's LAN
+  /// address:
+  ///   `--dart-define=API_BASE_URL=http://192.168.1.16:3000/api/mobile/v1`
+  /// Find it with `ipconfig getifaddr en0`. It changes with the network,
+  /// which is why it is a build flag rather than a default here.
   ///
   /// This is cleartext HTTP on purpose — it is localhost. iOS ATS and Android
   /// cleartext policy both block that by default, so each platform carries a
