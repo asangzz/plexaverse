@@ -7,6 +7,8 @@ import 'auth_gate.dart';
 import 'route_paths.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import '../../features/preferences/application/preferences_controller.dart';
+import '../../features/preferences/domain/user_preferences.dart';
 
 /// Query parameter used to round-trip the original location across the login
 /// redirect, so a deep link survives the auth gate.
@@ -158,16 +160,42 @@ String? appRedirect(Ref ref, GoRouterState state) {
   };
   final lockResolving = !lockAsync.hasValue && lockAsync is! AsyncError;
 
-  // Onboarding flag. An error reading the persisted flag is treated as
-  // "completed" — a returning user must never be trapped in the carousel, and
-  // a genuinely new user simply lands on /login instead (fail open).
-  final onboardingAsync = ref.read(onboardingControllerProvider);
-  final onboardingComplete = switch (onboardingAsync) {
-    AsyncData<bool>(:final value) => value,
-    _ => true,
+  // Onboarding. The SERVER decides, and the device-local flag is only the
+  // fallback.
+  //
+  // It used to be the local `onboarding_done` SharedPreferences key alone,
+  // which is per-install: a user who completed setup on the WEB and then
+  // installed the app was sent through the whole Plexa chat again, and their
+  // answers overwrote what they had already set. Reinstalling did the same.
+  //
+  // Reading preferences here is only possible because the onboarding gate
+  // now sits BELOW the auth check — there is a session by the time this runs,
+  // so there is something to ask the server about.
+  //
+  // Both sources fail OPEN, for the same reason they always did: a returning
+  // user must never be trapped in setup. A genuinely new user whose
+  // preferences call fails simply lands on the dashboard and can open the
+  // chat from there, which is recoverable; being held in a loop is not.
+  final localOnboarding = ref.read(onboardingControllerProvider);
+  // Only asked when there IS a session. Preferences is an authenticated
+  // call; firing it for a signed-out user buys a guaranteed 401, and the
+  // gate cannot matter to them anyway — the auth rule above sends them to
+  // /login before onboarding is ever consulted.
+  final serverOnboarding = (gate?.signedIn ?? false)
+      ? ref.read(preferencesControllerProvider)
+      : const AsyncLoading<UserPreferences>();
+  final onboardingComplete = switch (serverOnboarding) {
+    AsyncData<UserPreferences>(:final value) => value.onboardingCompleted,
+    // No server answer yet — fall back to whatever this device remembers.
+    _ => switch (localOnboarding) {
+      AsyncData<bool>(:final value) => value,
+      _ => true,
+    },
   };
+  // Only the LOCAL flag holds the splash. Preferences need a session, and a
+  // signed-out user would otherwise wait on a call that will never be made.
   final onboardingResolving =
-      !onboardingAsync.hasValue && onboardingAsync is! AsyncError;
+      !localOnboarding.hasValue && localOnboarding is! AsyncError;
 
   final isResolving = gateResolving || lockResolving || onboardingResolving;
   final location = state.matchedLocation;

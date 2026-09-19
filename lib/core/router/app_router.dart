@@ -46,6 +46,7 @@ import '../../features/studio/presentation/pages/studio_page.dart';
 import '../../features/studio/presentation/pages/template_creator_page.dart';
 import '../../features/studio/presentation/pages/title_creator_page.dart';
 import '../../features/topics/presentation/pages/topics_page.dart';
+import '../../features/preferences/application/preferences_controller.dart';
 
 part 'app_router.g.dart';
 
@@ -302,8 +303,24 @@ class _RouterRefresh extends ChangeNotifier {
     // Re-run when first-run onboarding is completed so the carousel gate
     // releases to the auth flow.
     _subs.add(
+      ref.listen(onboardingControllerProvider, (_, _) => notifyListeners()).close,
+    );
+    // The onboarding gate reads the SERVER's onboardingCompleted, so the
+    // guard has to re-run when preferences land — otherwise a web-onboarded
+    // user sits on the setup chat until something unrelated triggers a
+    // redirect.
+    //
+    // `fireImmediately: false` and a read only once signed in (see
+    // redirect.dart) keep this from firing an authenticated call on behalf
+    // of a signed-out user, which would buy a guaranteed 401 on every cold
+    // start.
+    _subs.add(
       ref
-          .listen(onboardingControllerProvider, (_, _) => notifyListeners())
+          .listen(
+            preferencesControllerProvider,
+            (_, _) => notifyListeners(),
+            fireImmediately: false,
+          )
           .close,
     );
     // Forced sign-out from the network layer (401 refresh failure emits on

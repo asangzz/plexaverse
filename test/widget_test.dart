@@ -18,6 +18,13 @@ void main() {
         child: const PlexaverseApp(),
       ),
     );
+    // Let the startup reads settle. The router subscribes to the auth gate,
+    // the app lock, the local onboarding flag AND preferences, and the mock
+    // repositories answer on a delay — without this the test tears down with
+    // those timers still pending and fails on `!timersPending` rather than on
+    // anything the app did wrong.
+    await tester.pump(const Duration(seconds: 2));
+
     expect(find.byType(ProviderScope), findsOneWidget);
   });
 }
