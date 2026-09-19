@@ -2,6 +2,7 @@ import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 import '../data/persona_repositories.dart';
 import '../domain/persona_repository.dart';
+import '../../../core/platform/file_picking.dart';
 
 part 'persona_controller.g.dart';
 
@@ -16,6 +17,21 @@ class PersonaController extends _$PersonaController {
   @override
   Future<PersonaSnapshot> build() =>
       ref.watch(personaRepositoryProvider).fetchPersona();
+
+  /// Imports the LinkedIn analytics export and refreshes.
+  ///
+  /// Returns the message to show — the repository passes the server's own
+  /// words through on a rejection, because "that does not look like a
+  /// LinkedIn export" tells the user what to do next and a generic failure
+  /// does not.
+  Future<String> importReach(PickedFile file) async {
+    final String message =
+        await ref.read(personaRepositoryProvider).importReachExport(file);
+    // Refresh either way: a partial import still moved the numbers, and a
+    // stale screen after a successful one reads as nothing having happened.
+    ref.invalidateSelf();
+    return message;
+  }
 
   /// Saves who the user writes for.
   ///

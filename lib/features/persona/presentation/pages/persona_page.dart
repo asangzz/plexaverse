@@ -7,6 +7,7 @@ import '../../domain/persona_repository.dart';
 import '../widgets/audience_section.dart';
 import '../widgets/identity_section.dart';
 import '../widgets/persona_chrome.dart';
+import '../../../../core/platform/file_picking.dart';
 
 /// **Your Persona** — the web's `/persona`.
 ///
@@ -156,13 +157,7 @@ class _ReachSection extends StatelessWidget {
       lead:
           "LinkedIn doesn't share personal-profile analytics with any app — "
           'but it lets you download them.',
-      child: PersonaUnavailableNote(
-        title: 'Import your numbers on the web',
-        message:
-            'Bringing your LinkedIn export in is not in the app yet. Nothing '
-            'you have already imported has been lost — this screen simply '
-            'cannot read it.',
-      ),
+      child: _ImportReachButton(),
     );
   }
 }
@@ -479,4 +474,69 @@ class _PersonaSkeletonBody extends StatelessWidget {
       ],
     );
   }
+}
+
+
+/// Imports the LinkedIn analytics export.
+///
+/// LinkedIn shares no personal-profile analytics with any app — the export
+/// a member downloads is the only route to this data, which is why the
+/// screen explains the numbers before it has any. It needed a DOCUMENT
+/// picker rather than a photo one, which is the whole reason it waited.
+class _ImportReachButton extends ConsumerStatefulWidget {
+  const _ImportReachButton();
+
+  @override
+  ConsumerState<_ImportReachButton> createState() =>
+      _ImportReachButtonState();
+}
+
+class _ImportReachButtonState extends ConsumerState<_ImportReachButton> {
+  bool _busy = false;
+
+  Future<void> _import() async {
+    setState(() => _busy = true);
+    String? note;
+    try {
+      final FilePickResult picked = await ref
+          .read(filePickingProvider)
+          .pick(extensions: <String>['xlsx']);
+      switch (picked) {
+        case PickedFile(): 
+          note = await ref
+              .read(personaControllerProvider.notifier)
+              .importReach(picked);
+        // Closing the picker is a decision.
+        case FilePickCancelled():
+          break;
+        case FilePickFailure(:final String? message):
+          note = message ?? 'Could not open your files.';
+      }
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+    if (note == null || !mounted) return;
+    ScaffoldMessenger.of(context)
+      ..hideCurrentSnackBar()
+      ..showSnackBar(SnackBar(content: Text(note, style: ZaveType.body)));
+  }
+
+  @override
+  Widget build(BuildContext context) => Column(
+    crossAxisAlignment: CrossAxisAlignment.start,
+    children: <Widget>[
+      Text(
+        'On LinkedIn: Settings › Data privacy › Get a copy of your data › '
+        'Posts. Then pick the .xlsx here.',
+        style: ZaveType.caption,
+      ),
+      SizedBox(height: ZaveSpace.md),
+      ZaveButton(
+        label: 'Import my LinkedIn export',
+        icon: const Icon(Icons.upload_file_outlined),
+        busy: _busy,
+        onPressed: _busy ? null : _import,
+      ),
+    ],
+  );
 }

@@ -51,7 +51,7 @@ final class PersonaControllerProvider
   PersonaController create() => PersonaController();
 }
 
-String _$personaControllerHash() => r'b25b56aa435bcbff01bf5a7298edbfccbd336663';
+String _$personaControllerHash() => r'b2758c978496bbc6f06025d0f80fe8a9aaa54500';
 
 /// The persona screen's state.
 ///

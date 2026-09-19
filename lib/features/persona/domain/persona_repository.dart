@@ -1,4 +1,5 @@
 import 'persona_entities.dart';
+import '../../../core/platform/file_picking.dart';
 
 export 'persona_entities.dart';
 
@@ -34,6 +35,13 @@ abstract class PersonaRepository {
   /// posts. Idempotent server-side. Spends real model budget, so it is a
   /// deliberate user action rather than something the screen does on open.
   Future<PersonaSnapshot> harvest();
+
+  /// Imports the LinkedIn analytics export.
+  ///
+  /// Returns a message to show — the server's own where it sent one, because
+  /// "that doesn't look like a LinkedIn export" is worth far more to someone
+  /// who picked the wrong file than a generic failure.
+  Future<String> importReachExport(PickedFile file);
 
   /// `POST /persona/audience` — asks the model who this user should write for.
   /// Returns candidates; choosing one is a separate [saveAudience].

@@ -72,6 +72,13 @@ class ApiPaths {
   /// GET / POST — DPDP s13. Raise a concern, and see the deadline it carries.
   static const String userGrievance = '/user/grievance';
 
+  /// POST multipart `file` — the `.xlsx` LinkedIn lets a member download.
+  ///
+  /// The only route to personal-profile analytics: LinkedIn shares none of
+  /// it with any app, so without the export the reach screen has nothing to
+  /// show.
+  static const String personaReachImport = '/persona/reach/import';
+
   /// POST — starts Season 2. `{choice, targetRole?}`. Idempotent.
   static const String seasonAdvance = '/season/advance';
 

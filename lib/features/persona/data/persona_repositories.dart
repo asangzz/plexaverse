@@ -5,6 +5,9 @@ import '../../../core/config/env.dart';
 import '../../../core/network/api_paths.dart';
 import '../../../core/network/dio_client.dart';
 import '../domain/persona_repository.dart';
+import '../../../core/platform/file_picking.dart';
+import '../../../core/network/failure.dart';
+import 'package:dio/dio.dart';
 
 /// Dio-backed [PersonaRepository], reading the real `GET /persona`.
 ///
@@ -42,6 +45,36 @@ class ApiPersonaRepository implements PersonaRepository {
     }
     return _get();
   });
+
+  @override
+  Future<String> importReachExport(PickedFile file) async {
+    try {
+      final FormData form = FormData.fromMap(<String, dynamic>{
+        'file': MultipartFile.fromBytes(file.bytes, filename: file.name),
+      });
+      final response = await _client.sendMultipart<Map<String, dynamic>>(
+        ApiPaths.personaReachImport,
+        form,
+      );
+      final Map<String, dynamic>? data = response.data;
+      final int posts = (data?['posts'] as num?)?.toInt() ?? 0;
+      return posts > 0
+          ? 'Imported $posts posts worth of reach.'
+          : 'Imported. Your numbers are up to date.';
+    } on DioException catch (e) {
+      // 422 carries a message written FOR the user — most often "that does
+      // not look like a LinkedIn export", which is the difference between
+      // them picking the right file next time and giving up.
+      final Object? failure = e.error;
+      if (failure is Failure) {
+        final String? m = failure.message;
+        if (m != null && m.isNotEmpty) return m;
+      }
+      return "Couldn't read that export.";
+    } on Object {
+      return "Couldn't read that export.";
+    }
+  }
 
   @override
   Future<PersonaSnapshot> harvest() => _guard(() async {
@@ -241,6 +274,12 @@ class FakePersonaRepository implements PersonaRepository {
       ),
     );
     return _snapshot;
+  }
+
+  @override
+  Future<String> importReachExport(PickedFile file) async {
+    await Future<void>.delayed(const Duration(milliseconds: 900));
+    return 'Imported 24 posts worth of reach.';
   }
 
   @override
