@@ -7,6 +7,7 @@ import '../../application/missions_controllers.dart';
 import '../../domain/missions_repository.dart';
 import '../widgets/banner_preview.dart';
 import '../widgets/mission_chrome.dart';
+import '../../../../core/platform/image_sharing.dart';
 
 /// **Banner Blueprint** — the web's `/roadmap/banner-blueprint`.
 ///
@@ -54,6 +55,8 @@ class _BannerBlueprintPageState extends ConsumerState<BannerBlueprintPage> {
   bool _seeded = false;
 
   int _index = 0;
+  final GlobalKey _bannerKey = GlobalKey();
+  bool _saving = false;
   bool _finishing = false;
 
   String? _message;
@@ -101,6 +104,43 @@ class _BannerBlueprintPageState extends ConsumerState<BannerBlueprintPage> {
     } on Object {
       _say('Could not record that step.', MissionTone.warning);
       if (mounted) setState(() => _finishing = false);
+    }
+  }
+
+  /// Renders the chosen banner at LinkedIn's cover width and hands it to the
+  /// share sheet, where iOS offers "Save Image".
+  ///
+  /// 1584 is LinkedIn's own cover width. Exporting the on-screen thumbnail
+  /// instead would give the user something that looks right in the app and
+  /// blurry on their profile — which is the only place it is going.
+  Future<void> _saveBanner() async {
+    setState(() => _saving = true);
+    try {
+      final ShareResult result = await ref
+          .read(imageSharingProvider)
+          .shareWidgetPng(
+            boundaryKey: _bannerKey,
+            fileName: 'plexaverse-linkedin-banner.png',
+            targetWidth: 1584,
+          );
+      if (!mounted) return;
+      switch (result) {
+        case ShareSucceeded():
+          setState(() {
+            _message = 'Saved. Set it as your cover photo on LinkedIn.';
+            _tone = MissionTone.success;
+          });
+        // Dismissing the sheet is a decision, not a failure.
+        case ShareDismissed():
+          break;
+        case ShareFailed(:final String? message):
+          setState(() {
+            _message = message ?? "Couldn't save the banner. Try again.";
+            _tone = MissionTone.warning;
+          });
+      }
+    } finally {
+      if (mounted) setState(() => _saving = false);
     }
   }
 
@@ -183,23 +223,27 @@ class _BannerBlueprintPageState extends ConsumerState<BannerBlueprintPage> {
                 Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: <Widget>[
-                    // Amber: waiting on something the app cannot do yet. Zave
-                    // has no red, and nothing here has failed.
                     Padding(
                       padding: EdgeInsets.only(top: ZaveSpace.xs + 2),
-                      child: const ZaveDot(ZaveColors.amber),
+                      child: const ZaveDot(ZaveColors.peri),
                     ),
                     SizedBox(width: ZaveSpace.sm),
                     Expanded(
                       child: Text(
-                        'Saving the banner image is not available in the app '
-                        'yet — download it from Plexa Studio on the web, then '
-                        'upload it to your LinkedIn profile. You can still '
-                        'mark the step done here.',
+                        'Save the banner, then set it as your LinkedIn cover '
+                        'photo from the LinkedIn app or the web.',
                         style: ZaveType.caption,
                       ),
                     ),
                   ],
+                ),
+                SizedBox(height: ZaveSpace.lg),
+                ZaveButton(
+                  label: 'Save this banner',
+                  icon: const Icon(Icons.ios_share),
+                  expand: true,
+                  busy: _saving,
+                  onPressed: _saving ? null : _saveBanner,
                 ),
                 SizedBox(height: ZaveSpace.lg),
                 ZaveButton.primary(
@@ -264,7 +308,16 @@ class _BannerBlueprintPageState extends ConsumerState<BannerBlueprintPage> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         mainAxisSize: MainAxisSize.min,
                         children: <Widget>[
-                          BannerPreview(design: design),
+                          // Only the active card carries the boundary: the
+                          // key must identify exactly one render object, and
+                          // the export is always of the card the user is
+                          // looking at.
+                          active
+                              ? RepaintBoundary(
+                                  key: _bannerKey,
+                                  child: BannerPreview(design: design),
+                                )
+                              : BannerPreview(design: design),
                           SizedBox(height: ZaveSpace.sm),
                           Text(
                             template.name.toUpperCase(),

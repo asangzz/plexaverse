@@ -87,6 +87,13 @@ dependencies:
   # Without it those actions can only copy a link to the clipboard.
   url_launcher: ^6.3.1
 
+  # Surfacing a generated file to the user. The banner mission renders a PNG
+  # the user has to get onto their LinkedIn profile, and without a share
+  # sheet there is nowhere for that file to go — the screen previously told
+  # them to download it from the web instead. iOS's sheet carries "Save
+  # Image", so this is also how a banner reaches the camera roll.
+  share_plus: ^13.3.0
+
   # Motion & expressive components — M3 Expressive tokens, springs, page
   # transitions (global PageTransitionsTheme), shape-morphing loaders.
   expressive_m3: ^0.2.0
