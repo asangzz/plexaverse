@@ -7,6 +7,8 @@ import '../../../core/network/dio_client.dart';
 import '../domain/plan_slot.dart';
 import '../domain/planner_repository.dart';
 import '../domain/weekly_article.dart';
+import 'package:dio/dio.dart';
+import '../../../core/network/failure.dart';
 
 /// Dio-backed [PlannerRepository].
 ///
@@ -55,6 +57,60 @@ class ApiPlannerRepository implements PlannerRepository {
       scheduledFor: when == null ? null : DateTime.tryParse(when)?.toLocal(),
       postUpdated: data?['postUpdated'] == true,
     );
+  }
+
+  @override
+  Future<GeneratedSlot> generateSlotPost({
+    required String planId,
+    required int slotIndex,
+    bool force = false,
+  }) async {
+    try {
+      final response = await _client.post<Map<String, dynamic>>(
+        ApiPaths.plannerGeneratePost,
+        data: <String, dynamic>{
+          'planId': planId,
+          'slotIndex': slotIndex,
+          'force': force,
+        },
+      );
+      final Map<String, dynamic>? data = response.data;
+      return GeneratedSlot(
+        postId: data?['postId'] as String?,
+        alreadyGenerated: data?['alreadyGenerated'] == true,
+      );
+    } on DioException catch (e) {
+      throw PlannerGenerateFailure(
+        kind: _generateKind(e),
+        message: _serverMessage(e),
+      );
+    } on Object {
+      throw const PlannerGenerateFailure(
+        kind: PlannerGenerateFailureKind.failed,
+      );
+    }
+  }
+
+  /// Maps the server's code onto the three genuinely different next actions.
+  static PlannerGenerateFailureKind _generateKind(DioException e) {
+    final Object? failure = e.error;
+    final String? code = failure is Failure ? failure.errorCode : null;
+    if (code == 'INSUFFICIENT_XP' || e.response?.statusCode == 402) {
+      return PlannerGenerateFailureKind.insufficientXp;
+    }
+    if (code == 'NO_LINKEDIN_ACCOUNT') {
+      return PlannerGenerateFailureKind.noLinkedinAccount;
+    }
+    return PlannerGenerateFailureKind.failed;
+  }
+
+  static String? _serverMessage(DioException e) {
+    final Object? failure = e.error;
+    if (failure is Failure) {
+      final String? m = failure.message;
+      if (m != null && m.isNotEmpty) return m;
+    }
+    return null;
   }
 
   @override
@@ -215,6 +271,30 @@ class FakePlannerRepository implements PlannerRepository {
       scheduledFor: null,
       postUpdated: slot.postId != null,
     );
+  }
+
+  @override
+  Future<GeneratedSlot> generateSlotPost({
+    required String planId,
+    required int slotIndex,
+    bool force = false,
+  }) async {
+    await Future<void>.delayed(const Duration(milliseconds: 1200));
+    final PlanSlot slot = _plan.posts[slotIndex];
+    if (!force && slot.postId != null) {
+      return GeneratedSlot(postId: slot.postId, alreadyGenerated: true);
+    }
+    final String id = 'mock-post-$slotIndex';
+    _plan = _plan.copyWith(
+      posts: <PlanSlot>[
+        for (int i = 0; i < _plan.posts.length; i++)
+          if (i == slotIndex)
+            _plan.posts[i].copyWith(status: SlotStatus.generated, postId: id)
+          else
+            _plan.posts[i],
+      ],
+    );
+    return GeneratedSlot(postId: id);
   }
 
   @override

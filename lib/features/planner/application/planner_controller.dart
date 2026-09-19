@@ -40,6 +40,47 @@ class PlannerController extends _$PlannerController {
   /// Optimistic: the slot flips immediately and is reconciled from the server's
   /// response. Approving is the single most-tapped action on this screen and a
   /// round-trip of dead UI for it reads as a broken button.
+  /// Writes the post for a slot, or replaces it when [force] is true.
+  ///
+  /// Marks the slot `generating` locally first so the row shows work in
+  /// progress — the server does the same thing under a row lock, and the
+  /// call takes seconds, not milliseconds. On any failure the local state is
+  /// re-read rather than guessed: the server rolls the slot back to
+  /// `planned`, and inventing that here would be a second source of truth.
+  ///
+  /// Rethrows [PlannerGenerateFailure] so the caller can say which of the
+  /// three things the user has to do.
+  Future<GeneratedSlot?> generate(int slotIndex, {bool force = false}) async {
+    final PlannerState? current = state.value;
+    final WeekPlan? plan = current?.plan;
+    if (plan == null) return null;
+
+    final List<PlanSlot> optimistic = List<PlanSlot>.of(plan.posts);
+    optimistic[slotIndex] =
+        optimistic[slotIndex].copyWith(status: SlotStatus.generating);
+    state = AsyncData<PlannerState>(
+      current!.copyWith(plan: plan.copyWith(posts: optimistic)),
+    );
+
+    try {
+      final GeneratedSlot result = await ref
+          .read(plannerRepositoryProvider)
+          .generateSlotPost(
+            planId: plan.id,
+            slotIndex: slotIndex,
+            force: force,
+          );
+      ref.invalidateSelf();
+      return result;
+    } on PlannerGenerateFailure {
+      ref.invalidateSelf();
+      rethrow;
+    } on Object {
+      ref.invalidateSelf();
+      return null;
+    }
+  }
+
   /// Approves a generated draft, and reports what that actually did.
   ///
   /// Goes through [PlannerRepository.approveSlot] rather than the generic slot

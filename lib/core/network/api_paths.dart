@@ -108,6 +108,14 @@ class ApiPaths {
   /// pushes one — it prepares a body and the user pastes it.
   static const String plannerArticle = '/planner/article';
 
+  /// POST — writes the post for one planner slot. `{planId, slotIndex, force}`.
+  ///
+  /// The planner's primary action, and the last thing keeping the mobile
+  /// planner read-only. `force: true` is Regenerate: it replaces the existing
+  /// draft and deletes the superseded one. Costs XP, so a 402 here is an
+  /// answer, not a fault.
+  static const String plannerGeneratePost = '/planner/generate-post';
+
   // ── Posts ───────────────────────────────────────────────────────────────
   static const String posts = '/posts';
 

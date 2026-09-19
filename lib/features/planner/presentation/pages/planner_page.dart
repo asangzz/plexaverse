@@ -135,7 +135,7 @@ class _PlannerBody extends StatelessWidget {
           SlotCard(
             slot: plan.posts[i],
             isToday: plan.posts[i].day == today,
-            onTap: () => _openSlot(context, plan.posts[i]),
+            onTap: () => _openSlot(context, plan.posts[i], i),
             onApprove: plan.posts[i].needsApproval
                 ? () => _approve(context, ref, i)
                 : null,
@@ -200,12 +200,12 @@ class _PlannerBody extends StatelessWidget {
     return '${when.day} ${months[when.month - 1]} at $time';
   }
 
-  void _openSlot(BuildContext context, PlanSlot slot) {
+  void _openSlot(BuildContext context, PlanSlot slot, int slotIndex) {
     showModalBottomSheet<void>(
       context: context,
       backgroundColor: Colors.transparent,
       isScrollControlled: true,
-      builder: (BuildContext ctx) => _SlotSheet(slot: slot),
+      builder: (BuildContext ctx) => _SlotSheet(slot: slot, slotIndex: slotIndex),
     );
   }
 
@@ -302,10 +302,99 @@ class _UpcomingWeek extends StatelessWidget {
 
 /// A slot's detail, as a bottom sheet — the phone's stand-in for the web's
 /// right-hand preview rail.
-class _SlotSheet extends StatelessWidget {
-  const _SlotSheet({required this.slot});
+class _SlotSheet extends ConsumerStatefulWidget {
+  const _SlotSheet({required this.slot, required this.slotIndex});
 
   final PlanSlot slot;
+  final int slotIndex;
+
+  @override
+  ConsumerState<_SlotSheet> createState() => _SlotSheetState();
+}
+
+class _SlotSheetState extends ConsumerState<_SlotSheet> {
+  bool _busy = false;
+
+  PlanSlot get slot => widget.slot;
+
+  /// Nothing written yet — the day is a title and an angle and no post.
+  bool get _canGenerate =>
+      slot.postId == null && slot.status != SlotStatus.generating;
+
+  /// A draft exists and can be thrown away for a different one. Never once it
+  /// is on LinkedIn: there is nothing to replace at that point.
+  bool get _canRegenerate =>
+      slot.postId != null &&
+      slot.status != SlotStatus.generating &&
+      slot.status != SlotStatus.published;
+
+  Future<void> _run({required bool force}) async {
+    if (force) {
+      final bool? confirmed = await showDialog<bool>(
+        context: context,
+        builder: (BuildContext ctx) => AlertDialog(
+          title: const Text('Write it again?'),
+          content: const Text(
+            'This replaces the current draft with a new one and costs XP. '
+            'The old draft is deleted.',
+          ),
+          actions: <Widget>[
+            TextButton(
+              onPressed: () => Navigator.of(ctx).pop(false),
+              child: Text(
+                'Cancel',
+                style: ZaveType.button.copyWith(color: ZaveColors.ink62),
+              ),
+            ),
+            TextButton(
+              onPressed: () => Navigator.of(ctx).pop(true),
+              child: Text(
+                'Replace',
+                // Amber, not red. Zave has no red.
+                style: ZaveType.button.copyWith(color: ZaveColors.amber),
+              ),
+            ),
+          ],
+        ),
+      );
+      if (confirmed != true) return;
+    }
+
+    setState(() => _busy = true);
+    // Empty means "nothing to say", which no path currently produces —
+    // but a future branch that stays silent should not have to reach for a
+    // nullable just to do so.
+    String note = '';
+    try {
+      final GeneratedSlot? result = await ref
+          .read(plannerControllerProvider.notifier)
+          .generate(widget.slotIndex, force: force);
+      note = switch (result) {
+        null => "That didn't go through. Try again.",
+        GeneratedSlot(alreadyGenerated: true) =>
+          'That day already has a post.',
+        _ => force ? 'Rewritten.' : 'Written. Review it, then approve.',
+      };
+    } on PlannerGenerateFailure catch (e) {
+      note = switch (e.kind) {
+        // The server's message names the price and the balance, which is the
+        // one thing a generic "not enough XP" would lose.
+        PlannerGenerateFailureKind.insufficientXp =>
+          e.message ?? 'Not enough XP to write this one.',
+        PlannerGenerateFailureKind.noLinkedinAccount =>
+          'Connect a LinkedIn account first — Settings › Connected Accounts.',
+        PlannerGenerateFailureKind.failed =>
+          e.message ?? "That didn't go through. Try again.",
+      };
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+
+    if (!mounted || note.isEmpty) return;
+    ScaffoldMessenger.of(context)
+      ..hideCurrentSnackBar()
+      ..showSnackBar(SnackBar(content: Text(note, style: ZaveType.body)));
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -343,6 +432,25 @@ class _SlotSheet extends StatelessWidget {
                 ZavePill(label: '#$tag', color: ZaveColors.peri),
             ],
           ),
+        ],
+        // The planner's primary action. Without it this sheet was a read-only
+        // description of a day the user could do nothing about.
+        if (_canGenerate || _canRegenerate) ...<Widget>[
+          SizedBox(height: ZaveSpace.xl),
+          if (_canGenerate)
+            ZaveButton.primary(
+              label: 'Write this post',
+              expand: true,
+              busy: _busy,
+              onPressed: _busy ? null : () => _run(force: false),
+            )
+          else
+            ZaveButton(
+              label: 'Write it again',
+              expand: true,
+              busy: _busy,
+              onPressed: _busy ? null : () => _run(force: true),
+            ),
         ],
       ],
     );

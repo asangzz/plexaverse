@@ -36,6 +36,18 @@ abstract class PlannerRepository {
     required int slotIndex,
   });
 
+  /// Writes the post for [slotIndex], or replaces it when [force] is true.
+  ///
+  /// Costs XP. Throws [PlannerGenerateFailure] rather than returning a
+  /// sentinel, because the reasons are genuinely different actions for the
+  /// user — top up, connect an account, or simply try again — and collapsing
+  /// them into null would lose the only thing that tells them which.
+  Future<GeneratedSlot> generateSlotPost({
+    required String planId,
+    required int slotIndex,
+    bool force = false,
+  });
+
   /// The week's Sunday article.
   Future<ArticleState> fetchArticle({int? week, int? season});
 
@@ -67,4 +79,42 @@ class ApproveResult {
   /// False when the slot had no post to move — the plan was approved and
   /// nothing was queued. Worth saying out loud rather than implying success.
   final bool postUpdated;
+}
+
+
+/// The post a slot generation produced.
+class GeneratedSlot {
+  const GeneratedSlot({
+    required this.postId,
+    this.alreadyGenerated = false,
+  });
+
+  final String? postId;
+
+  /// True when another request had already claimed the slot — a double-tap,
+  /// or a retry that raced the first attempt. Success, not an error, and no
+  /// XP was spent the second time.
+  final bool alreadyGenerated;
+}
+
+/// Why a slot generation did not produce a post.
+class PlannerGenerateFailure implements Exception {
+  const PlannerGenerateFailure({required this.kind, this.message});
+
+  final PlannerGenerateFailureKind kind;
+
+  /// The server's own words where it sent them — the XP message names the
+  /// price and the balance, which a generic string would lose.
+  final String? message;
+}
+
+enum PlannerGenerateFailureKind {
+  /// 402. The user needs to top up before this will work.
+  insufficientXp,
+
+  /// 400. Nothing to publish to, so nothing to generate for.
+  noLinkedinAccount,
+
+  /// Anything else — the slot has been rolled back and a retry is sensible.
+  failed,
 }
