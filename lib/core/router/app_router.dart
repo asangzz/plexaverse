@@ -289,8 +289,20 @@ class _RouterRefresh extends ChangeNotifier {
     );
     // Forced sign-out from the network layer (401 refresh failure emits on
     // this broadcast stream) — turn it into a /login redirect.
+    //
+    // The gate MUST be invalidated before the guard re-runs. `AuthInterceptor`
+    // clears the session store and emits here, but `authGateProvider` keeps
+    // whatever it last resolved — so notifying alone re-runs the guard against
+    // a cached `signedIn: true`, it decides "stay", and the user is stranded
+    // on a signed-in screen whose every request 401s. Explicit sign-out never
+    // hit this because SignOutController invalidates the gate itself; only the
+    // forced path did, which is the path a user reaches when their refresh
+    // token expires or their account is disabled.
     final sink = ref.read<AuthSignalSink>(authSignalSinkProvider);
-    final signals = sink.stream.listen((_) => notifyListeners());
+    final signals = sink.stream.listen((_) {
+      ref.invalidate(authGateProvider);
+      notifyListeners();
+    });
     _subs.add(signals.cancel);
   }
 
