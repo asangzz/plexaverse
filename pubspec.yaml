@@ -154,6 +154,9 @@ dependencies:
   razorpay_flutter: ^1.4.6
 
 dev_dependencies:
+  # Generates every platform icon size from one source, so the set cannot
+  # drift between iOS and Android the way hand-exported PNGs do.
+  flutter_launcher_icons: ^0.14.4
   flutter_test:
     sdk: flutter
   integration_test:
@@ -218,3 +221,25 @@ flutter_native_splash:
   android_12:
     color: "#0F0F1E"
     color_dark: "#0F0F1E"
+
+# The app icon. Source is the SAME mark the web ships as its PWA icon
+# (public/icon-512.png), so the two are literally one picture rather than two
+# that happen to look alike.
+#
+# Regenerate after changing the source:
+#   dart run flutter_launcher_icons
+flutter_launcher_icons:
+  image_path: "assets/branding/app_icon.png"
+
+  ios: true
+  # iOS masks to its own squircle and rejects alpha in the 1024 marketing
+  # icon, so the source is full-bleed and opaque.
+  remove_alpha_ios: true
+
+  android: "ic_launcher"
+  # Adaptive icons: the launcher composites these two layers and masks the
+  # pair to whatever shape the device uses. The background is the brand
+  # black rather than part of the artwork, so the mark keeps its margin
+  # under a circular mask.
+  adaptive_icon_background: "#0A0A0A"
+  adaptive_icon_foreground: "assets/branding/app_icon_foreground.png"
