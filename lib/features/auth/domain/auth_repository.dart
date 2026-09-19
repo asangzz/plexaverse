@@ -60,27 +60,86 @@ class RegisterNetworkFailure extends RegisterResult {
   final String? message;
 }
 
-/// Result of the LinkedIn OAuth hand-off (product-identity item). The real
-/// flow fetches an authorize URL, launches the browser via the core web-auth
-/// seam, then exchanges the returned `code`; the mock simulates a success.
-sealed class LinkedInResult {
-  const LinkedInResult();
+/// One optional consent purpose the server asked us to present.
+class ConsentPurposeOption {
+  const ConsentPurposeOption({
+    required this.purpose,
+    required this.label,
+    required this.required_,
+  });
+
+  /// The server's key, e.g. `style_learning`. Echoed back verbatim.
+  final String purpose;
+  final String label;
+  final bool required_;
 }
 
-class LinkedInSuccess extends LinkedInResult {
-  const LinkedInSuccess({required this.tokens, required this.user});
+/// The Google profile the server resolved, shown on the consent step so the
+/// user can see which account they are about to create.
+class GoogleProfile {
+  const GoogleProfile({required this.email, this.name, this.image});
+  final String email;
+  final String? name;
+  final String? image;
+}
+
+/// Outcome of the Google hand-off.
+///
+/// Note that "needs to sign up" is a SUCCESS variant, not a failure: the
+/// server answers it as a 200 with a discriminator, because the Dio error
+/// interceptor flattens every non-2xx into a message-only `Failure` and the
+/// signup ticket would be unreachable.
+sealed class GoogleResult {
+  const GoogleResult();
+}
+
+class GoogleSignedIn extends GoogleResult {
+  const GoogleSignedIn({required this.tokens, required this.user});
   final AuthTokens tokens;
   final AuthUser user;
 }
 
-/// The user dismissed the browser hand-off — distinct from a failure so the
-/// UI returns to the form silently, without an error banner.
-class LinkedInCancelled extends LinkedInResult {
-  const LinkedInCancelled();
+/// A brand-new data principal. NOTHING has been written about them yet — the
+/// notice has to be shown before anything is (DPDP s5/s6). Completing the
+/// sign-up means calling [AuthRepository.completeGoogleSignUp] with the
+/// ticket and the user's decisions.
+class GoogleConsentRequired extends GoogleResult {
+  const GoogleConsentRequired({
+    required this.signupTicket,
+    required this.noticeVersion,
+    required this.profile,
+    required this.purposes,
+  });
+
+  final String signupTicket;
+
+  /// Echoed back on completion so the server can refuse a store binary that
+  /// is showing a superseded notice.
+  final String noticeVersion;
+  final GoogleProfile profile;
+  final List<ConsentPurposeOption> purposes;
 }
 
-class LinkedInFailure extends LinkedInResult {
-  const LinkedInFailure({this.message});
+/// The user dismissed the browser sheet — distinct from a failure so the UI
+/// returns to the form silently, with no error banner. Backing out is a
+/// decision, not an error.
+class GoogleCancelled extends GoogleResult {
+  const GoogleCancelled();
+}
+
+/// This email already belongs to a PASSWORD account.
+///
+/// Deliberately not auto-linked: both register routes mark an address
+/// verified without ever mailing it, so anyone can pre-register someone
+/// else's email, and linking would hand their Google sign-in into a row whose
+/// password the attacker still knows.
+class GoogleAccountExistsWithPassword extends GoogleResult {
+  const GoogleAccountExistsWithPassword({required this.message});
+  final String message;
+}
+
+class GoogleFailure extends GoogleResult {
+  const GoogleFailure({this.message});
   final String? message;
 }
 
@@ -95,16 +154,41 @@ abstract class AuthRepository {
     required String password,
   });
 
+  /// Creates an account.
+  ///
+  /// [acceptedNotice] and [noticeVersion] are REQUIRED, not optional: the
+  /// server refuses a sign-up without an affirmative acceptance, because
+  /// consent under DPDP s6 cannot be inferred from silence. [consents] carries
+  /// the optional purposes, keyed by the server's purpose strings; an absent
+  /// key is a refusal.
   Future<RegisterResult> register({
     required String name,
     required String email,
     required String password,
+    required bool acceptedNotice,
+    required String noticeVersion,
+    Map<String, bool> consents = const <String, bool>{},
     String? referralCode,
   });
 
-  /// Runs the whole LinkedIn hand-off: fetch authorize URL → launch browser →
-  /// exchange the returned authorization code → resolve the session.
-  Future<LinkedInResult> signInWithLinkedIn();
+  /// Runs the whole Google hand-off: fetch an authorize URL bound to a PKCE
+  /// challenge → open the system browser → exchange the returned code.
+  ///
+  /// The PKCE verifier stays in a local variable for the duration and is
+  /// never persisted.
+  Future<GoogleResult> signInWithGoogle();
+
+  /// Finishes a Google SIGN-UP after the user has accepted the notice.
+  ///
+  /// Only valid against a [GoogleConsentRequired.signupTicket], and only once:
+  /// the server route only ever creates, so a replay is refused.
+  Future<GoogleResult> completeGoogleSignUp({
+    required String signupTicket,
+    required String noticeVersion,
+    required bool acceptedNotice,
+    Map<String, bool> consents = const <String, bool>{},
+    String? referralCode,
+  });
 
   /// Best-effort server-side session teardown. Local token clearing is owned
   /// by `SignOutController` via `SessionStore.clear()`; this only tells the

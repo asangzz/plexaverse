@@ -60,6 +60,15 @@ class AuthInterceptor extends Interceptor {
     DioException err,
     ErrorInterceptorHandler handler,
   ) async {
+    // A route that carries no bearer cannot have a stale one, so its 401 is
+    // an answer — "those credentials are wrong" — not an expired session.
+    // Without this, a failed sign-in attempt ran the refresh path and then
+    // _failHard, clearing the session and emitting a forced sign-out on
+    // behalf of a user who was never signed in.
+    if (err.requestOptions.extra[_skipAuthKey] == true) {
+      handler.next(err);
+      return;
+    }
     if (!_isRefreshable(err)) {
       handler.next(err);
       return;

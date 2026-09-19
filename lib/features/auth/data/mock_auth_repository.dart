@@ -2,6 +2,7 @@ import 'package:flutter/foundation.dart';
 
 import '../../../core/mock/mock_api.dart';
 import '../domain/auth_repository.dart';
+import '../../../core/consent/notice.dart';
 
 /// Stand-in credentials for the mock. Sign in with
 /// `demo@plexaverse.com` / `password123`.
@@ -17,6 +18,7 @@ const String kMockRejectedReferral = 'INVALID';
 
 const String _kLoginSuccessAsset = 'assets/mock/auth/login_success.json';
 const String _kRegisterSuccessAsset = 'assets/mock/auth/register_success.json';
+
 const String _kRefreshAsset = 'assets/mock/auth/refresh_success.json';
 
 /// In-memory [AuthRepository] used when `useFakeBackend` is true (the **mock**
@@ -31,8 +33,9 @@ const String _kRefreshAsset = 'assets/mock/auth/refresh_success.json';
 /// does to the Dio-backed repository. This keeps the mock flavor's offline UX
 /// identical to production.
 class MockAuthRepository implements AuthRepository {
-  const MockAuthRepository({bool Function()? isOffline})
-      : _isOffline = isOffline;
+  // Not const: the mock remembers whether a Google sign-up has been completed
+  // so the second attempt signs in rather than re-asking for consent.
+  MockAuthRepository({bool Function()? isOffline}) : _isOffline = isOffline;
 
   final bool Function()? _isOffline;
 
@@ -64,8 +67,18 @@ class MockAuthRepository implements AuthRepository {
     required String name,
     required String email,
     required String password,
+    required bool acceptedNotice,
+    required String noticeVersion,
+    Map<String, bool> consents = const <String, bool>{},
     String? referralCode,
   }) async {
+    // Mirrors the server: without an affirmative acceptance there is no
+    // account, so the mock must refuse too or the UI gate is never exercised.
+    if (!acceptedNotice) {
+      return const RegisterInvalid(
+        message: 'You must accept the privacy notice to create an account.',
+      );
+    }
     if (_isOffline?.call() ?? false) return const RegisterNetworkFailure();
     await Future<void>.delayed(MockApi.defaultDelay);
     if (referralCode != null &&
@@ -91,18 +104,79 @@ class MockAuthRepository implements AuthRepository {
     }
   }
 
+  /// Set once a mock Google sign-up has been completed, so a second
+  /// [signInWithGoogle] returns a session instead of asking for consent again.
+  bool _googleSignedUp = false;
+
   @override
-  Future<LinkedInResult> signInWithLinkedIn() async {
-    if (_isOffline?.call() ?? false) return const LinkedInFailure();
+  Future<GoogleResult> signInWithGoogle() async {
+    if (_isOffline?.call() ?? false) return const GoogleFailure();
     try {
-      // Simulate the browser hand-off + code exchange round trip.
+      // Simulate the browser hand-off.
+      await Future<void>.delayed(const Duration(milliseconds: 1200));
+
+      // First run returns consent_required, so the notice step is reachable
+      // under the mock flavor with no Google Cloud setup at all. That is the
+      // path most worth being able to exercise: it is the one that creates a
+      // data principal.
+      if (!_googleSignedUp) {
+        return const GoogleConsentRequired(
+          signupTicket: 'mock-signup-ticket',
+          noticeVersion: kNoticeVersion,
+          profile: GoogleProfile(
+            email: 'demo@plexaverse.com',
+            name: 'Demo User',
+          ),
+          purposes: <ConsentPurposeOption>[
+            ConsentPurposeOption(
+              purpose: 'style_learning',
+              label:
+                  'Read your existing LinkedIn posts to learn your writing voice',
+              required_: false,
+            ),
+            ConsentPurposeOption(
+              purpose: 'marketing',
+              label: 'Send product updates and tips',
+              required_: false,
+            ),
+          ],
+        );
+      }
+
       final json = await MockApi.loadObject(
         _kLoginSuccessAsset,
-        delay: const Duration(milliseconds: 1400),
+        delay: const Duration(milliseconds: 400),
       );
-      return LinkedInSuccess(tokens: _tokens(json), user: _user(json));
+      return GoogleSignedIn(tokens: _tokens(json), user: _user(json));
     } on Object {
-      return const LinkedInFailure();
+      return const GoogleFailure();
+    }
+  }
+
+  @override
+  Future<GoogleResult> completeGoogleSignUp({
+    required String signupTicket,
+    required String noticeVersion,
+    required bool acceptedNotice,
+    Map<String, bool> consents = const <String, bool>{},
+    String? referralCode,
+  }) async {
+    if (_isOffline?.call() ?? false) return const GoogleFailure();
+    // Mirrors the server: the notice is not optional.
+    if (!acceptedNotice) {
+      return const GoogleFailure(
+        message: 'You must accept the privacy notice to create an account.',
+      );
+    }
+    try {
+      final json = await MockApi.loadObject(
+        _kRegisterSuccessAsset,
+        delay: const Duration(milliseconds: 900),
+      );
+      _googleSignedUp = true;
+      return GoogleSignedIn(tokens: _tokens(json), user: _user(json));
+    } on Object {
+      return const GoogleFailure();
     }
   }
 

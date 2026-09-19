@@ -2,6 +2,8 @@ import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 
 import '../../../core/network/api_paths.dart';
+import '../../../core/network/interceptors/auth_interceptor.dart';
+import '../../../core/security/pkce.dart';
 import '../../../core/network/dio_client.dart';
 import '../../../core/network/failure.dart';
 import '../../../core/platform/web_auth.dart';
@@ -38,7 +40,10 @@ class ApiAuthRepository implements AuthRepository {
   /// were never configured — flutter_web_auth_2 could never intercept the
   /// redirect, so every mobile LinkedIn connect silently dead-ended in the
   /// browser (worse after a 2FA bounce into the LinkedIn app).
-  static const String _linkedInCallbackScheme = 'plexaverse';
+  /// The custom scheme both OAuth bridges return through. Registered
+  /// natively on iOS (CFBundleURLSchemes) and Android (the flutter_web_auth_2
+  /// CallbackActivity intent-filter), scheme-only with no host constraint.
+  static const String _callbackScheme = 'plexaverse';
 
   @override
   Future<SignInResult> signIn({
@@ -49,6 +54,7 @@ class ApiAuthRepository implements AuthRepository {
       final response = await _client.post<Map<String, dynamic>>(
         ApiPaths.login,
         data: <String, dynamic>{'email': email, 'password': password},
+        options: AuthInterceptor.skipAuth(),
       );
       final data = response.data;
       if (data == null) return const SignInNetworkFailure();
@@ -77,6 +83,9 @@ class ApiAuthRepository implements AuthRepository {
     required String name,
     required String email,
     required String password,
+    required bool acceptedNotice,
+    required String noticeVersion,
+    Map<String, bool> consents = const <String, bool>{},
     String? referralCode,
   }) async {
     try {
@@ -86,9 +95,16 @@ class ApiAuthRepository implements AuthRepository {
           'name': name,
           'email': email,
           'password': password,
+          // The server refuses a sign-up without these: consent under DPDP s6
+          // is an affirmative act, so it is sent explicitly rather than
+          // implied by the request existing.
+          'acceptedNotice': acceptedNotice,
+          'noticeVersion': noticeVersion,
+          'consents': consents,
           if (referralCode != null && referralCode.isNotEmpty)
             'referralCode': referralCode,
         },
+        options: AuthInterceptor.skipAuth(),
       );
       final data = response.data;
       if (data == null) return const RegisterNetworkFailure();
@@ -113,48 +129,162 @@ class ApiAuthRepository implements AuthRepository {
   }
 
   @override
-  Future<LinkedInResult> signInWithLinkedIn() async {
+  Future<GoogleResult> signInWithGoogle() async {
+    // The verifier lives HERE, in a local, for the duration of the hand-off.
+    // It is single-use and lasts seconds; persisting it would only create
+    // something worth stealing.
+    final PkcePair pkce = PkcePair.generate();
+
     try {
-      // 1. Ask the backend for the provider authorize URL.
+      // 1. Ask the server for a finished authorize URL. The app never holds
+      //    the Google client id.
       final urlResponse = await _client.post<Map<String, dynamic>>(
-        ApiPaths.linkedInAuthUrl,
-        data: <String, dynamic>{'type': 'personal'},
+        ApiPaths.googleAuthUrl,
+        data: <String, dynamic>{
+          'codeChallenge': pkce.challenge,
+          'codeChallengeMethod': PkcePair.method,
+        },
+        options: AuthInterceptor.skipAuth(),
       );
-      final authUrl = urlResponse.data?['authUrl'] as String?;
-      if (authUrl == null || authUrl.isEmpty) {
-        return const LinkedInFailure();
+      final String? authUrl = urlResponse.data?['authUrl'] as String?;
+      final String? issuedState = urlResponse.data?['state'] as String?;
+      if (authUrl == null || authUrl.isEmpty || issuedState == null) {
+        return const GoogleFailure();
       }
 
-      // 2. Launch the browser hand-off via the core web-auth seam.
+      // 2. System browser. NOT a webview — Google refuses OAuth in embedded
+      //    webviews (disallowed_useragent); ASWebAuthenticationSession and
+      //    Custom Tabs, which this seam uses, are allowed.
       final result = await _webAuth.authenticate(
         url: authUrl,
-        callbackUrlScheme: _linkedInCallbackScheme,
+        callbackUrlScheme: _callbackScheme,
       );
+
       switch (result) {
         case WebAuthCancelled():
-          return const LinkedInCancelled();
+          return const GoogleCancelled();
         case WebAuthFailure():
-          return const LinkedInFailure();
+          return const GoogleFailure();
         case WebAuthSuccess(:final callbackUrl):
-          final code = Uri.parse(callbackUrl).queryParameters['code'];
-          if (code == null || code.isEmpty) return const LinkedInCancelled();
-          // 3. Exchange the authorization code for a session.
-          final exchange = await _client.post<Map<String, dynamic>>(
-            ApiPaths.linkedInExchange,
-            data: <String, dynamic>{'code': code, 'type': 'personal'},
-          );
-          final data = exchange.data;
-          if (data == null) return const LinkedInFailure();
-          return LinkedInSuccess(tokens: _tokens(data), user: _user(data));
+          final Map<String, String> params =
+              Uri.parse(callbackUrl).queryParameters;
+
+          // The user pressed Cancel on Google's own screen.
+          if (params['error'] == 'access_denied') return const GoogleCancelled();
+          if (params['error'] != null) {
+            return GoogleFailure(message: params['error_description']);
+          }
+
+          final String? code = params['code'];
+          final String? state = params['state'];
+          if (code == null || code.isEmpty) return const GoogleCancelled();
+
+          // Redundant given PKCE — the server checks this too — but free, and
+          // it turns a server rejection into a local abort.
+          if (state != issuedState) return const GoogleFailure();
+
+          return _exchange(code: code, state: state!, verifier: pkce.verifier);
       }
     } on DioException catch (e) {
-      final failure = e.error;
-      return LinkedInFailure(
-        message: failure is Failure ? failure.message : null,
-      );
+      return GoogleFailure(message: _messageOf(e));
     } on Object {
-      return const LinkedInFailure();
+      return const GoogleFailure();
     }
+  }
+
+  Future<GoogleResult> _exchange({
+    required String code,
+    required String state,
+    required String verifier,
+  }) async {
+    final response = await _client.post<Map<String, dynamic>>(
+      ApiPaths.googleExchange,
+      data: <String, dynamic>{
+        'code': code,
+        'state': state,
+        'codeVerifier': verifier,
+      },
+      options: AuthInterceptor.skipAuth(),
+    );
+    final Map<String, dynamic>? data = response.data;
+    if (data == null) return const GoogleFailure();
+
+    // A 200 carrying a discriminator, not an error — see GoogleResult.
+    if (data['status'] == 'consent_required') {
+      return GoogleConsentRequired(
+        signupTicket: data['signupTicket'] as String,
+        noticeVersion: data['noticeVersion'] as String,
+        profile: _profile(data['profile']),
+        purposes: _purposes(data['purposes']),
+      );
+    }
+    return GoogleSignedIn(tokens: _tokens(data), user: _user(data));
+  }
+
+  @override
+  Future<GoogleResult> completeGoogleSignUp({
+    required String signupTicket,
+    required String noticeVersion,
+    required bool acceptedNotice,
+    Map<String, bool> consents = const <String, bool>{},
+    String? referralCode,
+  }) async {
+    try {
+      final response = await _client.post<Map<String, dynamic>>(
+        ApiPaths.googleComplete,
+        data: <String, dynamic>{
+          'signupTicket': signupTicket,
+          'acceptedNotice': acceptedNotice,
+          'noticeVersion': noticeVersion,
+          'consents': consents,
+          'referralCode': ?referralCode,
+        },
+        options: AuthInterceptor.skipAuth(),
+      );
+      final Map<String, dynamic>? data = response.data;
+      if (data == null) return const GoogleFailure();
+      return GoogleSignedIn(tokens: _tokens(data), user: _user(data));
+    } on DioException catch (e) {
+      return GoogleFailure(message: _messageOf(e));
+    } on Object {
+      return const GoogleFailure();
+    }
+  }
+
+  static GoogleProfile _profile(Object? raw) {
+    final Map<String, dynamic> m =
+        raw is Map<String, dynamic> ? raw : const <String, dynamic>{};
+    return GoogleProfile(
+      email: (m['email'] as String?) ?? '',
+      name: m['name'] as String?,
+      image: m['image'] as String?,
+    );
+  }
+
+  static List<ConsentPurposeOption> _purposes(Object? raw) {
+    if (raw is! List) return const <ConsentPurposeOption>[];
+    return raw
+        .whereType<Map<String, dynamic>>()
+        .map(
+          (Map<String, dynamic> m) => ConsentPurposeOption(
+            purpose: (m['purpose'] as String?) ?? '',
+            label: (m['label'] as String?) ?? '',
+            required_: m['required'] == true,
+          ),
+        )
+        .where((ConsentPurposeOption p) => p.purpose.isNotEmpty)
+        .toList(growable: false);
+  }
+
+  /// The server's own message when it sent one — these routes answer with
+  /// copy that is meant to be shown (e.g. the password-account refusal).
+  static String? _messageOf(DioException e) {
+    final Object? failure = e.error;
+    if (failure is Failure) {
+      final String? message = failure.message;
+      if (message != null && message.isNotEmpty) return message;
+    }
+    return null;
   }
 
   @override

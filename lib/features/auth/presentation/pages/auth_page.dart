@@ -13,6 +13,9 @@ import '../widgets/form_error_banner.dart';
 import '../widgets/password_strength_bar.dart';
 import '../widgets/referral_code_field.dart';
 import '../widgets/social_auth_button.dart';
+import '../../../../core/consent/notice.dart';
+import '../widgets/consent_block.dart';
+import '../widgets/consent_sheet.dart';
 
 enum _AuthMode { signIn, createAccount }
 
@@ -71,10 +74,15 @@ class _AuthPageState extends ConsumerState<AuthPage>
   // Submission flags. `_submitting` drives the primary CTA spinner; the two
   // social flags drive theirs. Guarded so only one runs at a time.
   bool _submitting = false;
-  // Google sign-in is a "coming soon" placeholder (see the button's onPressed);
-  // the flow is not wired yet, so this stays constant until it lands.
-  final bool _googleLoading = false;
-  bool _linkedInLoading = false;
+  bool _googleLoading = false;
+
+  /// What the user has ticked on the create-account notice. Reset when the
+  /// mode toggles, so switching to sign-in and back cannot leave a stale
+  /// acceptance behind.
+  ConsentDecision _consent = const ConsentDecision(
+    acceptedNotice: false,
+    consents: <String, bool>{},
+  );
 
   late final AnimationController _shakeCtrl = AnimationController(
     vsync: this,
@@ -131,7 +139,7 @@ class _AuthPageState extends ConsumerState<AuthPage>
 
   bool get _isSignIn => _mode == _AuthMode.signIn;
 
-  bool get _busy => _submitting || _googleLoading || _linkedInLoading;
+  bool get _busy => _submitting || _googleLoading;
 
   void _clearErrors() {
     _nameError = null;
@@ -215,6 +223,9 @@ class _AuthPageState extends ConsumerState<AuthPage>
           name: _nameCtrl.text.trim(),
           email: _emailCtrl.text.trim(),
           password: _passwordCtrl.text,
+          acceptedNotice: _consent.acceptedNotice,
+          noticeVersion: kNoticeVersion,
+          consents: _consent.consents,
           referralCode: referral.isEmpty ? null : referral,
         );
     if (!mounted) return;
@@ -242,26 +253,75 @@ class _AuthPageState extends ConsumerState<AuthPage>
     }
   }
 
-  Future<void> _startLinkedIn() async {
+  Future<void> _startGoogle() async {
     setState(() {
       _formError = null;
-      _linkedInLoading = true;
+      _googleLoading = true;
     });
-    final LinkedInResult result = await ref
+
+    final GoogleResult result = await ref
         .read(authRepositoryProvider)
-        .signInWithLinkedIn();
+        .signInWithGoogle();
     if (!mounted) return;
 
     switch (result) {
-      case LinkedInSuccess(:final AuthTokens tokens):
+      case GoogleSignedIn(:final AuthTokens tokens):
         await _onAuthenticated(tokens);
-      case LinkedInCancelled():
-        setState(() => _linkedInLoading = false);
-      case LinkedInFailure():
+
+      case GoogleConsentRequired():
+        // A brand-new data principal. Nothing has been stored about them yet,
+        // and nothing will be until they accept the notice.
+        setState(() => _googleLoading = false);
+        await _completeGoogleSignUp(result);
+
+      case GoogleCancelled():
+        // Backing out is a decision, not an error — no banner.
+        setState(() => _googleLoading = false);
+
+      case GoogleAccountExistsWithPassword(:final String message):
         setState(() {
-          _linkedInLoading = false;
-          _formError = 'LinkedIn sign-in failed. Please try again.';
+          _googleLoading = false;
+          _formError = message;
         });
+
+      case GoogleFailure(:final String? message):
+        setState(() {
+          _googleLoading = false;
+          _formError = message ?? 'Google sign-in failed. Please try again.';
+        });
+    }
+  }
+
+  /// Shows the notice, then creates the account.
+  Future<void> _completeGoogleSignUp(GoogleConsentRequired step) async {
+    final ConsentDecision? decision = await ConsentSheet.show(
+      context,
+      profile: step.profile,
+      purposes: step.purposes,
+    );
+    if (!mounted || decision == null) return; // dismissed — nothing written
+
+    setState(() => _googleLoading = true);
+    final GoogleResult result = await ref
+        .read(authRepositoryProvider)
+        .completeGoogleSignUp(
+          signupTicket: step.signupTicket,
+          noticeVersion: step.noticeVersion,
+          acceptedNotice: decision.acceptedNotice,
+          consents: decision.consents,
+        );
+    if (!mounted) return;
+
+    switch (result) {
+      case GoogleSignedIn(:final AuthTokens tokens):
+        await _onAuthenticated(tokens);
+      case GoogleFailure(:final String? message):
+        setState(() {
+          _googleLoading = false;
+          _formError = message ?? 'Could not create your account.';
+        });
+      case GoogleResult():
+        setState(() => _googleLoading = false);
     }
   }
 
@@ -350,24 +410,17 @@ class _AuthPageState extends ConsumerState<AuthPage>
                     ),
             ),
 
+            // Google only. The web offers exactly two providers — Google and
+            // credentials — and LinkedIn is never a sign-in there, only an
+            // account you CONNECT once signed in. The LinkedIn button that
+            // used to sit here had no web counterpart and no working backend
+            // path: /linkedin/auth-url requires a bearer token, so a
+            // signed-out tap could only ever 401.
             SocialAuthButton(
               provider: SocialButtonProvider.google,
               isSignIn: isSignIn,
               isLoading: _googleLoading,
-              onPressed: _busy
-                  ? null
-                  : () => ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text('Google sign-in coming soon'),
-                      ),
-                    ),
-            ),
-            SizedBox(height: ZaveSpace.md),
-            SocialAuthButton(
-              provider: SocialButtonProvider.linkedIn,
-              isSignIn: isSignIn,
-              isLoading: _linkedInLoading,
-              onPressed: _busy ? null : _startLinkedIn,
+              onPressed: _busy ? null : _startGoogle,
             ),
 
             SizedBox(height: ZaveSpace.xl),
@@ -436,12 +489,25 @@ class _AuthPageState extends ConsumerState<AuthPage>
 
             SizedBox(height: ZaveSpace.xl),
 
+            // The notice goes ABOVE the button, not below it as fine print.
+            // DPDP s5 wants it before collection, and a line under the CTA is
+            // read after the decision, if at all.
+            if (!isSignIn) ...<Widget>[
+              ConsentBlock(
+                decision: _consent,
+                onChanged: (ConsentDecision d) => setState(() => _consent = d),
+              ),
+              SizedBox(height: ZaveSpace.xl),
+            ],
+
             // The one solid-white button on this screen.
             ZaveButton.primary(
               label: isSignIn ? 'Continue' : 'Create account',
               expand: true,
               busy: _submitting,
-              onPressed: _busy
+              // Create-account stays disabled until the notice is accepted —
+              // matching the web's submit gate, and the server's.
+              onPressed: _busy || (!isSignIn && !_consent.isComplete)
                   ? null
                   : (isSignIn ? _submitSignIn : _submitRegister),
             ),

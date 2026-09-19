@@ -29,6 +29,20 @@ class ApiPaths {
   static const String register = '/auth/register';
   static const String refresh = '/auth/refresh';
 
+  // ── Google sign-in ──────────────────────────────────────────────────────
+  // The browser-OAuth bridge. The app never sees the Google client id: it asks
+  // the server for a finished authorize URL, opens it, and hands the code back.
+  /// POST a PKCE challenge, get a Google authorize URL.
+  static const String googleAuthUrl = '/auth/google/auth-url';
+
+  /// POST `{code, state, codeVerifier}`. Answers `signed_in` OR
+  /// `consent_required` — both as a 200, discriminated on `status`.
+  static const String googleExchange = '/auth/google/exchange';
+
+  /// POST the signup ticket plus the user's consent decisions. Creates the
+  /// account. Only reached after `consent_required`.
+  static const String googleComplete = '/auth/google/complete';
+
   /// Warm-boot check — validates the stored token AND returns fresh role /
   /// subscription state that is deliberately not in the token payload.
   static const String me = '/auth/me';

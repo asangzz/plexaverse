@@ -36,6 +36,14 @@ class LogScrubber {
     'pin',
     'otp',
     'signature',
+    // PKCE. The verifier is the one secret the whole Google flow rests on, and
+    // unlike `state` and `signupTicket` it is NOT a JWT — a 43-char base64url
+    // string has no dots, so the JWT-shaped redaction misses it entirely and
+    // it would land in a dev/staging request log verbatim.
+    'codeverifier',
+    'code_verifier',
+    'signupticket',
+    'signup_ticket',
     'driverlicense',
     'driver_license',
     'nationalid',
