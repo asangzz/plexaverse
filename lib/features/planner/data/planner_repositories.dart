@@ -32,6 +32,32 @@ class ApiPlannerRepository implements PlannerRepository {
   }
 
   @override
+  Future<ApproveResult> approveSlot({
+    required String planId,
+    required int slotIndex,
+  }) async {
+    final response = await _client.patch<Map<String, dynamic>>(
+      ApiPaths.planner,
+      data: <String, dynamic>{
+        'planId': planId,
+        'slotIndex': slotIndex,
+        'updates': <String, dynamic>{'status': 'approved'},
+      },
+    );
+    final Map<String, dynamic>? data = response.data;
+    final Map<String, dynamic>? plan = data?['plan'] as Map<String, dynamic>?;
+    if (plan == null) {
+      throw StateError('planner approve returned no plan');
+    }
+    final String? when = data?['scheduledFor'] as String?;
+    return ApproveResult(
+      plan: WeekPlan.fromJson(plan),
+      scheduledFor: when == null ? null : DateTime.tryParse(when)?.toLocal(),
+      postUpdated: data?['postUpdated'] == true,
+    );
+  }
+
+  @override
   Future<WeekPlan> updateSlot({
     required String planId,
     required int slotIndex,
@@ -168,6 +194,26 @@ class FakePlannerRepository implements PlannerRepository {
       plan: _plan,
       currentWeekNumber: 3,
       currentSeason: 1,
+    );
+  }
+
+  @override
+  Future<ApproveResult> approveSlot({
+    required String planId,
+    required int slotIndex,
+  }) async {
+    final WeekPlan plan = await updateSlot(
+      planId: planId,
+      slotIndex: slotIndex,
+      status: SlotStatus.approved,
+    );
+    final PlanSlot slot = plan.posts[slotIndex];
+    return ApproveResult(
+      plan: plan,
+      // The fake has no calendar, so it reports the honest "approved but not
+      // scheduled" branch rather than inventing a publish time.
+      scheduledFor: null,
+      postUpdated: slot.postId != null,
     );
   }
 

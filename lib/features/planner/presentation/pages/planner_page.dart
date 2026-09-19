@@ -7,6 +7,7 @@ import '../../domain/plan_slot.dart';
 import '../../domain/weekly_article.dart';
 import '../widgets/article_card.dart';
 import '../widgets/slot_card.dart';
+import '../../domain/planner_repository.dart';
 
 /// **Plan** — the content planner. The web's `/planner`.
 ///
@@ -136,15 +137,67 @@ class _PlannerBody extends StatelessWidget {
             isToday: plan.posts[i].day == today,
             onTap: () => _openSlot(context, plan.posts[i]),
             onApprove: plan.posts[i].needsApproval
-                ? () => ref
-                      .read(plannerControllerProvider.notifier)
-                      .approve(i)
+                ? () => _approve(context, ref, i)
                 : null,
           ),
           SizedBox(height: ZaveSpace.md),
         ],
       ],
     );
+  }
+
+  /// Approves a slot and says what happened.
+  ///
+  /// Approving is the moment the user hands the post over to the publisher,
+  /// so the confirmation names the time it will go out. The two quieter
+  /// outcomes are stated rather than glossed: a slot whose send time has
+  /// already passed is approved but NOT queued (the server refuses to
+  /// back-date), and a slot with no generated post has nothing to queue at
+  /// all. Both used to read as plain success.
+  Future<void> _approve(BuildContext context, WidgetRef ref, int index) async {
+    final ApproveResult? result =
+        await ref.read(plannerControllerProvider.notifier).approve(index);
+    if (!context.mounted) return;
+
+    final String message;
+    if (result == null) {
+      message = "That didn't go through. Try again.";
+    } else if (result.scheduledFor != null) {
+      message = 'Approved — publishing ${_whenLabel(result.scheduledFor!)}.';
+    } else if (result.postUpdated) {
+      message = "Approved. That slot's time has passed, so publish it "
+          'yourself when you are ready.';
+    } else {
+      message = 'Approved. Nothing is queued yet — this day has no post.';
+    }
+    ScaffoldMessenger.of(context)
+      ..hideCurrentSnackBar()
+      ..showSnackBar(SnackBar(content: Text(message, style: ZaveType.body)));
+  }
+
+  /// "today at 09:00" / "Mon at 09:00" / "12 Oct at 09:00".
+  static String _whenLabel(DateTime when) {
+    const List<String> days = <String>[
+      'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun',
+    ];
+    const List<String> months = <String>[
+      'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+      'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
+    ];
+    final DateTime now = DateTime.now();
+    final String time =
+        '${when.hour.toString().padLeft(2, '0')}:'
+        '${when.minute.toString().padLeft(2, '0')}';
+    final Duration ahead = when.difference(
+      DateTime(now.year, now.month, now.day),
+    );
+    if (when.year == now.year &&
+        when.month == now.month &&
+        when.day == now.day) {
+      return 'today at $time';
+    }
+    if (ahead.inDays < 7) return '${days[when.weekday - 1]} at $time';
+    return '${when.day} ${months[when.month - 1]} at $time';
   }
 
   void _openSlot(BuildContext context, PlanSlot slot) {

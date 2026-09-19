@@ -3,6 +3,7 @@ import 'package:riverpod_annotation/riverpod_annotation.dart';
 import '../data/planner_repositories.dart';
 import '../domain/plan_slot.dart';
 import '../domain/weekly_article.dart';
+import '../domain/planner_repository.dart';
 
 part 'planner_controller.g.dart';
 
@@ -39,8 +40,38 @@ class PlannerController extends _$PlannerController {
   /// Optimistic: the slot flips immediately and is reconciled from the server's
   /// response. Approving is the single most-tapped action on this screen and a
   /// round-trip of dead UI for it reads as a broken button.
-  Future<void> approve(int slotIndex) =>
-      _patch(slotIndex, status: SlotStatus.approved);
+  /// Approves a generated draft, and reports what that actually did.
+  ///
+  /// Goes through [PlannerRepository.approveSlot] rather than the generic slot
+  /// patch: approving moves the Post row too, which is the part that queues
+  /// it for publishing. Returns the outcome so the caller can say when it will
+  /// go out — or say plainly that nothing was queued — instead of leaving the
+  /// user to infer it from a status chip.
+  Future<ApproveResult?> approve(int slotIndex) async {
+    final PlannerState? current = state.value;
+    final WeekPlan? plan = current?.plan;
+    if (plan == null) return null;
+
+    final List<PlanSlot> optimistic = List<PlanSlot>.of(plan.posts);
+    optimistic[slotIndex] =
+        optimistic[slotIndex].copyWith(status: SlotStatus.approved);
+    state = AsyncData<PlannerState>(
+      current!.copyWith(plan: plan.copyWith(posts: optimistic)),
+    );
+
+    try {
+      final result = await ref
+          .read(plannerRepositoryProvider)
+          .approveSlot(planId: plan.id, slotIndex: slotIndex);
+      state = AsyncData<PlannerState>(current.copyWith(plan: result.plan));
+      return result;
+    } on Object {
+      // Put the server's truth back. A failed approve that still looks
+      // approved is worse than one that visibly did not take.
+      ref.invalidateSelf();
+      return null;
+    }
+  }
 
   /// Renames a slot. [titleEditedByUser] tells the generator not to overwrite
   /// it on a regenerate.
