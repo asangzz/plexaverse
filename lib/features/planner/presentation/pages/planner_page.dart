@@ -225,17 +225,21 @@ class _PlannerBody extends StatelessWidget {
 /// The web renders this as a PAIR rather than two stacked bars (commit
 /// b4d9f1b) — the week/phase on one side and the topic on the other, reading as
 /// one object.
-class _WeekHeader extends StatelessWidget {
+class _WeekHeader extends ConsumerWidget {
   const _WeekHeader({required this.state, required this.plan});
 
   final PlannerState state;
   final WeekPlan? plan;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final String? topic = plan?.topic ?? state.upcomingTopic;
     final String? phase = plan?.phase ?? state.upcomingPhase;
     final int week = plan?.weekNumber ?? state.currentWeekNumber;
+    final int season = plan?.season ?? 1;
+    // Null means "whatever the server calls now" — so a pinned week is the
+    // only way to know the user has navigated away from it.
+    final bool browsing = ref.watch(plannerWeekProvider).week != null;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -255,8 +259,162 @@ class _WeekHeader extends StatelessWidget {
         ],
         if (topic != null) ...<Widget>[
           SizedBox(height: ZaveSpace.md),
-          Text(topic, style: ZaveType.lead),
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: <Widget>[
+              Expanded(child: Text(topic, style: ZaveType.lead)),
+              // Changing the topic re-plans only the days that have not been
+              // written, so it is offered wherever the topic is shown rather
+              // than hidden behind a menu. Not on a past week: re-planning
+              // days that have already gone out would be a lie about history.
+              if (plan != null && !browsing) ...<Widget>[
+                SizedBox(width: ZaveSpace.md),
+                ZaveButton(
+                  label: 'Change',
+                  onPressed: () => _editTopic(context, ref, topic),
+                ),
+              ],
+            ],
+          ),
         ],
+        SizedBox(height: ZaveSpace.lg),
+        Row(
+          children: <Widget>[
+            ZaveButton(
+              label: 'Previous',
+              icon: const Icon(Icons.chevron_left),
+              // Week 1 is the floor — there is no week 0 to fetch, and a
+              // disabled control says that better than an error would.
+              onPressed: week <= 1
+                  ? null
+                  : () => ref
+                      .read(plannerWeekProvider.notifier)
+                      .show(week - 1, season),
+            ),
+            SizedBox(width: ZaveSpace.sm),
+            ZaveButton(
+              label: 'Next',
+              trailing: const Icon(Icons.chevron_right),
+              onPressed: () => ref
+                  .read(plannerWeekProvider.notifier)
+                  .show(week + 1, season),
+            ),
+            if (browsing) ...<Widget>[
+              SizedBox(width: ZaveSpace.md),
+              ZaveButton(
+                label: 'This week',
+                onPressed: () =>
+                    ref.read(plannerWeekProvider.notifier).showCurrent(),
+              ),
+            ],
+          ],
+        ),
+      ],
+    );
+  }
+
+  Future<void> _editTopic(
+    BuildContext context,
+    WidgetRef ref,
+    String current,
+  ) async {
+    final String? next = await showDialog<String>(
+      context: context,
+      builder: (BuildContext ctx) => _ChangeTopicDialog(current: current),
+    );
+    if (next == null || !context.mounted) return;
+
+    final String? failure =
+        await ref.read(plannerControllerProvider.notifier).changeTopic(next);
+    if (!context.mounted) return;
+    ScaffoldMessenger.of(context)
+      ..hideCurrentSnackBar()
+      ..showSnackBar(
+        SnackBar(
+          content: Text(
+            failure ?? 'Re-planned. Days you have already written are unchanged.',
+            style: ZaveType.body,
+          ),
+        ),
+      );
+  }
+}
+
+/// Typing a new topic for the week.
+///
+/// The 120-character cap matches the server's, which exists so a topic
+/// cannot become a prompt. Enforcing it here as well means the user is told
+/// while they type rather than after they submit.
+class _ChangeTopicDialog extends StatefulWidget {
+  const _ChangeTopicDialog({required this.current});
+
+  final String current;
+
+  @override
+  State<_ChangeTopicDialog> createState() => _ChangeTopicDialogState();
+}
+
+class _ChangeTopicDialogState extends State<_ChangeTopicDialog> {
+  static const int _maxLength = 120;
+  late final TextEditingController _topic =
+      TextEditingController(text: widget.current);
+
+  @override
+  void dispose() {
+    _topic.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final String value = _topic.text.trim();
+    final bool ready =
+        value.isNotEmpty && value != widget.current && value.length <= _maxLength;
+
+    return AlertDialog(
+      title: const Text("This week's topic"),
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: <Widget>[
+          const Text(
+            'The days you have not written yet will be re-planned around this. '
+            'Anything already written, approved or published stays as it is.',
+          ),
+          SizedBox(height: ZaveSpace.lg),
+          ZaveField(
+            controller: _topic,
+            hint: 'What this week is about',
+            onChanged: (_) => setState(() {}),
+          ),
+          SizedBox(height: ZaveSpace.sm),
+          Text(
+            '${value.length} / $_maxLength',
+            style: ZaveType.caption.copyWith(
+              color: value.length > _maxLength
+                  ? ZaveColors.amber
+                  : ZaveColors.ink62,
+            ),
+          ),
+        ],
+      ),
+      actions: <Widget>[
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(),
+          child: Text(
+            'Cancel',
+            style: ZaveType.button.copyWith(color: ZaveColors.ink62),
+          ),
+        ),
+        TextButton(
+          onPressed: ready ? () => Navigator.of(context).pop(value) : null,
+          child: Text(
+            'Re-plan',
+            style: ZaveType.button.copyWith(
+              color: ready ? ZaveColors.white : ZaveColors.ink35,
+            ),
+          ),
+        ),
       ],
     );
   }
