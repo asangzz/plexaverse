@@ -292,12 +292,12 @@ as String,
 /// @nodoc
 mixin _$HeadshotSession {
 
- HeadshotStep get step;/// Reference photos as `data:image/…;base64,…` URIs.
+ HeadshotStep get step;/// Reference photos as `data:image/…;base64,…` URIs, filled by
+/// [HeadshotsController.pickPhoto] from the camera roll or the camera.
 ///
-/// Always empty in this build: there is no image-picker package, so
-/// nothing can put a photo here. The field is real rather than removed
-/// because the rest of the flow is written against it and works the day
-/// the dependency lands.
+/// At least three are needed before the flow can generate — the server
+/// rejects fewer, and `canGenerate` gates on it here so the user is told
+/// before spending the round trip.
  List<String> get photos; HeadshotStyle get style; HeadshotBackground get background;/// The generated portraits, as data URIs.
  List<String> get results; bool get generating;/// `POST /roadmap/progress` in flight, and then done. Headshots is the
 /// roadmap's Level 1 Step 5, and closing it out is part of the page.
@@ -508,19 +508,19 @@ class _HeadshotSession extends HeadshotSession {
   
 
 @override@JsonKey() final  HeadshotStep step;
-/// Reference photos as `data:image/…;base64,…` URIs.
+/// Reference photos as `data:image/…;base64,…` URIs, filled by
+/// [HeadshotsController.pickPhoto] from the camera roll or the camera.
 ///
-/// Always empty in this build: there is no image-picker package, so
-/// nothing can put a photo here. The field is real rather than removed
-/// because the rest of the flow is written against it and works the day
-/// the dependency lands.
+/// At least three are needed before the flow can generate — the server
+/// rejects fewer, and `canGenerate` gates on it here so the user is told
+/// before spending the round trip.
  final  List<String> _photos;
-/// Reference photos as `data:image/…;base64,…` URIs.
+/// Reference photos as `data:image/…;base64,…` URIs, filled by
+/// [HeadshotsController.pickPhoto] from the camera roll or the camera.
 ///
-/// Always empty in this build: there is no image-picker package, so
-/// nothing can put a photo here. The field is real rather than removed
-/// because the rest of the flow is written against it and works the day
-/// the dependency lands.
+/// At least three are needed before the flow can generate — the server
+/// rejects fewer, and `canGenerate` gates on it here so the user is told
+/// before spending the round trip.
 @override@JsonKey() List<String> get photos {
   if (_photos is EqualUnmodifiableListView) return _photos;
   // ignore: implicit_dynamic_type

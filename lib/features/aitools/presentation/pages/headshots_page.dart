@@ -7,6 +7,7 @@ import '../../domain/headshot_session.dart';
 import '../widgets/ai_tool_image.dart';
 import '../widgets/ai_tool_note.dart';
 import '../widgets/headshot_stepper.dart';
+import '../../../../core/platform/image_picking.dart';
 
 /// **The Visual Persona** — the web's `/headshots`.
 ///
@@ -143,13 +144,26 @@ class _UploadStep extends StatelessWidget {
               style: ZaveType.bodyMuted,
             ),
             SizedBox(height: ZaveSpace.lg),
-            const AiToolNoteRow(
-              title: 'Choosing photos is not in the app yet',
-              message:
-                  'This build ships no photo picker, so there is no way to '
-                  'reach your camera roll from here. You can still look '
-                  'through the styles and backgrounds; generating needs the '
-                  'photos. Create your headshots on the web for now.',
+            Row(
+              children: <Widget>[
+                Expanded(
+                  child: ZaveButton(
+                    label: 'Choose photos',
+                    icon: const Icon(Icons.photo_library_outlined),
+                    expand: true,
+                    onPressed: () => _pick(context, controller, ImageSourceKind.gallery),
+                  ),
+                ),
+                SizedBox(width: ZaveSpace.md),
+                Expanded(
+                  child: ZaveButton(
+                    label: 'Take one',
+                    icon: const Icon(Icons.photo_camera_outlined),
+                    expand: true,
+                    onPressed: () => _pick(context, controller, ImageSourceKind.camera),
+                  ),
+                ),
+              ],
             ),
             if (session.photos.isNotEmpty) ...<Widget>[
               SizedBox(height: ZaveSpace.lg),
@@ -468,4 +482,24 @@ class _ResultsStep extends StatelessWidget {
       ),
     ],
   );
+}
+
+
+/// Runs the picker and reports only what is worth reporting.
+///
+/// A cancelled picker says nothing — the user closed it on purpose. This
+/// screen previously carried a note claiming the build shipped no photo
+/// picker, which stopped being true when `image_picker` landed for the
+/// composer; the note outlived the limitation and told users something false
+/// about their own app.
+Future<void> _pick(
+  BuildContext context,
+  HeadshotsController controller,
+  ImageSourceKind source,
+) async {
+  final String? message = await controller.pickPhoto(source);
+  if (message == null || !context.mounted) return;
+  ScaffoldMessenger.of(context)
+    ..hideCurrentSnackBar()
+    ..showSnackBar(SnackBar(content: Text(message, style: ZaveType.body)));
 }

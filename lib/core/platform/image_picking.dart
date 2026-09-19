@@ -1,4 +1,5 @@
 
+import 'dart:convert' show base64Encode;
 import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
@@ -25,6 +26,21 @@ class PickedImage extends ImagePickResult {
 
   /// The original filename, used for the upload's content type.
   final String name;
+
+  /// The `data:<mime>;base64,…` form every upload path in the app wants.
+  ///
+  /// On the seam rather than in each caller: two screens need it, and a
+  /// second copy of the extension-to-mime table is a second place for a
+  /// `.webp` to arrive labelled `image/jpeg`.
+  String get dataUri => 'data:$mimeType;base64,${base64Encode(bytes)}';
+
+  String get mimeType {
+    final String n = name.toLowerCase();
+    if (n.endsWith('.png')) return 'image/png';
+    if (n.endsWith('.webp')) return 'image/webp';
+    if (n.endsWith('.gif')) return 'image/gif';
+    return 'image/jpeg';
+  }
 }
 
 class ImagePickCancelled extends ImagePickResult {

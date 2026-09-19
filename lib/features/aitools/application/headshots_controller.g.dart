@@ -60,7 +60,7 @@ final class HeadshotsControllerProvider
 }
 
 String _$headshotsControllerHash() =>
-    r'14b0a192cb02eb48b239efb03e2cc335804fff68';
+    r'be1b57308a6669292b24fb5f1986ba27abfd9bb8';
 
 /// The `/headshots` wizard.
 ///

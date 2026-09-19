@@ -110,12 +110,12 @@ abstract class HeadshotSession with _$HeadshotSession {
   const factory HeadshotSession({
     @Default(HeadshotStep.upload) HeadshotStep step,
 
-    /// Reference photos as `data:image/…;base64,…` URIs.
+    /// Reference photos as `data:image/…;base64,…` URIs, filled by
+    /// [HeadshotsController.pickPhoto] from the camera roll or the camera.
     ///
-    /// Always empty in this build: there is no image-picker package, so
-    /// nothing can put a photo here. The field is real rather than removed
-    /// because the rest of the flow is written against it and works the day
-    /// the dependency lands.
+    /// At least three are needed before the flow can generate — the server
+    /// rejects fewer, and `canGenerate` gates on it here so the user is told
+    /// before spending the round trip.
     @Default(<String>[]) List<String> photos,
     @Default(HeadshotStyle.professional) HeadshotStyle style,
     @Default(HeadshotBackground.studio) HeadshotBackground background,

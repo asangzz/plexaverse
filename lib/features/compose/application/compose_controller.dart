@@ -1,5 +1,3 @@
-import 'dart:convert';
-import 'dart:typed_data';
 
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
@@ -111,10 +109,10 @@ class ComposeDraftController extends _$ComposeDraftController {
         .pick(source);
 
     switch (result) {
-      case PickedImage(:final Uint8List bytes, :final String name):
+      case PickedImage(:final String dataUri):
         state = state.copyWith(
           image: ComposeImage(
-            dataUri: 'data:${_mimeFor(name)};base64,${base64Encode(bytes)}',
+            dataUri: dataUri,
             // Not AI-generated, so no "AI generated" badge and no Regenerate:
             // there is no brief to reproduce it from.
             aiGenerated: false,
@@ -130,14 +128,6 @@ class ComposeDraftController extends _$ComposeDraftController {
 
   /// The upload route keys off the data URI's media type, and defaulting
   /// everything to PNG would mislabel every JPEG the camera produces.
-  static String _mimeFor(String name) {
-    final String n = name.toLowerCase();
-    if (n.endsWith('.png')) return 'image/png';
-    if (n.endsWith('.webp')) return 'image/webp';
-    if (n.endsWith('.gif')) return 'image/gif';
-    return 'image/jpeg';
-  }
-
   void removeImage() => state = state.copyWith(image: null);
 
   /// Clears everything. Used after a successful submission, so the next post

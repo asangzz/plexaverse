@@ -1,5 +1,6 @@
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
+import '../../../core/platform/image_picking.dart';
 import '../data/ai_tools_repositories.dart';
 import '../domain/ai_tool_failure.dart';
 import '../domain/headshot_session.dart';
@@ -24,12 +25,34 @@ class HeadshotsController extends _$HeadshotsController {
   void chooseBackground(HeadshotBackground background) =>
       state = state.copyWith(background: background);
 
-  /// Attach reference photos as `data:image/…;base64,…` URIs.
+  /// Opens the camera roll (or the camera) and attaches one reference photo.
   ///
-  /// Nothing in this build calls it: there is no image-picker package, so the
-  /// app cannot read the camera roll. It is written anyway because it is the
-  /// only thing standing between this screen and a working flow — the day the
-  /// dependency lands, this is the one line the picker has to reach.
+  /// Returns a message to show, or null when there is nothing to say —
+  /// cancelling the picker is a decision, not an error.
+  ///
+  /// This screen shipped for months behind a note claiming the build had no
+  /// photo picker. That stopped being true when `image_picker` landed for the
+  /// composer; the note outlived the limitation it described, which is the
+  /// worst kind of placeholder — one that tells the user a false thing about
+  /// their own app.
+  Future<String?> pickPhoto(ImageSourceKind source) async {
+    if (state.photos.length >= maxHeadshotPhotos) {
+      return 'That is the maximum of $maxHeadshotPhotos photos.';
+    }
+    final ImagePickResult result =
+        await ref.read(imagePickingProvider).pick(source);
+    switch (result) {
+      case PickedImage(:final String dataUri):
+        addPhotos(<String>[dataUri]);
+        return null;
+      case ImagePickCancelled():
+        return null;
+      case ImagePickFailure(:final String? message):
+        return message ?? 'Could not open your photos.';
+    }
+  }
+
+  /// Attach reference photos as `data:image/…;base64,…` URIs.
   void addPhotos(List<String> dataUris) {
     if (dataUris.isEmpty) return;
     final List<String> next = <String>[...state.photos, ...dataUris];
