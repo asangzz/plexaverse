@@ -5,6 +5,8 @@ import '../../../../core/ui/zave/zave_kit.dart';
 import '../../../preferences/domain/user_preferences.dart';
 import '../../../preferences/application/preferences_controller.dart';
 import 'settings_section.dart';
+import '../../../../core/platform/image_picking.dart';
+import '../../data/settings_repositories.dart';
 
 /// **Company Brand Details** — company-brand users only.
 ///
@@ -57,6 +59,47 @@ class _CompanyBrandSectionState extends ConsumerState<CompanyBrandSection> {
     _description.dispose();
     _features.dispose();
     super.dispose();
+  }
+
+  String? _logoUrl;
+  bool _uploadingLogo = false;
+
+  /// Picks a logo, uploads it, and saves the URL immediately.
+  ///
+  /// Saved on pick rather than folded into the Save button: the upload has
+  /// already happened by then, and leaving the URL unsaved would mean a file
+  /// sitting in storage that nothing references if the user backs out.
+  Future<void> _pickLogo() async {
+    setState(() => _uploadingLogo = true);
+    String? note;
+    try {
+      final ImagePickResult picked = await ref
+          .read(imagePickingProvider)
+          .pick(ImageSourceKind.gallery);
+      switch (picked) {
+        case PickedImage(:final String dataUri):
+          final String url = await ref
+              .read(settingsRepositoryProvider)
+              .uploadImage(dataUri);
+          await ref
+              .read(preferencesControllerProvider.notifier)
+              .saveCompanyBrand(companyLogoUrl: url);
+          if (!mounted) return;
+          setState(() => _logoUrl = url);
+          note = 'Logo saved.';
+        // Closing the picker is a decision.
+        case ImagePickCancelled():
+          break;
+        case ImagePickFailure(:final String? message):
+          note = message ?? 'Could not open your photos.';
+      }
+    } on Object {
+      note = "That logo didn't upload. Try again.";
+    } finally {
+      if (mounted) setState(() => _uploadingLogo = false);
+    }
+    if (note == null || !mounted) return;
+    showSettingsMessage(context, note);
   }
 
   Future<void> _save() async {
@@ -148,14 +191,35 @@ class _CompanyBrandSectionState extends ConsumerState<CompanyBrandSection> {
               onPressed: _saving ? null : _save,
             ),
           ),
+          const SettingsDivider(),
+          Row(
+            children: <Widget>[
+              Expanded(
+                child: Text(
+                  _logoUrl == null
+                      ? 'No brand logo yet — posters generate without one.'
+                      : 'Brand logo set. Posters will use it.',
+                  style: ZaveType.caption,
+                ),
+              ),
+              SizedBox(width: ZaveSpace.md),
+              ZaveButton(
+                label: _logoUrl == null ? 'Add logo' : 'Replace',
+                busy: _uploadingLogo,
+                onPressed: _uploadingLogo ? null : _pickLogo,
+              ),
+            ],
+          ),
           SizedBox(height: ZaveSpace.lg),
+          // The poster TEMPLATE picker is still absent: it needs the Studio
+          // designs list, and Studio is admin-gated in v1 — so there is
+          // nothing for an end user to choose from yet.
           const UnavailableNote(
-            title: 'Logo, poster style and template',
+            title: 'Poster colours and template',
             message:
-                'Editing your brand logo, poster colours and poster template '
-                'is not in the app yet — each needs a picker this build does '
-                'not ship. They stay editable in the web app, and generated '
-                'posters keep using whatever is saved there.',
+                'Poster colours and the template picker stay in the web app '
+                'for now. Generated posters keep using whatever is saved '
+                'there.',
           ),
         ],
       ),

@@ -32,6 +32,21 @@ class LinkedinAccountsController extends _$LinkedinAccountsController {
   Future<List<LinkedinAccount>> build() =>
       ref.watch(settingsRepositoryProvider).fetchLinkedinAccounts();
 
+  /// Disconnects [accountId]. Returns the failure message, or null.
+  ///
+  /// Posts survive, detached. Schedules do not — the confirm dialog says
+  /// both, because "disconnect" on its own does not tell the user which of
+  /// their things are about to stop.
+  Future<String?> disconnect(String accountId) async {
+    try {
+      await ref.read(settingsRepositoryProvider).disconnectLinkedin(accountId);
+    } on Object {
+      return "We couldn't disconnect that account. Nothing changed.";
+    }
+    ref.invalidateSelf();
+    return null;
+  }
+
   /// Runs the browser hand-off for [type] (`personal` | `company`) and
   /// refreshes the list on success.
   ///

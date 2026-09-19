@@ -139,7 +139,7 @@ class _LinkedinRowsState extends ConsumerState<_LinkedinRows> {
   }
 }
 
-class _LinkedinRow extends StatelessWidget {
+class _LinkedinRow extends ConsumerWidget {
   const _LinkedinRow({
     required this.account,
     required this.type,
@@ -159,7 +159,7 @@ class _LinkedinRow extends StatelessWidget {
   final VoidCallback? onConnect;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final LinkedinAccount? acct = account;
 
     final ConnectionStatus status = acct == null
@@ -209,11 +209,12 @@ class _LinkedinRow extends StatelessWidget {
         ),
         if (acct != null) ...<Widget>[
           SizedBox(height: ZaveSpace.md),
-          const UnavailableNote(
-            message:
-                'Disconnecting a LinkedIn account is not available in the app '
-                'yet — the mobile API has no delete route for it. Use the web '
-                'app if you linked the wrong account.',
+          Align(
+            alignment: Alignment.centerLeft,
+            child: ZaveButton(
+              label: 'Disconnect',
+              onPressed: () => _confirmDisconnectLinkedin(context, ref, acct),
+            ),
           ),
         ],
         if (acct != null && acct.isCompany && acct.profileSlug == null) ...[
@@ -555,4 +556,57 @@ class _CompanyPagePickerState extends ConsumerState<CompanyPagePicker> {
       ],
     );
   }
+}
+
+
+/// Confirms a LinkedIn disconnect, naming what survives and what does not.
+///
+/// "Disconnect" alone does not tell a user which of their things are about
+/// to stop. Posts survive detached — the server nulls their FK first,
+/// because `Post.account` cascades — but recurring schedules are cascaded
+/// away, because one pointing at no account cannot fire. Both facts belong
+/// in front of the decision, not after it.
+Future<void> _confirmDisconnectLinkedin(
+  BuildContext context,
+  WidgetRef ref,
+  LinkedinAccount account,
+) async {
+  final bool? confirmed = await showDialog<bool>(
+    context: context,
+    builder: (BuildContext ctx) => AlertDialog(
+      title: Text('Disconnect ${account.profileName}?'),
+      content: const Text(
+        'Your posts stay — they just stop being attached to this account. '
+        'Any recurring schedules on it are removed, and nothing will publish '
+        'until you connect an account again.',
+      ),
+      actions: <Widget>[
+        TextButton(
+          onPressed: () => Navigator.of(ctx).pop(false),
+          child: Text(
+            'Keep it',
+            style: ZaveType.button.copyWith(color: ZaveColors.ink62),
+          ),
+        ),
+        TextButton(
+          onPressed: () => Navigator.of(ctx).pop(true),
+          child: Text(
+            'Disconnect',
+            // Amber, not red. Zave has no red, including here.
+            style: ZaveType.button.copyWith(color: ZaveColors.amber),
+          ),
+        ),
+      ],
+    ),
+  );
+  if (confirmed != true || !context.mounted) return;
+
+  final String? failure = await ref
+      .read(linkedinAccountsControllerProvider.notifier)
+      .disconnect(account.id);
+  if (!context.mounted) return;
+  showSettingsMessage(
+    context,
+    failure ?? '${account.profileName} disconnected.',
+  );
 }

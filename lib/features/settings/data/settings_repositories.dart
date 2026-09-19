@@ -216,6 +216,35 @@ class ApiSettingsRepository implements SettingsRepository {
   }
 
   @override
+  Future<void> disconnectLinkedin(String accountId) async {
+    try {
+      await _client.delete<Map<String, dynamic>>(
+        ApiPaths.linkedInAccounts,
+        queryParameters: <String, dynamic>{'accountId': accountId},
+      );
+    } on Object {
+      throw const SettingsUnavailable();
+    }
+  }
+
+  @override
+  Future<String> uploadImage(String dataUri) async {
+    try {
+      final response = await _client.sendMultipart<Map<String, dynamic>>(
+        ApiPaths.uploadImage,
+        FormData.fromMap(<String, dynamic>{'base64': dataUri}),
+      );
+      final String? url = response.data?['url'] as String?;
+      if (url == null || url.isEmpty) throw const SettingsUnavailable();
+      return url;
+    } on SettingsUnavailable {
+      rethrow;
+    } on Object {
+      throw const SettingsUnavailable();
+    }
+  }
+
+  @override
   Future<ConsentLedger> fetchConsents() => _readLedger(
         () => _client.get<Map<String, dynamic>>(ApiPaths.userConsent),
       );
@@ -465,6 +494,17 @@ class FakeSettingsRepository implements SettingsRepository {
   @override
   Future<void> setCompanyPage(String orgId) async {
     await Future<void>.delayed(_latency);
+  }
+
+  @override
+  Future<void> disconnectLinkedin(String accountId) async {
+    await Future<void>.delayed(_latency);
+  }
+
+  @override
+  Future<String> uploadImage(String dataUri) async {
+    await Future<void>.delayed(_latency);
+    return 'https://example.invalid/mock-logo.png';
   }
 
   @override

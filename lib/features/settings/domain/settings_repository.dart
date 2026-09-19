@@ -104,6 +104,16 @@ abstract class SettingsRepository {
   /// /linkedin/organizations`.
   Future<void> setCompanyPage(String orgId);
 
+  /// Disconnects a LinkedIn account. `DELETE /linkedin/accounts`.
+  ///
+  /// Posts authored by it SURVIVE, detached — the server nulls their FK
+  /// before deleting, because `Post.account` cascades. Recurring schedules
+  /// do not survive: one pointing at no account cannot fire.
+  Future<void> disconnectLinkedin(String accountId);
+
+  /// Uploads an image and returns its URL. Used for the company logo.
+  Future<String> uploadImage(String dataUri);
+
   /// The DPDP s6 consent ledger — every purpose with its current decision.
   Future<ConsentLedger> fetchConsents();
 

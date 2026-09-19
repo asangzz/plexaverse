@@ -100,6 +100,10 @@ class PreferencesController extends _$PreferencesController {
     String? companyTagline,
     String? companyDescription,
     List<String>? companyFeatures,
+    String? companyLogoUrl,
+    String? posterTheme,
+    String? posterPrimaryColor,
+    String? posterSecondaryColor,
   }) {
     final Map<String, dynamic> patch = <String, dynamic>{};
     if (companyIndustry != null) patch['companyIndustry'] = companyIndustry;
@@ -109,6 +113,14 @@ class PreferencesController extends _$PreferencesController {
       patch['companyDescription'] = companyDescription;
     }
     if (companyFeatures != null) patch['companyFeatures'] = companyFeatures;
+    if (companyLogoUrl != null) patch['companyLogoUrl'] = companyLogoUrl;
+    if (posterTheme != null) patch['posterTheme'] = posterTheme;
+    if (posterPrimaryColor != null) {
+      patch['posterPrimaryColor'] = posterPrimaryColor;
+    }
+    if (posterSecondaryColor != null) {
+      patch['posterSecondaryColor'] = posterSecondaryColor;
+    }
     return _patch(patch);
   }
 
