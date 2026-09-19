@@ -170,3 +170,82 @@ abstract class _$ReferralController extends $AsyncNotifier<ReferralSummary> {
     element.handleCreate(ref, build);
   }
 }
+
+/// Buying a plan: create the mandate, open the sheet, verify the result.
+///
+/// The three steps are one controller because they are one act, and the
+/// middle one is the only part that happens on the device. What the sheet
+/// returns is a CLAIM — the server checks the signature before anything is
+/// activated, so a device that lies gets nothing.
+
+@ProviderFor(CheckoutController)
+final checkoutControllerProvider = CheckoutControllerProvider._();
+
+/// Buying a plan: create the mandate, open the sheet, verify the result.
+///
+/// The three steps are one controller because they are one act, and the
+/// middle one is the only part that happens on the device. What the sheet
+/// returns is a CLAIM — the server checks the signature before anything is
+/// activated, so a device that lies gets nothing.
+final class CheckoutControllerProvider
+    extends $NotifierProvider<CheckoutController, void> {
+  /// Buying a plan: create the mandate, open the sheet, verify the result.
+  ///
+  /// The three steps are one controller because they are one act, and the
+  /// middle one is the only part that happens on the device. What the sheet
+  /// returns is a CLAIM — the server checks the signature before anything is
+  /// activated, so a device that lies gets nothing.
+  CheckoutControllerProvider._()
+    : super(
+        from: null,
+        argument: null,
+        retry: null,
+        name: r'checkoutControllerProvider',
+        isAutoDispose: true,
+        dependencies: null,
+        $allTransitiveDependencies: null,
+      );
+
+  @override
+  String debugGetCreateSourceHash() => _$checkoutControllerHash();
+
+  @$internal
+  @override
+  CheckoutController create() => CheckoutController();
+
+  /// {@macro riverpod.override_with_value}
+  Override overrideWithValue(void value) {
+    return $ProviderOverride(
+      origin: this,
+      providerOverride: $SyncValueProvider<void>(value),
+    );
+  }
+}
+
+String _$checkoutControllerHash() =>
+    r'4b58b6b4247a6b34ae14fd529cec67f6be29245a';
+
+/// Buying a plan: create the mandate, open the sheet, verify the result.
+///
+/// The three steps are one controller because they are one act, and the
+/// middle one is the only part that happens on the device. What the sheet
+/// returns is a CLAIM — the server checks the signature before anything is
+/// activated, so a device that lies gets nothing.
+
+abstract class _$CheckoutController extends $Notifier<void> {
+  void build();
+  @$mustCallSuper
+  @override
+  void runBuild() {
+    final ref = this.ref as $Ref<void, void>;
+    final element =
+        ref.element
+            as $ClassProviderElement<
+              AnyNotifier<void, void>,
+              void,
+              Object?,
+              Object?
+            >;
+    element.handleCreate(ref, build);
+  }
+}

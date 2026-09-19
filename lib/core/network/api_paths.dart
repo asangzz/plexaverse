@@ -241,6 +241,12 @@ class ApiPaths {
 
   // ── Money ───────────────────────────────────────────────────────────────
   static const String geoPricing = '/geo/pricing';
+  /// GET — the per-region autopay flags, which decide whether a plan is sold
+  /// as a subscription mandate or a one-time order. The Razorpay key is NOT
+  /// here: create-order and subscription/create each return it alongside the
+  /// thing it is for.
+  static const String paymentConfig = '/payment/config';
+
   static const String paymentCreateOrder = '/payment/create-order';
   static const String paymentVerify = '/payment/verify';
   static const String subscriptionCreate = '/subscription/create';

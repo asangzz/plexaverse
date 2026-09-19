@@ -86,6 +86,47 @@ class ApiPricingRepository implements PricingRepository {
       throw const PricingUnavailable();
     }
   }
+
+  @override
+  Future<CheckoutIntent> createSubscription({
+    required String planType,
+    String? countryCode,
+  }) async {
+    final response = await _client.post<Map<String, dynamic>>(
+      ApiPaths.subscriptionCreate,
+      data: <String, dynamic>{
+        'planType': planType,
+        'countryCode': ?countryCode,
+      },
+    );
+    final Map<String, dynamic>? data = response.data;
+    if (data == null) throw StateError('subscription/create returned nothing');
+    return CheckoutIntent(
+      subscriptionId: (data['subscriptionId'] as String?) ?? '',
+      keyId: data['keyId'] as String?,
+      amount: (data['amount'] as num?)?.toInt() ?? 0,
+      currency: (data['currency'] as String?) ?? 'INR',
+    );
+  }
+
+  @override
+  Future<bool> verifySubscription({
+    required String paymentId,
+    required String subscriptionId,
+    required String signature,
+  }) async {
+    final response = await _client.post<Map<String, dynamic>>(
+      ApiPaths.subscriptionVerify,
+      data: <String, dynamic>{
+        'razorpayPaymentId': paymentId,
+        'razorpaySubscriptionId': subscriptionId,
+        'razorpaySignature': signature,
+      },
+    );
+    // Only an explicit success counts. A missing field is not a yes.
+    return response.data?['success'] == true ||
+        response.data?['verified'] == true;
+  }
 }
 
 /// In-memory [PricingRepository] for the `mock` flavor.
@@ -127,6 +168,32 @@ class FakePricingRepository implements PricingRepository {
     await Future<void>.delayed(_latency);
     _referral = _referral.copyWith(code: 'PLEXA-7F2K');
     return _referral;
+  }
+
+  @override
+  Future<CheckoutIntent> createSubscription({
+    required String planType,
+    String? countryCode,
+  }) async {
+    await Future<void>.delayed(_latency);
+    // No keyId: the mock must exercise the "Razorpay not configured" branch
+    // rather than hand the sheet a fake key and get an opaque SDK error.
+    return const CheckoutIntent(
+      subscriptionId: 'sub_mock',
+      keyId: null,
+      amount: 29900,
+      currency: 'INR',
+    );
+  }
+
+  @override
+  Future<bool> verifySubscription({
+    required String paymentId,
+    required String subscriptionId,
+    required String signature,
+  }) async {
+    await Future<void>.delayed(_latency);
+    return true;
   }
 }
 

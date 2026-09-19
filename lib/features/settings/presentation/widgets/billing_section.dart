@@ -8,6 +8,8 @@ import '../../application/settings_controllers.dart';
 // needs one import for both rather than two that overlap.
 import '../../domain/settings_repository.dart';
 import 'settings_section.dart';
+import 'package:go_router/go_router.dart';
+import '../../../../core/router/zave_routes.dart';
 
 /// **Plan & XP** — the Settings-side view of the web's `/pricing` page.
 ///
@@ -152,12 +154,16 @@ class BillingSection extends ConsumerWidget {
           ),
 
           SizedBox(height: ZaveSpace.lg),
-          const UnavailableNote(
-            title: 'Top up and subscribe on the web',
-            message:
-                'Payment is not in the app yet — the card sheet it needs is '
-                'not part of this build. Everything you buy on the web lands '
-                'in this balance immediately.',
+          // Pricing owns the plan cards and the checkout sheet; this block
+          // is the balance. Sending the user there beats a second copy of
+          // the same purchase flow in Settings.
+          Align(
+            alignment: Alignment.centerLeft,
+            child: ZaveButton(
+              label: 'Plans and top-ups',
+              icon: const Icon(Icons.bolt_outlined),
+              onPressed: () => context.push(ZaveRoutes.pricing),
+            ),
           ),
         ],
       ),

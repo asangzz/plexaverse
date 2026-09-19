@@ -36,15 +36,30 @@ import '../widgets/xp_budget_card.dart';
 ///     so the card states the grant neutrally instead of guessing which half of
 ///     the branch this user is in.
 ///   • The web decides `/month` vs `/purchase` from `GET /api/payment/config`.
-///     There is no mobile mirror of that route, so the price carries no billing
-///     period at all rather than an invented one.
+///     That route now has a mobile mirror, but the period is still not shown:
+///     reading it would mean a second call before the price can render, and
+///     the plans currently sold here are all monthly.
 class PricingPage extends ConsumerWidget {
   const PricingPage({super.key});
 
-  /// Shown under every disabled CTA. One sentence, and it says where to go.
-  static const String checkoutNote =
-      'Checkout opens on plexaverse.com — the payment sheet is not available '
-      'in the app yet. Your plan and XP carry over the moment you pay.';
+
+  /// Runs checkout and says what happened.
+  ///
+  /// Silence on a closed sheet — backing out of a payment is a decision, and
+  /// the same rule the browser hand-off and the image picker follow.
+  static Future<void> _buy(
+    BuildContext context,
+    WidgetRef ref,
+    PricingPlan plan,
+  ) async {
+    final String? note = await ref
+        .read(checkoutControllerProvider.notifier)
+        .buy(planType: plan.id);
+    if (note == null || !context.mounted) return;
+    ScaffoldMessenger.of(context)
+      ..hideCurrentSnackBar()
+      ..showSnackBar(SnackBar(content: Text(note, style: ZaveType.body)));
+  }
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -111,9 +126,7 @@ class PricingPage extends ConsumerWidget {
                     PlanCard(
                       plan: plan,
                       pricing: p,
-                      // Deliberately null — see the class doc.
-                      onCheckout: null,
-                      checkoutNote: checkoutNote,
+                      onCheckout: () => _buy(context, ref, plan),
                     ),
                     SizedBox(height: ZaveSpace.lg),
                   ],

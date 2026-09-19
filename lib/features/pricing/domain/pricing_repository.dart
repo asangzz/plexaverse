@@ -54,4 +54,43 @@ abstract class PricingRepository {
   /// The server never hands out two active codes at once, so this is safe to
   /// re-tap.
   Future<ReferralSummary> generateReferralCode();
+
+  /// Opens a Razorpay subscription mandate for [planType] and returns what
+  /// the payment sheet needs.
+  Future<CheckoutIntent> createSubscription({
+    required String planType,
+    String? countryCode,
+  });
+
+  /// Hands the sheet's result to the server, which checks the signature
+  /// before activating anything.
+  ///
+  /// NOTHING is trusted from the device here — a paid-looking response from
+  /// the sheet is a claim, and this is the call that turns it into a fact.
+  /// Returns true when the server accepted it.
+  Future<bool> verifySubscription({
+    required String paymentId,
+    required String subscriptionId,
+    required String signature,
+  });
+}
+
+
+/// What the payment sheet needs to open.
+class CheckoutIntent {
+  const CheckoutIntent({
+    required this.subscriptionId,
+    required this.keyId,
+    required this.amount,
+    required this.currency,
+  });
+
+  final String subscriptionId;
+
+  /// From the server, per order. Absent when Razorpay is not configured —
+  /// the caller must refuse to open a sheet it cannot identify rather than
+  /// send an empty key and get an opaque SDK error.
+  final String? keyId;
+  final int amount;
+  final String currency;
 }
