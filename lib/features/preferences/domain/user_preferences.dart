@@ -97,6 +97,20 @@ abstract class UserPreferences with _$UserPreferences {
   /// Season 2 dashboard over the planet roadmap.
   bool get isSeason2 => currentSeason >= 2;
 
+  /// True once Season 1's 66 days are behind the user but they have not
+  /// chosen a Season 2 path yet — the state the Season Complete screen
+  /// exists for.
+  ///
+  /// Ported from `isSeasonOneFinished` in lib/narrative-phases.ts, including
+  /// its day arithmetic: the roadmap is 1-indexed (the start day is day 1),
+  /// so the season is over strictly AFTER day 66, not on it.
+  bool get seasonOneFinished {
+    final DateTime? started = roadmapStartedAt;
+    if (started == null || currentSeason >= 2) return false;
+    final int day = DateTime.now().difference(started).inDays + 1;
+    return day > 66;
+  }
+
   /// Maintenance mode — the reduced cadence. The Sunday article still
   /// generates; only the weekday post slots shrink.
   bool get isMaintenance => postsPerWeek <= 3;

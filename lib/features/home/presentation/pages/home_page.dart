@@ -12,6 +12,7 @@ import '../widgets/levels_panel.dart';
 import '../widgets/roadmap_timeline.dart';
 import '../widgets/season_two_view.dart';
 import '../../../preferences/application/preferences_controller.dart';
+import '../../../../core/router/zave_routes.dart';
 
 /// **Home** — the web's `/dashboard`.
 ///
@@ -94,9 +95,17 @@ class _HomeBody extends ConsumerWidget {
         topInset: topInset,
         onRetry: () => ref.invalidate(preferencesControllerProvider),
       ),
-      data: (UserPreferences preferences) => preferences.isSeason2
-          ? _SeasonTwoBody(preferences: preferences, topInset: topInset)
-          : _SeasonOneBody(topInset: topInset),
+      // Three states, not two. A user past day 66 who has not chosen a
+      // Season 2 path belongs on the Season Complete screen — the route
+      // existed and nothing ever navigated to it, so finishing the 66-day
+      // arc simply carried on showing a roadmap with nothing left in it.
+      data: (UserPreferences preferences) => switch (preferences) {
+        final UserPreferences p when p.isSeason2 =>
+          _SeasonTwoBody(preferences: p, topInset: topInset),
+        final UserPreferences p when p.seasonOneFinished =>
+          const _SeasonOneFinishedRedirect(),
+        _ => _SeasonOneBody(topInset: topInset),
+      },
     );
   }
 }
@@ -321,4 +330,37 @@ class _SeasonTwoBody extends ConsumerWidget {
       ),
     );
   }
+}
+
+
+/// Sends a user who has finished Season 1 to the Season Complete screen.
+///
+/// A redirect rather than rendering the screen inline: Season Complete is a
+/// full-screen route with its own back behaviour, and the user may want to
+/// look at their dashboard again before deciding. Replacing the home body
+/// with it would leave them nowhere to go back to.
+///
+/// Fired once per mount, after the first frame — navigating during build
+/// throws, and go_router needs the tree settled before it will accept a push.
+class _SeasonOneFinishedRedirect extends StatefulWidget {
+  const _SeasonOneFinishedRedirect();
+
+  @override
+  State<_SeasonOneFinishedRedirect> createState() =>
+      _SeasonOneFinishedRedirectState();
+}
+
+class _SeasonOneFinishedRedirectState
+    extends State<_SeasonOneFinishedRedirect> {
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) context.push(ZaveRoutes.seasonComplete);
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) =>
+      const Center(child: CircularProgressIndicator());
 }
