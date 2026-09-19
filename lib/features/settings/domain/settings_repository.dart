@@ -78,10 +78,22 @@ abstract class SettingsRepository {
 
   Future<SlackConnection> fetchSlack();
 
+  /// Connects Slack through the system browser.
+  ///
+  /// Same shape as [connectLinkedin], and for the same reason it took a
+  /// server-side bridge to become possible: Slack accepts only https
+  /// redirect URLs, so the hand-off returns to
+  /// `/api/slack/mobile-callback`, which hops to `plexaverse://`.
+  Future<ConnectOutcome> connectSlack();
+
   /// Disconnects Slack. `DELETE /slack`.
   Future<void> disconnectSlack();
 
   Future<CalendarConnection> fetchCalendar();
+
+  /// Connects Google Calendar through the system browser. Uses its OWN
+  /// bridge, not the sign-in one — different scopes, different landing.
+  Future<ConnectOutcome> connectCalendar();
 
   /// Disconnects Google Calendar. `DELETE /google-calendar`.
   Future<void> disconnectCalendar();

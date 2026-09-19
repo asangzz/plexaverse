@@ -103,6 +103,22 @@ class SlackController extends _$SlackController {
   Future<SlackConnection> build() =>
       ref.watch(settingsRepositoryProvider).fetchSlack();
 
+  /// Runs the browser hand-off and refreshes on success.
+  ///
+  /// Returns the outcome rather than throwing so the caller can stay silent
+  /// on a cancel — the same contract the LinkedIn connect uses.
+  Future<ConnectOutcome> connect() async {
+    final ConnectOutcome outcome =
+        await ref.read(settingsRepositoryProvider).connectSlack();
+    if (outcome is ConnectSucceeded) {
+      state = const AsyncLoading<SlackConnection>();
+      state = await AsyncValue.guard(
+        () => ref.read(settingsRepositoryProvider).fetchSlack(),
+      );
+    }
+    return outcome;
+  }
+
   Future<void> disconnect() async {
     await ref.read(settingsRepositoryProvider).disconnectSlack();
     state = const AsyncData<SlackConnection>(SlackConnection());
@@ -115,6 +131,18 @@ class CalendarController extends _$CalendarController {
   @override
   Future<CalendarConnection> build() =>
       ref.watch(settingsRepositoryProvider).fetchCalendar();
+
+  Future<ConnectOutcome> connect() async {
+    final ConnectOutcome outcome =
+        await ref.read(settingsRepositoryProvider).connectCalendar();
+    if (outcome is ConnectSucceeded) {
+      state = const AsyncLoading<CalendarConnection>();
+      state = await AsyncValue.guard(
+        () => ref.read(settingsRepositoryProvider).fetchCalendar(),
+      );
+    }
+    return outcome;
+  }
 
   Future<void> disconnect() async {
     await ref.read(settingsRepositoryProvider).disconnectCalendar();

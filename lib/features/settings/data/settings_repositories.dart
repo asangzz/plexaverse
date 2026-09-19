@@ -124,6 +124,65 @@ class ApiSettingsRepository implements SettingsRepository {
   }
 
   @override
+  Future<ConnectOutcome> connectSlack() =>
+      _browserConnect(ApiPaths.slackAuthUrl, ApiPaths.slackExchange);
+
+  @override
+  Future<ConnectOutcome> connectCalendar() => _browserConnect(
+        ApiPaths.googleCalendarAuthUrl,
+        ApiPaths.googleCalendarExchange,
+      );
+
+  /// The browser hand-off, shared by Slack and Calendar.
+  ///
+  /// One implementation rather than three: LinkedIn's differs only in that
+  /// it carries a `type`, and every extra copy of this dance is another
+  /// place to forget that a redirect WITHOUT a code is the user backing out
+  /// at the provider's own consent screen — a cancel, not a failure. An
+  /// error banner there blames the app for the user's decision.
+  Future<ConnectOutcome> _browserConnect(
+    String authUrlPath,
+    String exchangePath,
+  ) async {
+    try {
+      final response = await _client.post<Map<String, dynamic>>(authUrlPath);
+      final String? authUrl = response.data?['authUrl'] as String?;
+      if (authUrl == null || authUrl.isEmpty) return const ConnectFailed();
+
+      final WebAuthResult result = await _webAuth.authenticate(
+        url: authUrl,
+        callbackUrlScheme: _callbackScheme,
+      );
+
+      switch (result) {
+        case WebAuthCancelled():
+          return const ConnectCancelled();
+        case WebAuthFailure():
+          return const ConnectFailed();
+        case WebAuthSuccess(:final String callbackUrl):
+          final Map<String, String> params =
+              Uri.parse(callbackUrl).queryParameters;
+          if (params['error'] != null) {
+            // Slack sends `error=access_denied` when the user declines,
+            // which is a decision rather than a fault.
+            return params['error'] == 'access_denied'
+                ? const ConnectCancelled()
+                : ConnectFailed(params['error_description']);
+          }
+          final String? code = params['code'];
+          if (code == null || code.isEmpty) return const ConnectCancelled();
+          await _client.post<Map<String, dynamic>>(
+            exchangePath,
+            data: <String, dynamic>{'code': code},
+          );
+          return const ConnectSucceeded();
+      }
+    } on Object {
+      return const ConnectFailed();
+    }
+  }
+
+  @override
   Future<SlackConnection> fetchSlack() async {
     try {
       final response = await _client.get<Map<String, dynamic>>(
@@ -437,6 +496,18 @@ class FakeSettingsRepository implements SettingsRepository {
 
   @override
   Future<ConnectOutcome> connectLinkedin({required String type}) async {
+    await Future<void>.delayed(_latency);
+    return const ConnectSucceeded();
+  }
+
+  @override
+  Future<ConnectOutcome> connectSlack() async {
+    await Future<void>.delayed(_latency);
+    return const ConnectSucceeded();
+  }
+
+  @override
+  Future<ConnectOutcome> connectCalendar() async {
     await Future<void>.delayed(_latency);
     return const ConnectSucceeded();
   }

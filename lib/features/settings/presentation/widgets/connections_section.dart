@@ -263,17 +263,15 @@ class _SlackRow extends ConsumerWidget {
                     label: 'Disconnect',
                     onPressed: () => _confirmDisconnect(context, ref),
                   )
-                : null,
+                : ZaveButton(
+                    label: 'Connect',
+                    onPressed: () => _connect(
+                      context,
+                      () => ref.read(slackControllerProvider.notifier).connect(),
+                      'Slack connected.',
+                    ),
+                  ),
           ),
-          if (!value.isConnected) ...<Widget>[
-            SizedBox(height: ZaveSpace.md),
-            const UnavailableNote(
-              message:
-                  'Connecting Slack is not available in the app yet — the '
-                  'OAuth hand-off has no mobile callback to return through. '
-                  'Connect it in the web app and it will show here.',
-            ),
-          ],
         ],
       ),
       _ => const SectionSkeleton(lines: 1),
@@ -358,17 +356,16 @@ class _CalendarRow extends ConsumerWidget {
                     label: 'Disconnect',
                     onPressed: () => _confirmDisconnect(context, ref),
                   )
-                : null,
+                : ZaveButton(
+                    label: 'Connect',
+                    onPressed: () => _connect(
+                      context,
+                      () =>
+                          ref.read(calendarControllerProvider.notifier).connect(),
+                      'Google Calendar connected.',
+                    ),
+                  ),
           ),
-          if (!value.isConnected) ...<Widget>[
-            SizedBox(height: ZaveSpace.md),
-            const UnavailableNote(
-              message:
-                  'Connecting Google Calendar is not available in the app yet '
-                  '— the OAuth hand-off has no mobile callback to return '
-                  'through. Connect it in the web app and it will show here.',
-            ),
-          ],
         ],
       ),
       _ => const SectionSkeleton(lines: 1),
@@ -609,4 +606,28 @@ Future<void> _confirmDisconnectLinkedin(
     context,
     failure ?? '${account.profileName} disconnected.',
   );
+}
+
+
+/// Runs a browser connect hand-off and says only what is worth saying.
+///
+/// Shared by Slack and Calendar because the rule is the same for both, and
+/// it is the rule most easily got wrong: a CANCELLED hand-off is silent.
+/// The user closed the sheet or declined at the provider's own consent
+/// screen; a banner there blames the app for their decision.
+Future<void> _connect(
+  BuildContext context,
+  Future<ConnectOutcome> Function() run,
+  String success,
+) async {
+  final ConnectOutcome outcome = await run();
+  if (!context.mounted) return;
+  final String? note = switch (outcome) {
+    ConnectSucceeded() => success,
+    ConnectCancelled() => null,
+    ConnectFailed(:final String? message) =>
+      message ?? "That didn't connect. Try again.",
+  };
+  if (note == null) return;
+  showSettingsMessage(context, note);
 }

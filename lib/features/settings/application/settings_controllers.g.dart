@@ -297,7 +297,7 @@ final class SlackControllerProvider
   SlackController create() => SlackController();
 }
 
-String _$slackControllerHash() => r'8e3355544761782e5a7c72dc6f6be5a3b8516c68';
+String _$slackControllerHash() => r'0f1b01463340e8b5394604e04629b61654f12f30';
 
 /// Slack connection status + disconnect.
 
@@ -348,7 +348,7 @@ final class CalendarControllerProvider
 }
 
 String _$calendarControllerHash() =>
-    r'85e186262dbcd68a9087257a02f8ffd3e38b3036';
+    r'860db761c01d38efc6ec8dee53bab829b2b1eea5';
 
 /// Google Calendar connection status + disconnect.
 
