@@ -269,8 +269,8 @@ class OnboardingChatController extends _$OnboardingChatController {
     switch (outcome) {
       case ConnectSucceeded():
         state = state.copyWith(connectFailed: false);
-        await _sendBot("Connected. That's everything I need.");
-        await _enter(OnboardingStep.finish);
+        await _sendBot('Connected.');
+        await _afterConnect();
       case ConnectCancelled():
         // Backing out of the browser is a decision, not an error — but the
         // step still has to be answered, so say why it matters and offer the
@@ -298,6 +298,98 @@ class OnboardingChatController extends _$OnboardingChatController {
     await _sendBot(
       'Fine — Settings › Connected Accounts, whenever you are ready.',
     );
+    await _afterConnect();
+  }
+
+  /// The one place the flow forks.
+  ///
+  /// A company brand needs a page to publish to and a document to write
+  /// from; without them `brandType: 'company'` is a setting with nothing
+  /// behind it, and every company surface renders empty. A personal brand
+  /// has nothing further to answer.
+  Future<void> _afterConnect() => _enter(
+        state.answers.brand == BrandChoice.company
+            ? OnboardingStep.companyPage
+            : OnboardingStep.finish,
+      );
+
+  // ── Company brand ─────────────────────────────────────────────────────────
+
+  /// The pages the connected account administers, for the chips.
+  ///
+  /// Reuses the Settings repository rather than a second copy: the route
+  /// answers three different ways (a live list, one saved page, or nothing
+  /// with `needsManualInput` when the scope was never granted) and handling
+  /// that twice is how the two would come to disagree.
+  Future<CompanyPageOptions> companyPages() =>
+      _settings.fetchCompanyPages();
+
+  Future<void> pickCompanyPage(String id, String name) async {
+    if (state.step != OnboardingStep.companyPage) return;
+    _echoUser(name);
+    state = state.copyWith(isBotTyping: true);
+
+    // Saved now rather than at finalise: this write goes to the LinkedIn
+    // ACCOUNT row, not the preferences patch, so it is not something the
+    // single finalise write can carry.
+    String? failure;
+    try {
+      await _settings.setCompanyPage(id);
+    } on Object {
+      failure = "I couldn't save that page.";
+    }
+    if (_disposed) return;
+    state = state.copyWith(
+      isBotTyping: false,
+      answers: state.answers.copyWith(
+        companyPageId: failure == null ? id : null,
+        companyPageName: failure == null ? name : null,
+      ),
+    );
+
+    if (failure != null) {
+      await _sendBot('$failure Try again, or pick a different one.');
+      return;
+    }
+    await _enter(OnboardingStep.companyDetails);
+  }
+
+  /// No page to choose — the account administers none, or the scope was
+  /// never granted. Moves on rather than trapping the user on a list that
+  /// will never populate; Settings can link one later.
+  Future<void> skipCompanyPage() async {
+    if (state.step != OnboardingStep.companyPage) return;
+    _echoUser("I'll pick it later");
+    await _sendBot(
+      'Fine — Settings › Connected Accounts when you know which page.',
+    );
+    await _enter(OnboardingStep.companyDetails);
+  }
+
+  void setCompanyDraft({
+    String? description,
+    String? industry,
+    String? tagline,
+  }) =>
+      state = state.copyWith(
+        answers: state.answers.copyWith(
+          companyDescription: description ?? state.answers.companyDescription,
+          companyIndustry: industry ?? state.answers.companyIndustry,
+          companyTagline: tagline ?? state.answers.companyTagline,
+        ),
+      );
+
+  Future<void> submitCompanyDetails() async {
+    if (state.step != OnboardingStep.companyDetails) return;
+    final String description = (state.answers.companyDescription ?? '').trim();
+    if (description.length < 20) {
+      await _sendBot(
+        'A little more — two sentences on what the company actually does is '
+        'enough for me to write from.',
+      );
+      return;
+    }
+    _echoUser(description);
     await _enter(OnboardingStep.finish);
   }
 

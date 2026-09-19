@@ -18,7 +18,12 @@ mixin _$OnboardingAnswers {
  String? get role; OnboardingGoal? get goal;/// The writing sample. Saved separately to the style memory (it is an
 /// embedding, not a preferences column), and kept here only so a failed
 /// save can be retried without re-asking.
- String? get voiceSample;/// Filled from `POST /ai/analyze-profession`, which the web calls with the
+ String? get voiceSample;/// **Company brand only.** The LinkedIn page company posts publish to.
+/// Without it `brandType: 'company'` is a setting with nowhere to act.
+ String? get companyPageId; String? get companyPageName;/// **Company brand only.** The company document. These anchor every
+/// generated company post, which is why the flow asks rather than
+/// letting the model infer a company from its page name.
+ String? get companyDescription; String? get companyIndustry; String? get companyTagline;/// Filled from `POST /ai/analyze-profession`, which the web calls with the
 /// user's headline. Best-effort: all three stay null when the call fails,
 /// and the finalise simply sends less.
  String? get profession; String? get industry; List<String> get postCategories;
@@ -32,16 +37,16 @@ $OnboardingAnswersCopyWith<OnboardingAnswers> get copyWith => _$OnboardingAnswer
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is OnboardingAnswers&&(identical(other.brand, brand) || other.brand == brand)&&(identical(other.role, role) || other.role == role)&&(identical(other.goal, goal) || other.goal == goal)&&(identical(other.voiceSample, voiceSample) || other.voiceSample == voiceSample)&&(identical(other.profession, profession) || other.profession == profession)&&(identical(other.industry, industry) || other.industry == industry)&&const DeepCollectionEquality().equals(other.postCategories, postCategories));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is OnboardingAnswers&&(identical(other.brand, brand) || other.brand == brand)&&(identical(other.role, role) || other.role == role)&&(identical(other.goal, goal) || other.goal == goal)&&(identical(other.voiceSample, voiceSample) || other.voiceSample == voiceSample)&&(identical(other.companyPageId, companyPageId) || other.companyPageId == companyPageId)&&(identical(other.companyPageName, companyPageName) || other.companyPageName == companyPageName)&&(identical(other.companyDescription, companyDescription) || other.companyDescription == companyDescription)&&(identical(other.companyIndustry, companyIndustry) || other.companyIndustry == companyIndustry)&&(identical(other.companyTagline, companyTagline) || other.companyTagline == companyTagline)&&(identical(other.profession, profession) || other.profession == profession)&&(identical(other.industry, industry) || other.industry == industry)&&const DeepCollectionEquality().equals(other.postCategories, postCategories));
 }
 
 
 @override
-int get hashCode => Object.hash(runtimeType,brand,role,goal,voiceSample,profession,industry,const DeepCollectionEquality().hash(postCategories));
+int get hashCode => Object.hash(runtimeType,brand,role,goal,voiceSample,companyPageId,companyPageName,companyDescription,companyIndustry,companyTagline,profession,industry,const DeepCollectionEquality().hash(postCategories));
 
 @override
 String toString() {
-  return 'OnboardingAnswers(brand: $brand, role: $role, goal: $goal, voiceSample: $voiceSample, profession: $profession, industry: $industry, postCategories: $postCategories)';
+  return 'OnboardingAnswers(brand: $brand, role: $role, goal: $goal, voiceSample: $voiceSample, companyPageId: $companyPageId, companyPageName: $companyPageName, companyDescription: $companyDescription, companyIndustry: $companyIndustry, companyTagline: $companyTagline, profession: $profession, industry: $industry, postCategories: $postCategories)';
 }
 
 
@@ -52,7 +57,7 @@ abstract mixin class $OnboardingAnswersCopyWith<$Res>  {
   factory $OnboardingAnswersCopyWith(OnboardingAnswers value, $Res Function(OnboardingAnswers) _then) = _$OnboardingAnswersCopyWithImpl;
 @useResult
 $Res call({
- BrandChoice? brand, String? role, OnboardingGoal? goal, String? voiceSample, String? profession, String? industry, List<String> postCategories
+ BrandChoice? brand, String? role, OnboardingGoal? goal, String? voiceSample, String? companyPageId, String? companyPageName, String? companyDescription, String? companyIndustry, String? companyTagline, String? profession, String? industry, List<String> postCategories
 });
 
 
@@ -69,12 +74,17 @@ class _$OnboardingAnswersCopyWithImpl<$Res>
 
 /// Create a copy of OnboardingAnswers
 /// with the given fields replaced by the non-null parameter values.
-@pragma('vm:prefer-inline') @override $Res call({Object? brand = freezed,Object? role = freezed,Object? goal = freezed,Object? voiceSample = freezed,Object? profession = freezed,Object? industry = freezed,Object? postCategories = null,}) {
+@pragma('vm:prefer-inline') @override $Res call({Object? brand = freezed,Object? role = freezed,Object? goal = freezed,Object? voiceSample = freezed,Object? companyPageId = freezed,Object? companyPageName = freezed,Object? companyDescription = freezed,Object? companyIndustry = freezed,Object? companyTagline = freezed,Object? profession = freezed,Object? industry = freezed,Object? postCategories = null,}) {
   return _then(_self.copyWith(
 brand: freezed == brand ? _self.brand : brand // ignore: cast_nullable_to_non_nullable
 as BrandChoice?,role: freezed == role ? _self.role : role // ignore: cast_nullable_to_non_nullable
 as String?,goal: freezed == goal ? _self.goal : goal // ignore: cast_nullable_to_non_nullable
 as OnboardingGoal?,voiceSample: freezed == voiceSample ? _self.voiceSample : voiceSample // ignore: cast_nullable_to_non_nullable
+as String?,companyPageId: freezed == companyPageId ? _self.companyPageId : companyPageId // ignore: cast_nullable_to_non_nullable
+as String?,companyPageName: freezed == companyPageName ? _self.companyPageName : companyPageName // ignore: cast_nullable_to_non_nullable
+as String?,companyDescription: freezed == companyDescription ? _self.companyDescription : companyDescription // ignore: cast_nullable_to_non_nullable
+as String?,companyIndustry: freezed == companyIndustry ? _self.companyIndustry : companyIndustry // ignore: cast_nullable_to_non_nullable
+as String?,companyTagline: freezed == companyTagline ? _self.companyTagline : companyTagline // ignore: cast_nullable_to_non_nullable
 as String?,profession: freezed == profession ? _self.profession : profession // ignore: cast_nullable_to_non_nullable
 as String?,industry: freezed == industry ? _self.industry : industry // ignore: cast_nullable_to_non_nullable
 as String?,postCategories: null == postCategories ? _self.postCategories : postCategories // ignore: cast_nullable_to_non_nullable
@@ -163,10 +173,10 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( BrandChoice? brand,  String? role,  OnboardingGoal? goal,  String? voiceSample,  String? profession,  String? industry,  List<String> postCategories)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( BrandChoice? brand,  String? role,  OnboardingGoal? goal,  String? voiceSample,  String? companyPageId,  String? companyPageName,  String? companyDescription,  String? companyIndustry,  String? companyTagline,  String? profession,  String? industry,  List<String> postCategories)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _OnboardingAnswers() when $default != null:
-return $default(_that.brand,_that.role,_that.goal,_that.voiceSample,_that.profession,_that.industry,_that.postCategories);case _:
+return $default(_that.brand,_that.role,_that.goal,_that.voiceSample,_that.companyPageId,_that.companyPageName,_that.companyDescription,_that.companyIndustry,_that.companyTagline,_that.profession,_that.industry,_that.postCategories);case _:
   return orElse();
 
 }
@@ -184,10 +194,10 @@ return $default(_that.brand,_that.role,_that.goal,_that.voiceSample,_that.profes
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( BrandChoice? brand,  String? role,  OnboardingGoal? goal,  String? voiceSample,  String? profession,  String? industry,  List<String> postCategories)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( BrandChoice? brand,  String? role,  OnboardingGoal? goal,  String? voiceSample,  String? companyPageId,  String? companyPageName,  String? companyDescription,  String? companyIndustry,  String? companyTagline,  String? profession,  String? industry,  List<String> postCategories)  $default,) {final _that = this;
 switch (_that) {
 case _OnboardingAnswers():
-return $default(_that.brand,_that.role,_that.goal,_that.voiceSample,_that.profession,_that.industry,_that.postCategories);case _:
+return $default(_that.brand,_that.role,_that.goal,_that.voiceSample,_that.companyPageId,_that.companyPageName,_that.companyDescription,_that.companyIndustry,_that.companyTagline,_that.profession,_that.industry,_that.postCategories);case _:
   throw StateError('Unexpected subclass');
 
 }
@@ -204,10 +214,10 @@ return $default(_that.brand,_that.role,_that.goal,_that.voiceSample,_that.profes
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( BrandChoice? brand,  String? role,  OnboardingGoal? goal,  String? voiceSample,  String? profession,  String? industry,  List<String> postCategories)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( BrandChoice? brand,  String? role,  OnboardingGoal? goal,  String? voiceSample,  String? companyPageId,  String? companyPageName,  String? companyDescription,  String? companyIndustry,  String? companyTagline,  String? profession,  String? industry,  List<String> postCategories)?  $default,) {final _that = this;
 switch (_that) {
 case _OnboardingAnswers() when $default != null:
-return $default(_that.brand,_that.role,_that.goal,_that.voiceSample,_that.profession,_that.industry,_that.postCategories);case _:
+return $default(_that.brand,_that.role,_that.goal,_that.voiceSample,_that.companyPageId,_that.companyPageName,_that.companyDescription,_that.companyIndustry,_that.companyTagline,_that.profession,_that.industry,_that.postCategories);case _:
   return null;
 
 }
@@ -219,7 +229,7 @@ return $default(_that.brand,_that.role,_that.goal,_that.voiceSample,_that.profes
 
 
 class _OnboardingAnswers extends OnboardingAnswers {
-  const _OnboardingAnswers({this.brand, this.role, this.goal, this.voiceSample, this.profession, this.industry, final  List<String> postCategories = const <String>[]}): _postCategories = postCategories,super._();
+  const _OnboardingAnswers({this.brand, this.role, this.goal, this.voiceSample, this.companyPageId, this.companyPageName, this.companyDescription, this.companyIndustry, this.companyTagline, this.profession, this.industry, final  List<String> postCategories = const <String>[]}): _postCategories = postCategories,super._();
   
 
 @override final  BrandChoice? brand;
@@ -230,6 +240,16 @@ class _OnboardingAnswers extends OnboardingAnswers {
 /// embedding, not a preferences column), and kept here only so a failed
 /// save can be retried without re-asking.
 @override final  String? voiceSample;
+/// **Company brand only.** The LinkedIn page company posts publish to.
+/// Without it `brandType: 'company'` is a setting with nowhere to act.
+@override final  String? companyPageId;
+@override final  String? companyPageName;
+/// **Company brand only.** The company document. These anchor every
+/// generated company post, which is why the flow asks rather than
+/// letting the model infer a company from its page name.
+@override final  String? companyDescription;
+@override final  String? companyIndustry;
+@override final  String? companyTagline;
 /// Filled from `POST /ai/analyze-profession`, which the web calls with the
 /// user's headline. Best-effort: all three stay null when the call fails,
 /// and the finalise simply sends less.
@@ -253,16 +273,16 @@ _$OnboardingAnswersCopyWith<_OnboardingAnswers> get copyWith => __$OnboardingAns
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is _OnboardingAnswers&&(identical(other.brand, brand) || other.brand == brand)&&(identical(other.role, role) || other.role == role)&&(identical(other.goal, goal) || other.goal == goal)&&(identical(other.voiceSample, voiceSample) || other.voiceSample == voiceSample)&&(identical(other.profession, profession) || other.profession == profession)&&(identical(other.industry, industry) || other.industry == industry)&&const DeepCollectionEquality().equals(other._postCategories, _postCategories));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is _OnboardingAnswers&&(identical(other.brand, brand) || other.brand == brand)&&(identical(other.role, role) || other.role == role)&&(identical(other.goal, goal) || other.goal == goal)&&(identical(other.voiceSample, voiceSample) || other.voiceSample == voiceSample)&&(identical(other.companyPageId, companyPageId) || other.companyPageId == companyPageId)&&(identical(other.companyPageName, companyPageName) || other.companyPageName == companyPageName)&&(identical(other.companyDescription, companyDescription) || other.companyDescription == companyDescription)&&(identical(other.companyIndustry, companyIndustry) || other.companyIndustry == companyIndustry)&&(identical(other.companyTagline, companyTagline) || other.companyTagline == companyTagline)&&(identical(other.profession, profession) || other.profession == profession)&&(identical(other.industry, industry) || other.industry == industry)&&const DeepCollectionEquality().equals(other._postCategories, _postCategories));
 }
 
 
 @override
-int get hashCode => Object.hash(runtimeType,brand,role,goal,voiceSample,profession,industry,const DeepCollectionEquality().hash(_postCategories));
+int get hashCode => Object.hash(runtimeType,brand,role,goal,voiceSample,companyPageId,companyPageName,companyDescription,companyIndustry,companyTagline,profession,industry,const DeepCollectionEquality().hash(_postCategories));
 
 @override
 String toString() {
-  return 'OnboardingAnswers(brand: $brand, role: $role, goal: $goal, voiceSample: $voiceSample, profession: $profession, industry: $industry, postCategories: $postCategories)';
+  return 'OnboardingAnswers(brand: $brand, role: $role, goal: $goal, voiceSample: $voiceSample, companyPageId: $companyPageId, companyPageName: $companyPageName, companyDescription: $companyDescription, companyIndustry: $companyIndustry, companyTagline: $companyTagline, profession: $profession, industry: $industry, postCategories: $postCategories)';
 }
 
 
@@ -273,7 +293,7 @@ abstract mixin class _$OnboardingAnswersCopyWith<$Res> implements $OnboardingAns
   factory _$OnboardingAnswersCopyWith(_OnboardingAnswers value, $Res Function(_OnboardingAnswers) _then) = __$OnboardingAnswersCopyWithImpl;
 @override @useResult
 $Res call({
- BrandChoice? brand, String? role, OnboardingGoal? goal, String? voiceSample, String? profession, String? industry, List<String> postCategories
+ BrandChoice? brand, String? role, OnboardingGoal? goal, String? voiceSample, String? companyPageId, String? companyPageName, String? companyDescription, String? companyIndustry, String? companyTagline, String? profession, String? industry, List<String> postCategories
 });
 
 
@@ -290,12 +310,17 @@ class __$OnboardingAnswersCopyWithImpl<$Res>
 
 /// Create a copy of OnboardingAnswers
 /// with the given fields replaced by the non-null parameter values.
-@override @pragma('vm:prefer-inline') $Res call({Object? brand = freezed,Object? role = freezed,Object? goal = freezed,Object? voiceSample = freezed,Object? profession = freezed,Object? industry = freezed,Object? postCategories = null,}) {
+@override @pragma('vm:prefer-inline') $Res call({Object? brand = freezed,Object? role = freezed,Object? goal = freezed,Object? voiceSample = freezed,Object? companyPageId = freezed,Object? companyPageName = freezed,Object? companyDescription = freezed,Object? companyIndustry = freezed,Object? companyTagline = freezed,Object? profession = freezed,Object? industry = freezed,Object? postCategories = null,}) {
   return _then(_OnboardingAnswers(
 brand: freezed == brand ? _self.brand : brand // ignore: cast_nullable_to_non_nullable
 as BrandChoice?,role: freezed == role ? _self.role : role // ignore: cast_nullable_to_non_nullable
 as String?,goal: freezed == goal ? _self.goal : goal // ignore: cast_nullable_to_non_nullable
 as OnboardingGoal?,voiceSample: freezed == voiceSample ? _self.voiceSample : voiceSample // ignore: cast_nullable_to_non_nullable
+as String?,companyPageId: freezed == companyPageId ? _self.companyPageId : companyPageId // ignore: cast_nullable_to_non_nullable
+as String?,companyPageName: freezed == companyPageName ? _self.companyPageName : companyPageName // ignore: cast_nullable_to_non_nullable
+as String?,companyDescription: freezed == companyDescription ? _self.companyDescription : companyDescription // ignore: cast_nullable_to_non_nullable
+as String?,companyIndustry: freezed == companyIndustry ? _self.companyIndustry : companyIndustry // ignore: cast_nullable_to_non_nullable
+as String?,companyTagline: freezed == companyTagline ? _self.companyTagline : companyTagline // ignore: cast_nullable_to_non_nullable
 as String?,profession: freezed == profession ? _self.profession : profession // ignore: cast_nullable_to_non_nullable
 as String?,industry: freezed == industry ? _self.industry : industry // ignore: cast_nullable_to_non_nullable
 as String?,postCategories: null == postCategories ? _self._postCategories : postCategories // ignore: cast_nullable_to_non_nullable

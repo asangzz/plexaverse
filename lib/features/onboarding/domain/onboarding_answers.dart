@@ -30,6 +30,18 @@ abstract class OnboardingAnswers with _$OnboardingAnswers {
     /// save can be retried without re-asking.
     String? voiceSample,
 
+    /// **Company brand only.** The LinkedIn page company posts publish to.
+    /// Without it `brandType: 'company'` is a setting with nowhere to act.
+    String? companyPageId,
+    String? companyPageName,
+
+    /// **Company brand only.** The company document. These anchor every
+    /// generated company post, which is why the flow asks rather than
+    /// letting the model infer a company from its page name.
+    String? companyDescription,
+    String? companyIndustry,
+    String? companyTagline,
+
     /// Filled from `POST /ai/analyze-profession`, which the web calls with the
     /// user's headline. Best-effort: all three stay null when the call fails,
     /// and the finalise simply sends less.
@@ -65,6 +77,17 @@ abstract class OnboardingAnswers with _$OnboardingAnswers {
       if (_nonEmpty(profession ?? role)) 'profession': profession ?? role,
       if (_nonEmpty(industry)) 'industry': industry,
       if (postCategories.isNotEmpty) 'postCategories': postCategories,
+      // Company fields only on the company path. Sending them empty on a
+      // personal account would write blank strings over columns the user may
+      // have filled in elsewhere.
+      if (brandType == BrandChoice.company) ...<String, dynamic>{
+        if (_nonEmpty(companyPageId)) 'companyPageId': companyPageId,
+        if (_nonEmpty(companyPageName)) 'companyPageName': companyPageName,
+        if (_nonEmpty(companyDescription))
+          'companyDescription': companyDescription,
+        if (_nonEmpty(companyIndustry)) 'companyIndustry': companyIndustry,
+        if (_nonEmpty(companyTagline)) 'companyTagline': companyTagline,
+      },
     };
   }
 

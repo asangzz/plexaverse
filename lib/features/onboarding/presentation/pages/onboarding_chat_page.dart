@@ -11,6 +11,7 @@ import '../widgets/onboarding_chrome.dart';
 import '../widgets/reply_lane.dart';
 import '../widgets/role_picker.dart';
 import '../widgets/tone_panel.dart';
+import '../../../settings/domain/settings_repository.dart';
 
 /// `/onboarding` — Plexa Setup, the conversational flow that configures a new
 /// account.
@@ -153,7 +154,11 @@ class _OnboardingBodyState extends ConsumerState<_OnboardingBody> {
           child: Row(
             children: <Widget>[
               Expanded(
-                child: OnboardingProgress(percent: chat.step.progressPercent),
+                child: OnboardingProgress(
+                  percent: chat.step.progressPercent(
+                    company: chat.answers.brand == BrandChoice.company,
+                  ),
+                ),
               ),
               SizedBox(width: ZaveSpace.md),
               ZaveIconButton(
@@ -288,6 +293,15 @@ class _DockControl extends ConsumerWidget {
             ),
         ],
       ),
+      // The pages come from the connected account, so they are fetched when
+      // the step is reached rather than held in chat state — a list that can
+      // fail needs somewhere to show the failure.
+      OnboardingStep.companyPage => _CompanyPageChips(hint: hint),
+      OnboardingStep.companyDetails => _CompanyDetailsPanel(
+        answers: chat.answers,
+        onChanged: controller().setCompanyDraft,
+        onSubmit: controller().submitCompanyDetails,
+      ),
       OnboardingStep.voice => TonePanel(
         value: chat.voiceDraft,
         onChanged: controller().setVoiceDraft,
@@ -309,5 +323,148 @@ class _DockControl extends ConsumerWidget {
               )
             : const DockHint(text: 'Setting things up…'),
     };
+  }
+}
+
+/// The company pages the connected account administers, as reply chips.
+///
+/// Fetched here rather than held in chat state: the list comes from LinkedIn
+/// through the connected account, so it can be slow, empty, or refused — and
+/// a control that can fail needs somewhere of its own to say so.
+///
+/// The server answers three ways and all three are reachable. A live list, a
+/// single already-saved page, or nothing at all with `needsManualInput` when
+/// `rw_organization_admin` was never granted. For that last group there is
+/// no chip to tap, so the escape is the only way through and is always
+/// offered rather than being revealed after a failure.
+class _CompanyPageChips extends ConsumerStatefulWidget {
+  const _CompanyPageChips({required this.hint});
+
+  final String? hint;
+
+  @override
+  ConsumerState<_CompanyPageChips> createState() => _CompanyPageChipsState();
+}
+
+class _CompanyPageChipsState extends ConsumerState<_CompanyPageChips> {
+  late Future<CompanyPageOptions> _pages;
+
+  @override
+  void initState() {
+    super.initState();
+    _pages = ref.read(onboardingChatControllerProvider.notifier).companyPages();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final OnboardingChatController controller =
+        ref.read(onboardingChatControllerProvider.notifier);
+
+    return FutureBuilder<CompanyPageOptions>(
+      future: _pages,
+      builder: (BuildContext context, AsyncSnapshot<CompanyPageOptions> snap) {
+        final List<CompanyPage> pages =
+            snap.data?.pages ?? const <CompanyPage>[];
+        return ReplyLane(
+          hint: widget.hint,
+          chips: <Widget>[
+            if (snap.connectionState == ConnectionState.waiting)
+              const ReplyChip(label: 'Looking…', onTap: null)
+            else ...<Widget>[
+              for (final CompanyPage page in pages)
+                ReplyChip(
+                  label: page.name,
+                  onTap: () => controller.pickCompanyPage(page.id, page.name),
+                ),
+              // Always present: for an account that administers no pages it
+              // is the only way forward, and for one that does it is still a
+              // legitimate "not now".
+              ReplyChip(
+                label: "I'll pick it later",
+                onTap: controller.skipCompanyPage,
+              ),
+            ],
+          ],
+        );
+      },
+    );
+  }
+}
+
+/// The company document — what the company does, its industry, its tagline.
+///
+/// A panel rather than chips because it is three fields, and the dock's
+/// panel lane exists precisely so a tall form does not get auto-scrolled
+/// into a thread.
+///
+/// Only the description is required. Industry and tagline sharpen what gets
+/// written but a company without a tagline should not be blocked from
+/// finishing setup over one.
+class _CompanyDetailsPanel extends StatefulWidget {
+  const _CompanyDetailsPanel({
+    required this.answers,
+    required this.onChanged,
+    required this.onSubmit,
+  });
+
+  final OnboardingAnswers answers;
+  final void Function({String? description, String? industry, String? tagline})
+      onChanged;
+  final VoidCallback onSubmit;
+
+  @override
+  State<_CompanyDetailsPanel> createState() => _CompanyDetailsPanelState();
+}
+
+class _CompanyDetailsPanelState extends State<_CompanyDetailsPanel> {
+  /// Seeded from the answers so a field survives a rebuild — the thread
+  /// above this panel grows while the user is typing in it.
+  late final TextEditingController _description =
+      TextEditingController(text: widget.answers.companyDescription);
+  late final TextEditingController _industry =
+      TextEditingController(text: widget.answers.companyIndustry);
+  late final TextEditingController _tagline =
+      TextEditingController(text: widget.answers.companyTagline);
+
+  @override
+  void dispose() {
+    _description.dispose();
+    _industry.dispose();
+    _tagline.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisSize: MainAxisSize.min,
+      children: <Widget>[
+        ZaveField(
+          controller: _description,
+          hint: 'What the company does, in two sentences',
+          maxLines: 3,
+          onChanged: (String v) => widget.onChanged(description: v),
+        ),
+        SizedBox(height: ZaveSpace.md),
+        ZaveField(
+          controller: _industry,
+          hint: 'Industry (optional)',
+          onChanged: (String v) => widget.onChanged(industry: v),
+        ),
+        SizedBox(height: ZaveSpace.md),
+        ZaveField(
+          controller: _tagline,
+          hint: 'Tagline (optional)',
+          onChanged: (String v) => widget.onChanged(tagline: v),
+        ),
+        SizedBox(height: ZaveSpace.lg),
+        ZaveButton.primary(
+          label: 'That is us',
+          expand: true,
+          onPressed: widget.onSubmit,
+        ),
+      ],
+    );
   }
 }

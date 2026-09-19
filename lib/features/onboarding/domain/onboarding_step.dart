@@ -21,8 +21,11 @@
 /// | `finish` | [OnboardingStep.finish] | — |
 /// | — | [OnboardingStep.goal] | **Added.** See the note on [OnboardingStep.goal]. |
 /// | `connect-linkedin` | [OnboardingStep.connect] | Present. It was omitted on the grounds that OAuth "belongs to the accounts surface" — true in isolation, and wrong in consequence: a user who onboarded on their phone reached the dashboard with no LinkedIn account, so nothing could publish and the entire product was inert for them. |
-/// | `cv-upload`, `style-screenshots`, `company-logo`, `poster-style`, `company-doc` | absent | All need file/image upload. |
-/// | `company-page`, `company-about`, `company-details` | absent | Need `/linkedin/organizations` + the company-document parse. |
+/// | `cv-upload`, `company-doc` | absent | Both take a PDF, which needs `file_picker`; `image_picker` cannot open documents. |
+/// | `style-screenshots` | absent | The route exists (`/ai/analyze-style-screenshot`) and the picker now does too — this is client work, not a gap in the API. |
+/// | `company-page` | [OnboardingStep.companyPage] | Present. |
+/// | `company-about`, `company-details` | [OnboardingStep.companyDetails] | Collapsed to one form. The web splits them because it parses an uploaded company document first and asks the user to confirm what it read; there is no document picker here yet, so there is nothing to confirm — only fields to fill. |
+/// | `company-logo`, `poster-style` | absent | Need an upload route (`/upload/asset`) and a poster-style analyser that the mobile API does not expose. |
 /// | `content-mode`, `target-role`, `who-you-serve` | absent | Hidden on the web too (`TRANSFORMATION_ONBOARDING_ENABLED` / `AUDIENCE_ONBOARDING_ENABLED` are both `false`), so their absence here MATCHES the web as it ships. |
 ///
 /// Every omission is reported rather than faked: a step that cannot complete is
@@ -53,7 +56,26 @@ enum OnboardingStep {
   /// Runs the same browser hand-off the Settings screen uses
   /// (`SettingsRepository.connectLinkedin`) rather than a second copy of it.
   connect,
+
+  /// **Company brand only.** Which LinkedIn page the account will publish to.
+  ///
+  /// Sits after [connect] because the list comes from the pages the connected
+  /// account administers — there is nothing to choose from before that.
+  ///
+  /// Skipping it is what made "Company brand" produce an account the web
+  /// flow cannot: `brandType: 'company'` with no page, so company posts had
+  /// nowhere to go and every company surface was inert.
+  companyPage,
+
+  /// **Company brand only.** The company document — what the company does,
+  /// its industry and its tagline — which anchors every generated post.
+  companyDetails,
   finish;
+
+  /// True for the two steps only a company brand ever sees.
+  bool get isCompanyOnly =>
+      this == OnboardingStep.companyPage ||
+      this == OnboardingStep.companyDetails;
 
   /// How this step is answered — with a tap, or by typing.
   ///
@@ -76,7 +98,9 @@ enum OnboardingStep {
     OnboardingStep.brand ||
     OnboardingStep.role ||
     OnboardingStep.goal ||
-    OnboardingStep.connect => OnboardingLane.reply,
+    OnboardingStep.connect ||
+    OnboardingStep.companyPage => OnboardingLane.reply,
+    OnboardingStep.companyDetails => OnboardingLane.panel,
     OnboardingStep.voice => OnboardingLane.panel,
     OnboardingStep.finish =>
       finaliseError ? OnboardingLane.reply : OnboardingLane.panel,
@@ -94,9 +118,23 @@ enum OnboardingStep {
 
   /// `progressPct` from the web: the bar never reads below 5%, so step one
   /// still looks like progress rather than like nothing has happened.
-  int get progressPercent {
-    final int idx = OnboardingStep.values.indexOf(this);
-    final double pct = (idx + 1) / OnboardingStep.values.length * 100;
+  /// [company] must be passed so a PERSONAL user still reaches 100%.
+  ///
+  /// The two company steps are in the enum but not in a personal user's
+  /// path, and counting them would leave that user's bar stuck in the
+  /// eighties at the moment they finish — a progress bar that never fills
+  /// reads as something having gone wrong.
+  int progressPercent({required bool company}) {
+    final List<OnboardingStep> path = company
+        ? OnboardingStep.values
+        : OnboardingStep.values
+              .where((OnboardingStep s) => !s.isCompanyOnly)
+              .toList(growable: false);
+    final int idx = path.indexOf(this);
+    // A company-only step on a personal path cannot happen, but if it ever
+    // did, reporting the last known position beats reporting -1.
+    if (idx < 0) return 100;
+    final double pct = (idx + 1) / path.length * 100;
     final int rounded = pct.round();
     return rounded < 5 ? 5 : rounded;
   }
@@ -130,8 +168,15 @@ enum OnboardingStep {
     // says what the chip cannot — that this is the step which makes every
     // other one mean something.
     OnboardingStep.connect => <String>[
-      'Last thing — connect LinkedIn. Until you do I can write your posts, '
-          'but nothing can publish.',
+      'Now connect LinkedIn. Until you do I can write your posts, but '
+          'nothing can publish.',
+    ],
+    OnboardingStep.companyPage => <String>[
+      'Which company page am I posting to?',
+    ],
+    OnboardingStep.companyDetails => <String>[
+      'Tell me what the company does — this anchors every post I write, so '
+          'a couple of honest sentences beat a polished one.',
     ],
     OnboardingStep.finish => <String>[
       "That's everything, $firstName. Building your roadmap now…",
