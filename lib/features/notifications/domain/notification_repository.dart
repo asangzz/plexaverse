@@ -32,4 +32,41 @@ abstract class NotificationRepository {
   /// "simulate" action drives the in-app pipeline instead. Never errors;
   /// closing is fine.
   Stream<AppNotification> get incoming;
+
+  /// The user's notifications from the SERVER, newest first.
+  ///
+  /// The inbox used to be the local Drift table and nothing else, which meant
+  /// it only ever held foreground pushes this device happened to receive
+  /// while running. Everything the server raised — an approval request, a
+  /// publish result, a token expiring — was invisible on mobile, and the
+  /// badge counted a number no one else could see. Drift is now a cache of
+  /// this, not a substitute for it.
+  ///
+  /// [cursor] comes from a previous page's [NotificationPage.nextCursor].
+  Future<NotificationPage> fetchInbox({String? cursor, int limit = 20});
+
+  /// Unread count from the server, so the badge matches what web shows.
+  Future<int> fetchUnreadCount();
+
+  /// Marks one notification read. [id] is the SERVER id.
+  Future<void> markRead(String id);
+
+  /// Marks every notification read.
+  Future<void> markAllRead();
+}
+
+
+/// One page of the server-side inbox.
+class NotificationPage {
+  const NotificationPage({
+    required this.notifications,
+    this.nextCursor,
+    this.hasMore = false,
+  });
+
+  final List<AppNotification> notifications;
+
+  /// Pass back as `cursor` to fetch the next page; null when there is none.
+  final String? nextCursor;
+  final bool hasMore;
 }

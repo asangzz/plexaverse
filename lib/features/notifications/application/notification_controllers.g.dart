@@ -8,6 +8,133 @@ part of 'notification_controllers.dart';
 
 // GENERATED CODE - DO NOT MODIFY BY HAND
 // ignore_for_file: type=lint, type=warning
+/// Pulls the server inbox into the cache. Watched by
+/// [notificationInboxProvider], so it runs when the inbox is first read.
+///
+/// A failure is deliberately NOT surfaced as an error state: the cached page
+/// below is still worth showing, and an offline user staring at an error
+/// where their notifications used to be is worse than slightly stale ones.
+
+@ProviderFor(notificationSync)
+final notificationSyncProvider = NotificationSyncProvider._();
+
+/// Pulls the server inbox into the cache. Watched by
+/// [notificationInboxProvider], so it runs when the inbox is first read.
+///
+/// A failure is deliberately NOT surfaced as an error state: the cached page
+/// below is still worth showing, and an offline user staring at an error
+/// where their notifications used to be is worse than slightly stale ones.
+
+final class NotificationSyncProvider
+    extends $FunctionalProvider<AsyncValue<void>, void, FutureOr<void>>
+    with $FutureModifier<void>, $FutureProvider<void> {
+  /// Pulls the server inbox into the cache. Watched by
+  /// [notificationInboxProvider], so it runs when the inbox is first read.
+  ///
+  /// A failure is deliberately NOT surfaced as an error state: the cached page
+  /// below is still worth showing, and an offline user staring at an error
+  /// where their notifications used to be is worse than slightly stale ones.
+  NotificationSyncProvider._()
+    : super(
+        from: null,
+        argument: null,
+        retry: null,
+        name: r'notificationSyncProvider',
+        isAutoDispose: true,
+        dependencies: null,
+        $allTransitiveDependencies: null,
+      );
+
+  @override
+  String debugGetCreateSourceHash() => _$notificationSyncHash();
+
+  @$internal
+  @override
+  $FutureProviderElement<void> $createElement($ProviderPointer pointer) =>
+      $FutureProviderElement(pointer);
+
+  @override
+  FutureOr<void> create(Ref ref) {
+    return notificationSync(ref);
+  }
+}
+
+String _$notificationSyncHash() => r'135940297b19d1aacb6dd944913b8ef60324210b';
+
+/// Marking read, on the server AND in the cache.
+///
+/// The drawer used to call the DAO directly, so a notification read on the
+/// phone stayed unread everywhere else and came back unread on the next
+/// sync — read state belongs to the account, not the device.
+
+@ProviderFor(NotificationReads)
+final notificationReadsProvider = NotificationReadsProvider._();
+
+/// Marking read, on the server AND in the cache.
+///
+/// The drawer used to call the DAO directly, so a notification read on the
+/// phone stayed unread everywhere else and came back unread on the next
+/// sync — read state belongs to the account, not the device.
+final class NotificationReadsProvider
+    extends $NotifierProvider<NotificationReads, void> {
+  /// Marking read, on the server AND in the cache.
+  ///
+  /// The drawer used to call the DAO directly, so a notification read on the
+  /// phone stayed unread everywhere else and came back unread on the next
+  /// sync — read state belongs to the account, not the device.
+  NotificationReadsProvider._()
+    : super(
+        from: null,
+        argument: null,
+        retry: null,
+        name: r'notificationReadsProvider',
+        isAutoDispose: true,
+        dependencies: null,
+        $allTransitiveDependencies: null,
+      );
+
+  @override
+  String debugGetCreateSourceHash() => _$notificationReadsHash();
+
+  @$internal
+  @override
+  NotificationReads create() => NotificationReads();
+
+  /// {@macro riverpod.override_with_value}
+  Override overrideWithValue(void value) {
+    return $ProviderOverride(
+      origin: this,
+      providerOverride: $SyncValueProvider<void>(value),
+    );
+  }
+}
+
+String _$notificationReadsHash() => r'eb65912388c463d5a9b140108d1892e36ed40993';
+
+/// Marking read, on the server AND in the cache.
+///
+/// The drawer used to call the DAO directly, so a notification read on the
+/// phone stayed unread everywhere else and came back unread on the next
+/// sync — read state belongs to the account, not the device.
+
+abstract class _$NotificationReads extends $Notifier<void> {
+  void build();
+  @$mustCallSuper
+  @override
+  void runBuild() {
+    final ref = this.ref as $Ref<void, void>;
+    final element =
+        ref.element
+            as $ClassProviderElement<
+              AnyNotifier<void, void>,
+              void,
+              Object?,
+              Object?
+            >;
+    element.handleCreate(ref, build);
+  }
+}
+
 /// Live foreground pushes (FCM in prod, empty in the mock). keepAlive so the
 /// FCM stream subscription stays put — a push must never be dropped in a
 /// listener gap. [NotificationIngestor] bridges this into the Drift inbox +

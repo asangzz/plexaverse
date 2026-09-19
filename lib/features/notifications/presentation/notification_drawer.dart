@@ -38,6 +38,9 @@ class NotificationDrawer extends ConsumerWidget {
     final scheme = Theme.of(context).colorScheme;
     final brand = context.brand;
     final dao = ref.read(appDatabaseProvider).notificationDao;
+    // Read state goes through the controller, not the DAO: it belongs to the
+    // account, so it has to reach the server as well as the cache.
+    final reads = ref.read(notificationReadsProvider.notifier);
 
     return Drawer(
       width: screenWidth * 0.8,
@@ -48,7 +51,7 @@ class NotificationDrawer extends ConsumerWidget {
       child: Column(
         children: <Widget>[
           _DrawerHeader(
-            onMarkAll: dao.markAllAsRead,
+            onMarkAll: reads.markAllRead,
             onClearAll: dao.clearAll,
             onSimulate: kDebugMode
                 ? () => ref
@@ -79,7 +82,7 @@ class NotificationDrawer extends ConsumerWidget {
                       ),
                       itemBuilder: (_, i) => _NotificationTile(
                         notification: items[i],
-                        onRead: () => dao.markAsRead(items[i].id),
+                        onRead: () => reads.markRead(items[i]),
                         onDismiss: () => dao.deleteNotification(items[i].id),
                       ),
                     ),

@@ -119,7 +119,7 @@ final class PlannerControllerProvider
   PlannerController create() => PlannerController();
 }
 
-String _$plannerControllerHash() => r'9ba759674fc341ab9265964b59a98b66ed42310d';
+String _$plannerControllerHash() => r'e60171802a9aad66b217d9924eaec9f5fdfddf8e';
 
 /// The week plan.
 
