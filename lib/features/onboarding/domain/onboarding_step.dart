@@ -20,7 +20,7 @@
 /// | `style-choice` / `style-write` | [OnboardingStep.voice] | Collapsed to one step: the screenshot branch needs an image picker. |
 /// | `finish` | [OnboardingStep.finish] | — |
 /// | — | [OnboardingStep.goal] | **Added.** See the note on [OnboardingStep.goal]. |
-/// | `connect-linkedin` | absent | Needs the LinkedIn OAuth connect flow, which belongs to the accounts surface, not this screen. |
+/// | `connect-linkedin` | [OnboardingStep.connect] | Present. It was omitted on the grounds that OAuth "belongs to the accounts surface" — true in isolation, and wrong in consequence: a user who onboarded on their phone reached the dashboard with no LinkedIn account, so nothing could publish and the entire product was inert for them. |
 /// | `cv-upload`, `style-screenshots`, `company-logo`, `poster-style`, `company-doc` | absent | All need file/image upload. |
 /// | `company-page`, `company-about`, `company-details` | absent | Need `/linkedin/organizations` + the company-document parse. |
 /// | `content-mode`, `target-role`, `who-you-serve` | absent | Hidden on the web too (`TRANSFORMATION_ONBOARDING_ENABLED` / `AUDIENCE_ONBOARDING_ENABLED` are both `false`), so their absence here MATCHES the web as it ships. |
@@ -45,6 +45,14 @@ enum OnboardingStep {
 
   /// The web's `style-choice` → `style-write`, collapsed.
   voice,
+
+  /// The web's `connect-linkedin`, and the one step whose absence broke the
+  /// product: without a connected account there is nothing to publish to, so
+  /// every downstream surface — planner, posts, auto-post — is inert.
+  ///
+  /// Runs the same browser hand-off the Settings screen uses
+  /// (`SettingsRepository.connectLinkedin`) rather than a second copy of it.
+  connect,
   finish;
 
   /// How this step is answered — with a tap, or by typing.
@@ -67,7 +75,8 @@ enum OnboardingStep {
     OnboardingStep.welcome ||
     OnboardingStep.brand ||
     OnboardingStep.role ||
-    OnboardingStep.goal => OnboardingLane.reply,
+    OnboardingStep.goal ||
+    OnboardingStep.connect => OnboardingLane.reply,
     OnboardingStep.voice => OnboardingLane.panel,
     OnboardingStep.finish =>
       finaliseError ? OnboardingLane.reply : OnboardingLane.panel,
@@ -116,6 +125,13 @@ enum OnboardingStep {
     ],
     OnboardingStep.voice => <String>[
       'Now your voice — so posts read like you wrote them.',
+    ],
+    // Same rule as the rest: the chip says "Connect LinkedIn", so the line
+    // says what the chip cannot — that this is the step which makes every
+    // other one mean something.
+    OnboardingStep.connect => <String>[
+      'Last thing — connect LinkedIn. Until you do I can write your posts, '
+          'but nothing can publish.',
     ],
     OnboardingStep.finish => <String>[
       "That's everything, $firstName. Building your roadmap now…",

@@ -3,6 +3,8 @@ import 'dart:math' as math;
 
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
+import '../../settings/data/settings_repositories.dart';
+import '../../settings/domain/settings_repository.dart';
 import '../data/onboarding_repositories.dart';
 import '../domain/onboarding_repository.dart';
 import 'onboarding_chat_state.dart';
@@ -64,6 +66,10 @@ class OnboardingChatController extends _$OnboardingChatController {
   }
 
   OnboardingRepository get _repo => ref.read(onboardingRepositoryProvider);
+
+  /// The connect step borrows the Settings slice's browser hand-off rather
+  /// than duplicating it — see [connectLinkedin].
+  SettingsRepository get _settings => ref.read(settingsRepositoryProvider);
 
   /// True while the state this code is about to write is still the state the
   /// screen is showing.
@@ -233,6 +239,65 @@ class OnboardingChatController extends _$OnboardingChatController {
         'first few posts instead.',
       );
     }
+    await _enter(OnboardingStep.connect);
+  }
+
+  // ── Connect LinkedIn ──────────────────────────────────────────────────────
+
+  /// Runs the LinkedIn browser hand-off, then advances.
+  ///
+  /// Deliberately reuses `SettingsRepository.connectLinkedin` rather than
+  /// adding a second implementation to this slice. The hand-off is a PKCE-less
+  /// OAuth trip through the system browser with a `plexaverse://` return, and
+  /// two copies of that drift — the copy that drifts then fails at LinkedIn
+  /// rather than anywhere a stack trace helps.
+  ///
+  /// `type` is derived from the brand answer, so a company-brand user connects
+  /// the account that administers their pages.
+  Future<void> connectLinkedin() async {
+    if (state.step != OnboardingStep.connect) return;
+    _echoUser('Connect LinkedIn');
+    state = state.copyWith(isBotTyping: true);
+
+    final String type =
+        state.answers.brand == BrandChoice.company ? 'company' : 'personal';
+    final ConnectOutcome outcome =
+        await _settings.connectLinkedin(type: type);
+    if (_disposed) return;
+    state = state.copyWith(isBotTyping: false);
+
+    switch (outcome) {
+      case ConnectSucceeded():
+        state = state.copyWith(connectFailed: false);
+        await _sendBot("Connected. That's everything I need.");
+        await _enter(OnboardingStep.finish);
+      case ConnectCancelled():
+        // Backing out of the browser is a decision, not an error — but the
+        // step still has to be answered, so say why it matters and offer the
+        // escape rather than silently re-asking.
+        state = state.copyWith(connectFailed: true);
+        await _sendBot(
+          "No account connected yet. Without one I can write your posts but "
+          "nothing can publish — you can connect now, or do it later from "
+          "Settings.",
+        );
+      case ConnectFailed(:final String? message):
+        state = state.copyWith(connectFailed: true);
+        await _sendBot(
+          message ?? "That didn't go through. Try again, or connect later "
+              'from Settings.',
+        );
+    }
+  }
+
+  /// The escape, unlocked only after a failed attempt. See
+  /// [OnboardingChatState.connectFailed] for why it is not offered up front.
+  Future<void> skipConnect() async {
+    if (state.step != OnboardingStep.connect || !state.connectFailed) return;
+    _echoUser("I'll connect later");
+    await _sendBot(
+      'Fine — Settings › Connected Accounts, whenever you are ready.',
+    );
     await _enter(OnboardingStep.finish);
   }
 

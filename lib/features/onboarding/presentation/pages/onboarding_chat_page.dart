@@ -272,6 +272,22 @@ class _DockControl extends ConsumerWidget {
             ),
         ],
       ),
+      OnboardingStep.connect => ReplyLane(
+        hint: hint,
+        chips: <Widget>[
+          ReplyChip(
+            label: chat.connectFailed ? 'Try again' : 'Connect LinkedIn',
+            onTap: () => controller().connectLinkedin(),
+          ),
+          // Only after an attempt has actually failed — see
+          // OnboardingChatState.connectFailed.
+          if (chat.connectFailed)
+            ReplyChip(
+              label: "I'll connect later",
+              onTap: () => controller().skipConnect(),
+            ),
+        ],
+      ),
       OnboardingStep.voice => TonePanel(
         value: chat.voiceDraft,
         onChanged: controller().setVoiceDraft,
