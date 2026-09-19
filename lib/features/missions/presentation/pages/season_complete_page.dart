@@ -6,6 +6,7 @@ import '../../../../core/ui/zave/zave_kit.dart';
 import '../../application/missions_controllers.dart';
 import '../../domain/missions_repository.dart';
 import '../widgets/mission_chrome.dart';
+import '../../application/season_controller.dart';
 
 /// **Season 1 Complete** — the web's `/season-complete`.
 ///
@@ -176,51 +177,30 @@ class _Body extends StatelessWidget {
         ),
         SizedBox(height: ZaveSpace.lg),
 
-        const _PathCard(
+        _PathCard(
+          choice: 'transformation',
           title: 'New Transformation',
           description:
               "You're ready to pivot. Pick a new career direction and start a "
               'fresh 66-day arc anchored to that goal.',
         ),
         SizedBox(height: ZaveSpace.md),
-        const _PathCard(
+        _PathCard(
+          choice: 'deeper',
           title: 'Go Deeper',
           description:
               'Your audience is built. Season 2 phases are bolder — '
               'Perspective, Controversy, Community, Movement, Legacy 2.0.',
         ),
         SizedBox(height: ZaveSpace.md),
-        const _PathCard(
+        _PathCard(
+          choice: 'maintenance',
           title: 'Maintenance Mode',
           description:
               'Life is busy. Stay visible with 3 posts a week (Mon / Wed / '
               'Fri) while Plexaverse handles the planning.',
         ),
 
-        SizedBox(height: ZaveSpace.lg),
-
-        ZaveCard(
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: <Widget>[
-              // Amber: waiting on something elsewhere. Zave has no red, and
-              // nothing here has failed.
-              Padding(
-                padding: EdgeInsets.only(top: ZaveSpace.xs + 2),
-                child: const ZaveDot(ZaveColors.amber),
-              ),
-              SizedBox(width: ZaveSpace.sm),
-              Expanded(
-                child: Text(
-                  'Starting Season 2 happens on plexaverse.com — the app '
-                  "cannot make that change yet. Your plan keeps running "
-                  'until you choose.',
-                  style: ZaveType.caption,
-                ),
-              ),
-            ],
-          ),
-        ),
       ],
     );
   }
@@ -269,20 +249,102 @@ class _StatCard extends StatelessWidget {
 /// A card, not a button. The web's version is pressable because it can act;
 /// this one describes, and a pressable surface that did nothing would be the
 /// dead control this whole screen is written to avoid.
-class _PathCard extends StatelessWidget {
-  const _PathCard({required this.title, required this.description});
+/// One Season 2 path, and the act of choosing it.
+///
+/// These were inert description cards under a note saying the choice
+/// happened on the web, which made day 66 a dead end for anyone who had only
+/// ever used the app: the recap showed their real numbers and then told them
+/// their next season was somewhere else.
+///
+/// Choosing is confirmed because it is not reversible from here — it starts
+/// the season, rebooks the auto-post chain and, on the transformation path,
+/// resets the 66-day clock. The server is idempotent, so a double-tap is
+/// harmless; the dialog is about intent, not about the request.
+class _PathCard extends ConsumerStatefulWidget {
+  const _PathCard({
+    required this.choice,
+    required this.title,
+    required this.description,
+  });
 
+  final String choice;
   final String title;
   final String description;
+
+  @override
+  ConsumerState<_PathCard> createState() => _PathCardState();
+}
+
+class _PathCardState extends ConsumerState<_PathCard> {
+  bool _busy = false;
+
+  Future<void> _choose() async {
+    final bool? confirmed = await showDialog<bool>(
+      context: context,
+      builder: (BuildContext ctx) => AlertDialog(
+        title: Text('Start Season 2 — ${widget.title}?'),
+        content: Text(
+          widget.choice == 'transformation'
+              ? 'This starts a fresh 66-day arc from today. Your Season 1 '
+                  'posts and history stay exactly as they are.'
+              : widget.choice == 'maintenance'
+                  ? 'Your plan drops to 3 posts a week — Monday, Wednesday '
+                      'and Friday. You can change the pace later in Settings.'
+                  : 'Season 2 phases are bolder, and your plan refreshes this '
+                      'Sunday. Your audience and clock carry over.',
+        ),
+        actions: <Widget>[
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(false),
+            child: Text(
+              'Not yet',
+              style: ZaveType.button.copyWith(color: ZaveColors.ink62),
+            ),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(true),
+            child: Text('Start', style: ZaveType.button),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !mounted) return;
+
+    setState(() => _busy = true);
+    String message;
+    try {
+      final bool already = await ref
+          .read(seasonAdvanceControllerProvider.notifier)
+          .advance(widget.choice);
+      message = already
+          ? 'You are already on Season 2.'
+          : 'Season 2 started — ${widget.title}.';
+    } on Object {
+      message = "That didn't go through. Your plan is unchanged.";
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+    if (!mounted) return;
+    ScaffoldMessenger.of(context)
+      ..hideCurrentSnackBar()
+      ..showSnackBar(SnackBar(content: Text(message, style: ZaveType.body)));
+  }
 
   @override
   Widget build(BuildContext context) => ZaveCard(
     child: Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: <Widget>[
-        Text(title, style: ZaveType.h3),
+        Text(widget.title, style: ZaveType.h3),
         SizedBox(height: ZaveSpace.sm),
-        Text(description, style: ZaveType.bodyMuted),
+        Text(widget.description, style: ZaveType.bodyMuted),
+        SizedBox(height: ZaveSpace.lg),
+        ZaveButton(
+          label: 'Choose this path',
+          expand: true,
+          busy: _busy,
+          onPressed: _busy ? null : _choose,
+        ),
       ],
     ),
   );
