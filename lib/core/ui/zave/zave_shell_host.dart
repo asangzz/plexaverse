@@ -7,6 +7,7 @@ import '../../router/zave_destinations.dart';
 import '../../../features/preferences/domain/user_preferences.dart';
 import '../../../features/settings/application/settings_controllers.dart';
 import '../../../features/settings/domain/settings_entities.dart';
+import '../../../features/preferences/application/preferences_controller.dart';
 import 'zave_shell.dart';
 
 /// Binds [ZaveShell] to the app's state.

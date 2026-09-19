@@ -16,67 +16,6 @@ part of 'home_controllers.dart';
 /// Season 1 roadmap and the Season 2 dashboard without `currentSeason`, and
 /// several other screens will need the same row. When the preferences slice
 /// grows a data layer this should move there wholesale and this file should
-/// import it; until then, home owning it is better than home guessing.
-
-@ProviderFor(homeUserPreferences)
-final homeUserPreferencesProvider = HomeUserPreferencesProvider._();
-
-/// The signed-in user's preferences.
-///
-/// **This provider lives in the home slice on purpose, and temporarily.**
-/// `features/preferences/` currently contains a domain model and nothing else —
-/// no repository, no provider — yet the home screen cannot choose between the
-/// Season 1 roadmap and the Season 2 dashboard without `currentSeason`, and
-/// several other screens will need the same row. When the preferences slice
-/// grows a data layer this should move there wholesale and this file should
-/// import it; until then, home owning it is better than home guessing.
-
-final class HomeUserPreferencesProvider
-    extends
-        $FunctionalProvider<
-          AsyncValue<UserPreferences>,
-          UserPreferences,
-          FutureOr<UserPreferences>
-        >
-    with $FutureModifier<UserPreferences>, $FutureProvider<UserPreferences> {
-  /// The signed-in user's preferences.
-  ///
-  /// **This provider lives in the home slice on purpose, and temporarily.**
-  /// `features/preferences/` currently contains a domain model and nothing else —
-  /// no repository, no provider — yet the home screen cannot choose between the
-  /// Season 1 roadmap and the Season 2 dashboard without `currentSeason`, and
-  /// several other screens will need the same row. When the preferences slice
-  /// grows a data layer this should move there wholesale and this file should
-  /// import it; until then, home owning it is better than home guessing.
-  HomeUserPreferencesProvider._()
-    : super(
-        from: null,
-        argument: null,
-        retry: null,
-        name: r'homeUserPreferencesProvider',
-        isAutoDispose: true,
-        dependencies: null,
-        $allTransitiveDependencies: null,
-      );
-
-  @override
-  String debugGetCreateSourceHash() => _$homeUserPreferencesHash();
-
-  @$internal
-  @override
-  $FutureProviderElement<UserPreferences> $createElement(
-    $ProviderPointer pointer,
-  ) => $FutureProviderElement(pointer);
-
-  @override
-  FutureOr<UserPreferences> create(Ref ref) {
-    return homeUserPreferences(ref);
-  }
-}
-
-String _$homeUserPreferencesHash() =>
-    r'9ff9b38f8bc6b82b0e22ac4617678a920a8f4f16';
-
 /// The user's position on the 66-day roadmap.
 ///
 /// The web caches this for 30 seconds and busts the browser cache on every
@@ -86,6 +25,14 @@ String _$homeUserPreferencesHash() =>
 @ProviderFor(RoadmapProgressController)
 final roadmapProgressControllerProvider = RoadmapProgressControllerProvider._();
 
+/// The signed-in user's preferences.
+///
+/// **This provider lives in the home slice on purpose, and temporarily.**
+/// `features/preferences/` currently contains a domain model and nothing else —
+/// no repository, no provider — yet the home screen cannot choose between the
+/// Season 1 roadmap and the Season 2 dashboard without `currentSeason`, and
+/// several other screens will need the same row. When the preferences slice
+/// grows a data layer this should move there wholesale and this file should
 /// The user's position on the 66-day roadmap.
 ///
 /// The web caches this for 30 seconds and busts the browser cache on every
@@ -93,6 +40,14 @@ final roadmapProgressControllerProvider = RoadmapProgressControllerProvider._();
 /// invalidation and on a pull-to-refresh.
 final class RoadmapProgressControllerProvider
     extends $AsyncNotifierProvider<RoadmapProgressController, RoadmapProgress> {
+  /// The signed-in user's preferences.
+  ///
+  /// **This provider lives in the home slice on purpose, and temporarily.**
+  /// `features/preferences/` currently contains a domain model and nothing else —
+  /// no repository, no provider — yet the home screen cannot choose between the
+  /// Season 1 roadmap and the Season 2 dashboard without `currentSeason`, and
+  /// several other screens will need the same row. When the preferences slice
+  /// grows a data layer this should move there wholesale and this file should
   /// The user's position on the 66-day roadmap.
   ///
   /// The web caches this for 30 seconds and busts the browser cache on every
@@ -120,6 +75,14 @@ final class RoadmapProgressControllerProvider
 String _$roadmapProgressControllerHash() =>
     r'db06a220208904080c45496f916fbdf58c88fef5';
 
+/// The signed-in user's preferences.
+///
+/// **This provider lives in the home slice on purpose, and temporarily.**
+/// `features/preferences/` currently contains a domain model and nothing else —
+/// no repository, no provider — yet the home screen cannot choose between the
+/// Season 1 roadmap and the Season 2 dashboard without `currentSeason`, and
+/// several other screens will need the same row. When the preferences slice
+/// grows a data layer this should move there wholesale and this file should
 /// The user's position on the 66-day roadmap.
 ///
 /// The web caches this for 30 seconds and busts the browser cache on every

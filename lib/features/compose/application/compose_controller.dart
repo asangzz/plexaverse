@@ -1,12 +1,13 @@
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 import '../data/compose_repositories.dart';
-import '../domain/compose_context.dart';
 import '../domain/compose_draft.dart';
 import '../domain/compose_models.dart';
 import '../domain/compose_repository.dart';
 import '../domain/compose_status.dart';
 import '../domain/linkedin_account.dart';
+import '../../preferences/application/preferences_controller.dart';
+import '../../preferences/domain/user_preferences.dart';
 
 part 'compose_controller.g.dart';
 
@@ -19,8 +20,20 @@ part 'compose_controller.g.dart';
 @riverpod
 class ComposeContextController extends _$ComposeContextController {
   @override
-  Future<ComposeContextState> build() =>
-      ref.watch(composeRepositoryProvider).fetchContext();
+  Future<ComposeContextState> build() async {
+    // Preferences come from the app's ONE reader, not a second fetch of
+    // /user/preferences. This screen branches on `brandType` to decide whether
+    // it is the personal or the company composer; reading that from its own
+    // copy meant it could disagree with the navigation about which product the
+    // user is even using.
+    final UserPreferences preferences = await ref.watch(
+      preferencesControllerProvider.future,
+    );
+    final List<LinkedinAccount> accounts = await ref
+        .watch(composeRepositoryProvider)
+        .fetchAccounts();
+    return ComposeContextState(preferences: preferences, accounts: accounts);
+  }
 }
 
 /// The post being written.

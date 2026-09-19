@@ -1,4 +1,3 @@
-import '../../preferences/domain/user_preferences.dart';
 import 'roadmap_progress.dart';
 import 'xp_balance.dart';
 
@@ -32,6 +31,4 @@ abstract class HomeRepository {
   /// Lives here rather than in a preferences slice because the preferences
   /// feature currently has a domain model and nothing else, and the home
   /// screen cannot choose between Season 1 and Season 2 without it. See the
-  /// note on `homeUserPreferencesProvider`.
-  Future<UserPreferences> fetchPreferences();
 }

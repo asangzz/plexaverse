@@ -1,4 +1,6 @@
-import 'compose_context.dart';
+import 'linkedin_account.dart';
+
+export 'compose_context.dart';
 import 'compose_draft.dart';
 import 'compose_models.dart';
 
@@ -39,14 +41,16 @@ class ComposeFailure implements Exception {
 /// there is deliberately no method and the UI says so out loud instead of
 /// silently rendering a dead control.
 abstract class ComposeRepository {
-  /// `GET /user/preferences` + `GET /linkedin/accounts`, together.
+  /// `GET /linkedin/accounts`.
   ///
-  /// Fetched as one unit because the screen cannot render a correct connection
-  /// panel from either half alone: "company brand" comes from preferences and
-  /// "has a company connection" comes from the accounts list, and showing one
-  /// before the other produces a panel that briefly tells the user the wrong
-  /// thing about where their post is going.
-  Future<ComposeContextState> fetchContext();
+  /// Preferences are deliberately NOT fetched here. The screen needs both
+  /// halves to render a correct connection panel — "company brand" comes from
+  /// preferences and "has a company connection" comes from this list — but the
+  /// controller composes them, reading preferences from the app's single
+  /// reader rather than fetching /user/preferences a second time. A composer
+  /// that keeps its own copy of `brandType` can disagree with the navigation
+  /// about which product the user is using.
+  Future<List<LinkedinAccount>> fetchAccounts();
 
   /// `POST /ai/generate` — the post body, its visual category, and a poster
   /// headline, in one round-trip.

@@ -8,83 +8,9 @@ part of 'settings_controllers.dart';
 
 // GENERATED CODE - DO NOT MODIFY BY HAND
 // ignore_for_file: type=lint, type=warning
-/// The preferences row — the keystone the whole screen branches on.
-///
-/// Writes are **partial**: every mutator sends only the keys it changed. The
-/// server's schema is `.strict()`, so an unknown key rejects the entire
-/// payload with a 400 rather than being dropped, and it strips undefined keys
-/// so a small write can never null out an unrelated column.
-
-@ProviderFor(PreferencesController)
-final preferencesControllerProvider = PreferencesControllerProvider._();
-
-/// The preferences row — the keystone the whole screen branches on.
-///
-/// Writes are **partial**: every mutator sends only the keys it changed. The
-/// server's schema is `.strict()`, so an unknown key rejects the entire
-/// payload with a 400 rather than being dropped, and it strips undefined keys
-/// so a small write can never null out an unrelated column.
-final class PreferencesControllerProvider
-    extends $AsyncNotifierProvider<PreferencesController, UserPreferences> {
-  /// The preferences row — the keystone the whole screen branches on.
-  ///
-  /// Writes are **partial**: every mutator sends only the keys it changed. The
-  /// server's schema is `.strict()`, so an unknown key rejects the entire
-  /// payload with a 400 rather than being dropped, and it strips undefined keys
-  /// so a small write can never null out an unrelated column.
-  PreferencesControllerProvider._()
-    : super(
-        from: null,
-        argument: null,
-        retry: null,
-        name: r'preferencesControllerProvider',
-        isAutoDispose: true,
-        dependencies: null,
-        $allTransitiveDependencies: null,
-      );
-
-  @override
-  String debugGetCreateSourceHash() => _$preferencesControllerHash();
-
-  @$internal
-  @override
-  PreferencesController create() => PreferencesController();
-}
-
-String _$preferencesControllerHash() =>
-    r'3db4b71617c6f58b26d74f9a56f0dccb56e87127';
-
-/// The preferences row — the keystone the whole screen branches on.
-///
-/// Writes are **partial**: every mutator sends only the keys it changed. The
-/// server's schema is `.strict()`, so an unknown key rejects the entire
-/// payload with a 400 rather than being dropped, and it strips undefined keys
-/// so a small write can never null out an unrelated column.
-
-abstract class _$PreferencesController extends $AsyncNotifier<UserPreferences> {
-  FutureOr<UserPreferences> build();
-  @$mustCallSuper
-  @override
-  void runBuild() {
-    final ref = this.ref as $Ref<AsyncValue<UserPreferences>, UserPreferences>;
-    final element =
-        ref.element
-            as $ClassProviderElement<
-              AnyNotifier<AsyncValue<UserPreferences>, UserPreferences>,
-              AsyncValue<UserPreferences>,
-              Object?,
-              Object?
-            >;
-    element.handleCreate(ref, build);
-  }
-}
-
-/// Identity + billing state, from `GET /auth/me`.
 
 @ProviderFor(accountSnapshot)
 final accountSnapshotProvider = AccountSnapshotProvider._();
-
-/// Identity + billing state, from `GET /auth/me`.
 
 final class AccountSnapshotProvider
     extends
@@ -94,7 +20,6 @@ final class AccountSnapshotProvider
           FutureOr<AccountSnapshot>
         >
     with $FutureModifier<AccountSnapshot>, $FutureProvider<AccountSnapshot> {
-  /// Identity + billing state, from `GET /auth/me`.
   AccountSnapshotProvider._()
     : super(
         from: null,

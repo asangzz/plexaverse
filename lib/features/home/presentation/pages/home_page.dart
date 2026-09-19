@@ -11,6 +11,7 @@ import '../widgets/home_states.dart';
 import '../widgets/levels_panel.dart';
 import '../widgets/roadmap_timeline.dart';
 import '../widgets/season_two_view.dart';
+import '../../../preferences/application/preferences_controller.dart';
 
 /// **Home** — the web's `/dashboard`.
 ///
@@ -84,14 +85,14 @@ class _HomeBody extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final double topInset = ZaveScaffold.contentTop(context);
     final AsyncValue<UserPreferences> prefs = ref.watch(
-      homeUserPreferencesProvider,
+      preferencesControllerProvider,
     );
 
     return prefs.when(
       loading: () => HomeSkeleton(topInset: topInset),
       error: (Object _, StackTrace _) => HomeError(
         topInset: topInset,
-        onRetry: () => ref.invalidate(homeUserPreferencesProvider),
+        onRetry: () => ref.invalidate(preferencesControllerProvider),
       ),
       data: (UserPreferences preferences) => preferences.isSeason2
           ? _SeasonTwoBody(preferences: preferences, topInset: topInset)

@@ -6,6 +6,7 @@ import '../../../preferences/domain/user_preferences.dart';
 import '../../application/settings_controllers.dart';
 import '../widgets/connections_section.dart';
 import '../widgets/settings_section.dart';
+import '../../../preferences/application/preferences_controller.dart';
 
 /// **Accounts** — the web's `/accounts`.
 ///

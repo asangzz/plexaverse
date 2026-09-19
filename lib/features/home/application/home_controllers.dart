@@ -1,6 +1,5 @@
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
-import '../../preferences/domain/user_preferences.dart';
 import '../data/home_repositories.dart';
 import '../domain/home_repository.dart';
 import '../domain/roadmap_level.dart';
@@ -15,11 +14,6 @@ part 'home_controllers.g.dart';
 /// Season 1 roadmap and the Season 2 dashboard without `currentSeason`, and
 /// several other screens will need the same row. When the preferences slice
 /// grows a data layer this should move there wholesale and this file should
-/// import it; until then, home owning it is better than home guessing.
-@riverpod
-Future<UserPreferences> homeUserPreferences(Ref ref) =>
-    ref.watch(homeRepositoryProvider).fetchPreferences();
-
 /// The user's position on the 66-day roadmap.
 ///
 /// The web caches this for 30 seconds and busts the browser cache on every

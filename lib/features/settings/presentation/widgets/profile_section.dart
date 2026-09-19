@@ -3,7 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/ui/zave/zave_kit.dart';
 import '../../../preferences/domain/user_preferences.dart';
-import '../../application/settings_controllers.dart';
+import '../../../preferences/application/preferences_controller.dart';
 import 'settings_section.dart';
 
 /// **Profile Details** — the web's first Settings section.

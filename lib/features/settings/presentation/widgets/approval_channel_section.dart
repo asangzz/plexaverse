@@ -3,7 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/ui/zave/zave_kit.dart';
 import '../../../preferences/domain/user_preferences.dart';
-import '../../application/settings_controllers.dart';
+import '../../../preferences/application/preferences_controller.dart';
 import 'settings_section.dart';
 
 /// **Approval Channel** — where the daily post goes for your sign-off.

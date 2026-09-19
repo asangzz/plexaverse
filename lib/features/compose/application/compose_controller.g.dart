@@ -53,7 +53,7 @@ final class ComposeContextControllerProvider
 }
 
 String _$composeContextControllerHash() =>
-    r'0c3306b1f25ccd5d6ad0cf6e7dc83c3946e3337b';
+    r'7def994c2cee31de99cc7b9c9a485d563de2a925';
 
 /// Who the user is publishing as — preferences plus connected accounts.
 ///

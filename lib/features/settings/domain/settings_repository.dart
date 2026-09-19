@@ -1,4 +1,3 @@
-import '../../preferences/domain/user_preferences.dart';
 import 'settings_entities.dart';
 
 export '../../preferences/domain/user_preferences.dart';
@@ -46,15 +45,9 @@ class SettingsUnavailable implements Exception {
 /// only.
 abstract class SettingsRepository {
   /// The preferences row. The server answers `{exists: false}` for a user who
-  /// has never completed onboarding; that is a value, not an error.
-  Future<UserPreferences> fetchPreferences();
-
   /// Partial upsert. **Send only what changed** — the server strips undefined
   /// fields so a small write cannot null out an unrelated column, and its zod
   /// schema is `.strict()`, so an unknown key rejects the WHOLE payload with a
-  /// 400 rather than being ignored.
-  Future<UserPreferences> updatePreferences(Map<String, dynamic> patch);
-
   /// Flips the auto-post kill switch. Returns the new value.
   ///
   /// Its own call rather than a field on [updatePreferences], because it is not

@@ -27,45 +27,7 @@ class ApiSettingsRepository implements SettingsRepository {
   /// user into the LinkedIn app mid-flow.
   static const String _callbackScheme = 'plexaverse';
 
-  @override
-  Future<UserPreferences> fetchPreferences() async {
-    try {
-      final response = await _client.get<Map<String, dynamic>>(
-        ApiPaths.userPreferences,
-      );
-      final Map<String, dynamic>? data = response.data;
-      if (data == null) throw const SettingsUnavailable();
-      return UserPreferences.fromJson(data);
-    } on SettingsUnavailable {
-      rethrow;
-    } on Object {
-      throw const SettingsUnavailable();
-    }
-  }
 
-  @override
-  Future<UserPreferences> updatePreferences(Map<String, dynamic> patch) async {
-    try {
-      final response = await _client.patch<Map<String, dynamic>>(
-        ApiPaths.userPreferences,
-        data: patch,
-      );
-      final Map<String, dynamic>? data = response.data;
-      if (data == null) throw const SettingsUnavailable();
-      // PATCH answers with the preferences row but without the `exists`
-      // sentinel the GET adds, so re-assert it: a row we just wrote exists by
-      // definition, and letting it default to false would bounce the user
-      // back into onboarding on the next read of this object.
-      return UserPreferences.fromJson(<String, dynamic>{
-        'exists': true,
-        ...data,
-      });
-    } on SettingsUnavailable {
-      rethrow;
-    } on Object {
-      throw const SettingsUnavailable();
-    }
-  }
 
   @override
   Future<bool> setAutoPostEnabled(bool enabled) async {
@@ -264,25 +226,7 @@ class FakeSettingsRepository implements SettingsRepository {
 
   static const Duration _latency = Duration(milliseconds: 220);
 
-  @override
-  Future<UserPreferences> fetchPreferences() async {
-    await Future<void>.delayed(_latency);
-    return _preferences;
-  }
 
-  @override
-  Future<UserPreferences> updatePreferences(Map<String, dynamic> patch) async {
-    await Future<void>.delayed(_latency);
-    // Round-trip through JSON so the fake applies a patch exactly the way the
-    // server does — by key, onto the existing row — instead of hand-copying
-    // fields and quietly drifting from the real merge.
-    _preferences = UserPreferences.fromJson(<String, dynamic>{
-      ..._preferences.toJson(),
-      ...patch,
-      'exists': true,
-    });
-    return _preferences;
-  }
 
   @override
   Future<bool> setAutoPostEnabled(bool enabled) async {

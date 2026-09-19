@@ -6,8 +6,6 @@ import '../../../core/config/env.dart';
 import '../../../core/network/api_paths.dart';
 import '../../../core/network/dio_client.dart';
 import '../../../core/network/failure.dart';
-import '../../preferences/domain/user_preferences.dart';
-import '../domain/compose_context.dart';
 import '../domain/compose_draft.dart';
 import '../domain/compose_models.dart';
 import '../domain/compose_repository.dart';
@@ -72,33 +70,17 @@ class ApiComposeRepository implements ComposeRepository {
   };
 
   @override
-  Future<ComposeContextState> fetchContext() => _guard(() async {
-    // In parallel: neither answer depends on the other, and serialising them
-    // would double the time the screen spends unable to say where a post is
-    // going.
-    final List<Response<Map<String, dynamic>>> results =
-        await Future.wait(<Future<Response<Map<String, dynamic>>>>[
-          _client.get<Map<String, dynamic>>(ApiPaths.userPreferences),
-          _client.get<Map<String, dynamic>>(ApiPaths.linkedInAccounts),
-        ]);
-
-    final Map<String, dynamic>? prefsJson = results[0].data;
-    final Map<String, dynamic>? accountsJson = results[1].data;
-
-    final UserPreferences preferences = prefsJson == null
-        ? UserPreferences.empty
-        : UserPreferences.fromJson(prefsJson);
+  Future<List<LinkedinAccount>> fetchAccounts() => _guard(() async {
+    final Response<Map<String, dynamic>> response = await _client
+        .get<Map<String, dynamic>>(ApiPaths.linkedInAccounts);
 
     final List<dynamic> rows =
-        (accountsJson?['accounts'] as List<dynamic>?) ?? const <dynamic>[];
+        (response.data?['accounts'] as List<dynamic>?) ?? const <dynamic>[];
 
-    return ComposeContextState(
-      preferences: preferences,
-      accounts: rows
-          .whereType<Map<String, dynamic>>()
-          .map(LinkedinAccount.fromJson)
-          .toList(growable: false),
-    );
+    return rows
+        .whereType<Map<String, dynamic>>()
+        .map(LinkedinAccount.fromJson)
+        .toList(growable: false);
   });
 
   @override
@@ -239,19 +221,16 @@ class FakeComposeRepository implements ComposeRepository {
       'YPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==';
 
   @override
-  Future<ComposeContextState> fetchContext() async {
+  Future<List<LinkedinAccount>> fetchAccounts() async {
     await Future<void>.delayed(const Duration(milliseconds: 350));
-    return const ComposeContextState(
-      preferences: UserPreferences(exists: true, onboardingCompleted: true),
-      accounts: <LinkedinAccount>[
-        LinkedinAccount(
-          id: 'mock-account-1',
-          profileId: 'urn:li:person:mock',
-          profileName: 'Asang Borkar',
-          profileHeadline: 'Building Plexaverse',
-        ),
-      ],
-    );
+    return const <LinkedinAccount>[
+      LinkedinAccount(
+        id: 'mock-account-1',
+        profileId: 'urn:li:person:mock',
+        profileName: 'Asang Borkar',
+        profileHeadline: 'Building Plexaverse',
+      ),
+    ];
   }
 
   @override

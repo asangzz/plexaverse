@@ -12,6 +12,7 @@ import '../widgets/company_brand_section.dart';
 import '../widgets/connections_section.dart';
 import '../widgets/profile_section.dart';
 import '../widgets/settings_section.dart';
+import '../../../preferences/application/preferences_controller.dart';
 
 /// **Settings** — the web's `/settings`.
 ///

@@ -4,7 +4,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/config/env.dart';
 import '../../../core/network/api_paths.dart';
 import '../../../core/network/dio_client.dart';
-import '../../preferences/domain/user_preferences.dart';
 import '../domain/home_repository.dart';
 
 /// Dio-backed [HomeRepository].
@@ -50,21 +49,6 @@ class ApiHomeRepository implements HomeRepository {
     }
   }
 
-  @override
-  Future<UserPreferences> fetchPreferences() async {
-    try {
-      final response = await _client.get<Map<String, dynamic>>(
-        ApiPaths.userPreferences,
-      );
-      final Map<String, dynamic>? data = response.data;
-      // `{exists: false}` is the server's answer for a brand-new account, and
-      // `UserPreferences.empty` is the client's word for the same thing.
-      if (data == null) return UserPreferences.empty;
-      return UserPreferences.fromJson(data);
-    } on Object {
-      throw const HomeUnavailable();
-    }
-  }
 }
 
 /// In-memory [HomeRepository] for the `mock` flavor.
@@ -110,17 +94,6 @@ class FakeHomeRepository implements HomeRepository {
     return const XpBalance(balance: 4350);
   }
 
-  @override
-  Future<UserPreferences> fetchPreferences() async {
-    await Future<void>.delayed(const Duration(milliseconds: 200));
-    return UserPreferences(
-      exists: true,
-      onboardingCompleted: true,
-      roadmapStartedAt: DateTime.now().subtract(
-        const Duration(days: _currentDay - 1),
-      ),
-    );
-  }
 }
 
 /// Mock ↔ real switch on `useFakeBackend`. A release build can never resolve

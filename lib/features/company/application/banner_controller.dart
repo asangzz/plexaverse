@@ -8,6 +8,7 @@ import '../data/company_repositories.dart';
 import '../domain/banner_design.dart';
 import '../domain/banner_template.dart';
 import '../domain/company_repository.dart';
+import '../../preferences/application/preferences_controller.dart';
 
 part 'banner_controller.freezed.dart';
 part 'banner_controller.g.dart';
