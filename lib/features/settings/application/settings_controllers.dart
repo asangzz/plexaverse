@@ -120,3 +120,46 @@ Future<GeoPricing> geoPricing(Ref ref) {
     countryCode: country,
   );
 }
+
+/// The LinkedIn company pages this account can publish to.
+///
+/// Its own provider rather than part of [accountSnapshot] for the reason
+/// stated at the top of this file: one combined fetch makes a slow or failing
+/// LinkedIn call take the whole Settings screen with it. This one calls
+/// LinkedIn's `organizationAcls` live, so it is the slowest thing here.
+@riverpod
+class CompanyPagesController extends _$CompanyPagesController {
+  @override
+  Future<CompanyPageOptions> build() =>
+      ref.watch(settingsRepositoryProvider).fetchCompanyPages();
+
+  /// Resolves a pasted company URL or numeric id into a page.
+  ///
+  /// Kept separate from [build] so a bad paste replaces only the list, and a
+  /// user who mistypes can try again without losing the screen.
+  Future<void> lookup(String vanityNameOrId) async {
+    state = const AsyncLoading<CompanyPageOptions>();
+    state = await AsyncValue.guard(
+      () => ref
+          .read(settingsRepositoryProvider)
+          .fetchCompanyPages(vanityName: vanityNameOrId),
+    );
+  }
+
+  /// Saves the page, then refreshes the accounts list so the row stops
+  /// reporting "no page chosen".
+  ///
+  /// Returns the failure message, or null on success — the caller decides
+  /// whether to speak, the same contract [LinkedinAccountsController.connect]
+  /// uses.
+  Future<String?> choose(String orgId) async {
+    try {
+      await ref.read(settingsRepositoryProvider).setCompanyPage(orgId);
+    } on Object {
+      return "We couldn't save that page. Try again.";
+    }
+    ref.invalidate(linkedinAccountsControllerProvider);
+    ref.invalidateSelf();
+    return null;
+  }
+}

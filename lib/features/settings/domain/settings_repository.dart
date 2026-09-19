@@ -86,7 +86,65 @@ abstract class SettingsRepository {
   /// Disconnects Google Calendar. `DELETE /google-calendar`.
   Future<void> disconnectCalendar();
 
+  /// The LinkedIn company pages this account administers.
+  ///
+  /// The server answers three different ways from one route, and the UI has to
+  /// handle all three: the pages fetched live from LinkedIn; a single saved
+  /// page when one is already chosen; or an empty list with
+  /// [CompanyPageOptions.needsManualInput] set, which happens when the
+  /// `rw_organization_admin` scope was not granted or LinkedIn returned
+  /// nothing. That last case is why the manual entry field is not optional
+  /// polish — for some accounts it is the only way through.
+  ///
+  /// [vanityName] accepts a full company URL or a numeric page id, mirroring
+  /// what the web's field takes.
+  Future<CompanyPageOptions> fetchCompanyPages({String? orgId, String? vanityName});
+
+  /// Saves the chosen page onto the connected company account. `PATCH
+  /// /linkedin/organizations`.
+  Future<void> setCompanyPage(String orgId);
+
   /// Localised plan pricing. [countryCode] is the device's region; the server
   /// defaults to `IN` when it is absent or unrecognised.
   Future<GeoPricing> fetchPricing({String? countryCode});
+}
+
+
+/// One LinkedIn company page the connected account administers.
+class CompanyPage {
+  const CompanyPage({
+    required this.id,
+    required this.name,
+    this.saved = false,
+  });
+
+  factory CompanyPage.fromJson(Map<String, dynamic> json) => CompanyPage(
+    id: (json['id'] ?? '').toString(),
+    name: (json['name'] as String?) ?? '',
+    saved: json['saved'] == true,
+  );
+
+  final String id;
+  final String name;
+
+  /// True for the page already stored on the account.
+  final bool saved;
+}
+
+/// What `GET /linkedin/organizations` answered.
+class CompanyPageOptions {
+  const CompanyPageOptions({
+    this.pages = const <CompanyPage>[],
+    this.needsManualInput = false,
+    this.message,
+  });
+
+  final List<CompanyPage> pages;
+
+  /// True when the server could not list pages and the user must type the
+  /// numeric page id themselves. Not an error — see [fetchCompanyPages].
+  final bool needsManualInput;
+
+  /// The server's own explanation, written to be shown.
+  final String? message;
 }

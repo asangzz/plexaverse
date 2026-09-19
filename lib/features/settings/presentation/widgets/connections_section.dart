@@ -218,13 +218,7 @@ class _LinkedinRow extends StatelessWidget {
         ],
         if (acct != null && acct.isCompany && acct.profileSlug == null) ...[
           SizedBox(height: ZaveSpace.md),
-          const UnavailableNote(
-            title: 'No company page linked',
-            message:
-                'Your company token is connected but no page is chosen, so '
-                'company posts have nowhere to go. Picking the page is not '
-                'ported to the app yet — do it in the web app’s Settings.',
-          ),
+          const CompanyPagePicker(),
         ],
       ],
     );
@@ -418,5 +412,147 @@ class _CalendarRow extends ConsumerWidget {
         showSettingsMessage(context, 'Failed to disconnect Google Calendar.');
       }
     }
+  }
+}
+
+
+/// **Pick the company page** — shown when a company token is connected but no
+/// page is chosen, which is a state in which nothing can publish: company
+/// posts have nowhere to go.
+///
+/// This used to be an "open the web app" note. Both verbs already existed on
+/// the mobile API (`GET`/`PATCH /linkedin/organizations`, delegating to the
+/// same service the web route uses), so the only thing missing was this.
+///
+/// Three server answers, all reachable, all handled here:
+///  * a list of administered pages, fetched live from LinkedIn;
+///  * one page already saved;
+///  * nothing, with `needsManualInput` — which happens when
+///    `rw_organization_admin` was not granted. For those accounts the text
+///    field is not a fallback, it is the only way through, so it is always
+///    offered rather than revealed after a failure.
+class CompanyPagePicker extends ConsumerStatefulWidget {
+  const CompanyPagePicker({super.key});
+
+  @override
+  ConsumerState<CompanyPagePicker> createState() => _CompanyPagePickerState();
+}
+
+class _CompanyPagePickerState extends ConsumerState<CompanyPagePicker> {
+  final TextEditingController _manual = TextEditingController();
+  bool _busy = false;
+
+  @override
+  void dispose() {
+    _manual.dispose();
+    super.dispose();
+  }
+
+  Future<void> _choose(String orgId) async {
+    setState(() => _busy = true);
+    try {
+      final String? failure = await ref
+          .read(companyPagesControllerProvider.notifier)
+          .choose(orgId);
+      if (!mounted) return;
+      showSettingsMessage(
+        context,
+        failure ?? 'Company page linked. Company posts will publish there.',
+      );
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
+  Future<void> _lookup() async {
+    final String value = _manual.text.trim();
+    if (value.isEmpty) return;
+    setState(() => _busy = true);
+    try {
+      await ref.read(companyPagesControllerProvider.notifier).lookup(value);
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final AsyncValue<CompanyPageOptions> pages = ref.watch(
+      companyPagesControllerProvider,
+    );
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: <Widget>[
+        Text(
+          'No company page linked yet, so company posts have nowhere to go. '
+          'Pick the page you want to grow.',
+          style: ZaveType.caption,
+        ),
+        SizedBox(height: ZaveSpace.md),
+        switch (pages) {
+          AsyncError<CompanyPageOptions>() => SectionError(
+            message: "We couldn't reach LinkedIn for your pages.",
+            onRetry: () => ref.invalidate(companyPagesControllerProvider),
+          ),
+          AsyncData<CompanyPageOptions>(:final CompanyPageOptions value) =>
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: <Widget>[
+                for (final CompanyPage page in value.pages)
+                  Padding(
+                    padding: EdgeInsets.only(bottom: ZaveSpace.sm),
+                    child: Row(
+                      children: <Widget>[
+                        Expanded(
+                          child: Text(
+                            page.name,
+                            style: ZaveType.label.copyWith(
+                              color: ZaveColors.white,
+                            ),
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                        SizedBox(width: ZaveSpace.md),
+                        ZaveButton(
+                          label: 'Use this page',
+                          busy: _busy,
+                          onPressed: _busy ? null : () => _choose(page.id),
+                        ),
+                      ],
+                    ),
+                  ),
+                // The server's own words when it has some — it explains
+                // exactly what to paste, which a generic hint cannot.
+                if (value.message != null && value.message!.isNotEmpty) ...<Widget>[
+                  SizedBox(height: ZaveSpace.sm),
+                  Text(value.message!, style: ZaveType.caption),
+                ],
+              ],
+            ),
+          _ => const SectionSkeleton(lines: 2),
+        },
+        SizedBox(height: ZaveSpace.lg),
+        Text(
+          'Or paste your company page URL or its numeric ID',
+          style: ZaveType.caption,
+        ),
+        SizedBox(height: ZaveSpace.sm),
+        ZaveField(
+          controller: _manual,
+          hint: 'linkedin.com/company/… or 1234567',
+          onSubmitted: (_) => _lookup(),
+        ),
+        SizedBox(height: ZaveSpace.sm),
+        Align(
+          alignment: Alignment.centerLeft,
+          child: ZaveButton(
+            label: 'Find page',
+            busy: _busy,
+            onPressed: _busy ? null : _lookup,
+          ),
+        ),
+      ],
+    );
   }
 }

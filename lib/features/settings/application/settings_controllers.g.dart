@@ -428,3 +428,76 @@ final class GeoPricingProvider
 }
 
 String _$geoPricingHash() => r'cda07207517f1f57ce88f5dc5d7b4b31521f4b83';
+
+/// The LinkedIn company pages this account can publish to.
+///
+/// Its own provider rather than part of [accountSnapshot] for the reason
+/// stated at the top of this file: one combined fetch makes a slow or failing
+/// LinkedIn call take the whole Settings screen with it. This one calls
+/// LinkedIn's `organizationAcls` live, so it is the slowest thing here.
+
+@ProviderFor(CompanyPagesController)
+final companyPagesControllerProvider = CompanyPagesControllerProvider._();
+
+/// The LinkedIn company pages this account can publish to.
+///
+/// Its own provider rather than part of [accountSnapshot] for the reason
+/// stated at the top of this file: one combined fetch makes a slow or failing
+/// LinkedIn call take the whole Settings screen with it. This one calls
+/// LinkedIn's `organizationAcls` live, so it is the slowest thing here.
+final class CompanyPagesControllerProvider
+    extends $AsyncNotifierProvider<CompanyPagesController, CompanyPageOptions> {
+  /// The LinkedIn company pages this account can publish to.
+  ///
+  /// Its own provider rather than part of [accountSnapshot] for the reason
+  /// stated at the top of this file: one combined fetch makes a slow or failing
+  /// LinkedIn call take the whole Settings screen with it. This one calls
+  /// LinkedIn's `organizationAcls` live, so it is the slowest thing here.
+  CompanyPagesControllerProvider._()
+    : super(
+        from: null,
+        argument: null,
+        retry: null,
+        name: r'companyPagesControllerProvider',
+        isAutoDispose: true,
+        dependencies: null,
+        $allTransitiveDependencies: null,
+      );
+
+  @override
+  String debugGetCreateSourceHash() => _$companyPagesControllerHash();
+
+  @$internal
+  @override
+  CompanyPagesController create() => CompanyPagesController();
+}
+
+String _$companyPagesControllerHash() =>
+    r'c10ab89179eb8ae35fd605cccd81b75d47277655';
+
+/// The LinkedIn company pages this account can publish to.
+///
+/// Its own provider rather than part of [accountSnapshot] for the reason
+/// stated at the top of this file: one combined fetch makes a slow or failing
+/// LinkedIn call take the whole Settings screen with it. This one calls
+/// LinkedIn's `organizationAcls` live, so it is the slowest thing here.
+
+abstract class _$CompanyPagesController
+    extends $AsyncNotifier<CompanyPageOptions> {
+  FutureOr<CompanyPageOptions> build();
+  @$mustCallSuper
+  @override
+  void runBuild() {
+    final ref =
+        this.ref as $Ref<AsyncValue<CompanyPageOptions>, CompanyPageOptions>;
+    final element =
+        ref.element
+            as $ClassProviderElement<
+              AnyNotifier<AsyncValue<CompanyPageOptions>, CompanyPageOptions>,
+              AsyncValue<CompanyPageOptions>,
+              Object?,
+              Object?
+            >;
+    element.handleCreate(ref, build);
+  }
+}

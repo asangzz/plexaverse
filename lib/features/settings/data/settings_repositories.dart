@@ -168,6 +168,52 @@ class ApiSettingsRepository implements SettingsRepository {
   }
 
   @override
+  Future<CompanyPageOptions> fetchCompanyPages({
+    String? orgId,
+    String? vanityName,
+  }) async {
+    try {
+      final response = await _client.get<Map<String, dynamic>>(
+        ApiPaths.linkedInOrganizations,
+        queryParameters: <String, dynamic>{
+          if (orgId != null && orgId.isNotEmpty) 'orgId': orgId,
+          if (vanityName != null && vanityName.isNotEmpty)
+            'vanityName': vanityName,
+        },
+      );
+      final Map<String, dynamic>? data = response.data;
+      if (data == null) throw const SettingsUnavailable();
+      final List<dynamic> raw =
+          (data['organizations'] as List<dynamic>?) ?? const <dynamic>[];
+      return CompanyPageOptions(
+        pages: raw
+            .whereType<Map<String, dynamic>>()
+            .map(CompanyPage.fromJson)
+            .where((CompanyPage p) => p.id.isNotEmpty)
+            .toList(growable: false),
+        needsManualInput: data['needsManualInput'] == true,
+        message: data['message'] as String?,
+      );
+    } on SettingsUnavailable {
+      rethrow;
+    } on Object {
+      throw const SettingsUnavailable();
+    }
+  }
+
+  @override
+  Future<void> setCompanyPage(String orgId) async {
+    try {
+      await _client.patch<Map<String, dynamic>>(
+        ApiPaths.linkedInOrganizations,
+        data: <String, dynamic>{'orgId': orgId},
+      );
+    } on Object {
+      throw const SettingsUnavailable();
+    }
+  }
+
+  @override
   Future<GeoPricing> fetchPricing({String? countryCode}) async {
     try {
       final response = await _client.get<Map<String, dynamic>>(
@@ -310,6 +356,37 @@ class FakeSettingsRepository implements SettingsRepository {
   Future<void> disconnectCalendar() async {
     await Future<void>.delayed(_latency);
     _calendar = const CalendarConnection();
+  }
+
+  @override
+  Future<CompanyPageOptions> fetchCompanyPages({
+    String? orgId,
+    String? vanityName,
+  }) async {
+    await Future<void>.delayed(_latency);
+    if (vanityName != null && vanityName.isNotEmpty) {
+      final String slug = vanityName.trim();
+      if (!RegExp(r'^\d+$').hasMatch(slug)) {
+        return const CompanyPageOptions(
+          needsManualInput: true,
+          message: 'Please enter the numeric page ID instead of the URL name.',
+        );
+      }
+      return CompanyPageOptions(
+        pages: <CompanyPage>[CompanyPage(id: slug, name: 'Company Page ($slug)')],
+      );
+    }
+    return const CompanyPageOptions(
+      pages: <CompanyPage>[
+        CompanyPage(id: '1234567', name: 'Plexaverse'),
+        CompanyPage(id: '7654321', name: 'Plexaverse Labs'),
+      ],
+    );
+  }
+
+  @override
+  Future<void> setCompanyPage(String orgId) async {
+    await Future<void>.delayed(_latency);
   }
 
   @override
