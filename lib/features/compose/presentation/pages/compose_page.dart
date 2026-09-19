@@ -13,6 +13,9 @@ import '../widgets/linkedin_preview_card.dart';
 import '../widgets/post_optimizer_card.dart';
 import '../widgets/schedule_panel.dart';
 import '../../../../core/platform/image_picking.dart';
+import 'package:go_router/go_router.dart';
+
+import '../../../../core/router/zave_routes.dart';
 
 /// **Write** — the composer. The web's `/create` and `/company-post`.
 ///
@@ -478,11 +481,23 @@ class _ProblemCard extends StatelessWidget {
           SizedBox(height: ZaveSpace.md),
           Text(
             status.insufficientXp
-                ? "You don't have enough XP to generate. Top up from Pricing, "
-                      'then try again.'
+                ? "You don't have enough XP to generate."
                 : status.error!,
             style: ZaveType.body,
           ),
+          // Only the XP case gets a CTA. "Did not go through" is a retry the
+          // user makes with the button they already pressed; sending them to
+          // Pricing for it would be wrong.
+          if (status.insufficientXp) ...<Widget>[
+            SizedBox(height: ZaveSpace.md),
+            Align(
+              alignment: Alignment.centerLeft,
+              child: ZaveButton(
+                label: 'Top up XP',
+                onPressed: () => context.push(ZaveRoutes.pricing),
+              ),
+            ),
+          ],
         ],
       ),
     );

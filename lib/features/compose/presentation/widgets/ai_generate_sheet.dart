@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
+
+import '../../../../core/router/zave_routes.dart';
 
 import '../../../../core/ui/zave/zave_kit.dart';
 import '../../application/compose_controller.dart';
@@ -278,10 +281,17 @@ class _XpNotice extends StatelessWidget {
           SizedBox(width: ZaveSpace.md),
           Expanded(
             child: Text(
-              "You don't have enough XP to generate a post. Top up from "
-              'Pricing, then try again.',
+              "You don't have enough XP to generate a post.",
               style: ZaveType.caption.copyWith(color: ZaveColors.amber),
             ),
+          ),
+          SizedBox(width: ZaveSpace.md),
+          // The sentence used to end "…top up from Pricing" and stop there,
+          // which names the fix and withholds the way to it. Pricing is a
+          // route; say it with the route.
+          ZaveButton(
+            label: 'Top up',
+            onPressed: () => context.push(ZaveRoutes.pricing),
           ),
         ],
       ),

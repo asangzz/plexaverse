@@ -186,8 +186,27 @@ GoRouter appRouter(Ref ref) {
       // the bottom bar. Horizontal-slide entrance.
       // Compose. Two paths, one widget: it derives company mode from
       // preferences, mirroring the web's two nav items both labelled "Write".
-      _fullScreen(ZaveRoutes.create, const ComposePage()),
-      _fullScreen(ZaveRoutes.companyPost, const ComposePage()),
+      // `onOpenSettings` is what turns the composer's "no LinkedIn account
+      // connected" state from a statement into a way out. ComposePage has
+      // always accepted the callback; the router simply never passed it, so
+      // the one screen that tells you to go and connect an account was also
+      // the one screen with no route to the place you do it.
+      _fullScreen(
+        ZaveRoutes.create,
+        Builder(
+          builder: (BuildContext context) => ComposePage(
+            onOpenSettings: () => context.push(ZaveRoutes.settings),
+          ),
+        ),
+      ),
+      _fullScreen(
+        ZaveRoutes.companyPost,
+        Builder(
+          builder: (BuildContext context) => ComposePage(
+            onOpenSettings: () => context.push(ZaveRoutes.settings),
+          ),
+        ),
+      ),
       _fullScreen(ZaveRoutes.schedules, const SchedulesPage()),
       _fullScreen(ZaveRoutes.persona, const PersonaPage()),
       _fullScreen(ZaveRoutes.settings, const SettingsPage()),
