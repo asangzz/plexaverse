@@ -2,7 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/ui/zave/zave_kit.dart';
+import '../../../auth/application/google_link_controller.dart';
 import '../../../auth/application/sign_out_controller.dart';
+import '../../../auth/domain/auth_repository.dart';
 import '../../application/settings_controllers.dart';
 import '../../domain/settings_repository.dart';
 import 'settings_section.dart';
@@ -81,6 +83,8 @@ class _AccountBody extends ConsumerWidget {
               'they update here.',
         ),
         const SettingsDivider(),
+        const _GoogleSignInRow(),
+        const SettingsDivider(),
         Align(
           alignment: Alignment.centerLeft,
           child: ZaveButton(
@@ -126,6 +130,156 @@ class _AccountBody extends ConsumerWidget {
     // local session clear, then the auth gate flips and the router redirects.
     // Never an imperative navigation from here.
     await ref.read(signOutControllerProvider.notifier).signOut();
+  }
+}
+
+/// **Sign in with Google** — the escape hatch from the sign-in refusal.
+///
+/// Signing in with Google is refused for an account that has a password,
+/// because both register routes mark an address verified without ever mailing
+/// it: anyone can pre-register someone else's email, and auto-linking would
+/// hand that person's Google sign-in into a row whose password the attacker
+/// still knows. The refusal tells the user to "sign in with your password,
+/// then link Google from Settings" — this row is the thing that sentence
+/// promises, and without it that message points nowhere.
+///
+/// Linking is safe here in a way it is not at sign-in: the user has already
+/// entered the password, which is the proof of ownership that was missing.
+class _GoogleSignInRow extends ConsumerStatefulWidget {
+  const _GoogleSignInRow();
+
+  @override
+  ConsumerState<_GoogleSignInRow> createState() => _GoogleSignInRowState();
+}
+
+class _GoogleSignInRowState extends ConsumerState<_GoogleSignInRow> {
+  bool _busy = false;
+
+  Future<void> _act(
+    Future<GoogleLinkResult> Function() action,
+    String succeeded,
+  ) async {
+    setState(() => _busy = true);
+    try {
+      final GoogleLinkResult result = await action();
+      if (!mounted) return;
+      final String? note = switch (result) {
+        GoogleLinkSucceeded(alreadyLinked: true) =>
+          'That Google account was already linked.',
+        GoogleLinkSucceeded() => succeeded,
+        // Silent. The user closed the browser; they know they did.
+        GoogleLinkCancelled() => null,
+        // The server's own copy where it sent some — its refusals name the one
+        // thing the user has to do next, which a generic message would lose.
+        GoogleLinkFailed(:final String? message) =>
+          message ?? "We couldn't change your Google sign-in.",
+      };
+      if (note != null) showSettingsMessage(context, note);
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
+  Future<void> _confirmUnlink() async {
+    final bool? confirmed = await showDialog<bool>(
+      context: context,
+      builder: (BuildContext dialogContext) => AlertDialog(
+        title: const Text('Unlink Google?'),
+        content: const Text(
+          'You will sign in with your email and password from then on. '
+          'Nothing else about your account changes.',
+        ),
+        actions: <Widget>[
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(false),
+            child: Text(
+              'Cancel',
+              style: ZaveType.button.copyWith(color: ZaveColors.ink62),
+            ),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(true),
+            child: Text(
+              'Unlink',
+              // Amber, not red. Zave has no red, including here.
+              style: ZaveType.button.copyWith(color: ZaveColors.amber),
+            ),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true) return;
+    await _act(
+      () => ref.read(googleLinkControllerProvider.notifier).unlink(),
+      'Google unlinked.',
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final AsyncValue<GoogleLinkStatus?> status = ref.watch(
+      googleLinkControllerProvider,
+    );
+
+    return switch (status) {
+      // A null value is "unknown", not "not linked" — see the controller.
+      // Offering "Link Google" to someone who already linked it would send
+      // them through the browser to a refusal.
+      AsyncError<GoogleLinkStatus?>() ||
+      AsyncData<GoogleLinkStatus?>(value: null) => SectionError(
+        message: "We couldn't check your Google sign-in.",
+        onRetry: () => ref.invalidate(googleLinkControllerProvider),
+      ),
+      AsyncData<GoogleLinkStatus?>(value: final GoogleLinkStatus value) =>
+        Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: <Widget>[
+            ConnectionRow(
+              name: 'Google',
+              status: value.linked
+                  ? ConnectionStatus.live
+                  : ConnectionStatus.absent,
+              detail: value.linked
+                  ? 'You can sign in with Google'
+                  : 'Sign in with Google instead of your password',
+              icon: Icons.account_circle_outlined,
+              trailing: value.linked
+                  ? (value.canUnlink
+                        ? ZaveButton(
+                            label: 'Unlink',
+                            busy: _busy,
+                            onPressed: _busy ? null : _confirmUnlink,
+                          )
+                        : null)
+                  : ZaveButton(
+                      label: 'Link',
+                      busy: _busy,
+                      onPressed: _busy
+                          ? null
+                          : () => _act(
+                              () => ref
+                                  .read(googleLinkControllerProvider.notifier)
+                                  .link(),
+                              'Google linked.',
+                            ),
+                    ),
+            ),
+            // Unlinking the only sign-in method would strand the account for
+            // good — there is no password-reset path onto a row that never had
+            // a password. The server refuses it; saying so here is better than
+            // offering a button that always fails.
+            if (value.linked && !value.canUnlink) ...<Widget>[
+              SizedBox(height: ZaveSpace.md),
+              const UnavailableNote(
+                message:
+                    'Google is the only way into this account, so it cannot '
+                    'be unlinked. Set a password in the web app first.',
+              ),
+            ],
+          ],
+        ),
+      _ => const SectionSkeleton(lines: 1),
+    };
   }
 }
 

@@ -131,7 +131,7 @@ final class ComposeDraftControllerProvider
 }
 
 String _$composeDraftControllerHash() =>
-    r'ed43b13027e2d5b30d40cf33958d8db7ea94d202';
+    r'2edefbdd767e610ecda926bfb1ab15e9bb4ef018';
 
 /// The post being written.
 ///

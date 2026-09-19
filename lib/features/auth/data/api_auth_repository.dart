@@ -130,6 +130,26 @@ class ApiAuthRepository implements AuthRepository {
 
   @override
   Future<GoogleResult> signInWithGoogle() async {
+    final _Authorization auth = await _authorizeWithGoogle();
+    return switch (auth) {
+      _AuthCancelled() => const GoogleCancelled(),
+      _AuthFailed(:final String? message) => GoogleFailure(message: message),
+      _AuthCode(:final String code, :final String state, :final String verifier) =>
+        await _guardGoogle(
+          () => _exchange(code: code, state: state, verifier: verifier),
+        ),
+    };
+  }
+
+  /// The browser half of the Google hand-off.
+  ///
+  /// Shared by sign-in and by linking from Settings, because it is the same
+  /// trip: ask the server for a finished authorize URL, open the system
+  /// browser, and come back with a code. Only what happens to that code
+  /// differs, so only that is left to the callers — duplicating this would
+  /// mean two PKCE implementations that can drift apart, and the one that
+  /// drifted would fail at Google rather than here.
+  Future<_Authorization> _authorizeWithGoogle() async {
     // The verifier lives HERE, in a local, for the duration of the hand-off.
     // It is single-use and lasts seconds; persisting it would only create
     // something worth stealing.
@@ -149,7 +169,7 @@ class ApiAuthRepository implements AuthRepository {
       final String? authUrl = urlResponse.data?['authUrl'] as String?;
       final String? issuedState = urlResponse.data?['state'] as String?;
       if (authUrl == null || authUrl.isEmpty || issuedState == null) {
-        return const GoogleFailure();
+        return const _AuthFailed();
       }
 
       // 2. System browser. NOT a webview — Google refuses OAuth in embedded
@@ -162,29 +182,45 @@ class ApiAuthRepository implements AuthRepository {
 
       switch (result) {
         case WebAuthCancelled():
-          return const GoogleCancelled();
+          return const _AuthCancelled();
         case WebAuthFailure():
-          return const GoogleFailure();
+          return const _AuthFailed();
         case WebAuthSuccess(:final callbackUrl):
           final Map<String, String> params =
               Uri.parse(callbackUrl).queryParameters;
 
           // The user pressed Cancel on Google's own screen.
-          if (params['error'] == 'access_denied') return const GoogleCancelled();
+          if (params['error'] == 'access_denied') return const _AuthCancelled();
           if (params['error'] != null) {
-            return GoogleFailure(message: params['error_description']);
+            return _AuthFailed(message: params['error_description']);
           }
 
           final String? code = params['code'];
           final String? state = params['state'];
-          if (code == null || code.isEmpty) return const GoogleCancelled();
+          if (code == null || code.isEmpty) return const _AuthCancelled();
 
           // Redundant given PKCE — the server checks this too — but free, and
           // it turns a server rejection into a local abort.
-          if (state != issuedState) return const GoogleFailure();
+          if (state != issuedState) return const _AuthFailed();
 
-          return _exchange(code: code, state: state!, verifier: pkce.verifier);
+          return _AuthCode(
+            code: code,
+            state: state!,
+            verifier: pkce.verifier,
+          );
       }
+    } on DioException catch (e) {
+      return _AuthFailed(message: _messageOf(e));
+    } on Object {
+      return const _AuthFailed();
+    }
+  }
+
+  /// Wraps the post-browser server call in the same never-throw contract the
+  /// browser half already honours.
+  Future<GoogleResult> _guardGoogle(Future<GoogleResult> Function() body) async {
+    try {
+      return await body();
     } on DioException catch (e) {
       return GoogleFailure(message: _messageOf(e));
     } on Object {
@@ -248,6 +284,69 @@ class ApiAuthRepository implements AuthRepository {
       return GoogleFailure(message: _messageOf(e));
     } on Object {
       return const GoogleFailure();
+    }
+  }
+
+  @override
+  Future<GoogleLinkStatus?> googleLinkStatus() async {
+    try {
+      final response = await _client.get<Map<String, dynamic>>(
+        ApiPaths.linkGoogle,
+      );
+      final Map<String, dynamic>? data = response.data;
+      if (data == null) return null;
+      return GoogleLinkStatus(
+        linked: data['linked'] == true,
+        canUnlink: data['canUnlink'] == true,
+        hasPassword: data['hasPassword'] == true,
+      );
+    } on Object {
+      // Null is "unknown", not "not linked" — see the interface.
+      return null;
+    }
+  }
+
+  @override
+  Future<GoogleLinkResult> linkGoogle() async {
+    final _Authorization auth = await _authorizeWithGoogle();
+    return switch (auth) {
+      _AuthCancelled() => const GoogleLinkCancelled(),
+      _AuthFailed(:final String? message) => GoogleLinkFailed(message: message),
+      _AuthCode(:final String code, :final String state, :final String verifier) =>
+        await _guardLink(() async {
+          final response = await _client.post<Map<String, dynamic>>(
+            ApiPaths.linkGoogle,
+            data: <String, dynamic>{
+              'code': code,
+              'state': state,
+              'codeVerifier': verifier,
+            },
+          );
+          return GoogleLinkSucceeded(
+            alreadyLinked: response.data?['alreadyLinked'] == true,
+          );
+        }),
+    };
+  }
+
+  @override
+  Future<GoogleLinkResult> unlinkGoogle() => _guardLink(() async {
+    await _client.delete<Map<String, dynamic>>(ApiPaths.linkGoogle);
+    return const GoogleLinkSucceeded();
+  });
+
+  /// Keeps the never-throw contract. The server's own message is preserved:
+  /// these refusals name the one thing the user has to do next, and replacing
+  /// them with "Something went wrong" would delete exactly that.
+  Future<GoogleLinkResult> _guardLink(
+    Future<GoogleLinkResult> Function() body,
+  ) async {
+    try {
+      return await body();
+    } on DioException catch (e) {
+      return GoogleLinkFailed(message: _messageOf(e));
+    } on Object {
+      return const GoogleLinkFailed();
     }
   }
 
@@ -319,4 +418,33 @@ class ApiAuthRepository implements AuthRepository {
     if (value is Map) return Map<String, dynamic>.from(value);
     throw FormatException('Expected a JSON object, got ${value.runtimeType}');
   }
+}
+
+
+/// Result of the browser half of the Google hand-off — private to this file
+/// because it is a step, not an outcome: both callers translate it into their
+/// own public result type.
+sealed class _Authorization {
+  const _Authorization();
+}
+
+class _AuthCode extends _Authorization {
+  const _AuthCode({
+    required this.code,
+    required this.state,
+    required this.verifier,
+  });
+
+  final String code;
+  final String state;
+  final String verifier;
+}
+
+class _AuthCancelled extends _Authorization {
+  const _AuthCancelled();
+}
+
+class _AuthFailed extends _Authorization {
+  const _AuthFailed({this.message});
+  final String? message;
 }

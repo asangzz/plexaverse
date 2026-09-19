@@ -108,6 +108,11 @@ class MockAuthRepository implements AuthRepository {
   /// [signInWithGoogle] returns a session instead of asking for consent again.
   bool _googleSignedUp = false;
 
+  /// Mock link state. Starts UNLINKED with a password, which is the state the
+  /// escape hatch exists for — the one worth being able to exercise without a
+  /// Google Cloud project.
+  bool _googleLinked = false;
+
   @override
   Future<GoogleResult> signInWithGoogle() async {
     if (_isOffline?.call() ?? false) return const GoogleFailure();
@@ -151,6 +156,42 @@ class MockAuthRepository implements AuthRepository {
     } on Object {
       return const GoogleFailure();
     }
+  }
+
+  @override
+  Future<GoogleLinkStatus?> googleLinkStatus() async {
+    if (_isOffline?.call() ?? false) return null;
+    await Future<void>.delayed(const Duration(milliseconds: 250));
+    return GoogleLinkStatus(
+      linked: _googleLinked,
+      // The mock user has a password, so unlinking is always allowed once
+      // something is linked. The lockout refusal is the server's to make.
+      canUnlink: _googleLinked,
+      hasPassword: true,
+    );
+  }
+
+  @override
+  Future<GoogleLinkResult> linkGoogle() async {
+    if (_isOffline?.call() ?? false) return const GoogleLinkFailed();
+    // Simulate the browser hand-off.
+    await Future<void>.delayed(const Duration(milliseconds: 1200));
+    final bool was = _googleLinked;
+    _googleLinked = true;
+    return GoogleLinkSucceeded(alreadyLinked: was);
+  }
+
+  @override
+  Future<GoogleLinkResult> unlinkGoogle() async {
+    if (_isOffline?.call() ?? false) return const GoogleLinkFailed();
+    await Future<void>.delayed(const Duration(milliseconds: 300));
+    if (!_googleLinked) {
+      return const GoogleLinkFailed(
+        message: 'No Google account is linked to this account.',
+      );
+    }
+    _googleLinked = false;
+    return const GoogleLinkSucceeded();
   }
 
   @override

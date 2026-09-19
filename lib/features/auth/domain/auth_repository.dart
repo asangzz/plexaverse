@@ -143,6 +143,56 @@ class GoogleFailure extends GoogleResult {
   final String? message;
 }
 
+/// Whether this account can sign in with Google, and whether that can be
+/// undone.
+///
+/// [canUnlink] is a server-side fact the app cannot derive: unlinking is
+/// refused when Google is the only way in, and only the server knows whether
+/// a password exists. Sending it means Settings can disable the control rather
+/// than offer it and then refuse.
+class GoogleLinkStatus {
+  const GoogleLinkStatus({
+    required this.linked,
+    required this.canUnlink,
+    required this.hasPassword,
+  });
+
+  final bool linked;
+  final bool canUnlink;
+  final bool hasPassword;
+}
+
+/// Outcome of linking or unlinking Google from a SIGNED-IN account.
+///
+/// Separate from [GoogleResult] because nothing here produces a session: the
+/// user is already authenticated, and the browser trip proves who they are to
+/// Google, not to us.
+sealed class GoogleLinkResult {
+  const GoogleLinkResult();
+}
+
+/// Linked. [alreadyLinked] is true when this exact Google account was already
+/// on the row — a double-tap, which is success, not an error.
+class GoogleLinkSucceeded extends GoogleLinkResult {
+  const GoogleLinkSucceeded({this.alreadyLinked = false});
+  final bool alreadyLinked;
+}
+
+/// Backed out of the browser sheet. Silence, not an error banner.
+class GoogleLinkCancelled extends GoogleLinkResult {
+  const GoogleLinkCancelled();
+}
+
+/// Refused or failed. [message] is the server's own copy where it sent some —
+/// these refusals ("that Google account is already linked to a different
+/// Plexaverse account", "Google is the only way to sign in") are written to be
+/// shown, and a generic message would lose the only thing that tells the user
+/// what to do next.
+class GoogleLinkFailed extends GoogleLinkResult {
+  const GoogleLinkFailed({this.message});
+  final String? message;
+}
+
 /// Seam between the UI and the auth backend. The UI depends only on this
 /// interface; `authRepositoryProvider` (see `data/`) resolves the mock or the
 /// real Dio-backed implementation from `useFakeBackend`, so going live is
@@ -189,6 +239,25 @@ abstract class AuthRepository {
     Map<String, bool> consents = const <String, bool>{},
     String? referralCode,
   });
+
+  /// Current Google-link state for the signed-in user, or null when it could
+  /// not be read (offline, server error). Null is "unknown", NOT "not linked"
+  /// — rendering an unlinked row on a failed read would invite the user to
+  /// link an account that is already linked.
+  Future<GoogleLinkStatus?> googleLinkStatus();
+
+  /// Runs the same browser hand-off as [signInWithGoogle] and attaches the
+  /// resulting identity to the account that is already signed in.
+  ///
+  /// This is the way out of [GoogleAccountExistsWithPassword]: sign-in refuses
+  /// to link a Google identity onto a password account on its own, because it
+  /// cannot tell the owner from someone who pre-registered the address. Once
+  /// the password has been entered, it can.
+  Future<GoogleLinkResult> linkGoogle();
+
+  /// Removes Google as a sign-in method. Refused by the server when it is the
+  /// only one left.
+  Future<GoogleLinkResult> unlinkGoogle();
 
   /// Best-effort server-side session teardown. Local token clearing is owned
   /// by `SignOutController` via `SessionStore.clear()`; this only tells the

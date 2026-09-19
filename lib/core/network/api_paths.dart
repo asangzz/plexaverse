@@ -43,6 +43,17 @@ class ApiPaths {
   /// account. Only reached after `consent_required`.
   static const String googleComplete = '/auth/google/complete';
 
+  /// GET / POST / DELETE — the Google link on an already-signed-in account.
+  ///
+  /// The escape hatch from the sign-in refusal: a password account cannot be
+  /// auto-linked to Google (anyone can pre-register an address, and both
+  /// register routes mark it verified without mailing it), so the user links
+  /// it deliberately from Settings once they have proved the password.
+  ///
+  /// POST takes the same `{code, state, codeVerifier}` as [googleExchange] —
+  /// the browser hand-off is identical, only the destination differs.
+  static const String linkGoogle = '/user/link-google';
+
   /// Warm-boot check — validates the stored token AND returns fresh role /
   /// subscription state that is deliberately not in the token payload.
   static const String me = '/auth/me';
