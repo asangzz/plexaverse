@@ -8,6 +8,7 @@ import '../widgets/ai_tool_image.dart';
 import '../widgets/ai_tool_note.dart';
 import '../widgets/headshot_stepper.dart';
 import '../../../../core/platform/image_picking.dart';
+import '../../../../core/platform/image_sharing.dart';
 
 /// **The Visual Persona** — the web's `/headshots`.
 ///
@@ -445,24 +446,26 @@ class _ResultsStep extends StatelessWidget {
       Text('Your headshots are ready', style: ZaveType.h2),
       SizedBox(height: ZaveSpace.xl),
 
-      for (final String url in session.results) ...<Widget>[
+      for (int i = 0; i < session.results.length; i++) ...<Widget>[
         ZaveCard(
           child: ClipRRect(
             borderRadius: ZaveRadius.cardSmBr,
             // 4:5 — LinkedIn's portrait crop, the same ratio the web uses.
-            child: AiToolImage(source: url, aspectRatio: 4 / 5),
+            child: AiToolImage(source: session.results[i], aspectRatio: 4 / 5),
           ),
+        ),
+        SizedBox(height: ZaveSpace.sm),
+        Align(
+          alignment: Alignment.centerLeft,
+          child: _SaveHeadshot(url: session.results[i], index: i),
         ),
         SizedBox(height: ZaveSpace.md),
       ],
 
       SizedBox(height: ZaveSpace.md),
-      const AiToolNoteRow(
-        title: 'Saving to your phone is not in the app yet',
-        message:
-            'Writing an image to the photo library needs a package this build '
-            'does not ship. Open Plexaverse on the web to download these and '
-            'set one as your LinkedIn profile picture.',
+      Text(
+        'Save one, then set it as your LinkedIn profile picture.',
+        style: ZaveType.caption,
       ),
 
       SizedBox(height: ZaveSpace.lg),
@@ -502,4 +505,59 @@ Future<void> _pick(
   ScaffoldMessenger.of(context)
     ..hideCurrentSnackBar()
     ..showSnackBar(SnackBar(content: Text(message, style: ZaveType.body)));
+}
+
+
+/// Saves one generated headshot.
+///
+/// This screen used to say saving "needs a package this build does not
+/// ship" — true when written, and false since `share_plus` landed for the
+/// banner mission. iOS's sheet carries "Save Image", so the portrait reaches
+/// the camera roll without a photo-library write permission.
+class _SaveHeadshot extends ConsumerStatefulWidget {
+  const _SaveHeadshot({required this.url, required this.index});
+
+  final String url;
+  final int index;
+
+  @override
+  ConsumerState<_SaveHeadshot> createState() => _SaveHeadshotState();
+}
+
+class _SaveHeadshotState extends ConsumerState<_SaveHeadshot> {
+  bool _busy = false;
+
+  Future<void> _save() async {
+    setState(() => _busy = true);
+    try {
+      final ShareResult result = await ref
+          .read(imageSharingProvider)
+          .shareImageUrl(
+            url: widget.url,
+            fileName: 'plexaverse-headshot-${widget.index + 1}.png',
+          );
+      if (!mounted) return;
+      // A dismissed sheet says nothing — the user closed it on purpose.
+      final String? note = switch (result) {
+        ShareSucceeded() => 'Saved.',
+        ShareDismissed() => null,
+        ShareFailed(:final String? message) =>
+          message ?? "Couldn't save that one. Try again.",
+      };
+      if (note == null) return;
+      ScaffoldMessenger.of(context)
+        ..hideCurrentSnackBar()
+        ..showSnackBar(SnackBar(content: Text(note, style: ZaveType.body)));
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) => ZaveButton(
+    label: 'Save',
+    icon: const Icon(Icons.ios_share),
+    busy: _busy,
+    onPressed: _busy ? null : _save,
+  );
 }

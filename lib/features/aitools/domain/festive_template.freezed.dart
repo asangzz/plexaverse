@@ -583,7 +583,9 @@ mixin _$FestiveCustomizations {
 /// which is a legacy gradient colour rather than a brand token; it is kept
 /// verbatim because it is the value the server composites with, and
 /// changing it would silently change every poster generated from the app.
- String get primaryColor;
+ String get primaryColor;/// The uploaded logo, as the URL `/upload/image` returned. Null means no
+/// logo, which the server composites around rather than failing on.
+ String? get logoUrl;
 /// Create a copy of FestiveCustomizations
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
@@ -594,16 +596,16 @@ $FestiveCustomizationsCopyWith<FestiveCustomizations> get copyWith => _$FestiveC
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is FestiveCustomizations&&(identical(other.companyName, companyName) || other.companyName == companyName)&&(identical(other.eventName, eventName) || other.eventName == eventName)&&(identical(other.additionalText, additionalText) || other.additionalText == additionalText)&&(identical(other.date, date) || other.date == date)&&(identical(other.primaryColor, primaryColor) || other.primaryColor == primaryColor));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is FestiveCustomizations&&(identical(other.companyName, companyName) || other.companyName == companyName)&&(identical(other.eventName, eventName) || other.eventName == eventName)&&(identical(other.additionalText, additionalText) || other.additionalText == additionalText)&&(identical(other.date, date) || other.date == date)&&(identical(other.primaryColor, primaryColor) || other.primaryColor == primaryColor)&&(identical(other.logoUrl, logoUrl) || other.logoUrl == logoUrl));
 }
 
 
 @override
-int get hashCode => Object.hash(runtimeType,companyName,eventName,additionalText,date,primaryColor);
+int get hashCode => Object.hash(runtimeType,companyName,eventName,additionalText,date,primaryColor,logoUrl);
 
 @override
 String toString() {
-  return 'FestiveCustomizations(companyName: $companyName, eventName: $eventName, additionalText: $additionalText, date: $date, primaryColor: $primaryColor)';
+  return 'FestiveCustomizations(companyName: $companyName, eventName: $eventName, additionalText: $additionalText, date: $date, primaryColor: $primaryColor, logoUrl: $logoUrl)';
 }
 
 
@@ -614,7 +616,7 @@ abstract mixin class $FestiveCustomizationsCopyWith<$Res>  {
   factory $FestiveCustomizationsCopyWith(FestiveCustomizations value, $Res Function(FestiveCustomizations) _then) = _$FestiveCustomizationsCopyWithImpl;
 @useResult
 $Res call({
- String companyName, String eventName, String additionalText, DateTime? date, String primaryColor
+ String companyName, String eventName, String additionalText, DateTime? date, String primaryColor, String? logoUrl
 });
 
 
@@ -631,14 +633,15 @@ class _$FestiveCustomizationsCopyWithImpl<$Res>
 
 /// Create a copy of FestiveCustomizations
 /// with the given fields replaced by the non-null parameter values.
-@pragma('vm:prefer-inline') @override $Res call({Object? companyName = null,Object? eventName = null,Object? additionalText = null,Object? date = freezed,Object? primaryColor = null,}) {
+@pragma('vm:prefer-inline') @override $Res call({Object? companyName = null,Object? eventName = null,Object? additionalText = null,Object? date = freezed,Object? primaryColor = null,Object? logoUrl = freezed,}) {
   return _then(_self.copyWith(
 companyName: null == companyName ? _self.companyName : companyName // ignore: cast_nullable_to_non_nullable
 as String,eventName: null == eventName ? _self.eventName : eventName // ignore: cast_nullable_to_non_nullable
 as String,additionalText: null == additionalText ? _self.additionalText : additionalText // ignore: cast_nullable_to_non_nullable
 as String,date: freezed == date ? _self.date : date // ignore: cast_nullable_to_non_nullable
 as DateTime?,primaryColor: null == primaryColor ? _self.primaryColor : primaryColor // ignore: cast_nullable_to_non_nullable
-as String,
+as String,logoUrl: freezed == logoUrl ? _self.logoUrl : logoUrl // ignore: cast_nullable_to_non_nullable
+as String?,
   ));
 }
 
@@ -723,10 +726,10 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String companyName,  String eventName,  String additionalText,  DateTime? date,  String primaryColor)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String companyName,  String eventName,  String additionalText,  DateTime? date,  String primaryColor,  String? logoUrl)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _FestiveCustomizations() when $default != null:
-return $default(_that.companyName,_that.eventName,_that.additionalText,_that.date,_that.primaryColor);case _:
+return $default(_that.companyName,_that.eventName,_that.additionalText,_that.date,_that.primaryColor,_that.logoUrl);case _:
   return orElse();
 
 }
@@ -744,10 +747,10 @@ return $default(_that.companyName,_that.eventName,_that.additionalText,_that.dat
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String companyName,  String eventName,  String additionalText,  DateTime? date,  String primaryColor)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String companyName,  String eventName,  String additionalText,  DateTime? date,  String primaryColor,  String? logoUrl)  $default,) {final _that = this;
 switch (_that) {
 case _FestiveCustomizations():
-return $default(_that.companyName,_that.eventName,_that.additionalText,_that.date,_that.primaryColor);case _:
+return $default(_that.companyName,_that.eventName,_that.additionalText,_that.date,_that.primaryColor,_that.logoUrl);case _:
   throw StateError('Unexpected subclass');
 
 }
@@ -764,10 +767,10 @@ return $default(_that.companyName,_that.eventName,_that.additionalText,_that.dat
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String companyName,  String eventName,  String additionalText,  DateTime? date,  String primaryColor)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String companyName,  String eventName,  String additionalText,  DateTime? date,  String primaryColor,  String? logoUrl)?  $default,) {final _that = this;
 switch (_that) {
 case _FestiveCustomizations() when $default != null:
-return $default(_that.companyName,_that.eventName,_that.additionalText,_that.date,_that.primaryColor);case _:
+return $default(_that.companyName,_that.eventName,_that.additionalText,_that.date,_that.primaryColor,_that.logoUrl);case _:
   return null;
 
 }
@@ -779,7 +782,7 @@ return $default(_that.companyName,_that.eventName,_that.additionalText,_that.dat
 
 
 class _FestiveCustomizations extends FestiveCustomizations {
-  const _FestiveCustomizations({this.companyName = '', this.eventName = '', this.additionalText = '', this.date, this.primaryColor = '#7000FF'}): super._();
+  const _FestiveCustomizations({this.companyName = '', this.eventName = '', this.additionalText = '', this.date, this.primaryColor = '#7000FF', this.logoUrl}): super._();
   
 
 @override@JsonKey() final  String companyName;
@@ -793,6 +796,9 @@ class _FestiveCustomizations extends FestiveCustomizations {
 /// verbatim because it is the value the server composites with, and
 /// changing it would silently change every poster generated from the app.
 @override@JsonKey() final  String primaryColor;
+/// The uploaded logo, as the URL `/upload/image` returned. Null means no
+/// logo, which the server composites around rather than failing on.
+@override final  String? logoUrl;
 
 /// Create a copy of FestiveCustomizations
 /// with the given fields replaced by the non-null parameter values.
@@ -804,16 +810,16 @@ _$FestiveCustomizationsCopyWith<_FestiveCustomizations> get copyWith => __$Festi
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is _FestiveCustomizations&&(identical(other.companyName, companyName) || other.companyName == companyName)&&(identical(other.eventName, eventName) || other.eventName == eventName)&&(identical(other.additionalText, additionalText) || other.additionalText == additionalText)&&(identical(other.date, date) || other.date == date)&&(identical(other.primaryColor, primaryColor) || other.primaryColor == primaryColor));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is _FestiveCustomizations&&(identical(other.companyName, companyName) || other.companyName == companyName)&&(identical(other.eventName, eventName) || other.eventName == eventName)&&(identical(other.additionalText, additionalText) || other.additionalText == additionalText)&&(identical(other.date, date) || other.date == date)&&(identical(other.primaryColor, primaryColor) || other.primaryColor == primaryColor)&&(identical(other.logoUrl, logoUrl) || other.logoUrl == logoUrl));
 }
 
 
 @override
-int get hashCode => Object.hash(runtimeType,companyName,eventName,additionalText,date,primaryColor);
+int get hashCode => Object.hash(runtimeType,companyName,eventName,additionalText,date,primaryColor,logoUrl);
 
 @override
 String toString() {
-  return 'FestiveCustomizations(companyName: $companyName, eventName: $eventName, additionalText: $additionalText, date: $date, primaryColor: $primaryColor)';
+  return 'FestiveCustomizations(companyName: $companyName, eventName: $eventName, additionalText: $additionalText, date: $date, primaryColor: $primaryColor, logoUrl: $logoUrl)';
 }
 
 
@@ -824,7 +830,7 @@ abstract mixin class _$FestiveCustomizationsCopyWith<$Res> implements $FestiveCu
   factory _$FestiveCustomizationsCopyWith(_FestiveCustomizations value, $Res Function(_FestiveCustomizations) _then) = __$FestiveCustomizationsCopyWithImpl;
 @override @useResult
 $Res call({
- String companyName, String eventName, String additionalText, DateTime? date, String primaryColor
+ String companyName, String eventName, String additionalText, DateTime? date, String primaryColor, String? logoUrl
 });
 
 
@@ -841,14 +847,15 @@ class __$FestiveCustomizationsCopyWithImpl<$Res>
 
 /// Create a copy of FestiveCustomizations
 /// with the given fields replaced by the non-null parameter values.
-@override @pragma('vm:prefer-inline') $Res call({Object? companyName = null,Object? eventName = null,Object? additionalText = null,Object? date = freezed,Object? primaryColor = null,}) {
+@override @pragma('vm:prefer-inline') $Res call({Object? companyName = null,Object? eventName = null,Object? additionalText = null,Object? date = freezed,Object? primaryColor = null,Object? logoUrl = freezed,}) {
   return _then(_FestiveCustomizations(
 companyName: null == companyName ? _self.companyName : companyName // ignore: cast_nullable_to_non_nullable
 as String,eventName: null == eventName ? _self.eventName : eventName // ignore: cast_nullable_to_non_nullable
 as String,additionalText: null == additionalText ? _self.additionalText : additionalText // ignore: cast_nullable_to_non_nullable
 as String,date: freezed == date ? _self.date : date // ignore: cast_nullable_to_non_nullable
 as DateTime?,primaryColor: null == primaryColor ? _self.primaryColor : primaryColor // ignore: cast_nullable_to_non_nullable
-as String,
+as String,logoUrl: freezed == logoUrl ? _self.logoUrl : logoUrl // ignore: cast_nullable_to_non_nullable
+as String?,
   ));
 }
 

@@ -8,6 +8,8 @@ import '../../domain/festive_template.dart';
 import 'ai_tool_image.dart';
 import 'ai_tool_note.dart';
 import 'ai_tool_sheet.dart';
+import '../../../../core/platform/image_picking.dart';
+import '../../data/ai_tools_repositories.dart';
 
 /// **Customize poster** — the web's `FestiveCustomizer`.
 ///
@@ -55,6 +57,43 @@ class _FestiveCustomizerSheetState
 
   DateTime? _date;
 
+  /// The uploaded logo's URL, once the user has picked one. Uploaded on pick
+  /// rather than on submit so a slow upload does not sit in front of the
+  /// generate button.
+  String? _logoUrl;
+  bool _uploadingLogo = false;
+
+  Future<void> _pickLogo() async {
+    setState(() => _uploadingLogo = true);
+    String? note;
+    try {
+      final ImagePickResult picked = await ref
+          .read(imagePickingProvider)
+          .pick(ImageSourceKind.gallery);
+      switch (picked) {
+        case PickedImage(:final String dataUri):
+          final String url = await ref
+              .read(aiToolsRepositoryProvider)
+              .uploadDataUri(dataUri);
+          if (!mounted) return;
+          setState(() => _logoUrl = url);
+        // Closing the picker is a decision.
+        case ImagePickCancelled():
+          break;
+        case ImagePickFailure(:final String? message):
+          note = message ?? 'Could not open your photos.';
+      }
+    } on Object {
+      note = "That logo didn't upload. Try again.";
+    } finally {
+      if (mounted) setState(() => _uploadingLogo = false);
+    }
+    if (note == null || !mounted) return;
+    ScaffoldMessenger.of(context)
+      ..hideCurrentSnackBar()
+      ..showSnackBar(SnackBar(content: Text(note, style: ZaveType.body)));
+  }
+
   /// `RRGGBB`, already upper-cased by the caller.
   static final RegExp _hexPattern = RegExp(r'^[0-9A-F]{6}$');
 
@@ -81,6 +120,7 @@ class _FestiveCustomizerSheetState
   }
 
   FestiveCustomizations get _values => FestiveCustomizations(
+    logoUrl: _logoUrl,
     companyName: _company.text,
     eventName: _event.text,
     additionalText: _message.text,
@@ -186,12 +226,23 @@ class _FestiveCustomizerSheetState
     final bool busy = poster.isBusy;
 
     return <Widget>[
-      const AiToolNoteRow(
-        title: 'Logo upload is not in the app yet',
-        message:
-            'Adding your logo needs a photo picker, which this build does not '
-            'ship. The poster generates without one; add the logo on the web '
-            'if you need it.',
+      Row(
+        children: <Widget>[
+          Expanded(
+            child: Text(
+              _logoUrl == null
+                  ? 'Add your logo (optional)'
+                  : 'Logo added — it will be composited onto the poster.',
+              style: ZaveType.caption,
+            ),
+          ),
+          SizedBox(width: ZaveSpace.md),
+          ZaveButton(
+            label: _logoUrl == null ? 'Choose' : 'Replace',
+            busy: _uploadingLogo,
+            onPressed: busy || _uploadingLogo ? null : _pickLogo,
+          ),
+        ],
       ),
       SizedBox(height: ZaveSpace.xl),
 

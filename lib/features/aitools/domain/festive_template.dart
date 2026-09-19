@@ -46,11 +46,9 @@ abstract class FestiveGallery with _$FestiveGallery {
 
 /// Everything the user typed into the customizer.
 ///
-/// One field of the web's form is missing here and it is missing on purpose:
-/// `logoUrl`. The web reads a file into a data URI with `FileReader`; this app
-/// ships no image-picker package, so there is nothing to read. The sheet says
-/// so out loud rather than rendering a dead upload box — see
-/// `FestiveCustomizerSheet`.
+/// `logoUrl` was absent here for as long as the app shipped no image picker.
+/// It ships one now, so the field exists and the sheet has a real upload
+/// control instead of a note explaining why it does not.
 @freezed
 abstract class FestiveCustomizations with _$FestiveCustomizations {
   const FestiveCustomizations._();
@@ -70,6 +68,10 @@ abstract class FestiveCustomizations with _$FestiveCustomizations {
     /// verbatim because it is the value the server composites with, and
     /// changing it would silently change every poster generated from the app.
     @Default('#7000FF') String primaryColor,
+
+    /// The uploaded logo, as the URL `/upload/image` returned. Null means no
+    /// logo, which the server composites around rather than failing on.
+    String? logoUrl,
   }) = _FestiveCustomizations;
 
   /// The date exactly as the web sends it: `toLocaleDateString('en-US', …)`

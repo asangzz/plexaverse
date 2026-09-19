@@ -133,6 +133,7 @@ class ApiAiToolsRepository implements AiToolsRepository {
       'eventName': ?_trimmedOrNull(customizations.eventName),
       'additionalText': ?_trimmedOrNull(customizations.additionalText),
       'date': ?customizations.formattedDate,
+      'logoUrl': ?customizations.logoUrl,
       'colors': <String, dynamic>{'primary': customizations.primaryColor},
     };
 
