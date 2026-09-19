@@ -89,5 +89,30 @@
 	<string>Plexaverse needs access to your photos so you can add an image to a post, set your profile picture, or upload your company logo.</string>
 	<key>NSCameraUsageDescription</key>
 	<string>Plexaverse needs access to your camera so you can take a photo for a post or a headshot.</string>
+	<!-- App Transport Security.
+
+	     The dev flavor talks to a Next.js server running on the developer's
+	     own machine over plain HTTP, which ATS blocks by default. The
+	     exception below is scoped to loopback and the local network and
+	     NOTHING else: NSAllowsArbitraryLoads is deliberately absent, so
+	     cleartext to any real host stays blocked and App Store review has
+	     nothing to justify. Apple provides NSAllowsLocalNetworking for
+	     exactly this case.
+
+	     dev  -> http://localhost:3000  (iOS simulator shares the host stack)
+	     prod -> https://www.plexaverse.com — TLS, unaffected by any of this. -->
+	<key>NSAppTransportSecurity</key>
+	<dict>
+		<key>NSAllowsLocalNetworking</key>
+		<true/>
+		<key>NSExceptionDomains</key>
+		<dict>
+			<key>localhost</key>
+			<dict>
+				<key>NSExceptionAllowsInsecureHTTPLoads</key>
+				<true/>
+			</dict>
+		</dict>
+	</dict>
 </dict>
 </plist>

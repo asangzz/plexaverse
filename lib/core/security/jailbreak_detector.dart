@@ -118,7 +118,7 @@ TalsecConfig buildTalsecConfig() {
     watcherMail: 'security@plexaverse.com',
     isProd: !kDebugMode,
     androidConfig: AndroidConfig(
-      packageName: 'com.example.plexaverse',
+      packageName: 'com.plexaverse.app',
       // freeRASP validates the hash FORMAT at AndroidConfig construction time
       // (valid base64 decoding to exactly 32 bytes) even in debug, where the
       // integrity checks don't actually run (isProd=false). The real release
@@ -132,7 +132,7 @@ TalsecConfig buildTalsecConfig() {
       supportedStores: const <String>['com.android.vending'],
     ),
     iosConfig: IOSConfig(
-      bundleIds: const <String>['com.example.plexaverse'],
+      bundleIds: const <String>['com.plexaverse.app'],
       teamId: 'REPLACE_WITH_APPLE_TEAM_ID',
     ),
   );

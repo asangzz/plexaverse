@@ -1,4 +1,4 @@
-package com.example.plexaverse
+package com.plexaverse.app
 
 import io.flutter.embedding.android.FlutterActivity
 

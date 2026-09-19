@@ -5,7 +5,7 @@ plugins {
 }
 
 android {
-    namespace = "com.example.plexaverse"
+    namespace = "com.plexaverse.app"
     compileSdk = flutter.compileSdkVersion
     ndkVersion = flutter.ndkVersion
 
@@ -21,7 +21,7 @@ android {
     }
 
     defaultConfig {
-        applicationId = "com.example.plexaverse"
+        applicationId = "com.plexaverse.app"
         // flutter_local_notifications and firebase_messaging require minSdk >= 21
         minSdk = flutter.minSdkVersion
         targetSdk = flutter.targetSdkVersion

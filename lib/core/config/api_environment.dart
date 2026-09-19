@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 import 'env.dart';
@@ -24,25 +25,48 @@ class ApiEnvironment {
   static const String _override = String.fromEnvironment('API_BASE_URL');
 
   /// Per-flavor base URLs.
+  ///
   ///   mock    — unused (fake repos don't hit the network); kept valid as a
   ///             fallback so the Dio client always has a base.
-  ///   dev     — the LOCAL backend. `10.0.2.2` is the Android emulator's
-  ///             alias for the host machine; on a physical device override
-  ///             with the host's LAN IP:
-  ///             `--dart-define=API_BASE_URL=http://192.168.x.x:8443/api/mobile/v1`.
-  ///   staging — placeholder until a staging deployment exists; release
-  ///             guards refuse a prod boot on placeholder config, and the
-  ///             staging flavor is dev-team-only.
-  ///   prod    — the live API.
-  static const Map<Env, String> _defaults = <Env, String>{
-    Env.mock: 'http://localhost:8443/api/mobile/v1',
-    Env.dev: 'https://dfy-plexaverse-lrthghbmsq-uc.a.run.app/api/mobile/v1', //'http://10.0.2.2:8443/api/mobile/v1',
-    Env.staging: 'https://staging.plexaverse.com/api/mobile/v1',
-    Env.prod: 'https://www.plexaverse.com/api/mobile/v1',
-  };
+  ///   dev     — YOUR LOCAL Next.js server (`npm run dev`, port 3000). See
+  ///             [_localDev] for why the host differs on Android.
+  ///   staging — the SAME deployment prod uses, reached directly at its Cloud
+  ///             Run origin instead of through the public domain. There is no
+  ///             separate staging service, so this is not a third environment
+  ///             — it is prod with Cloudflare taken out of the path, which is
+  ///             what you want when diagnosing whether an edge rule is the
+  ///             thing breaking a request.
+  ///   prod    — the live API on the public domain.
+  static String _defaultFor(Env env) => switch (env) {
+        Env.mock => 'http://localhost:3000/api/mobile/v1',
+        Env.dev => _localDev,
+        Env.staging =>
+          'https://dfy-plexaverse-lrthghbmsq-uc.a.run.app/api/mobile/v1',
+        Env.prod => 'https://www.plexaverse.com/api/mobile/v1',
+      };
+
+  /// The local Next.js dev server, addressed the way each platform can reach it.
+  ///
+  /// `localhost` inside the Android emulator is the EMULATOR, not your Mac —
+  /// `10.0.2.2` is its alias for the host loopback. The iOS simulator shares
+  /// the host's network stack, so plain `localhost` is correct there. Getting
+  /// this wrong produces a connection-refused that looks exactly like a server
+  /// that is not running.
+  ///
+  /// On a PHYSICAL device neither works: pass your Mac's LAN address, e.g.
+  /// `--dart-define=API_BASE_URL=http://192.168.1.16:3000/api/mobile/v1`.
+  ///
+  /// This is cleartext HTTP on purpose — it is localhost. iOS ATS and Android
+  /// cleartext policy both block that by default, so each platform carries a
+  /// LOCALHOST-ONLY exception (see ios/Runner/Info.plist and
+  /// android/app/src/main/res/xml/network_security_config.xml). Neither
+  /// exception permits cleartext to any other host.
+  static String get _localDev => defaultTargetPlatform == TargetPlatform.android
+      ? 'http://10.0.2.2:3000/api/mobile/v1'
+      : 'http://localhost:3000/api/mobile/v1';
 
   static String baseUrlFor(Env env) =>
-      _override.isNotEmpty ? _override : _defaults[env]!;
+      _override.isNotEmpty ? _override : _defaultFor(env);
 }
 
 /// The resolved API base URL for the current build. Consumed by the Dio
