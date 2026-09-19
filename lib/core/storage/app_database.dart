@@ -10,6 +10,7 @@ import 'package:sqlcipher_flutter_libs/sqlcipher_flutter_libs.dart';
 import 'package:sqlite3/open.dart';
 import 'package:sqlite3/sqlite3.dart' as sqlite;
 
+import '../config/env.dart';
 import '../sync/pending_mutation.dart';
 import '../sync/sync_queue.dart';
 import 'dao/notification_dao.dart';
@@ -46,11 +47,28 @@ part 'app_database.g.dart';
   ],
 )
 class AppDatabase extends _$AppDatabase {
-  AppDatabase(SecureStorageService secure) : super(_openConnection(secure));
+  AppDatabase(SecureStorageService secure, {this.seedDemoData = false})
+      : super(_openConnection(secure));
 
   /// Test constructor — bypasses SQLCipher entirely (pass an in-memory or
   /// plain executor). Never used in production.
-  AppDatabase.forTesting(super.executor);
+  AppDatabase.forTesting(super.executor, {this.seedDemoData = false});
+
+  /// Whether a fresh database is filled with the demo fixtures.
+  ///
+  /// **Only ever true for the mock flavor.** This used to be unconditional:
+  /// [migration]'s `beforeOpen` seeded on `details.wasCreated` alone, with no
+  /// flavor, release or `useFakeBackend` check, so a real dev/staging/prod
+  /// install wrote a 40-day streak, 1440 XP, level 8, five invented LinkedIn
+  /// posts and 16,200 impressions of engagement into the user's own encrypted
+  /// database before they had done anything.
+  ///
+  /// Nothing rendered those rows — both readers (`OdysseyPage`,
+  /// `posts_controllers.dart`) were unrouted legacy code, and they are deleted
+  /// in the same change — but the seed is gated rather than removed because it
+  /// is what makes the mock flavor a usable demo. A future screen reading
+  /// these DAOs must inherit an empty database, not someone else's numbers.
+  final bool seedDemoData;
 
   @override
   int get schemaVersion => 1;
@@ -90,8 +108,10 @@ class AppDatabase extends _$AppDatabase {
           // on as soon as the encrypted connection is alive (post_metrics
           // cascades on posts).
           await customStatement('PRAGMA foreign_keys = ON;');
-          // Seed demo product data on the fresh install.
-          if (details.wasCreated) {
+          // Seed demo product data on the fresh install — MOCK FLAVOR ONLY.
+          // See [seedDemoData]: on a real backend these rows would be
+          // indistinguishable from the user's own history.
+          if (details.wasCreated && seedDemoData) {
             await postsDao.seedIfEmpty();
             await userStatsDao.seedIfEmpty();
           }
@@ -285,7 +305,11 @@ class SyncPayloadCodec {
 
 @Riverpod(keepAlive: true)
 AppDatabase appDatabase(Ref ref) {
-  final db = AppDatabase(ref.watch(secureStorageProvider));
+  final db = AppDatabase(
+    ref.watch(secureStorageProvider),
+    // The demo fixtures belong to the mock flavor and nowhere else.
+    seedDemoData: ref.watch(useFakeBackendProvider),
+  );
   ref.onDispose(db.close);
   return db;
 }
