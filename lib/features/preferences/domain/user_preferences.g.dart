@@ -64,6 +64,9 @@ _UserPreferences _$UserPreferencesFromJson(Map<String, dynamic> json) =>
               ?.map((e) => e as String)
               .toList() ??
           const <String>[],
+      posterTheme: json['posterTheme'] as String? ?? 'dark',
+      posterPrimaryColor: json['posterPrimaryColor'] as String?,
+      posterSecondaryColor: json['posterSecondaryColor'] as String?,
       approvalChannel: json['approvalChannel'] as String? ?? 'slack',
     );
 
@@ -103,5 +106,8 @@ Map<String, dynamic> _$UserPreferencesToJson(_UserPreferences instance) =>
       'companyLogoUrl': instance.companyLogoUrl,
       'companyWebsite': instance.companyWebsite,
       'companyFeatures': instance.companyFeatures,
+      'posterTheme': instance.posterTheme,
+      'posterPrimaryColor': instance.posterPrimaryColor,
+      'posterSecondaryColor': instance.posterSecondaryColor,
       'approvalChannel': instance.approvalChannel,
     };

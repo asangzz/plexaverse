@@ -80,6 +80,13 @@ abstract class UserPreferences with _$UserPreferences {
     String? companyWebsite,
     @Default(<String>[]) List<String> companyFeatures,
 
+    /// Poster style. The server composites with these, so the defaults here
+    /// match its own rather than Zave's palette — changing them would
+    /// silently restyle every poster generated from the app.
+    @Default('dark') String posterTheme,
+    String? posterPrimaryColor,
+    String? posterSecondaryColor,
+
     @Default('slack') String approvalChannel,
   }) = _UserPreferences;
 

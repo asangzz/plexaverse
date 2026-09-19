@@ -58,11 +58,34 @@ class _CompanyBrandSectionState extends ConsumerState<CompanyBrandSection> {
     _tagline.dispose();
     _description.dispose();
     _features.dispose();
+    _primary.dispose();
+    _secondary.dispose();
     super.dispose();
   }
 
-  String? _logoUrl;
+  late String? _logoUrl = widget.preferences.companyLogoUrl;
   bool _uploadingLogo = false;
+
+  /// Seeded from what is saved, like every other field here — a style
+  /// editor that opens blank reads as "nothing is set" rather than showing
+  /// the user what their posters currently use.
+  late String _posterTheme = widget.preferences.posterTheme;
+  late final TextEditingController _primary = TextEditingController(
+    text: widget.preferences.posterPrimaryColor ?? '',
+  );
+  late final TextEditingController _secondary = TextEditingController(
+    text: widget.preferences.posterSecondaryColor ?? '',
+  );
+
+  /// `#RRGGBB`, upper-cased, `#` restored — or null for "leave it to the
+  /// product default". Anything that is not six hex digits is treated as
+  /// unset rather than sent, because the server composites with it and a
+  /// malformed value would produce a poster nobody chose.
+  static String? _hex(String raw) {
+    final String v = raw.trim().replaceAll('#', '').toUpperCase();
+    if (v.isEmpty) return null;
+    return RegExp(r'^[0-9A-F]{6}$').hasMatch(v) ? '#$v' : null;
+  }
 
   /// Picks a logo, uploads it, and saves the URL immediately.
   ///
@@ -117,6 +140,9 @@ class _CompanyBrandSectionState extends ConsumerState<CompanyBrandSection> {
                 .map((String line) => line.trim())
                 .where((String line) => line.isNotEmpty)
                 .toList(growable: false),
+            posterTheme: _posterTheme,
+            posterPrimaryColor: _hex(_primary.text),
+            posterSecondaryColor: _hex(_secondary.text),
           );
       if (mounted) {
         showSettingsMessage(
@@ -210,16 +236,54 @@ class _CompanyBrandSectionState extends ConsumerState<CompanyBrandSection> {
               ),
             ],
           ),
+          const SettingsDivider(),
+          Text('POSTER STYLE', style: ZaveType.kicker),
+          SizedBox(height: ZaveSpace.md),
+          Row(
+            children: <Widget>[
+              Expanded(
+                child: Text(
+                  'Dark posters',
+                  style: ZaveType.body,
+                ),
+              ),
+              ZaveSwitch(
+                value: _posterTheme == 'dark',
+                onChanged: (bool dark) =>
+                    setState(() => _posterTheme = dark ? 'dark' : 'light'),
+              ),
+            ],
+          ),
+          SizedBox(height: ZaveSpace.md),
+          ZaveField(
+            controller: _primary,
+            label: 'Primary colour',
+            hint: '#7000FF',
+          ),
+          SizedBox(height: ZaveSpace.md),
+          ZaveField(
+            controller: _secondary,
+            label: 'Secondary colour',
+            hint: '#0F172A',
+          ),
+          SizedBox(height: ZaveSpace.md),
+          // Hex rather than a colour wheel, deliberately: a brand colour is
+          // a value the user already has written down somewhere, and typing
+          // it is more accurate than finding it on a gradient.
+          Text(
+            'Six hex digits, with or without the #. Left blank, posters use '
+            'the product default.',
+            style: ZaveType.caption,
+          ),
           SizedBox(height: ZaveSpace.lg),
-          // The poster TEMPLATE picker is still absent: it needs the Studio
-          // designs list, and Studio is admin-gated in v1 — so there is
-          // nothing for an end user to choose from yet.
+          // The TEMPLATE picker stays absent, and for a reason worth
+          // stating: it needs the Studio designs list, and Studio is
+          // admin-gated in v1 — there is nothing for an end user to choose.
           const UnavailableNote(
-            title: 'Poster colours and template',
+            title: 'Poster template',
             message:
-                'Poster colours and the template picker stay in the web app '
-                'for now. Generated posters keep using whatever is saved '
-                'there.',
+                'Choosing a saved Plexa Studio design as your poster template '
+                'is web-only while Studio itself is admin-only in the app.',
           ),
         ],
       ),
