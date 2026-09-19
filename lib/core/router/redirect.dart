@@ -29,20 +29,32 @@ enum RedirectTarget { stay, splash, onboarding, login, home, unlock }
 /// Pure routing decision. `stay` means "no redirect" (`null`). No Riverpod /
 /// Flutter dependencies — exhaustively unit-testable.
 ///
-/// Rules, in priority order (splash → onboarding → login/unlock → home):
+/// Rules, in priority order (splash → unlock → login → onboarding → home):
 ///   0. /styleguide is public (dev/design reference) → stay.
 ///   1. Session / lock / onboarding state still resolving on cold start →
 ///      hold on the splash.
-///   2. Onboarding not yet completed → /onboarding (before any auth rule —
-///      a fresh install sees the carousel first, whatever the target).
-///   3. Signed in && idle > timeout → /login (clearSession).
-///   4. Signed in && locked → /unlock (precedence over every signed-in
+///   2. Signed in && idle > timeout → /login (clearSession).
+///   3. Signed in && locked → /unlock (precedence over every signed-in
 ///      destination).
-///   5. At /unlock but no longer locked / signed in → move on.
-///   6. At /(splash) or a completed /onboarding → home or login by auth.
-///   7. Not signed in (or gate errored) → /login, except on the pre-auth
-///      surface.
-///   8. Signed in && still on a pre-auth route → /home.
+///   4. At /unlock but no longer locked / signed in → move on.
+///   5. NOT signed in → /login, except on the pre-auth surface.
+///   6. Signed in && onboarding not completed → /onboarding.
+///   7. At /(splash), a completed /onboarding, or a pre-auth route while
+///      signed in → /home.
+///
+/// **The onboarding gate sits BELOW the auth gate, and that ordering is the
+/// whole point of it.** It used to sit above every auth rule, on the
+/// inherited assumption that `/onboarding` was a pre-auth carousel a fresh
+/// install should see before anything else. It is not: `OnboardingChatPage`
+/// is the authenticated "Plexa setup" chat. It opens by calling `/auth/me`
+/// for the user's name and it finishes by PATCHing `/user/preferences`.
+///
+/// With the gate on top, a signed-out fresh install was sent into that chat,
+/// 401'd on the opening call, answered every question against a server that
+/// did not know who they were, and hit "I hit a snag saving your setup" at
+/// the end — having never been shown a login screen. Web has always had this
+/// right: `/onboarding` lives under the `(dashboard)` route group, which
+/// requires a session.
 ({RedirectTarget target, bool clearSession}) redirectDecision({
   required String location,
   required AuthGate? gate,
@@ -65,15 +77,6 @@ enum RedirectTarget { stay, splash, onboarding, login, home, unlock }
     return atSplash
         ? stay
         : (target: RedirectTarget.splash, clearSession: false);
-  }
-
-  // Onboarding gate — ahead of every auth rule. A fresh install is held on
-  // the carousel until it is completed (persisted flag), then falls through
-  // to the ordinary auth routing below.
-  if (!onboardingComplete) {
-    return atOnboarding
-        ? stay
-        : (target: RedirectTarget.onboarding, clearSession: false);
   }
 
   final signedIn = gate != null && gate.signedIn;
@@ -101,23 +104,27 @@ enum RedirectTarget { stay, splash, onboarding, login, home, unlock }
         : (target: RedirectTarget.login, clearSession: false);
   }
 
-  // Leaving the splash, or lingering on a completed onboarding → route on.
-  if (atSplash || atOnboarding) {
-    return signedIn
-        ? (target: RedirectTarget.home, clearSession: false)
-        : (target: RedirectTarget.login, clearSession: false);
-  }
-
   // Not signed in (or gate errored): the pre-auth surface is allowed,
-  // anything else bounces to /login.
+  // anything else bounces to /login — INCLUDING /onboarding. See the class
+  // comment: that chat cannot function, or save, without a session.
   if (!signedIn) {
     return atPreAuth
         ? stay
         : (target: RedirectTarget.login, clearSession: false);
   }
 
-  // Signed in and still on a pre-auth route → home.
-  if (atPreAuth) return (target: RedirectTarget.home, clearSession: false);
+  // Signed in, but setup is unfinished → hold on the Plexa setup chat.
+  if (!onboardingComplete) {
+    return atOnboarding
+        ? stay
+        : (target: RedirectTarget.onboarding, clearSession: false);
+  }
+
+  // Signed in, set up, and sitting somewhere that is not a destination:
+  // the splash, a completed onboarding, or the login screen → home.
+  if (atSplash || atOnboarding || atPreAuth) {
+    return (target: RedirectTarget.home, clearSession: false);
+  }
 
   return stay;
 }
