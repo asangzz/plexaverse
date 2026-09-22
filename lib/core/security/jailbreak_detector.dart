@@ -126,9 +126,27 @@ TalsecConfig buildTalsecConfig() {
       // ("Invalid hash length"). Use a valid 32-byte dummy in debug so the app
       // boots; keep the real placeholder for release builds — the release guard
       // in bootstrap/release_guards.dart still refuses a prod boot on it.
+      // Release builds take the hash from a BUILD-TIME define rather than an
+      // edited source file: it is environment-specific, not secret, and
+      // hard-coding it means every developer with a different keystore has to
+      // edit and un-edit the same line.
+      //
+      //   --dart-define=ANDROID_SIGNING_CERT_SHA256=<base64 of the 32 raw bytes>
+      //
+      // BASE64, not the colon-separated hex `keytool -list` prints. freeRASP
+      // validates the format at construction and an hex string fails as
+      // "Invalid hash length".
+      //
+      // Unset, it stays the placeholder — which the release guard in
+      // bootstrap/release_guards.dart refuses to boot prod with, deliberately.
       signingCertHashes: kDebugMode
           ? const <String>['AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=']
-          : const <String>['REPLACE_WITH_RELEASE_SIGNING_CERT_SHA256'],
+          : const <String>[
+              String.fromEnvironment(
+                'ANDROID_SIGNING_CERT_SHA256',
+                defaultValue: 'REPLACE_WITH_RELEASE_SIGNING_CERT_SHA256',
+              ),
+            ],
       supportedStores: const <String>['com.android.vending'],
     ),
     iosConfig: IOSConfig(
