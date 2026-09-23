@@ -6,6 +6,7 @@ import '../../settings/data/settings_repositories.dart'
     show settingsRepositoryProvider;
 import '../data/preferences_repositories.dart';
 import '../domain/preferences_repository.dart';
+import '../../../core/router/auth_gate.dart';
 
 part 'preferences_controller.g.dart';
 
@@ -26,8 +27,23 @@ part 'preferences_controller.g.dart';
 @riverpod
 class PreferencesController extends _$PreferencesController {
   @override
-  Future<UserPreferences> build() =>
-      ref.watch(preferencesRepositoryProvider).fetch();
+  Future<UserPreferences> build() {
+    // Rebuild whenever the SESSION changes, not just on first read.
+    //
+    // This is an authenticated call, and the router now reads it to decide
+    // the onboarding gate — which means it gets initialised while the user
+    // is still signed OUT, 401s, and caches that error. Without this watch
+    // nothing refetches it after sign-in, so the gate kept falling back to
+    // the device-local flag: every user who signed in on a fresh install was
+    // sent to onboarding and stayed there, existing account or not.
+    //
+    // Watching the gate also clears the previous user's preferences on a
+    // sign-out, which matters more than the bug that prompted it: the row
+    // decides brand type and which dashboard renders, and serving one
+    // account's to the next is worse than serving none.
+    ref.watch(authGateProvider);
+    return ref.watch(preferencesRepositoryProvider).fetch();
+  }
 
   /// Profile Details — the web's first section.
   Future<void> saveProfile({

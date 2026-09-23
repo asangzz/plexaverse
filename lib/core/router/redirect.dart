@@ -192,10 +192,24 @@ String? appRedirect(Ref ref, GoRouterState state) {
       _ => true,
     },
   };
-  // Only the LOCAL flag holds the splash. Preferences need a session, and a
-  // signed-out user would otherwise wait on a call that will never be made.
+  // What holds the splash.
+  //
+  // The local flag always does — it is a disk read and resolves in
+  // milliseconds.
+  //
+  // Preferences hold it too, but ONLY while signed in. A signed-out user
+  // would otherwise wait on a call that is never made. And waiting here is
+  // the point: immediately after sign-in the answer is still in flight, and
+  // guessing from the device-local flag sends a returning user to onboarding
+  // for the moment it takes to arrive — a flash of the wrong screen, or on a
+  // slow connection several seconds of it, before the redirect corrects.
+  // Better to hold the splash than to answer wrongly and take it back.
+  final signedInNow = gate?.signedIn ?? false;
   final onboardingResolving =
-      !localOnboarding.hasValue && localOnboarding is! AsyncError;
+      (!localOnboarding.hasValue && localOnboarding is! AsyncError) ||
+      (signedInNow &&
+          !serverOnboarding.hasValue &&
+          serverOnboarding is! AsyncError);
 
   final isResolving = gateResolving || lockResolving || onboardingResolving;
   final location = state.matchedLocation;

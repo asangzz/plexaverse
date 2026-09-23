@@ -72,6 +72,45 @@ void main() {
     });
   });
 
+  group('a returning user is never sent to setup while the answer is loading', () {
+    // The production bug this pins. The onboarding gate reads the SERVER's
+    // onboardingCompleted, but on a fresh install the device-local flag is
+    // false — so during the window where preferences are still in flight,
+    // falling back to that flag sent every signed-in user to onboarding.
+    // With a cached 401 from before sign-in it never corrected, and they
+    // stayed there: an existing account, looking at a setup chat.
+    test('resolving holds the splash rather than guessing "not onboarded"', () {
+      expect(
+        target(
+          location: RoutePaths.home,
+          gate: signedIn,
+          isResolving: true,
+          onboardingComplete: false,
+        ),
+        RedirectTarget.splash,
+      );
+    });
+
+    test('once the server says completed, they go home and not to setup', () {
+      expect(
+        target(location: RoutePaths.home, gate: signedIn, onboardingComplete: true),
+        RedirectTarget.stay,
+      );
+      expect(
+        target(location: RoutePaths.splash, gate: signedIn, onboardingComplete: true),
+        RedirectTarget.home,
+      );
+    });
+
+    test('a genuinely new user still reaches setup', () {
+      // The fix must not break the case the gate exists for.
+      expect(
+        target(location: RoutePaths.home, gate: signedIn, onboardingComplete: false),
+        RedirectTarget.onboarding,
+      );
+    });
+  });
+
   group('auth boundary', () {
     test('signed out, /login is allowed', () {
       expect(target(location: RoutePaths.login, gate: signedOut), RedirectTarget.stay);
