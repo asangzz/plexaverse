@@ -29,22 +29,47 @@ import '../../../../core/router/zave_routes.dart';
 /// drawn, and blocked first paint on it; it was removed, and re-adding one on
 /// mobile would re-import the same mistake. What this screen asks the server
 /// for is the roadmap, the preferences that choose between the two seasons, and
-/// the XP balance in the header — nothing else.
+/// the XP balance in the corner — nothing else.
 class HomePage extends StatelessWidget {
   const HomePage({super.key});
 
   @override
   Widget build(BuildContext context) {
-    return const ZaveScaffold(
-      // No title: the screen carries its own heading inside the timeline
-      // ("Your 66-day plan"), and Zave screens never wear both.
-      actions: <Widget>[_XpPill()],
-      body: _HomeBody(),
+    // No header at all — not even for the XP pill.
+    //
+    // `actions` alone was enough to build one, so home wore a full sticky
+    // header (blur, hairline, the lot) to carry a single read-only pill. The
+    // pill stays where it was; it is now laid over the body rather than
+    // mounted in chrome, so the timeline runs to the top of the screen the
+    // way it was drawn to.
+    return const ZaveScaffold(body: _HomeWithXp());
+  }
+}
+
+/// The roadmap, with the XP balance laid over its top-right corner.
+///
+/// [IgnorePointer] because the pill is a readout, not a control: overlaying it
+/// must not take taps away from the timeline underneath, and the orbit is
+/// exactly where a thumb reaches for the current day.
+class _HomeWithXp extends StatelessWidget {
+  const _HomeWithXp();
+
+  @override
+  Widget build(BuildContext context) {
+    return Stack(
+      children: <Widget>[
+        const _HomeBody(),
+        Positioned(
+          top: MediaQuery.paddingOf(context).top + ZaveSpace.sm,
+          right: ZaveSpace.gutter,
+          child: const IgnorePointer(child: _XpPill()),
+        ),
+      ],
     );
   }
 }
 
-/// The XP balance, where the web puts it — up in the mobile header.
+/// The XP balance, where the web puts it — top-right of the home screen.
 ///
 /// Amber because amber is Zave's word for points. (Blue is "the XP *path*" and
 /// belongs to the buttons that lead to buying or earning it, not to a readout
@@ -61,13 +86,10 @@ class _XpPill extends ConsumerWidget {
       // is decoration on a screen whose job is the roadmap.
       error: (Object _, StackTrace _) => const SizedBox.shrink(),
       loading: () => const SizedBox.shrink(),
-      data: (XpBalance value) => Padding(
-        padding: EdgeInsets.only(right: ZaveSpace.sm),
-        child: ZavePill(
-          label: '${value.balance} XP',
-          color: ZaveColors.amber,
-          leading: const ZaveDot(ZaveColors.amber),
-        ),
+      data: (XpBalance value) => ZavePill(
+        label: '${value.balance} XP',
+        color: ZaveColors.amber,
+        leading: const ZaveDot(ZaveColors.amber),
       ),
     );
   }

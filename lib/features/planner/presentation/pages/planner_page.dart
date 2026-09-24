@@ -32,7 +32,8 @@ class PlannerPage extends ConsumerWidget {
     );
 
     return ZaveScaffold(
-      title: 'Plan',
+      // No header. The body opens with its own `Week N` / `planner` lockup,
+      // and a Zave screen never wears both.
       body: RefreshIndicator(
         color: ZaveColors.white,
         backgroundColor: ZaveColors.deep,

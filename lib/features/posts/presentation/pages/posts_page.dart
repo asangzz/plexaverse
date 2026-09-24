@@ -131,7 +131,8 @@ class _PostsPageState extends ConsumerState<PostsPage> {
     final PostLibraryFilter filter = ref.watch(postFilterProvider);
 
     return ZaveScaffold(
-      title: 'Posts',
+      // No header — the name moves into the scroll view as an `.h2`, above the
+      // lead line that was already there.
       body: RefreshIndicator(
         color: ZaveColors.white,
         backgroundColor: ZaveColors.deep,
@@ -141,6 +142,8 @@ class _PostsPageState extends ConsumerState<PostsPage> {
         },
         child: ZaveScrollView(
           children: <Widget>[
+            Text('Posts', style: ZaveType.h2),
+            SizedBox(height: ZaveSpace.md),
             Text('Manage all your LinkedIn posts', style: ZaveType.lead),
             SizedBox(height: ZaveSpace.lg),
             ZaveButton(

@@ -72,7 +72,8 @@ class _CalendarPageState extends ConsumerState<CalendarPage> {
     );
 
     return ZaveScaffold(
-      title: 'Calendar',
+      // No header — the name moves into the scroll view as an `.h2`, which is
+      // what every other headerless Zave screen does.
       body: RefreshIndicator(
         color: ZaveColors.white,
         backgroundColor: ZaveColors.deep,
@@ -97,6 +98,8 @@ class _CalendarPageState extends ConsumerState<CalendarPage> {
 
     return ZaveScrollView(
       children: <Widget>[
+        Text('Calendar', style: ZaveType.h2),
+        SizedBox(height: ZaveSpace.lg),
         _MonthStepper(
           viewMonth: _viewMonth,
           onPrevious: () => setState(() {
