@@ -1,0 +1,101 @@
+{
+  // Run and debug profiles for the Plexaverse app.
+  //
+  // Pick the device first (the status-bar device selector, bottom right), then
+  // the profile here. None of these pin a `deviceId`, so each one runs on
+  // whatever is selected — the same profile serves the iOS simulator, the Moto
+  // and macOS.
+  //
+  // ── Which API each one talks to ────────────────────────────────────────
+  //   Local           your `npm run dev` on this Mac, port 3000
+  //   Production      https://www.plexaverse.com/api/mobile/v1
+  //   Mock            nothing — bundled JSON fixtures, no backend running
+  //
+  // The flavor (`main_dev` / `main_prod` / `main_mock`) picks the default API
+  // URL AND whether the real Dio repositories or the fixtures are used.
+  // `--dart-define=API_BASE_URL=…` overrides the URL only, which is what the
+  // physical-device profile below needs.
+  "version": "0.2.0",
+  "configurations": [
+    {
+      // The everyday one. Works on the iOS simulator as-is (the simulator
+      // shares this Mac's network, so `localhost` is this Mac).
+      //
+      // On a PHYSICAL phone `localhost` is the PHONE, so run this first, in a
+      // terminal, and leave the cable in:
+      //
+      //     adb reverse tcp:3000 tcp:3000
+      //
+      // That points the phone's own port 3000 back down the USB cable to this
+      // Mac. Re-run it after every replug or reboot — it does not survive
+      // either.
+      //
+      // Why not the Mac's LAN IP, which would need no tunnel: Google will not
+      // accept one as an OAuth redirect URI. `http://localhost:3000/api/google
+      // /mobile-callback` is registered and a `192.168.x.x` equivalent cannot
+      // be, so signing in would break on exactly the flow you most need to
+      // test.
+      "name": "Local API (simulator, or phone with adb reverse)",
+      "request": "launch",
+      "type": "dart",
+      "program": "lib/main_dev.dart",
+      "toolArgs": [
+        "--dart-define=API_BASE_URL=http://localhost:3000/api/mobile/v1"
+      ]
+    },
+    {
+      // The Android EMULATOR only. `localhost` inside it is the emulator, and
+      // 10.0.2.2 is its alias for the host loopback — no adb reverse needed.
+      // This is also what `Env.dev` resolves to on Android with no override,
+      // so the define is belt and braces for when the profile is copied.
+      "name": "Local API (Android emulator)",
+      "request": "launch",
+      "type": "dart",
+      "program": "lib/main_dev.dart",
+      "toolArgs": [
+        "--dart-define=API_BASE_URL=http://10.0.2.2:3000/api/mobile/v1"
+      ]
+    },
+    {
+      // The live API, with the debugger attached. Real accounts, real posts,
+      // real LinkedIn — every write here is a write to production.
+      //
+      // Debug mode exempts this from the prod boot guard (see
+      // bootstrap/release_guards.dart): freeRASP's integrity checks are off in
+      // debug, so there is nothing for placeholder config to compromise. A
+      // PROFILE or RELEASE build of this flavor still refuses to boot without
+      // a real signing-cert hash.
+      "name": "Production API",
+      "request": "launch",
+      "type": "dart",
+      "program": "lib/main_prod.dart"
+    },
+    {
+      // No backend at all. The fixtures in assets/mock/ stand in for every
+      // endpoint, so this runs on a plane. Use it for UI work.
+      "name": "Mock (no backend)",
+      "request": "launch",
+      "type": "dart",
+      "program": "lib/main_mock.dart"
+    },
+    {
+      // Frame timings and jank, on a physical device. Profile mode is the only
+      // honest place to measure: debug builds run unoptimised Dart and will
+      // lie to you.
+      //
+      // freeRASP IS live in profile, so the signing-cert hash has to be real.
+      // The value below is this Mac's Android DEBUG keystore, which is what
+      // `flutter run --profile` signs with when android/key.properties is
+      // absent. On another machine, or once a release keystore exists, this
+      // has to be recomputed — see the release APK steps.
+      "name": "Production API — profile mode (perf)",
+      "request": "launch",
+      "type": "dart",
+      "program": "lib/main_prod.dart",
+      "flutterMode": "profile",
+      "toolArgs": [
+        "--dart-define=ANDROID_SIGNING_CERT_SHA256=z7Q2chWwwY9Ai5aDKOV7R6D6TVcEQalqCirYrf/QeQA="
+      ]
+    }
+  ]
+}

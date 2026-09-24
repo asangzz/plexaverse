@@ -24,6 +24,14 @@ void assertTenantCatalogueComplete() {
 /// flavors skip it (RULINGS §12).
 void assertReleaseConfigSane(Env env, AppLogger logger) {
   if (env != Env.prod) return;
+  // Debug builds are exempt, and the condition is `kDebugMode` rather than
+  // `!kReleaseMode` on purpose: it is exactly the condition freeRASP itself
+  // is configured with (`isProd: !kDebugMode`). In debug the integrity checks
+  // do not run at all, so refusing to boot over their configuration blocks a
+  // developer from pointing the app at production — which is an ordinary
+  // thing to do and the only way to debug against it — while protecting
+  // nothing. Profile builds are NOT exempt: freeRASP is live there.
+  if (kDebugMode) return;
   _assertTalsecConfigured(logger);
   _assertTenantUrlsConfigured(logger);
 }
