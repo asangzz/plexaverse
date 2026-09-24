@@ -44,10 +44,11 @@ enum _AuthMode { signIn, createAccount }
 ///
 ///  * **One solid-white button per screen.** That is the email CTA. The social
 ///    buttons are therefore `ghost`, which also matches the web's hierarchy.
-///  * **Selected inverts to solid white.** The mode toggle is a [ZaveChip]
-///    pair, not a `SegmentedButton` — a segmented control would bring Material's
-///    own selection language (a tinted fill and a check glyph) onto a surface
-///    whose whole selection grammar is the inversion.
+///  * **Selected inverts to solid white.** The mode toggle is a hand-built
+///    segmented control, never Material's `SegmentedButton` — that would bring
+///    its own selection language (a tinted fill and a check glyph) onto a
+///    surface whose whole selection grammar is the inversion. See
+///    [_ModeToggle] for why it is not a ZaveChip pair either.
 ///  * **Dark only.** Zave has one appearance, so the `isDark` fork every child
 ///    widget used to carry is removed rather than defaulted.
 class AuthPage extends ConsumerStatefulWidget {
@@ -119,8 +120,6 @@ class _AuthPageState extends ConsumerState<AuthPage>
 
   /// Owned here rather than built inline so they are disposed. A recognizer
   /// created in `build` leaks one per rebuild.
-  late final TapGestureRecognizer _switchModeTap = TapGestureRecognizer()
-    ..onTap = _toggleMode;
   late final TapGestureRecognizer _termsTap = TapGestureRecognizer();
   late final TapGestureRecognizer _privacyTap = TapGestureRecognizer();
 
@@ -131,7 +130,6 @@ class _AuthPageState extends ConsumerState<AuthPage>
     _nameCtrl.dispose();
     _referralCtrl.dispose();
     _shakeCtrl.dispose();
-    _switchModeTap.dispose();
     _termsTap.dispose();
     _privacyTap.dispose();
     super.dispose();
@@ -353,9 +351,6 @@ class _AuthPageState extends ConsumerState<AuthPage>
     });
   }
 
-  void _toggleMode() =>
-      _setMode(_isSignIn ? _AuthMode.createAccount : _AuthMode.signIn);
-
   @override
   Widget build(BuildContext context) {
     final bool isSignIn = _isSignIn;
@@ -368,9 +363,6 @@ class _AuthPageState extends ConsumerState<AuthPage>
         behavior: HitTestBehavior.translucent,
         child: ZaveScrollView(
           children: <Widget>[
-            const _PlexaLockup(),
-            SizedBox(height: ZaveSpace.xl),
-
             Text(
               isSignIn ? 'Sign in' : 'Create an account',
               style: ZaveType.h2,
@@ -519,69 +511,12 @@ class _AuthPageState extends ConsumerState<AuthPage>
           ],
         ),
       ),
-      // Thumb-reachable, and outside the scroll view so it never scrolls away.
-      bottomBar: SafeArea(
-        top: false,
-        child: Padding(
-          padding: EdgeInsets.symmetric(
-            horizontal: ZaveSpace.gutter,
-            vertical: ZaveSpace.lg,
-          ),
-          child: Text.rich(
-            TextSpan(
-              text: isSignIn
-                  ? "Don't have an account? "
-                  : 'Already have an account? ',
-              style: ZaveType.bodyMuted,
-              children: <InlineSpan>[
-                TextSpan(
-                  text: isSignIn ? 'Create one' : 'Sign in',
-                  // `--zv-peri` is Zave's link colour. This is the one place a
-                  // tinted word is correct: it is a link, not a control.
-                  style: ZaveType.body.copyWith(color: ZaveColors.peri),
-                  recognizer: _switchModeTap,
-                ),
-              ],
-            ),
-            textAlign: TextAlign.center,
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-// ════════════════════════════════════════════════════════════════════════════
-// The lockup
-// ════════════════════════════════════════════════════════════════════════════
-
-/// The Plexaverse mark and wordmark.
-///
-/// The pre-alignment lockup was a violet→purple gradient tile under a coloured
-/// drop shadow. Zave has neither decorative gradients nor shadows — depth is a
-/// fill step — so the mark is the [ZaveGlass.now] step (the "this is the one"
-/// surface) with the letter in white.
-class _PlexaLockup extends StatelessWidget {
-  const _PlexaLockup();
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      children: <Widget>[
-        Container(
-          height: ZaveSpace.iconBtn,
-          width: ZaveSpace.iconBtn,
-          alignment: Alignment.center,
-          decoration: BoxDecoration(
-            color: ZaveGlass.now,
-            border: Border.all(color: ZaveGlass.nowBorder, width: 1),
-            shape: BoxShape.circle,
-          ),
-          child: Text('P', style: ZaveType.h3),
-        ),
-        SizedBox(width: ZaveSpace.md),
-        Text('Plexaverse', style: ZaveType.h3),
-      ],
+      // No footer. It offered the same choice as the mode toggle a few
+      // hundred pixels above it, in a second grammar — a tinted link rather
+      // than a control — so the screen asked twice and answered in two
+      // different languages. The toggle is the one that survives: it is a
+      // control, it says which side you are on, and it is where a user who
+      // has read the heading is already looking.
     );
   }
 }
@@ -590,11 +525,23 @@ class _PlexaLockup extends StatelessWidget {
 // Mode toggle — a chip pair, never a SegmentedButton
 // ════════════════════════════════════════════════════════════════════════════
 
-/// Sign in / Create account.
+/// Sign in / Create account, as one segmented control.
 ///
-/// Two [ZaveChip]s. The selected one inverts to solid white with ink letters,
-/// which is the entire selection language of this system — a tinted pill or an
-/// underline would read as a different product.
+/// The selected half inverts to solid white with ink letters, which is the
+/// entire selection language of this system — a tinted pill or an underline
+/// would read as a different product.
+///
+/// **Why this is not a [ZaveChip] pair.** It was, and two chips are two
+/// objects: each drew its own fill and hairline, so the unselected one sat
+/// beside the selected one as a second thing you could also have, rather than
+/// the other half of one switch. Inside a track that reading gets worse, not
+/// better — a hairline pill inside a hairline pill. Here the track owns the
+/// border and the unselected half is drawn with nothing at all, so what you
+/// see is one control with a lit side.
+///
+/// The halves are [Expanded] rather than sized to their labels: equal halves
+/// are what makes a track read as a track, and 'Sign in' and 'Create account'
+/// are nowhere near the same width.
 class _ModeToggle extends StatelessWidget {
   const _ModeToggle({required this.mode, required this.onChanged});
 
@@ -603,20 +550,73 @@ class _ModeToggle extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Row(
-      children: <Widget>[
-        ZaveChip(
-          label: 'Sign in',
-          selected: mode == _AuthMode.signIn,
-          onTap: () => onChanged(_AuthMode.signIn),
+    return Container(
+      padding: EdgeInsets.all(ZaveSpace.xs),
+      decoration: BoxDecoration(
+        border: Border.all(color: ZaveColors.rule, width: 1),
+        borderRadius: BorderRadius.circular(ZaveRadius.pill),
+      ),
+      child: Row(
+        children: <Widget>[
+          Expanded(
+            child: _ModeHalf(
+              label: 'Sign in',
+              selected: mode == _AuthMode.signIn,
+              onTap: () => onChanged(_AuthMode.signIn),
+            ),
+          ),
+          Expanded(
+            child: _ModeHalf(
+              label: 'Create account',
+              selected: mode == _AuthMode.createAccount,
+              onTap: () => onChanged(_AuthMode.createAccount),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// One half of [_ModeToggle]. Transparent until selected.
+class _ModeHalf extends StatelessWidget {
+  const _ModeHalf({
+    required this.label,
+    required this.selected,
+    required this.onTap,
+  });
+
+  final String label;
+  final bool selected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Semantics(
+      button: true,
+      selected: selected,
+      label: label,
+      child: ZavePress(
+        child: GestureDetector(
+          onTap: onTap,
+          behavior: HitTestBehavior.opaque,
+          child: AnimatedContainer(
+            duration: ZaveMotion.fast,
+            curve: ZaveMotion.curve,
+            alignment: Alignment.center,
+            constraints: BoxConstraints(minHeight: ZaveSpace.minTapTarget),
+            decoration: selected
+                ? ZaveSurface.chipSelected
+                : const BoxDecoration(),
+            child: Text(
+              label,
+              style: ZaveType.label.copyWith(
+                color: selected ? ZaveColors.ink : ZaveColors.ink85,
+              ),
+            ),
+          ),
         ),
-        SizedBox(width: ZaveSpace.sm),
-        ZaveChip(
-          label: 'Create account',
-          selected: mode == _AuthMode.createAccount,
-          onTap: () => onChanged(_AuthMode.createAccount),
-        ),
-      ],
+      ),
     );
   }
 }
