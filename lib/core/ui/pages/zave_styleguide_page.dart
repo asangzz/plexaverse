@@ -50,6 +50,8 @@ class _ZaveStyleguidePageState extends State<ZaveStyleguidePage> {
             ('void', ZaveColors.void_),
             ('midnight', ZaveColors.midnight),
             ('deep', ZaveColors.deep),
+            ('dusk', ZaveColors.dusk),
+            ('pitch', ZaveColors.pitch),
             ('glow', ZaveColors.glow),
             ('horizon', ZaveColors.horizon),
           ]),

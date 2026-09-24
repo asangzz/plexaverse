@@ -144,11 +144,22 @@ class ZaveSurface {
 class ZaveGround {
   const ZaveGround._();
 
-  /// The base vertical wash: midnight at the top, deep at the foot.
+  /// The base vertical wash: blue at the top, near-black at the foot.
+  ///
+  /// It used to run midnight → deep across the whole height, which meant the
+  /// page got BLUER the further down it went — deep is the brighter colour of
+  /// the two. On a phone that is most of what you see, so the app read as blue
+  /// rather than as a dark surface with a lit top.
+  ///
+  /// The lit part is now the top third and the rest falls away to [pitch]. The
+  /// 0.30 stop is [ZaveColors.dusk], which is exactly the colour the old wash
+  /// reached at that height — so the top 30% is pixel-identical to before and
+  /// only the descent below it changed.
   static const LinearGradient base = LinearGradient(
     begin: Alignment.topCenter,
     end: Alignment.bottomCenter,
-    colors: <Color>[ZaveColors.midnight, ZaveColors.deep],
+    colors: <Color>[ZaveColors.midnight, ZaveColors.dusk, ZaveColors.pitch],
+    stops: <double>[0.0, 0.30, 1.0],
   );
 
   /// The single top-left glow, laid over [base].

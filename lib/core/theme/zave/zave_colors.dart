@@ -30,8 +30,21 @@ class ZaveColors {
   /// `--zv-midnight` — the app base. Every signed-in screen starts here.
   static const Color midnight = Color(0xFF050A24);
 
-  /// `--zv-deep` — the page foot, as the bottom stop of the ground gradient.
+  /// `--zv-deep` — the blue the ground used to end on, now the colour it
+  /// passes through on the way down. Still the fill for overlays that sit over
+  /// the lit top of a screen: dialogs, sheets and refresh spinners.
   static const Color deep = Color(0xFF071445);
+
+  /// The ground's 30% line — exactly what the old midnight→deep wash reached
+  /// at that height, so the lit top of every screen is unchanged. Moving this
+  /// moves where the blue stops.
+  static const Color dusk = Color(0xFF060D2E);
+
+  /// `--zv-pitch` — the page foot. Near-black, with just enough blue left in
+  /// it to belong to this palette rather than read as a hole in it. Not
+  /// [void_]: pure black is the landing page's, and against these cards it
+  /// goes flat.
+  static const Color pitch = Color(0xFF03050F);
 
   /// `--zv-glow` — radial-glow only. Never use this as a fill: it exists to be
   /// blurred into the top-left of the ground and nothing else.
