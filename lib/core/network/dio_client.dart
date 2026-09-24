@@ -36,13 +36,13 @@ class DioClient {
     Options? options,
     CancelToken? cancelToken,
   }) async {
-    final response = await _dio.get<T>(
+    final response = await _dio.get<dynamic>(
       path,
       queryParameters: queryParameters,
       options: options,
       cancelToken: cancelToken,
     );
-    return _unwrap(response);
+    return _unwrap<T>(response);
   }
 
   Future<Response<T>> post<T>(
@@ -53,7 +53,7 @@ class DioClient {
     CancelToken? cancelToken,
     void Function(int sent, int total)? onSendProgress,
   }) async {
-    final response = await _dio.post<T>(
+    final response = await _dio.post<dynamic>(
       path,
       data: data,
       queryParameters: queryParameters,
@@ -61,7 +61,7 @@ class DioClient {
       cancelToken: cancelToken,
       onSendProgress: onSendProgress,
     );
-    return _unwrap(response);
+    return _unwrap<T>(response);
   }
 
   /// PATCH.
@@ -78,14 +78,14 @@ class DioClient {
     Options? options,
     CancelToken? cancelToken,
   }) async {
-    final response = await _dio.patch<T>(
+    final response = await _dio.patch<dynamic>(
       path,
       data: data,
       queryParameters: queryParameters,
       options: options,
       cancelToken: cancelToken,
     );
-    return _unwrap(response);
+    return _unwrap<T>(response);
   }
 
   Future<Response<T>> put<T>(
@@ -94,13 +94,13 @@ class DioClient {
     Map<String, dynamic>? queryParameters,
     Options? options,
   }) async {
-    final response = await _dio.put<T>(
+    final response = await _dio.put<dynamic>(
       path,
       data: data,
       queryParameters: queryParameters,
       options: options,
     );
-    return _unwrap(response);
+    return _unwrap<T>(response);
   }
 
   Future<Response<T>> delete<T>(
@@ -108,12 +108,12 @@ class DioClient {
     Object? data,
     Map<String, dynamic>? queryParameters,
   }) async {
-    final response = await _dio.delete<T>(
+    final response = await _dio.delete<dynamic>(
       path,
       data: data,
       queryParameters: queryParameters,
     );
-    return _unwrap(response);
+    return _unwrap<T>(response);
   }
 
   /// Used by MultipartUploader. Kept inside the adapter so feature code
@@ -124,14 +124,14 @@ class DioClient {
     ProgressCallback? onSendProgress,
     CancelToken? cancelToken,
   }) async {
-    final response = await _dio.post<T>(
+    final response = await _dio.post<dynamic>(
       path,
       data: data,
       onSendProgress: onSendProgress,
       cancelToken: cancelToken,
       options: Options(sendTimeout: NetworkConfig.sendTimeout),
     );
-    return _unwrap(response);
+    return _unwrap<T>(response);
   }
 
   void close({bool force = false}) => _dio.close(force: force);
@@ -139,9 +139,24 @@ class DioClient {
   /// Unwraps the `{data, error, meta}` Plexaverse mobile-API envelope
   /// (RULINGS ruling 7). Non-Map bodies (e.g. `List` list endpoints that
   /// aren't enveloped, or `null`/`void` responses) pass straight through.
-  Response<T> _unwrap<T>(Response<T> response) {
+  ///
+  /// **Every verb fetches as `dynamic` and this is what applies `T`.** It used
+  /// to hand `T` to Dio, which casts the body to it inside `fetch` — i.e.
+  /// BEFORE the envelope is opened. So `T` was silently a claim about the
+  /// ENVELOPE rather than the payload, and the two only agree when the payload
+  /// is itself a Map. `get<List<dynamic>>` on any list endpoint threw
+  /// `_Map<String, dynamic> is not a subtype of List<dynamic>` from inside
+  /// Dio, before a line of ours ran. The Season 1 recap counted published
+  /// posts that way, caught the TypeError with the same `on Object` that
+  /// catches a dead network, and told the user their season did not load —
+  /// while every request behind it had returned 200.
+  ///
+  /// Casting here instead makes `T` mean what the doc above always said it
+  /// meant: the type of the PAYLOAD. A mismatch still throws, but at this
+  /// seam, naming the payload type the caller actually got.
+  Response<T> _unwrap<T>(Response<dynamic> response) {
     final body = response.data;
-    if (body is! Map) return response;
+    if (body is! Map) return _retype<T>(response, body);
 
     final apiError = body['error'];
     if (apiError != null) {
@@ -169,14 +184,32 @@ class DioClient {
       };
     }
 
-    if (body.containsKey('data')) {
-      // The inner payload replaces the envelope. `T` is what the caller
-      // asked for (Map / List / dynamic); the cast mirrors Dio's own
-      // response typing and is verified at the repository fromJson boundary.
-      response.data = body['data'] as T;
-    }
-    return response;
+    // The inner payload replaces the envelope. A bare `{...}` with no `data`
+    // key is passed through untouched, for forward-compat.
+    return _retype<T>(
+      response,
+      body.containsKey('data') ? body['data'] : body,
+    );
   }
+
+  /// Re-types a response around [payload], preserving everything else.
+  ///
+  /// The cast is to `T?`, not `T`: an envelope may legitimately carry
+  /// `"data": null` — a write that answers with nothing, a read of something
+  /// absent — and `null as T` threw for every caller that named a type. The
+  /// nullability is already in the signature, since `Response.data` is `T?`
+  /// and every caller has to handle the null.
+  Response<T> _retype<T>(Response<dynamic> response, Object? payload) =>
+      Response<T>(
+        data: payload as T?,
+        requestOptions: response.requestOptions,
+        statusCode: response.statusCode,
+        statusMessage: response.statusMessage,
+        isRedirect: response.isRedirect,
+        redirects: response.redirects,
+        extra: response.extra,
+        headers: response.headers,
+      );
 
   static const String _metaKey = 'plexaverse.envelope.meta';
 

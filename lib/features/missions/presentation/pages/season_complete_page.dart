@@ -14,21 +14,20 @@ import '../../application/season_controller.dart';
 /// a recap, a choice of three Season 2 paths, and — for the pivot path — an
 /// AI-suggested career-direction picker.
 ///
-/// ## Why the choice is described here rather than offered
+/// ## The choice is offered here, and it is a real write
 ///
-/// The choice is one call: `POST /api/season/advance`. **There is no
-/// `season/` directory under `app/api/mobile/v1/`**, so that route does not
-/// exist for this client, and `GET /api/ai/career-suggestions` (which feeds the
-/// pivot path) has no mobile mirror either.
+/// It is one call: `POST /season/advance`, which the mobile API now carries.
+/// Until it did, this screen could only describe the three paths and point at
+/// the web — advancing re-anchors the user's whole content plan, so posting to
+/// a route that did not exist and swallowing the 404 would have left someone
+/// believing they had started Season 2 while the server still had them on day
+/// 67 of Season 1, generating the old arc.
 ///
-/// Advancing a season is not a read that can quietly degrade: it re-anchors the
-/// user's whole content plan. Posting to an invented path and swallowing the
-/// 404 would leave someone believing they had started Season 2 while the server
-/// still had them on day 67 of Season 1, generating the old arc. So the recap
-/// is real, the three paths are described in the web's own words, and the
-/// choice itself points at the web.
-///
-/// Both missing routes are reported in the summary.
+/// The pivot path asks for the new direction in the user's own words rather
+/// than suggesting one: `GET /api/ai/career-suggestions`, which feeds the
+/// web's picker, has no mobile mirror. `targetRole` is optional on the route,
+/// so the field is too — leaving it blank starts the arc unanchored rather
+/// than blocking the choice.
 class SeasonCompletePage extends ConsumerWidget {
   const SeasonCompletePage({super.key});
 
@@ -278,20 +277,51 @@ class _PathCard extends ConsumerStatefulWidget {
 class _PathCardState extends ConsumerState<_PathCard> {
   bool _busy = false;
 
+  /// The pivot path's new direction. Only the transformation card builds one.
+  late final TextEditingController? _targetRole =
+      widget.choice == 'transformation' ? TextEditingController() : null;
+
+  @override
+  void dispose() {
+    _targetRole?.dispose();
+    super.dispose();
+  }
+
   Future<void> _choose() async {
     final bool? confirmed = await showDialog<bool>(
       context: context,
       builder: (BuildContext ctx) => AlertDialog(
         title: Text('Start Season 2 — ${widget.title}?'),
-        content: Text(
-          widget.choice == 'transformation'
-              ? 'This starts a fresh 66-day arc from today. Your Season 1 '
-                  'posts and history stay exactly as they are.'
-              : widget.choice == 'maintenance'
-                  ? 'Your plan drops to 3 posts a week — Monday, Wednesday '
-                      'and Friday. You can change the pace later in Settings.'
-                  : 'Season 2 phases are bolder, and your plan refreshes this '
-                      'Sunday. Your audience and clock carry over.',
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: <Widget>[
+            Text(
+              widget.choice == 'transformation'
+                  ? 'This starts a fresh 66-day arc from today. Your Season 1 '
+                      'posts and history stay exactly as they are.'
+                  : widget.choice == 'maintenance'
+                      ? 'Your plan drops to 3 posts a week — Monday, Wednesday '
+                          'and Friday. You can change the pace later in '
+                          'Settings.'
+                      : 'Season 2 phases are bolder, and your plan refreshes '
+                          'this Sunday. Your audience and clock carry over.',
+            ),
+            // The card promises a new direction, so this is where it is
+            // given. Optional on the route and optional here: a blank field
+            // starts the arc unanchored rather than blocking the choice.
+            if (_targetRole != null) ...<Widget>[
+              SizedBox(height: ZaveSpace.lg),
+              ZaveField(
+                controller: _targetRole,
+                label: 'New direction',
+                hint: 'e.g. Head of Product',
+                helper: 'Optional — it anchors the new arc.',
+                textInputAction: TextInputAction.done,
+                onSubmitted: (_) => Navigator.of(ctx).pop(true),
+              ),
+            ],
+          ],
         ),
         actions: <Widget>[
           TextButton(
@@ -313,9 +343,10 @@ class _PathCardState extends ConsumerState<_PathCard> {
     setState(() => _busy = true);
     String message;
     try {
+      final String role = _targetRole?.text.trim() ?? '';
       final bool already = await ref
           .read(seasonAdvanceControllerProvider.notifier)
-          .advance(widget.choice);
+          .advance(widget.choice, targetRole: role.isEmpty ? null : role);
       message = already
           ? 'You are already on Season 2.'
           : 'Season 2 started — ${widget.title}.';
