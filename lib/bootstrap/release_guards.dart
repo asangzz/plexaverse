@@ -1,3 +1,5 @@
+import 'package:flutter/foundation.dart';
+
 import '../core/config/env.dart';
 import '../core/logging/app_logger.dart';
 import '../core/security/jailbreak_detector.dart';
@@ -28,17 +30,33 @@ void assertReleaseConfigSane(Env env, AppLogger logger) {
 
 void _assertTalsecConfigured(AppLogger logger) {
   final config = buildTalsecConfig();
-  final hasPlaceholderCert = config.androidConfig?.signingCertHashes.any(
-        (hash) => hash.contains('REPLACE_WITH'),
-      ) ??
-      false;
-  final hasPlaceholderTeam =
-      config.iosConfig?.teamId.contains('REPLACE_WITH') ?? false;
-  if (!hasPlaceholderCert && !hasPlaceholderTeam) return;
-  const message =
-      'Refusing to boot prod with placeholder Talsec config. '
-      'Set real signingCertHashes / teamId (and register watcherMail at '
-      'talsec.app) in core/security/jailbreak_detector.dart.';
+
+  // Checked for the platform this build RUNS on, not across both halves.
+  //
+  // The two halves describe two different artifacts: an Android APK has no
+  // Apple team id to set and an iOS build has no Android signing cert. Testing
+  // both meant the Apple placeholder — which an Android release can never
+  // fill in, because there is nothing to fill it in with — refused to boot a
+  // correctly configured Android prod build. The guard is meant to stop a
+  // release shipping with its own integrity checks unconfigured, not to hold
+  // one platform hostage to the other's rollout.
+  final bool isIOS = defaultTargetPlatform == TargetPlatform.iOS;
+  final bool placeholder = isIOS
+      ? config.iosConfig?.teamId.contains('REPLACE_WITH') ?? false
+      : config.androidConfig?.signingCertHashes.any(
+              (String hash) => hash.contains('REPLACE_WITH'),
+            ) ??
+            false;
+  if (!placeholder) return;
+
+  final String message = isIOS
+      ? 'Refusing to boot prod with a placeholder Apple team id. Set the real '
+            'teamId (and register watcherMail at talsec.app) in '
+            'core/security/jailbreak_detector.dart.'
+      : 'Refusing to boot prod with a placeholder signing cert hash. Pass the '
+            'real one at build time: '
+            '--dart-define=ANDROID_SIGNING_CERT_SHA256=<base64 of the 32 raw '
+            'bytes of the certificate SHA-256>.';
   logger.error(message);
   throw StateError(message);
 }
