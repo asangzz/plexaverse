@@ -3,6 +3,7 @@ import 'dart:math' as math;
 
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
+import '../../preferences/application/preferences_controller.dart';
 import '../../settings/data/settings_repositories.dart';
 import '../../settings/domain/settings_repository.dart';
 import '../data/onboarding_repositories.dart';
@@ -456,6 +457,17 @@ class OnboardingChatController extends _$OnboardingChatController {
       return;
     }
     if (_disposed) return;
+
+    // That PATCH is what set `onboardingCompleted` on the server, and the
+    // router's onboarding gate reads exactly that field — out of a cache
+    // still holding the `false` it was built with. Without this, the chat
+    // says "taking you there now", flips the device flag, and the guard sends
+    // the user straight back into the chat they just finished.
+    //
+    // Dropped here rather than after the handover so the refetch overlaps the
+    // closing lines: by the time the gate flips the answer has usually landed,
+    // and when it has not the guard holds the splash instead of guessing.
+    ref.invalidate(preferencesControllerProvider);
 
     // The post-finalise fan-out: grounding, audience, week one, the roadmap and
     // topics. It runs in the background so the handover is not held up, but

@@ -131,6 +131,63 @@ enum RedirectTarget { stay, splash, onboarding, login, home, unlock }
   return stay;
 }
 
+/// Whether setup is finished, and whether that is known yet.
+///
+/// Pure, so the matrix that decides it can be tested without a router — which
+/// is the point: this is the third bug to come out of this handful of states,
+/// and all three were invisible to a test of [redirectDecision] because they
+/// happened one layer up, in deciding what to pass it.
+///
+/// **The server decides; the device-local flag is only a fallback.** The flag
+/// is per-install: a user who set up on the WEB and then installed the app was
+/// sent through the whole Plexa chat again, and their answers overwrote what
+/// they had already set. Reinstalling did the same.
+///
+/// **A signed-in user whose preferences could not be READ is treated as set
+/// up.** It reads like the unsafe direction and is the safe one. A genuinely
+/// new user is not an error case — their row answers 200 with
+/// `onboardingCompleted: false`, so they still go to setup. An error means the
+/// read failed, and the person behind a failed read is overwhelmingly someone
+/// who already has an account. Sending them into a chat that would overwrite
+/// their real setup is destructive; landing them on the dashboard is not, and
+/// they can open setup from there.
+({bool complete, bool resolving}) onboardingGate({
+  required bool signedIn,
+  required AsyncValue<bool> local,
+  required AsyncValue<UserPreferences> server,
+}) {
+  // The flag is a disk read and resolves in milliseconds, so it is always
+  // worth the wait rather than guessing and correcting.
+  final bool localResolving = !local.hasValue && local is! AsyncError;
+  final bool localComplete = switch (local) {
+    AsyncData<bool>(:final value) => value,
+    _ => true,
+  };
+
+  // Signed out, the auth rule fires first and onboarding is never consulted.
+  // Answering from the device flag alone keeps this defined without asking
+  // the server a question on behalf of someone who has no session.
+  if (!signedIn) {
+    return (complete: localComplete, resolving: localResolving);
+  }
+
+  return switch (server) {
+    AsyncData<UserPreferences>(:final value) => (
+      complete: value.onboardingCompleted,
+      resolving: localResolving,
+    ),
+    // The read failed. See above: treat as set up rather than risk
+    // overwriting a real account's setup.
+    AsyncError<UserPreferences>() => (complete: true, resolving: localResolving),
+    // Still in flight. Waiting here is the point — immediately after sign-in
+    // the answer has not arrived, and guessing from the device flag sends a
+    // returning user to setup for as long as the round trip takes. On this
+    // API that is two to three seconds of the wrong screen before the
+    // redirect takes it back.
+    _ => (complete: localComplete, resolving: true),
+  };
+}
+
 /// Guard evaluated on every navigation (§14). Resolves the auth gate, app-lock
 /// and onboarding state, runs the pure [redirectDecision], then applies the
 /// side effects: idle sign-out and deep-link preservation.
@@ -160,58 +217,26 @@ String? appRedirect(Ref ref, GoRouterState state) {
   };
   final lockResolving = !lockAsync.hasValue && lockAsync is! AsyncError;
 
-  // Onboarding. The SERVER decides, and the device-local flag is only the
-  // fallback.
-  //
-  // It used to be the local `onboarding_done` SharedPreferences key alone,
-  // which is per-install: a user who completed setup on the WEB and then
-  // installed the app was sent through the whole Plexa chat again, and their
-  // answers overwrote what they had already set. Reinstalling did the same.
-  //
-  // Reading preferences here is only possible because the onboarding gate
+  // Onboarding. Reading preferences here is only possible because the gate
   // now sits BELOW the auth check — there is a session by the time this runs,
   // so there is something to ask the server about.
-  //
-  // Both sources fail OPEN, for the same reason they always did: a returning
-  // user must never be trapped in setup. A genuinely new user whose
-  // preferences call fails simply lands on the dashboard and can open the
-  // chat from there, which is recoverable; being held in a loop is not.
-  final localOnboarding = ref.read(onboardingControllerProvider);
-  // Only asked when there IS a session. Preferences is an authenticated
-  // call; firing it for a signed-out user buys a guaranteed 401, and the
-  // gate cannot matter to them anyway — the auth rule above sends them to
-  // /login before onboarding is ever consulted.
-  final serverOnboarding = (gate?.signedIn ?? false)
-      ? ref.read(preferencesControllerProvider)
-      : const AsyncLoading<UserPreferences>();
-  final onboardingComplete = switch (serverOnboarding) {
-    AsyncData<UserPreferences>(:final value) => value.onboardingCompleted,
-    // No server answer yet — fall back to whatever this device remembers.
-    _ => switch (localOnboarding) {
-      AsyncData<bool>(:final value) => value,
-      _ => true,
-    },
-  };
-  // What holds the splash.
-  //
-  // The local flag always does — it is a disk read and resolves in
-  // milliseconds.
-  //
-  // Preferences hold it too, but ONLY while signed in. A signed-out user
-  // would otherwise wait on a call that is never made. And waiting here is
-  // the point: immediately after sign-in the answer is still in flight, and
-  // guessing from the device-local flag sends a returning user to onboarding
-  // for the moment it takes to arrive — a flash of the wrong screen, or on a
-  // slow connection several seconds of it, before the redirect corrects.
-  // Better to hold the splash than to answer wrongly and take it back.
   final signedInNow = gate?.signedIn ?? false;
-  final onboardingResolving =
-      (!localOnboarding.hasValue && localOnboarding is! AsyncError) ||
-      (signedInNow &&
-          !serverOnboarding.hasValue &&
-          serverOnboarding is! AsyncError);
+  final onboarding = onboardingGate(
+    signedIn: signedInNow,
+    local: ref.read(onboardingControllerProvider),
+    // Only asked when there IS a session. Preferences is an authenticated
+    // call; asking on behalf of a signed-out user buys a guaranteed 401, and
+    // the answer cannot matter to them anyway — the auth rule above sends
+    // them to /login before onboarding is ever consulted. The router's
+    // SUBSCRIPTION is gated on the same fact, in `_RouterRefresh`; this read
+    // alone is not enough, because subscribing is what creates the provider.
+    server: signedInNow
+        ? ref.read(preferencesControllerProvider)
+        : const AsyncLoading<UserPreferences>(),
+  );
+  final onboardingComplete = onboarding.complete;
 
-  final isResolving = gateResolving || lockResolving || onboardingResolving;
+  final isResolving = gateResolving || lockResolving || onboarding.resolving;
   final location = state.matchedLocation;
   final decision = redirectDecision(
     location: location,

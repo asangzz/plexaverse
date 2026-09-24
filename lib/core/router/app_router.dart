@@ -296,7 +296,21 @@ class _RouterRefresh extends ChangeNotifier {
     _subs.add(
       ref.listen(tenantControllerProvider, (_, _) => notifyListeners()).close,
     );
-    _subs.add(ref.listen(authGateProvider, (_, _) => notifyListeners()).close);
+    _subs.add(
+      ref.listen(authGateProvider, (_, AsyncValue<AuthGate> next) {
+        // Before notifying, not after: the guard reads preferences, and an
+        // unsubscribed autoDispose provider is torn down the instant that
+        // read returns. Subscribing first is what keeps the fetch alive.
+        _syncPreferences(
+          ref,
+          signedIn: switch (next) {
+            AsyncData<AuthGate>(:final AuthGate value) => value.signedIn,
+            _ => false,
+          },
+        );
+        notifyListeners();
+      }).close,
+    );
     // Re-run the guard when the app locks/unlocks so the /unlock gate appears
     // on background-resume and clears on a successful unlock.
     _subs.add(ref.listen(appLockProvider, (_, _) => notifyListeners()).close);
@@ -305,24 +319,8 @@ class _RouterRefresh extends ChangeNotifier {
     _subs.add(
       ref.listen(onboardingControllerProvider, (_, _) => notifyListeners()).close,
     );
-    // The onboarding gate reads the SERVER's onboardingCompleted, so the
-    // guard has to re-run when preferences land — otherwise a web-onboarded
-    // user sits on the setup chat until something unrelated triggers a
-    // redirect.
-    //
-    // `fireImmediately: false` and a read only once signed in (see
-    // redirect.dart) keep this from firing an authenticated call on behalf
-    // of a signed-out user, which would buy a guaranteed 401 on every cold
-    // start.
-    _subs.add(
-      ref
-          .listen(
-            preferencesControllerProvider,
-            (_, _) => notifyListeners(),
-            fireImmediately: false,
-          )
-          .close,
-    );
+    // Preferences are subscribed in [_syncPreferences], and ONLY while signed
+    // in — see there for why this cannot be a plain listen.
     // Forced sign-out from the network layer (401 refresh failure emits on
     // this broadcast stream) — turn it into a /login redirect.
     //
@@ -344,8 +342,50 @@ class _RouterRefresh extends ChangeNotifier {
 
   final List<FutureOr<void> Function()> _subs = <FutureOr<void> Function()>[];
 
+  /// Closes the preferences subscription. Null means "not subscribed" — which
+  /// is the state the whole of [_syncPreferences] exists to keep us in while
+  /// there is no session.
+  FutureOr<void> Function()? _closePreferences;
+
+  /// Subscribes to preferences while signed in, and drops the subscription on
+  /// sign-out.
+  ///
+  /// The guard reads the SERVER's `onboardingCompleted`, so it has to re-run
+  /// when preferences land — otherwise a web-onboarded user sits on the setup
+  /// chat until something unrelated triggers a redirect. That is why there is
+  /// a subscription at all.
+  ///
+  /// It has to be conditional because **`ref.listen` creates the provider**.
+  /// This was a plain listen with `fireImmediately: false`, on the belief that
+  /// not firing the callback meant not making the call. It does not: the
+  /// subscription builds `PreferencesController`, which fetches, which 401s
+  /// with no session — and the 401 makes `AuthInterceptor` clear the session
+  /// and emit a forced sign-out, which this same class turns into
+  /// `invalidate(authGateProvider)`, which rebuilds the controller that
+  /// watches it, which fetches again. A sign-in screen sitting idle drove 52
+  /// calls to `/user/preferences` and talked itself into a 429.
+  ///
+  /// The storm also cost the sign-in itself. It kept a fresh `AsyncError` in
+  /// the cache at every instant, so the redirect that ran the moment the gate
+  /// flipped read that error instead of a loading state, fell back to the
+  /// device flag — false on a fresh install — and sent a returning user to
+  /// the setup chat for the two-to-three seconds the first real preferences
+  /// fetch took.
+  void _syncPreferences(Ref ref, {required bool signedIn}) {
+    if (signedIn) {
+      _closePreferences ??= ref
+          .listen(preferencesControllerProvider, (_, _) => notifyListeners())
+          .close;
+      return;
+    }
+    _closePreferences?.call();
+    _closePreferences = null;
+  }
+
   @override
   void dispose() {
+    _closePreferences?.call();
+    _closePreferences = null;
     for (final cancel in _subs) {
       cancel();
     }

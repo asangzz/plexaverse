@@ -27,12 +27,12 @@ part 'preferences_controller.g.dart';
 @riverpod
 class PreferencesController extends _$PreferencesController {
   @override
-  Future<UserPreferences> build() {
+  Future<UserPreferences> build() async {
     // Rebuild whenever the SESSION changes, not just on first read.
     //
-    // This is an authenticated call, and the router now reads it to decide
-    // the onboarding gate — which means it gets initialised while the user
-    // is still signed OUT, 401s, and caches that error. Without this watch
+    // This is an authenticated call, and the router reads it to decide the
+    // onboarding gate — which means it gets initialised while the user is
+    // still signed OUT, 401s, and caches that error. Without this watch
     // nothing refetches it after sign-in, so the gate kept falling back to
     // the device-local flag: every user who signed in on a fresh install was
     // sent to onboarding and stayed there, existing account or not.
@@ -41,7 +41,24 @@ class PreferencesController extends _$PreferencesController {
     // sign-out, which matters more than the bug that prompted it: the row
     // decides brand type and which dashboard renders, and serving one
     // account's to the next is worse than serving none.
-    ref.watch(authGateProvider);
+    // AWAITED, not read as an AsyncValue. The gate is itself asynchronous —
+    // it reads the token out of the session store — so watching its
+    // AsyncValue runs this build twice: once while it is still loading, when
+    // there is no answer to branch on, and again when it resolves. That is
+    // two fetches per session change, and the first of them is the one made
+    // before anyone knows whether there is a session.
+    final AuthGate gate = await ref.watch(authGateProvider.future);
+
+    // No session, no call. A 401 here is not a harmless wasted request: it
+    // makes AuthInterceptor clear the session and announce a forced
+    // sign-out, the router turns that into an auth-gate invalidation, and
+    // this controller watches the gate — so the answer to its own failed
+    // request is another one. The router no longer subscribes while signed
+    // out, which is what broke that loop; this is the same guarantee held
+    // one layer lower, where it does not depend on every future caller
+    // knowing about it.
+    if (!gate.signedIn) return const UserPreferences();
+
     return ref.watch(preferencesRepositoryProvider).fetch();
   }
 
