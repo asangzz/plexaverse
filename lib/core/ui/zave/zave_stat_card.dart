@@ -36,6 +36,8 @@ class ZaveStatCard extends StatelessWidget {
     this.onTap,
     this.filled = false,
     this.width,
+    this.labelMaxLines = 1,
+    this.labelStyle,
     super.key,
   });
 
@@ -68,6 +70,15 @@ class ZaveStatCard extends StatelessWidget {
 
   /// Fixed width for a horizontally-scrolling strip. Null fills the parent.
   final double? width;
+
+  /// Two when the label is a sentence rather than a noun — a task title needs
+  /// the second line where `Heart rate` does not.
+  final int labelMaxLines;
+
+  /// Overrides the label's style. The one caller that needs it strikes a
+  /// finished task through; keeping it a style override rather than a `done`
+  /// flag stops this card learning what a task is.
+  final TextStyle? labelStyle;
 
   /// How tall the chart band is. Exposed because the card's height budget is
   /// the sum of fixed parts and this is the only one worth trading: a caller
@@ -106,8 +117,9 @@ class ZaveStatCard extends StatelessWidget {
               Expanded(
                 child: Text(
                   label,
-                  style: ZaveType.label.copyWith(color: labelColor),
-                  maxLines: 1,
+                  style:
+                      labelStyle ?? ZaveType.label.copyWith(color: labelColor),
+                  maxLines: labelMaxLines,
                   overflow: TextOverflow.ellipsis,
                 ),
               ),

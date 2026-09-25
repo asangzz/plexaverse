@@ -186,6 +186,15 @@ class _StepStrip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // The wedge on each card is the step's XP against the biggest step of the
+    // day, so the tallest curve is the day's heaviest task. It is the same
+    // fact the numeral states, drawn — which is what the reference's own cards
+    // do (a heart-rate line beside 67 BPM, a rising wedge beside 24 Days), and
+    // is why the picture can be read at a glance without a legend.
+    final int topXp = steps
+        .map((RoadmapStep s) => s.xpReward)
+        .fold(0, (int a, int b) => a > b ? a : b);
+
     return SingleChildScrollView(
       scrollDirection: Axis.horizontal,
       child: IntrinsicHeight(
@@ -193,10 +202,7 @@ class _StepStrip extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: <Widget>[
             for (final RoadmapStep step in steps) ...<Widget>[
-              SizedBox(
-                width: _cardWidth,
-                child: _StepCard(step: step, onStart: onStart),
-              ),
+              SizedBox(width: _cardWidth, child: _stepCard(step, topXp)),
               if (step != steps.last) SizedBox(width: ZaveSpace.md),
             ],
           ],
@@ -204,126 +210,38 @@ class _StepStrip extends StatelessWidget {
       ),
     );
   }
-}
 
-/// One step, as a card.
-///
-/// Modelled on the reference's Program tile rather than its Heart rate tile:
-/// a title, a chevron, and a small pill at the foot. No big numeral, because
-/// a step has no quantity — the only number attached to one is its XP reward,
-/// and a strip of reward figures turns a list of things to do into a price
-/// list.
-class _StepCard extends StatelessWidget {
-  const _StepCard({required this.step, required this.onStart});
-
-  final RoadmapStep step;
-  final ValueChanged<String> onStart;
-
-  @override
-  Widget build(BuildContext context) {
+  /// A step rendered as the SAME [ZaveStatCard] the rest of the app uses.
+  ///
+  /// Not a lookalike written beside it. A second card class drifts the first
+  /// time one of them gains a state, and the two sitting in one strip is
+  /// exactly where that shows.
+  Widget _stepCard(RoadmapStep step, int topXp) {
     final bool isDone = step.isCompleted;
     final bool isNow = step.isCurrent;
 
-    final Color titleColor = isDone
-        ? ZaveColors.ink50
-        : isNow
-        ? ZaveColors.white
-        : ZaveColors.ink85;
-
-    return Semantics(
-      button: true,
-      label: 'Start ${step.title}',
-      child: ZavePress(
-        child: GestureDetector(
-          onTap: () => onStart(step.moduleLink),
-          behavior: HitTestBehavior.opaque,
-          child: Container(
-            padding: EdgeInsets.all(ZaveSpace.lg),
-            decoration: isNow
-                ? BoxDecoration(
-                    gradient: ZaveAccent.violetCard,
-                    borderRadius: BorderRadius.circular(ZaveRadius.cardCompact),
-                  )
-                : ZaveSurface.cardCompact,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
-              children: <Widget>[
-                Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: <Widget>[
-                    Expanded(
-                      child: Text(
-                        step.title,
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                        style: ZaveType.label.copyWith(
-                          color: titleColor,
-                          decoration: isDone
-                              ? TextDecoration.lineThrough
-                              : null,
-                          decorationColor: ZaveColors.ink50,
-                        ),
-                      ),
-                    ),
-                    Icon(
-                      Icons.chevron_right,
-                      size: 18,
-                      color: isNow ? ZaveColors.ink62 : ZaveColors.ink45,
-                    ),
-                  ],
-                ),
-                SizedBox(height: ZaveSpace.xl),
-                _StatePill(isDone: isDone, isNow: isNow),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-/// The foot of a step card — where the reference puts `Elevate`.
-///
-/// Green for done, because colour names a status and green is this palette's
-/// word for finished. The live step says nothing in colour: it is already the
-/// only violet card in the row, and saying it twice is how a design starts
-/// shouting.
-class _StatePill extends StatelessWidget {
-  const _StatePill({required this.isDone, required this.isNow});
-
-  final bool isDone;
-  final bool isNow;
-
-  @override
-  Widget build(BuildContext context) {
-    final String text = isDone
-        ? 'Done'
-        : isNow
-        ? 'Now'
-        : 'To do';
-
-    return Container(
-      padding: EdgeInsets.symmetric(
-        horizontal: ZaveSpace.md,
-        vertical: ZaveSpace.xs,
-      ),
-      decoration: BoxDecoration(
-        color: isNow ? ZaveGlass.now : ZaveGlass.controlFill,
-        borderRadius: ZaveRadius.pillBr,
-        border: Border.all(
-          color: isNow ? ZaveGlass.nowBorder : ZaveColors.rule,
-          width: 1,
-        ),
-      ),
-      child: Text(
-        text,
-        style: ZaveType.caption.copyWith(
-          fontWeight: FontWeight.w700,
-          color: isDone ? ZaveColors.green : ZaveColors.white,
-        ),
-      ),
+    return ZaveStatCard(
+      label: step.title,
+      labelMaxLines: 2,
+      labelStyle: isDone
+          ? ZaveType.label.copyWith(
+              color: ZaveColors.ink50,
+              decoration: TextDecoration.lineThrough,
+              decorationColor: ZaveColors.ink50,
+            )
+          : null,
+      sublabel: isDone
+          ? 'Done'
+          : isNow
+          ? 'Now'
+          : 'To do',
+      // A step with no reward has no number to show, and `+0` is worse than
+      // nothing.
+      value: step.xpReward > 0 ? '+${step.xpReward}' : '—',
+      unit: step.xpReward > 0 ? 'XP' : null,
+      chart: topXp > 0 ? ZaveAreaWedge(progress: step.xpReward / topXp) : null,
+      filled: isNow,
+      onTap: () => onStart(step.moduleLink),
     );
   }
 }
