@@ -59,6 +59,11 @@ class PlannerPage extends ConsumerWidget {
 }
 
 class _PlannerBody extends StatelessWidget {
+  /// Two tiles across a phone, with the second ending flush rather than cut
+  /// off: unlike the home strip there is no third card to hint at, so an
+  /// overhang here would promise something that is not there.
+  static const double _tileWidth = 164;
+
   const _PlannerBody({
     required this.state,
     required this.article,
@@ -119,16 +124,52 @@ class _PlannerBody extends StatelessWidget {
           ),
         ),
 
-        SizedBox(height: ZaveSpace.xxl),
-        Row(
-          children: <Widget>[
-            Text('THE WEEK', style: ZaveType.kicker),
-            const Spacer(),
-            Text(
-              '${plan.publishedCount}/${plan.liveSlotCount} published',
-              style: ZaveType.caption.copyWith(color: ZaveColors.mint),
+        // The week at a glance, before the day-by-day. The reference opens its
+        // Training screen the same way: two readings side by side, then the
+        // list underneath. Both numbers here are counted off `plan`, and the
+        // wedge draws the same ratio the first one states.
+        SizedBox(height: ZaveSpace.xl),
+        SingleChildScrollView(
+          scrollDirection: Axis.horizontal,
+          child: IntrinsicHeight(
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: <Widget>[
+                SizedBox(
+                  width: _tileWidth,
+                  child: ZaveStatCard(
+                    label: 'Published',
+                    sublabel: 'this week',
+                    value: '${plan.publishedCount}',
+                    unit: 'of ${plan.liveSlotCount}',
+                    chart: plan.liveSlotCount == 0
+                        ? null
+                        : ZaveAreaWedge(
+                            progress:
+                                plan.publishedCount / plan.liveSlotCount,
+                          ),
+                  ),
+                ),
+                SizedBox(width: ZaveSpace.md),
+                SizedBox(
+                  width: _tileWidth,
+                  child: ZaveStatCard(
+                    label: 'Week',
+                    sublabel: plan.phase ?? 'of the season',
+                    value: '${plan.weekNumber}',
+                    filled: true,
+                  ),
+                ),
+              ],
             ),
-          ],
+          ),
+        ),
+
+        SizedBox(height: ZaveSpace.xxl),
+        ZaveSectionHeader(
+          title: 'The week',
+          actionLabel: '${plan.publishedCount}/${plan.liveSlotCount} published',
+          onTap: () {},
         ),
         SizedBox(height: ZaveSpace.lg),
 

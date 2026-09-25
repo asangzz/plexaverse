@@ -147,9 +147,14 @@ class _Thumbnail extends StatelessWidget {
   /// Total images on the post; the badge only appears above one.
   final int count;
 
-  /// The web's mobile tile is 64px. Not a Zave token — Zave sizes cards, not
-  /// thumbnails — so it is stated once here rather than sprinkled as a literal.
-  static const double _size = 64;
+  /// A circle, at the same 44pt every list row in the app opens with.
+  ///
+  /// It was a 64px rounded square ported from the web. The reference has no
+  /// square thumbnails anywhere — every row, whether it leads with a photo, an
+  /// icon or a letter, opens with the same disc, and that shared diameter is
+  /// what lines the titles up down a scrolling page. A square here made the
+  /// post list the one list that did not.
+  static const double _size = ZaveRowCircle.size;
 
   @override
   Widget build(BuildContext context) {
@@ -159,12 +164,7 @@ class _Thumbnail extends StatelessWidget {
       child: Stack(
         fit: StackFit.expand,
         children: <Widget>[
-          ClipRRect(
-            // The web uses an 8px corner here. Zave's smallest radius token is
-            // 16 (`.zv-input`), and the system's rule is that radius scales
-            // with the element — a 64px tile is the smallest element on this
-            // screen, so it takes the smallest token.
-            borderRadius: ZaveRadius.inputBr,
+          ClipOval(
             child: _PostImage(url: url, fit: BoxFit.cover),
           ),
           if (count > 1)

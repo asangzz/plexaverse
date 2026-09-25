@@ -64,44 +64,74 @@ class SlotCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: <Widget>[
+          // The reference opens every list row with a circle, and it is what
+          // makes a column of these scan as a week rather than as stacked
+          // paragraphs. The day's initial goes inside it, so the row is
+          // identifiable before any of its text is read.
           Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: <Widget>[
-              Text(slot.day.toUpperCase(), style: ZaveType.kicker),
-              SizedBox(width: ZaveSpace.sm),
-              if (isToday)
-                Text(
-                  '· TODAY',
-                  style: ZaveType.kicker.copyWith(color: ZaveColors.peri),
+              _DayCircle(
+                day: slot.day,
+                tone: slot.status == SlotStatus.published
+                    ? ZaveRowTone.done
+                    : isToday
+                    ? ZaveRowTone.now
+                    : ZaveRowTone.rest,
+              ),
+              SizedBox(width: ZaveSpace.md),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: <Widget>[
+                    Row(
+                      children: <Widget>[
+                        Text(slot.day.toUpperCase(), style: ZaveType.kicker),
+                        SizedBox(width: ZaveSpace.sm),
+                        if (isToday)
+                          Text(
+                            '· TODAY',
+                            style: ZaveType.kicker.copyWith(
+                              color: ZaveColors.lavenderLo,
+                            ),
+                          ),
+                        const Spacer(),
+                        ZaveDot(signal.color),
+                        SizedBox(width: ZaveSpace.sm),
+                        Text(
+                          signal.label,
+                          style: ZaveType.caption.copyWith(color: signal.color),
+                        ),
+                      ],
+                    ),
+                    SizedBox(height: ZaveSpace.xs),
+                    Text(
+                      slot.restDay ? 'No post scheduled' : slot.title,
+                      style: ZaveType.h3.copyWith(
+                        color: slot.restDay
+                            ? ZaveColors.ink45
+                            : ZaveColors.white,
+                      ),
+                    ),
+                  ],
                 ),
-              const Spacer(),
-              ZaveDot(signal.color),
-              SizedBox(width: ZaveSpace.sm),
-              Text(
-                signal.label,
-                style: ZaveType.caption.copyWith(color: signal.color),
               ),
             ],
           ),
-          SizedBox(height: ZaveSpace.md),
-          Text(
-            slot.restDay ? 'No post scheduled' : slot.title,
-            style: ZaveType.h3.copyWith(
-              color: slot.restDay ? ZaveColors.ink45 : ZaveColors.white,
-            ),
-          ),
           if (!slot.restDay) ...<Widget>[
             SizedBox(height: ZaveSpace.md),
-            Row(
+            // Wrap, not Row: the leading circle took 56pt off this line and a
+            // third tag no longer fits beside the other two. Wrapping keeps
+            // every tag visible — a horizontal scroller would hide the third
+            // one behind an edge nobody would think to drag.
+            Wrap(
+              spacing: ZaveSpace.sm,
+              runSpacing: ZaveSpace.sm,
               children: <Widget>[
                 _FormatChip(format: slot.format),
-                if (slot.posterTag != null) ...<Widget>[
-                  SizedBox(width: ZaveSpace.sm),
+                if (slot.posterTag != null)
                   _FormatChip(format: slot.posterTag!),
-                ],
-                if (slot.artifact != null) ...<Widget>[
-                  SizedBox(width: ZaveSpace.sm),
-                  _FormatChip(format: slot.artifact!),
-                ],
+                if (slot.artifact != null) _FormatChip(format: slot.artifact!),
               ],
             ),
           ],
@@ -130,4 +160,48 @@ class _FormatChip extends StatelessWidget {
   @override
   Widget build(BuildContext context) =>
       ZavePill(label: format, color: ZaveColors.ink62);
+}
+
+/// The day's initial, in the reference's list-row circle.
+///
+/// A letter rather than an icon: seven rows all carrying the same calendar
+/// glyph would be decoration, where `M` `T` `W` is the one thing that tells
+/// the rows apart at a glance.
+class _DayCircle extends StatelessWidget {
+  const _DayCircle({required this.day, required this.tone});
+
+  final String day;
+  final ZaveRowTone tone;
+
+  @override
+  Widget build(BuildContext context) {
+    final (Color fill, Color border, Color fg) = switch (tone) {
+      ZaveRowTone.done => (ZaveColors.green, ZaveColors.green, ZaveColors.ink),
+      ZaveRowTone.now => (
+        ZaveColors.violet,
+        ZaveColors.violet,
+        ZaveColors.white,
+      ),
+      ZaveRowTone.rest => (
+        ZaveGlass.controlFill,
+        ZaveColors.rule,
+        ZaveColors.ink62,
+      ),
+    };
+
+    return Container(
+      height: ZaveRowCircle.size,
+      width: ZaveRowCircle.size,
+      alignment: Alignment.center,
+      decoration: BoxDecoration(
+        color: fill,
+        shape: BoxShape.circle,
+        border: Border.all(color: border, width: 1),
+      ),
+      child: Text(
+        day.isEmpty ? '?' : day.substring(0, 1).toUpperCase(),
+        style: ZaveType.label.copyWith(color: fg, fontWeight: FontWeight.w700),
+      ),
+    );
+  }
 }

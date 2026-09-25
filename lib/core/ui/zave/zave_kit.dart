@@ -27,3 +27,4 @@ export 'zave_press.dart';
 export 'zave_switch.dart';
 export 'zave_section_header.dart';
 export 'zave_stat_card.dart';
+export 'zave_row_circle.dart';

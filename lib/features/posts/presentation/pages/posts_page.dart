@@ -145,21 +145,11 @@ class _PostsPageState extends ConsumerState<PostsPage> {
             Text('Posts', style: ZaveType.h2),
             SizedBox(height: ZaveSpace.md),
             Text('Manage all your LinkedIn posts', style: ZaveType.lead),
-            SizedBox(height: ZaveSpace.lg),
-            ZaveButton(
-              label: 'New Post',
-              icon: const Icon(Icons.add),
-              expand: true,
-              onPressed: () => context.push(ZaveRoutes.create),
-            ),
 
-            SizedBox(height: ZaveSpace.xl),
-            _FilterStrip(
-              selected: filter,
-              onSelect: (PostLibraryFilter next) =>
-                  ref.read(postFilterProvider.notifier).select(next),
-            ),
-
+            // Search, THEN the filters. The reference orders them that way and
+            // it is the right order: the filters narrow what a search runs
+            // over, so reading them in the other order asks you to pick a
+            // scope before you know you want one.
             SizedBox(height: ZaveSpace.lg),
             ZaveField(
               controller: _search,
@@ -167,6 +157,24 @@ class _PostsPageState extends ConsumerState<PostsPage> {
               hint: 'Search posts...',
               prefix: const Icon(Icons.search),
               onChanged: (String value) => setState(() => _query = value),
+            ),
+
+            SizedBox(height: ZaveSpace.lg),
+            _FilterStrip(
+              selected: filter,
+              onSelect: (PostLibraryFilter next) =>
+                  ref.read(postFilterProvider.notifier).select(next),
+            ),
+
+            SizedBox(height: ZaveSpace.lg),
+            // The screen's one primary action, and now the one violet thing
+            // on it. It was a ghost button sitting above a row of chips, which
+            // made "New Post" look like another filter.
+            ZaveButton.primary(
+              label: 'New Post',
+              icon: const Icon(Icons.add),
+              expand: true,
+              onPressed: () => context.push(ZaveRoutes.create),
             ),
 
             SizedBox(height: ZaveSpace.xl),
