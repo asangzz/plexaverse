@@ -151,11 +151,19 @@ class _SeasonOneBody extends ConsumerWidget {
 
   final double topInset;
 
-  /// The web's mobile split: a `58vh` scroll column with a `40vh` sheet over
-  /// it, expanding to `82vh`. Kept as ratios rather than viewport heights so
-  /// they survive whatever chrome the shell puts above and below.
+  /// The web's mobile split: a `58vh` scroll column with a sheet over it,
+  /// expanding to `82vh`. Kept as ratios rather than viewport heights so they
+  /// survive whatever chrome the shell puts above and below.
+  ///
+  /// The collapsed size is 0.56 rather than the web's 0.40, and the extra is
+  /// spent on one thing: a whole step card, numeral included.
+  ///
+  /// The live step is now the screen's action — there is no button repeating
+  /// it — so a card you have to drag the sheet open to read is an action in a
+  /// drawer. What the extra covers is the empty stretch of timeline between
+  /// the orbit and the sheet, which was carrying nothing.
   static const double _timelineFraction = 0.58;
-  static const double _sheetCollapsed = 0.42;
+  static const double _sheetCollapsed = 0.56;
   static const double _sheetExpanded = 0.82;
 
   @override

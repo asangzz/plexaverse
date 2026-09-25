@@ -6,11 +6,17 @@ import '../../domain/roadmap_level.dart';
 
 /// The mission surface for the selected roadmap day.
 ///
-/// The web's `LevelsPanel`: a heading that names the day, the day's completion
-/// bar, ONE white primary action, the task list, and two stat tiles. It renders
-/// identically on desktop (a sticky right-hand card) and mobile (inside the
-/// bottom sheet) — the panel itself has no responsive branch — so this is a
-/// straight port with the styling re-expressed in Zave.
+/// A heading that names the day, the day's completion bar, and the day's steps
+/// as a horizontal strip.
+///
+/// **There is no primary button.** There was one, labelled with the live step,
+/// and it said the same words as the filled card directly beneath it — the
+/// screen offered the same action twice in two shapes. The filled card is the
+/// action now, which is also what the reference does: its Next Training tile is
+/// tapped, not accompanied by a button repeating it.
+///
+/// So this screen has no `ZaveButtonKind.primary` at all, and that is allowed.
+/// The rule is at most one, not exactly one.
 ///
 /// The one thing worth not "improving": **the visible steps are not always all
 /// the steps.** A locked day shows none, a completed day shows only the ones it
@@ -40,26 +46,6 @@ class LevelsPanel extends StatelessWidget {
         : isCompleted
         ? level.steps.where((RoadmapStep s) => s.isPending).toList()
         : level.steps;
-
-    // The next thing to do: the in-progress step, else the first missed one,
-    // else simply the first.
-    RoadmapStep? current;
-    for (final RoadmapStep s in level.steps) {
-      if (s.isCurrent) {
-        current = s;
-        break;
-      }
-    }
-    if (current == null) {
-      for (final RoadmapStep s in level.steps) {
-        if (s.isPending) {
-          current = s;
-          break;
-        }
-      }
-    }
-    final RoadmapStep? currentStep =
-        current ?? (level.steps.isEmpty ? null : level.steps.first);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -96,18 +82,6 @@ class LevelsPanel extends StatelessWidget {
         SizedBox(height: ZaveSpace.sm),
         Text(_subline(status, visible.length), style: ZaveType.bodyMuted),
         SizedBox(height: ZaveSpace.xl),
-
-        // The one white thing on the screen: the next action. It sits above
-        // the list so the thing to do is the first thing you reach.
-        if (!isLocked && currentStep != null) ...<Widget>[
-          ZaveButton.primary(
-            label: currentStep.title,
-            expand: true,
-            trailing: const Icon(Icons.arrow_forward),
-            onPressed: () => onStart(currentStep.moduleLink),
-          ),
-          SizedBox(height: ZaveSpace.lg),
-        ],
 
         if (visible.isNotEmpty) _StepStrip(steps: visible, onStart: onStart),
       ],
