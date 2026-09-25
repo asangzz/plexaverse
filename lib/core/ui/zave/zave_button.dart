@@ -8,8 +8,14 @@ import 'zave_press.dart';
 /// The roles are not sizes and they are not interchangeable. Each one encodes a
 /// rule from the web design system, and the rules are the point:
 enum ZaveButtonKind {
-  /// Solid white, ink letters. **Reserved for the ONE primary action on a
-  /// screen.** If a screen has two white buttons, one of them is wrong.
+  /// Solid [ZaveColors.violet], white letters, under its own bloom.
+  /// **Reserved for the ONE primary action on a screen.** If a screen has two
+  /// violet buttons, one of them is wrong.
+  ///
+  /// It was solid white until the palette was retuned against the Aura
+  /// reference, whose hero action is violet. White is now what a SELECTED
+  /// chip or nav item inverts to — the inversion is the selection language,
+  /// and sharing it with the primary action made the two compete.
   primary,
 
   /// [primary]'s compact size — same meaning, same one-per-screen rule.
@@ -85,18 +91,20 @@ class ZaveButton extends StatelessWidget {
     final (BoxDecoration deco, TextStyle style, EdgeInsets pad) = switch (kind) {
       ZaveButtonKind.primary => (
         BoxDecoration(
-          color: ZaveColors.white,
+          color: ZaveColors.violet,
           borderRadius: ZaveRadius.pillBr,
+          boxShadow: ZaveShadow.bloom,
         ),
-        ZaveType.buttonLarge,
+        ZaveType.buttonLarge.copyWith(color: ZaveColors.white),
         ZaveSpace.btnPrimaryPad,
       ),
       ZaveButtonKind.primarySmall => (
         BoxDecoration(
-          color: ZaveColors.white,
+          color: ZaveColors.violet,
           borderRadius: ZaveRadius.pillBr,
+          boxShadow: ZaveShadow.bloom,
         ),
-        ZaveType.button.copyWith(color: ZaveColors.ink),
+        ZaveType.button.copyWith(color: ZaveColors.white),
         ZaveSpace.btnPrimarySmPad,
       ),
       ZaveButtonKind.ghost => (

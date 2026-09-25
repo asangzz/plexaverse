@@ -9,10 +9,14 @@ import 'zave_geometry.dart';
 /// opacity, a slightly brighter white hairline, and a radius chosen by what the
 /// element is — so it is written once here rather than re-derived per screen.
 ///
-/// **There are no shadows.** Depth is the fill step ([ZaveGlass.rest] →
-/// [ZaveGlass.hover] → [ZaveGlass.now]) and nothing else. The one place a
-/// shadow appears in the whole system is the white primary button's hover lift
-/// on the web, which has no touch equivalent and is intentionally not ported.
+/// **Depth is still the fill step** ([ZaveGlass.rest] → [ZaveGlass.hover] →
+/// [ZaveGlass.now]). Do not add a `BoxShadow` to lift a card; if a surface
+/// needs to read as raised, move it up a step.
+///
+/// The one shadow in the system is [ZaveShadow.bloom], and it is not a lift —
+/// it is light. The primary action is a saturated violet on a near-black
+/// ground, and in the Aura reference that violet spills onto the ground around
+/// it. Nothing else casts anything.
 class ZaveSurface {
   const ZaveSurface._();
 
@@ -130,51 +134,75 @@ class ZaveSurface {
 
 /// The app ground — the gradient every signed-in screen is painted on.
 ///
-/// Ported from `.root` in the web's `zave.module.css`:
+/// Two layers: a vertical wash, and one violet bloom over it.
 ///
-/// ```css
-/// background:
-///   radial-gradient(1100px 700px at 18% -6%, rgba(13,42,158,0.55) 0%, transparent 62%),
-///   linear-gradient(180deg, var(--zv-midnight) 0%, var(--zv-deep) 100%);
-/// ```
+/// The bloom is **top-left and appears exactly once**. Do not repeat it
+/// further down a scroll view: the whole point of a single light source is
+/// that the page has a top.
 ///
-/// The glow is **top-left and appears exactly once**. Do not repeat it further
-/// down a scroll view: the whole point of a single light source is that the
-/// page has a top.
+/// This no longer matches the web's `.root`, which is still on the navy wash.
+/// The two were ported 1:1 and have now deliberately diverged — the app was
+/// retuned against the Aura reference and the web has not been.
 class ZaveGround {
   const ZaveGround._();
 
-  /// The base vertical wash: blue at the top, near-black at the foot.
+  /// The base vertical wash: violet-tinted dark at the top, near-black at the
+  /// foot, holding the lit colour through the top third.
   ///
-  /// It used to run midnight → deep across the whole height, which meant the
-  /// page got BLUER the further down it went — deep is the brighter colour of
-  /// the two. On a phone that is most of what you see, so the app read as blue
-  /// rather than as a dark surface with a lit top.
-  ///
-  /// The lit part is now the top third and the rest falls away to [pitch]. The
-  /// 0.30 stop is [ZaveColors.dusk], which is exactly the colour the old wash
-  /// reached at that height — so the top 30% is pixel-identical to before and
-  /// only the descent below it changed.
+  /// It once ran midnight → deep across the whole height, and `deep` was the
+  /// BRIGHTER of the two — so the page grew more saturated the further down it
+  /// went, which on a phone is most of what you see. The shape here is the
+  /// opposite and it is the shape the Aura reference has: a lit top, then a
+  /// fall away to almost nothing.
   static const LinearGradient base = LinearGradient(
     begin: Alignment.topCenter,
     end: Alignment.bottomCenter,
     colors: <Color>[ZaveColors.midnight, ZaveColors.dusk, ZaveColors.pitch],
-    stops: <double>[0.0, 0.30, 1.0],
+    stops: <double>[0.0, 0.45, 1.0],
   );
 
-  /// The single top-left glow, laid over [base].
+  /// The bloom, over [base].
   ///
-  /// The web's ellipse is 1100x700 centred at (18%, -6%) — wider than it is
-  /// tall and mostly above the viewport. [RadialGradient] is circular, so the
-  /// shape is reproduced by [radius] plus a horizontal [transform] rather than
-  /// by the radius alone.
-  static const RadialGradient glow = RadialGradient(
-    center: Alignment(-0.64, -1.12), // 18% across, -6% down, in (-1..1) space
+  /// Same geometry as before — a wide ellipse centred above the top-left of
+  /// the viewport, so what a screen actually shows is its tail rather than its
+  /// core. Only the hue changed, from the old navy to [ZaveColors.glow]. The
+  /// geometry was tuned against a real screen and is worth keeping; the colour
+  /// is what makes it read as violet.
+  static const RadialGradient bloom = RadialGradient(
+    center: Alignment(-0.64, -1.12),
     radius: 1.1,
     colors: <Color>[
-      Color(0x8C0D2A9E), // --zv-glow at 55%
-      Color(0x000D2A9E), // transparent at the 62% stop
+      Color(0x8C5B3BD1),
+      Color(0x005B3BD1),
     ],
     stops: <double>[0.0, 0.62],
   );
+
+  /// Deprecated alias for [bloom], kept so existing call sites keep compiling.
+  /// New code should say [bloom].
+  static const RadialGradient glow = bloom;
+}
+
+/// The only shadow in the system.
+///
+/// Not a lift — light. [ZaveColors.violet] is a saturated fill on a near-black
+/// ground, and in the Aura reference it spills onto the ground around it. That
+/// spill is what stops the primary action reading as a sticker laid on the
+/// page.
+///
+/// Nothing else in the app casts anything. A card that needs to look raised
+/// moves up a [ZaveGlass] step instead — see the rule on [ZaveSurface].
+class ZaveShadow {
+  const ZaveShadow._();
+
+  /// Under a violet primary action. No offset: light spills in every
+  /// direction, and an offset would read as a drop shadow, which is the thing
+  /// this system does not have.
+  static List<BoxShadow> get bloom => const <BoxShadow>[
+    BoxShadow(
+      color: Color(0x665939CF),
+      blurRadius: 24,
+      spreadRadius: -4,
+    ),
+  ];
 }

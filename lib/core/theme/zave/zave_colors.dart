@@ -10,48 +10,59 @@ import 'dart:ui' show Color;
 /// The governing rule of this palette, stated in the web source and repeated
 /// here because it is easy to violate by accident:
 ///
-///   **Colour only ever names a status.**
+///   **Colour names a status, with exactly one exception.**
 ///
-/// Nothing is tinted for decoration. A green thing is done; an amber thing is
-/// waiting; a blue thing is on the XP / upgrade path. Ordinary surfaces are
-/// white at a low opacity over the midnight ground — never a custom grey, and
-/// never a brand tint. If you find yourself reaching for a colour to make
-/// something "pop", reach for a fill step in [ZaveGlass] instead.
+/// A green thing is done; an amber thing is waiting; a blue thing is on the
+/// XP / upgrade path. Ordinary surfaces are white at a low opacity over the
+/// ground — never a custom grey. If you find yourself reaching for a colour to
+/// make something "pop", reach for a fill step in [ZaveGlass] instead.
+///
+/// The exception is [violet], the primary action. It is a brand tint and it is
+/// meant to be: the Aura reference this palette was retuned against leads with
+/// a violet CTA, and that is the single loudest thing about how it feels. One
+/// exception, written down, is a palette. Two is a mood board.
 class ZaveColors {
   const ZaveColors._();
 
   // ── Ground ────────────────────────────────────────────────────────────────
-  // The surfaces the app is painted ON. `midnight` is the app base; `deep` is
-  // the foot of a long page, reached by gradient, never by a hard edge.
+  // The surfaces the app is painted ON: a violet-tinted near-black at the top
+  // falling to an almost neutral black at the foot.
+  //
+  // Every value below was SAMPLED from the Aura reference, not chosen by eye.
+  // Three independent screens in that set agree: the top sits around #15122E
+  // (#190F3E where the bloom is strongest), the middle passes through #1D142C,
+  // and the foot lands on #0F0E13. The family is violet, and it is far darker
+  // than the navy this palette used to be.
 
-  /// `--zv-void` — the landing page's top. Pure black.
+  /// `--zv-void` — pure black. The landing page's top, and nothing else.
   static const Color void_ = Color(0xFF000000);
 
-  /// `--zv-midnight` — the app base. Every signed-in screen starts here.
-  static const Color midnight = Color(0xFF050A24);
+  /// The app base — the violet-tinted dark every signed-in screen starts on.
+  static const Color midnight = Color(0xFF14102A);
 
-  /// `--zv-deep` — the blue the ground used to end on, now the colour it
-  /// passes through on the way down. Still the fill for overlays that sit over
-  /// the lit top of a screen: dialogs, sheets and refresh spinners.
-  static const Color deep = Color(0xFF071445);
+  /// One step up from the ground. The fill for surfaces that sit OVER the lit
+  /// top of a screen and must not disappear into it: dialogs, sheets, refresh
+  /// spinners.
+  static const Color deep = Color(0xFF191430);
 
-  /// The ground's 30% line — exactly what the old midnight→deep wash reached
-  /// at that height, so the lit top of every screen is unchanged. Moving this
-  /// moves where the blue stops.
-  static const Color dusk = Color(0xFF060D2E);
+  /// The ground's hold line — where the violet stops and the fall to black
+  /// begins. Kept close to [midnight] on purpose: measured against the
+  /// reference, a wash that starts descending at 30% is already too dark by
+  /// the upper middle of the screen. The reference holds its colour to roughly
+  /// the waist and then drops.
+  static const Color dusk = Color(0xFF15112A);
 
-  /// `--zv-pitch` — the page foot. Near-black, with just enough blue left in
-  /// it to belong to this palette rather than read as a hole in it. Not
-  /// [void_]: pure black is the landing page's, and against these cards it
-  /// goes flat.
-  static const Color pitch = Color(0xFF03050F);
+  /// The page foot. Sampled at #0F0E13: near-black, with barely any violet
+  /// left. Not [void_] — pure black goes flat under these glass cards and
+  /// their hairlines stop reading.
+  static const Color pitch = Color(0xFF0F0E13);
 
-  /// `--zv-glow` — radial-glow only. Never use this as a fill: it exists to be
-  /// blurred into the top-left of the ground and nothing else.
-  static const Color glow = Color(0xFF0D2A9E);
+  /// The bloom. Radial-glow only — never a fill. Sampled from the reference's
+  /// primary action, which is the same violet the bloom is made of.
+  static const Color glow = Color(0xFF5B3BD1);
 
-  /// `--zv-horizon` — hero base.
-  static const Color horizon = Color(0xFF0A1F8A);
+  /// Hero base.
+  static const Color horizon = Color(0xFF241A52);
 
   // ── Signal ────────────────────────────────────────────────────────────────
   // Each of these means one thing. The comment IS the contract.
@@ -65,8 +76,21 @@ class ZaveColors {
   /// `--zv-amber` — points, waiting.
   static const Color amber = Color(0xFFFFD166);
 
-  /// `--zv-blue` — brand / the XP path. This is the ONLY brand-coloured fill,
-  /// and it is reserved for XP and upgrade actions (see `ZaveButtonStyle.brand`).
+  /// The primary action. Sampled at #5939CF from the reference's own CTA.
+  ///
+  /// This is the one place the palette's "colour only names a status" rule is
+  /// deliberately broken, and it is broken because the reference breaks it:
+  /// its hero action is violet, not white. Everything else still earns its
+  /// colour by meaning.
+  static const Color violet = Color(0xFF5939CF);
+
+  /// [violet] lifted, for the pressed state and for text that has to stay
+  /// legible on a dark surface.
+  static const Color violetLift = Color(0xFF7B5CE8);
+
+  /// `--zv-blue` — the XP path. Reserved for XP and upgrade actions
+  /// (`ZaveButtonKind.brand`), which is why it did NOT become the violet
+  /// above: XP has to stay distinguishable from an ordinary primary action.
   static const Color blue = Color(0xFF2F3AF7);
 
   /// `--zv-peri` — links and kickers (periwinkle).
@@ -173,7 +197,7 @@ class ZaveGlass {
 
   /// Sticky header fill — rgba(5,10,36,0.78), i.e. [ZaveColors.midnight] at
   /// 78%. Pair with an 18px backdrop blur.
-  static const Color headerFill = Color(0xC7050A24);
+  static const Color headerFill = Color(0xC714102A);
 
   /// Header bottom hairline — rgba(255,255,255,0.08)
   static const Color headerBorder = Color(0x14FFFFFF);
