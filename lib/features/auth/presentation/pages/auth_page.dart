@@ -363,19 +363,17 @@ class _AuthPageState extends ConsumerState<AuthPage>
         behavior: HitTestBehavior.translucent,
         child: ZaveScrollView(
           children: <Widget>[
-            Text(
-              isSignIn ? 'Sign in' : 'Create an account',
-              style: ZaveType.h2,
+            Align(
+              alignment: Alignment.centerRight,
+              child: Opacity(
+                opacity: 0.3,
+                child: Text(
+                  isSignIn ? 'Sign in' : 'Create an account',
+                  style: ZaveType.hero,
+                ),
+              ),
             ),
-            SizedBox(height: ZaveSpace.md),
-            Text(
-              isSignIn
-                  ? 'Continue to your LinkedIn automation dashboard'
-                  : 'Start automating your LinkedIn presence with AI',
-              style: ZaveType.lead,
-            ),
-            SizedBox(height: ZaveSpace.xl),
-
+            SizedBox(height: ZaveSpace.xl), 
             _ModeToggle(mode: _mode, onChanged: _setMode),
             SizedBox(height: ZaveSpace.xl),
 
