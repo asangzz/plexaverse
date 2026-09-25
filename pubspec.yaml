@@ -199,6 +199,10 @@ flutter:
   generate: true
 
   assets:
+    # The signed-out hero. Its own folder because the launcher-icon source
+    # images live here too and are NOT bundled — only this one is drawn at
+    # runtime.
+    - assets/branding/
     - assets/images/
     - assets/icons/
     - assets/animations/

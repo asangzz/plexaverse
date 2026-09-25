@@ -9,6 +9,7 @@ import '../../../../core/ui/zave/zave_kit.dart';
 import '../../data/auth_repository_providers.dart';
 import '../../domain/auth_repository.dart';
 import '../widgets/auth_divider.dart';
+import '../widgets/auth_welcome.dart';
 import '../widgets/form_error_banner.dart';
 import '../widgets/password_strength_bar.dart';
 import '../widgets/referral_code_field.dart';
@@ -61,6 +62,16 @@ class AuthPage extends ConsumerStatefulWidget {
 class _AuthPageState extends ConsumerState<AuthPage>
     with SingleTickerProviderStateMixin {
   _AuthMode _mode = _AuthMode.signIn;
+
+  /// The signed-out screen has two stages: the welcome, and the email form
+  /// behind it. Google signs in straight from the welcome; `Sign in with
+  /// Email` is what opens the form.
+  ///
+  /// A stage rather than a route: the form's controllers, validators, consent
+  /// state and in-flight flags all live on this State, and pushing a second
+  /// page would mean either lifting all of that out or losing what the user
+  /// had typed every time they went back.
+  bool _emailStage = false;
 
   final TextEditingController _emailCtrl = TextEditingController();
   final TextEditingController _passwordCtrl = TextEditingController();
@@ -355,9 +366,32 @@ class _AuthPageState extends ConsumerState<AuthPage>
   Widget build(BuildContext context) {
     final bool isSignIn = _isSignIn;
 
+    if (!_emailStage) {
+      return ZaveScaffold(
+        body: SafeArea(
+          child: Padding(
+            padding: EdgeInsets.symmetric(horizontal: ZaveSpace.gutter),
+            child: AuthWelcome(
+              googleBusy: _googleLoading,
+              onGoogle: _busy ? null : _startGoogle,
+              onEmail: () => setState(() => _emailStage = true),
+            ),
+          ),
+        ),
+      );
+    }
+
     return ZaveScaffold(
       // No title: the screen carries its own `.h2` heading inside the scroll
       // view, and ZaveScaffold's doc is explicit that a screen never has both.
+      leading: ZaveIconButton(
+        icon: const Icon(Icons.arrow_back),
+        tooltip: 'Back',
+        onPressed: () => setState(() {
+          _clearErrors();
+          _emailStage = false;
+        }),
+      ),
       body: GestureDetector(
         onTap: () => FocusScope.of(context).unfocus(),
         behavior: HitTestBehavior.translucent,

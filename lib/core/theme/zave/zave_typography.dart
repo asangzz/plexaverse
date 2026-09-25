@@ -135,6 +135,23 @@ class ZaveType {
 
   // ── Urbanist — the reading face ───────────────────────────────────────────
 
+  /// The brand's name, beside the mark. 22px / 700 / +0.14em, URBANIST.
+  ///
+  /// Urbanist rather than Manrope, which every other naming style here uses.
+  /// The wordmark is not a heading — it is the product signing its own name,
+  /// and it is set in the body face on purpose so it reads as the brand rather
+  /// than as the largest heading on the screen.
+  ///
+  /// The tracking is most of the effect: letterspacing is what turns a word
+  /// into a mark.
+  static TextStyle get wordmark => GoogleFonts.urbanist(
+    fontSize: 22.sp,
+    fontWeight: FontWeight.w700,
+    letterSpacing: _track(0.14, 22.sp),
+    height: 1.1,
+    color: ZaveColors.white,
+  );
+
   /// `.lead` — 18px / lh 1.6 / ink-62. The paragraph under a heading.
   static TextStyle get lead => GoogleFonts.urbanist(
     fontSize: 18.sp,
