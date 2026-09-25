@@ -109,30 +109,7 @@ class LevelsPanel extends StatelessWidget {
           SizedBox(height: ZaveSpace.lg),
         ],
 
-        for (final RoadmapStep step in visible) ...<Widget>[
-          _StepRow(step: step, onStart: onStart),
-          SizedBox(height: ZaveSpace.md),
-        ],
-
-        SizedBox(height: ZaveSpace.sm),
-        Row(
-          children: <Widget>[
-            Expanded(
-              child: _StatTile(
-                value: '$done/$total',
-                label: isToday ? 'done today' : 'done',
-              ),
-            ),
-            SizedBox(width: ZaveSpace.md),
-            Expanded(
-              child: _StatTile(
-                value: '$percent%',
-                label: 'complete',
-                valueColor: ZaveColors.mint,
-              ),
-            ),
-          ],
-        ),
+        if (visible.isNotEmpty) _StepStrip(steps: visible, onStart: onStart),
       ],
     );
   }
@@ -184,61 +161,43 @@ class _CompletionBar extends StatelessWidget {
   }
 }
 
-/// One task row.
+/// The day's steps, side by side.
 ///
-/// Three states in one stack: done strikes through at half strength, the active
-/// one steps up to the [ZaveGlass.now] fill, everything else sits at rest. XP
-/// always sits at the right edge. **The whole row is the link** — there is no
-/// play button, and no tick-to-complete, because completion is the server's to
-/// decide.
-class _StepRow extends StatelessWidget {
-  const _StepRow({required this.step, required this.onStart});
+/// They were a vertical checklist with a tick at the head of each row. The
+/// ticks are gone with it: a list of ticks is a report on the past, and the
+/// reference puts what is left to do in front of you as cards instead.
+///
+/// The current step is the FILLED one — the same "this is the one" treatment
+/// the reference gives Next Training, and the reason a filled card has to be
+/// rare. A done step keeps its place, struck through, because a day that
+/// silently loses its finished steps reads as a day that is not progressing.
+///
+/// Height comes from [IntrinsicHeight] rather than a constant: titles are one
+/// or two lines depending on the day, and the tallest sets the row.
+class _StepStrip extends StatelessWidget {
+  const _StepStrip({required this.steps, required this.onStart});
 
-  final RoadmapStep step;
+  final List<RoadmapStep> steps;
   final ValueChanged<String> onStart;
+
+  /// Narrow enough that the next card always shows at the right edge. A strip
+  /// whose last card ends flush looks like a grid, and nobody swipes a grid.
+  static const double _cardWidth = 168;
 
   @override
   Widget build(BuildContext context) {
-    final bool isDone = step.isCompleted;
-    final bool isActive = step.isCurrent;
-    final bool isMissed = step.isPending;
-
-    return Semantics(
-      button: true,
-      label: 'Start ${step.title}',
-      child: ZaveCard(
-        size: ZaveCardSize.small,
-        isNow: isActive,
-        padding: ZaveSpace.rowPad,
-        onTap: () => onStart(step.moduleLink),
+    return SingleChildScrollView(
+      scrollDirection: Axis.horizontal,
+      child: IntrinsicHeight(
         child: Row(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: <Widget>[
-            _StatusMark(isDone: isDone, isActive: isActive, isMissed: isMissed),
-            SizedBox(width: ZaveSpace.lg),
-            Expanded(
-              child: Text(
-                step.title,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: ZaveType.body.copyWith(
-                  fontWeight: isActive ? FontWeight.w700 : FontWeight.w400,
-                  color: isDone ? ZaveColors.ink50 : ZaveColors.ink85,
-                  decoration: isDone ? TextDecoration.lineThrough : null,
-                  decorationColor: ZaveColors.ink50,
-                ),
+            for (final RoadmapStep step in steps) ...<Widget>[
+              SizedBox(
+                width: _cardWidth,
+                child: _StepCard(step: step, onStart: onStart),
               ),
-            ),
-            if (!isDone && step.xpReward > 0) ...<Widget>[
-              SizedBox(width: ZaveSpace.md),
-              Text(
-                '+${step.xpReward}',
-                style: ZaveType.caption.copyWith(
-                  fontWeight: FontWeight.w700,
-                  // Amber is Zave's word for points. It brightens on the step
-                  // that is actually yours to earn right now.
-                  color: isActive ? ZaveColors.amber : ZaveColors.ink45,
-                ),
-              ),
+              if (step != steps.last) SizedBox(width: ZaveSpace.md),
             ],
           ],
         ),
@@ -247,94 +206,123 @@ class _StepRow extends StatelessWidget {
   }
 }
 
-/// The 28px mark at the head of a task row.
-class _StatusMark extends StatelessWidget {
-  const _StatusMark({
-    required this.isDone,
-    required this.isActive,
-    required this.isMissed,
-  });
+/// One step, as a card.
+///
+/// Modelled on the reference's Program tile rather than its Heart rate tile:
+/// a title, a chevron, and a small pill at the foot. No big numeral, because
+/// a step has no quantity — the only number attached to one is its XP reward,
+/// and a strip of reward figures turns a list of things to do into a price
+/// list.
+class _StepCard extends StatelessWidget {
+  const _StepCard({required this.step, required this.onStart});
 
-  final bool isDone;
-  final bool isActive;
-  final bool isMissed;
+  final RoadmapStep step;
+  final ValueChanged<String> onStart;
 
   @override
   Widget build(BuildContext context) {
-    final double size = 28.r;
+    final bool isDone = step.isCompleted;
+    final bool isNow = step.isCurrent;
 
-    if (isDone) {
-      return Container(
-        height: size,
-        width: size,
-        decoration: const BoxDecoration(
-          shape: BoxShape.circle,
-          color: ZaveColors.green,
-        ),
-        child: Icon(
-          Icons.check,
-          size: 16.r,
-          // Ink on a solid fill, exactly as a white Zave pill carries ink
-          // letters rather than black ones.
-          color: ZaveColors.ink,
-        ),
-      );
-    }
+    final Color titleColor = isDone
+        ? ZaveColors.ink50
+        : isNow
+        ? ZaveColors.white
+        : ZaveColors.ink85;
 
-    return Container(
-      height: size,
-      width: size,
-      decoration: BoxDecoration(
-        shape: BoxShape.circle,
-        border: Border.all(
-          color: isActive
-              ? ZaveColors.white
-              // Amber for a missed step — Zave has no red.
-              : isMissed
-              ? ZaveColors.amber
-              : ZaveColors.ink35,
-          width: 2,
+    return Semantics(
+      button: true,
+      label: 'Start ${step.title}',
+      child: ZavePress(
+        child: GestureDetector(
+          onTap: () => onStart(step.moduleLink),
+          behavior: HitTestBehavior.opaque,
+          child: Container(
+            padding: EdgeInsets.all(ZaveSpace.lg),
+            decoration: isNow
+                ? BoxDecoration(
+                    gradient: ZaveAccent.violetCard,
+                    borderRadius: BorderRadius.circular(ZaveRadius.cardCompact),
+                  )
+                : ZaveSurface.cardCompact,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: <Widget>[
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: <Widget>[
+                    Expanded(
+                      child: Text(
+                        step.title,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: ZaveType.label.copyWith(
+                          color: titleColor,
+                          decoration: isDone
+                              ? TextDecoration.lineThrough
+                              : null,
+                          decorationColor: ZaveColors.ink50,
+                        ),
+                      ),
+                    ),
+                    Icon(
+                      Icons.chevron_right,
+                      size: 18,
+                      color: isNow ? ZaveColors.ink62 : ZaveColors.ink45,
+                    ),
+                  ],
+                ),
+                SizedBox(height: ZaveSpace.xl),
+                _StatePill(isDone: isDone, isNow: isNow),
+              ],
+            ),
+          ),
         ),
       ),
     );
   }
 }
 
-/// One of the two tiles under the list: the day's progress, stated plainly.
-class _StatTile extends StatelessWidget {
-  const _StatTile({
-    required this.value,
-    required this.label,
-    this.valueColor = ZaveColors.white,
-  });
+/// The foot of a step card — where the reference puts `Elevate`.
+///
+/// Green for done, because colour names a status and green is this palette's
+/// word for finished. The live step says nothing in colour: it is already the
+/// only violet card in the row, and saying it twice is how a design starts
+/// shouting.
+class _StatePill extends StatelessWidget {
+  const _StatePill({required this.isDone, required this.isNow});
 
-  final String value;
-  final String label;
-  final Color valueColor;
+  final bool isDone;
+  final bool isNow;
 
   @override
   Widget build(BuildContext context) {
-    return ZaveCard(
-      size: ZaveCardSize.small,
-      padding: ZaveSpace.rowPad,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisSize: MainAxisSize.min,
-        children: <Widget>[
-          Text(
-            value,
-            // The `.zv-h` recipe (800 / -0.035em / 1.05) at 26 — the same
-            // face as ZaveType.h2, one step down. The web sets the recipe
-            // inline here for the same reason.
-            style: ZaveType.h2.copyWith(
-              fontSize: 26.sp,
-              letterSpacing: -0.035 * 26.sp,
-              color: valueColor,
-            ),
-          ),
-          SizedBox(height: ZaveSpace.xs),
-          Text(label, style: ZaveType.caption),
-        ],
+    final String text = isDone
+        ? 'Done'
+        : isNow
+        ? 'Now'
+        : 'To do';
+
+    return Container(
+      padding: EdgeInsets.symmetric(
+        horizontal: ZaveSpace.md,
+        vertical: ZaveSpace.xs,
+      ),
+      decoration: BoxDecoration(
+        color: isNow ? ZaveGlass.now : ZaveGlass.controlFill,
+        borderRadius: ZaveRadius.pillBr,
+        border: Border.all(
+          color: isNow ? ZaveGlass.nowBorder : ZaveColors.rule,
+          width: 1,
+        ),
+      ),
+      child: Text(
+        text,
+        style: ZaveType.caption.copyWith(
+          fontWeight: FontWeight.w700,
+          color: isDone ? ZaveColors.green : ZaveColors.white,
+        ),
       ),
     );
   }
