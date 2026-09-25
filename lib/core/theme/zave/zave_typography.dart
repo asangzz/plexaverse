@@ -142,12 +142,14 @@ class ZaveType {
   /// and it is set in the body face on purpose so it reads as the brand rather
   /// than as the largest heading on the screen.
   ///
-  /// The tracking is most of the effect: letterspacing is what turns a word
-  /// into a mark.
+  /// Tracked, but only just. 0.14em was the reference's, and on a nine-letter
+  /// name it read as a gap between every pair of letters rather than as a
+  /// mark. 0.04em is the smallest step that still says "this is a name" —
+  /// past that the word closes up and becomes body copy.
   static TextStyle get wordmark => GoogleFonts.urbanist(
     fontSize: 22.sp,
     fontWeight: FontWeight.w700,
-    letterSpacing: _track(0.14, 22.sp),
+    letterSpacing: _track(0.04, 22.sp),
     height: 1.1,
     color: ZaveColors.white,
   );
