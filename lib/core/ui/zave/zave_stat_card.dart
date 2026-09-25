@@ -64,8 +64,12 @@ class ZaveStatCard extends StatelessWidget {
   /// The "this is the one" treatment: a solid violet tile. At most one per
   /// group, the way the reference fills only Next Training.
   ///
-  /// A filled card drops its chart — violet on violet is unreadable, and the
-  /// reference does not try.
+  /// It no longer suppresses [chart]. That rule was written for the violet
+  /// wedge, which really is invisible on violet — but it is a fact about that
+  /// ONE chart, not about filled cards, and it was silently blanking the live
+  /// task's illustration. A caller that has nothing readable to draw on violet
+  /// passes no chart; deciding that here meant this widget had to know what
+  /// each chart is made of.
   final bool filled;
 
   /// Fixed width for a horizontally-scrolling strip. Null fills the parent.
@@ -143,7 +147,7 @@ class ZaveStatCard extends StatelessWidget {
           // instead. Same total either way, which is what makes a filled tile
           // and a charted one the same height in a row — the reference's
           // strip has no ragged bottom edge.
-          if (chart != null && !filled) ...<Widget>[
+          if (chart != null) ...<Widget>[
             SizedBox(height: ZaveSpace.md),
             SizedBox(height: chartHeight, width: double.infinity, child: chart),
           ] else

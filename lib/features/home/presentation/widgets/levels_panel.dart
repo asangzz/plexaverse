@@ -160,15 +160,6 @@ class _StepStrip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // The wedge on each card is the step's XP against the biggest step of the
-    // day, so the tallest curve is the day's heaviest task. It is the same
-    // fact the numeral states, drawn — which is what the reference's own cards
-    // do (a heart-rate line beside 67 BPM, a rising wedge beside 24 Days), and
-    // is why the picture can be read at a glance without a legend.
-    final int topXp = steps
-        .map((RoadmapStep s) => s.xpReward)
-        .fold(0, (int a, int b) => a > b ? a : b);
-
     return SingleChildScrollView(
       scrollDirection: Axis.horizontal,
       child: IntrinsicHeight(
@@ -176,7 +167,7 @@ class _StepStrip extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: <Widget>[
             for (final RoadmapStep step in steps) ...<Widget>[
-              SizedBox(width: _cardWidth, child: _stepCard(step, topXp)),
+              SizedBox(width: _cardWidth, child: _stepCard(step)),
               if (step != steps.last) SizedBox(width: ZaveSpace.md),
             ],
           ],
@@ -190,7 +181,7 @@ class _StepStrip extends StatelessWidget {
   /// Not a lookalike written beside it. A second card class drifts the first
   /// time one of them gains a state, and the two sitting in one strip is
   /// exactly where that shows.
-  Widget _stepCard(RoadmapStep step, int topXp) {
+  Widget _stepCard(RoadmapStep step) {
     final bool isDone = step.isCompleted;
     final bool isNow = step.isCurrent;
 
@@ -213,7 +204,18 @@ class _StepStrip extends StatelessWidget {
       // nothing.
       value: step.xpReward > 0 ? '+${step.xpReward}' : '—',
       unit: step.xpReward > 0 ? 'XP' : null,
-      chart: topXp > 0 ? ZaveAreaWedge(progress: step.xpReward / topXp) : null,
+      // The illustration says what the TASK is, not what the number is.
+      //
+      // Every card used to carry the same rising wedge, scaled by the step's
+      // XP against the day's biggest — which made a row of tasks look like a
+      // row of measurements of the same thing, and said "this task is
+      // growing", which is not a fact about anything. A post now looks like
+      // written lines, a comment like two bubbles. Same ramp, same stroke,
+      // same band: the tone is in the recipe, not the subject.
+      chart: switch (glyphForStepKey(step.key)) {
+        final ZaveGlyph glyph => ZaveTaskGlyph(glyph, onViolet: isNow),
+        null => null,
+      },
       filled: isNow,
       onTap: () => onStart(step.moduleLink),
     );
