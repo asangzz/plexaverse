@@ -122,8 +122,10 @@ class _HomeBody extends ConsumerWidget {
       // existed and nothing ever navigated to it, so finishing the 66-day
       // arc simply carried on showing a roadmap with nothing left in it.
       data: (UserPreferences preferences) => switch (preferences) {
-        final UserPreferences p when p.isSeason2 =>
-          _SeasonTwoBody(preferences: p, topInset: topInset),
+        final UserPreferences p when p.isSeason2 => _SeasonTwoBody(
+          preferences: p,
+          topInset: topInset,
+        ),
         final UserPreferences p when p.seasonOneFinished =>
           const _SeasonOneFinishedRedirect(),
         _ => _SeasonOneBody(topInset: topInset),
@@ -309,13 +311,103 @@ class _MissionSheet extends StatelessWidget {
                   onPressed: () => _start(context, '/planner'),
                 ),
               ),
-              SizedBox(height: ZaveSpace.lg),
+              SizedBox(height: ZaveSpace.xl),
+              ZaveSectionHeader(
+                title: 'Your activity',
+                onTap: () => _start(context, '/planner'),
+              ),
+              SizedBox(height: ZaveSpace.md),
+              _ActivityStrip(level: level),
+              SizedBox(height: ZaveSpace.xl),
               LevelsPanel(
                 level: level,
                 onStart: (String link) => _start(context, link),
               ),
             ],
           ),
+        ),
+      ),
+    );
+  }
+}
+
+/// The reference's activity strip, carrying this app's numbers.
+///
+/// Three cards, scrolling sideways, the first one filled — the shape the
+/// reference uses for Next Training beside Progress and Program.
+///
+/// **No chart is drawn from invented data.** The reference's sparkline is a
+/// heart-rate series; nothing on this screen has a series, and a wiggle drawn
+/// from nothing would be a picture of data that does not exist. The wedge is
+/// used instead, because it takes a single real ratio — steps done over steps
+/// total — and that ratio is on the screen already. When a real series exists
+/// (XP over the last fortnight, say), [ZaveSparkline] is waiting for it.
+class _ActivityStrip extends ConsumerWidget {
+  const _ActivityStrip({required this.level});
+
+  final RoadmapLevel level;
+
+  /// Sized so the third card is visibly cut off at the right edge. That is the
+  /// affordance: a strip whose last card ends flush looks like a grid that has
+  /// run out, and nobody swipes it. 156 is the reference's own tile width once
+  /// its 667px mock is scaled to a 393pt screen.
+  static const double _cardWidth = 156;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final AsyncValue<XpBalance> xp = ref.watch(xpBalanceProvider);
+    final int total = level.steps.length;
+    final int done = level.steps.where((RoadmapStep s) => s.isCompleted).length;
+
+    // The strip measures itself rather than being told a height.
+    //
+    // A constant was tried and was wrong twice — every gap in the card is
+    // `.w`-scaled and every font `.sp`-scaled, so the total moves with the
+    // screen and again with the reader's text-size setting, and being eight
+    // pixels short shows up as a yellow-and-black bar across the number.
+    // IntrinsicHeight costs one extra layout pass over three children, which
+    // is nothing, and cannot be wrong.
+    //
+    // `stretch` is what makes the filled tile and the charted ones the same
+    // height: the tallest child sets it and the rest fill.
+    return SingleChildScrollView(
+      scrollDirection: Axis.horizontal,
+      child: IntrinsicHeight(
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: <Widget>[
+            ZaveStatCard(
+              label: 'Today',
+              sublabel: level.subtitle,
+              value: '${level.id}',
+              unit: 'of 66',
+              filled: true,
+              width: _cardWidth,
+              onTap: () => _start(context, '/planner'),
+            ),
+            SizedBox(width: ZaveSpace.md),
+            ZaveStatCard(
+              label: 'Steps',
+              sublabel: done == total && total > 0 ? 'all done' : 'today',
+              value: total == 0 ? '—' : '$done/$total',
+              chart: ZaveAreaWedge(progress: total == 0 ? 0 : done / total),
+              width: _cardWidth,
+            ),
+            SizedBox(width: ZaveSpace.md),
+            ZaveStatCard(
+              label: 'XP',
+              sublabel: 'balance',
+              // A failed XP read must not take the strip with it — the same
+              // rule the pill above follows.
+              value: switch (xp) {
+                AsyncData<XpBalance>(:final XpBalance value) =>
+                  '${value.balance}',
+                _ => '—',
+              },
+              unit: 'XP',
+              width: _cardWidth,
+            ),
+          ],
         ),
       ),
     );
@@ -353,7 +445,6 @@ class _SeasonTwoBody extends ConsumerWidget {
     );
   }
 }
-
 
 /// Sends a user who has finished Season 1 to the Season Complete screen.
 ///

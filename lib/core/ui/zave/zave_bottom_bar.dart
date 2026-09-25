@@ -213,13 +213,19 @@ class ZaveComposeButton extends StatelessWidget {
             child: Container(
               height: size,
               width: size,
-              decoration: const BoxDecoration(
-                color: ZaveColors.white,
+              // A violet disc inside a hairline ring, which is how the
+              // reference draws its centre action: the ring separates the
+              // button from the bar behind it without needing a cut-out, and
+              // the bloom is the same light the primary button casts.
+              decoration: BoxDecoration(
+                color: ZaveColors.violet,
                 shape: BoxShape.circle,
+                border: Border.all(color: ZaveGlass.nowBorder, width: 1),
+                boxShadow: ZaveShadow.bloom,
               ),
               child: const Icon(
                 Icons.edit_outlined,
-                color: ZaveColors.ink,
+                color: ZaveColors.white,
                 size: 24,
               ),
             ),

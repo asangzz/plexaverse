@@ -76,17 +76,34 @@ class ZaveColors {
   /// `--zv-amber` — points, waiting.
   static const Color amber = Color(0xFFFFD166);
 
-  /// The primary action. Sampled at #5939CF from the reference's own CTA.
+  /// The primary action. Sampled at #5E3DE6 off the reference's own filled
+  /// card — sixty-three thousand pixels of it, so this is the value rather
+  /// than the #5939CF read earlier off a low-resolution button.
   ///
   /// This is the one place the palette's "colour only names a status" rule is
   /// deliberately broken, and it is broken because the reference breaks it:
   /// its hero action is violet, not white. Everything else still earns its
   /// colour by meaning.
-  static const Color violet = Color(0xFF5939CF);
+  static const Color violet = Color(0xFF5E3DE6);
 
   /// [violet] lifted, for the pressed state and for text that has to stay
   /// legible on a dark surface.
   static const Color violetLift = Color(0xFF7B5CE8);
+
+  // ── Lavender ──────────────────────────────────────────────────────────────
+  // The reference's second voice, and it is a GRADIENT rather than a colour:
+  // pink-lavender falling to periwinkle. It is what a selected chip is filled
+  // with and what a big readout numeral is painted with, and using either end
+  // on its own loses the thing that makes them recognisable.
+  //
+  // Both ends sampled: the "All" chip runs #DCBEFE → #AFB1FC across its width,
+  // and the `67` numeral runs the same ramp down its height.
+
+  /// The warm end — pink-lavender.
+  static const Color lavenderHi = Color(0xFFDCBEFE);
+
+  /// The cool end — periwinkle.
+  static const Color lavenderLo = Color(0xFFAFB1FC);
 
   /// `--zv-blue` — the XP path. Reserved for XP and upgrade actions
   /// (`ZaveButtonKind.brand`), which is why it did NOT become the violet

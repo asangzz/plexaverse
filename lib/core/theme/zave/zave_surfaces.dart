@@ -79,10 +79,19 @@ class ZaveSurface {
     ZaveRadius.pill,
   );
 
-  /// `.chipOn` — selected INVERTS to solid white with ink text. A selected chip
-  /// is never merely tinted, and never underlined.
-  static BoxDecoration get chipSelected =>
-      _glass(ZaveColors.white, ZaveColors.white, ZaveRadius.pill);
+  /// `.chipOn` — selected fills with the lavender ramp and takes ink letters.
+  ///
+  /// It was solid white. The reference's selected chip is a gradient, and the
+  /// difference is not decoration: a flat white pill and the white primary
+  /// button were the same object, so "selected" and "the action" looked
+  /// identical. Now the action is violet and selection is lavender, and
+  /// neither can be mistaken for the other.
+  ///
+  /// Still an inversion, still never a tint or an underline.
+  static BoxDecoration get chipSelected => BoxDecoration(
+    gradient: ZaveAccent.lavender,
+    borderRadius: BorderRadius.circular(ZaveRadius.pill),
+  );
 
   /// `.pill` — a static (non-selectable) pill.
   static BoxDecoration get pill => _glass(
@@ -205,4 +214,30 @@ class ZaveShadow {
       spreadRadius: -4,
     ),
   ];
+}
+
+/// The lavender ramp — the reference's second voice.
+///
+/// One gradient, two uses: the fill of a selected chip, and the paint of a big
+/// readout numeral (through a `ShaderMask`). Both sampled from the reference,
+/// which runs the same ramp across a chip's width and down a numeral's height.
+class ZaveAccent {
+  const ZaveAccent._();
+
+  /// Pink-lavender to periwinkle. Diagonal, so it reads on a wide pill and on
+  /// a tall glyph without needing two definitions.
+  static const LinearGradient lavender = LinearGradient(
+    begin: Alignment.topLeft,
+    end: Alignment.bottomRight,
+    colors: <Color>[ZaveColors.lavenderHi, ZaveColors.lavenderLo],
+  );
+
+  /// The violet fill of a "this is the one" card, with a little depth across
+  /// it. Flat #5E3DE6 is correct for a pill; across a card the size of the
+  /// reference's Next Training tile it goes plastic.
+  static const LinearGradient violetCard = LinearGradient(
+    begin: Alignment.topLeft,
+    end: Alignment.bottomRight,
+    colors: <Color>[Color(0xFF6A4BEE), Color(0xFF5433D8)],
+  );
 }

@@ -81,6 +81,23 @@ class ZaveType {
     color: ZaveColors.ink45,
   );
 
+  /// The big readout on a stat card — 40px / 300 / -0.03em.
+  ///
+  /// LIGHT, not the w800 every other Manrope style here uses, and that is the
+  /// point: the reference's numerals are thin at forty-odd points. A bold face
+  /// at that size stops being a readout and becomes a headline, and then it
+  /// competes with the actual heading two rows above it.
+  ///
+  /// Painted with [ZaveAccent.lavender] via `ZaveGradientText` — see
+  /// `ZaveStatCard` for why it is not white.
+  static TextStyle get statNumber => GoogleFonts.manrope(
+    fontSize: 40.sp,
+    fontWeight: FontWeight.w300,
+    letterSpacing: _track(-0.03, 40.sp),
+    height: 1.0,
+    color: ZaveColors.white,
+  );
+
   /// `.num` — the kicker's metrics in periwinkle. Section numbers, counters.
   static TextStyle get num => GoogleFonts.manrope(
     fontSize: 13.sp,
