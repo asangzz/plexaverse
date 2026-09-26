@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../../core/ui/widgets/open_link.dart';
 import '../../../../core/ui/zave/zave_kit.dart';
 import '../../application/compose_controller.dart';
 import '../../domain/compose_context.dart';
@@ -376,13 +377,13 @@ class _Preview extends StatelessWidget {
 /// slice does not navigate: the posts route belongs to the shell, and a screen
 /// that pushes a route it does not own is how two agents end up disagreeing
 /// about the back stack. The card states the outcome and the user decides.
-class _OutcomeCard extends StatelessWidget {
+class _OutcomeCard extends ConsumerWidget {
   const _OutcomeCard({required this.status});
 
   final ComposeStatus status;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final (String kicker, String line) copy = switch (status.outcome) {
       ComposeOutcome.draftSaved => (
         'SAVED',
@@ -417,8 +418,19 @@ class _OutcomeCard extends StatelessWidget {
           SizedBox(height: ZaveSpace.md),
           Text(copy.$2, style: ZaveType.body),
           if (status.publishedUrl != null) ...<Widget>[
-            SizedBox(height: ZaveSpace.sm),
-            Text(status.publishedUrl!, style: ZaveType.caption),
+            SizedBox(height: ZaveSpace.md),
+            // Was the URL printed as caption text: a LinkedIn link the user
+            // could read and not act on. Every other publish path in the
+            // product opens the post it just made — the web does it from both
+            // the posts list and the post detail page — and this is the only
+            // place a company post's URL ever appears.
+            ZaveButton(
+              label: 'View on LinkedIn',
+              icon: const Icon(Icons.open_in_new_rounded),
+              expand: true,
+              onPressed: () =>
+                  openLinkAndReport(context, ref, status.publishedUrl!),
+            ),
           ],
         ],
       ),
@@ -585,8 +597,7 @@ Future<void> _attach(BuildContext context, WidgetRef ref) async {
                 label: 'Choose a photo',
                 icon: const Icon(Icons.photo_library_outlined),
                 expand: true,
-                onPressed: () =>
-                    Navigator.of(ctx).pop(ImageSourceKind.gallery),
+                onPressed: () => Navigator.of(ctx).pop(ImageSourceKind.gallery),
               ),
               SizedBox(height: ZaveSpace.md),
               ZaveButton(

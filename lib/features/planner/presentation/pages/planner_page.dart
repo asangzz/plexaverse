@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart' show Clipboard, ClipboardData;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../../core/links/linkedin.dart';
+import '../../../../core/ui/widgets/open_link.dart';
 import '../../../../core/ui/zave/zave_kit.dart';
 import '../../application/planner_controller.dart';
 import '../../data/planner_repositories.dart';
@@ -321,7 +323,26 @@ class _PlannerBody extends StatelessWidget {
     }
     await Clipboard.setData(ClipboardData(text: body));
     if (!context.mounted) return;
-    _say(context, 'Article copied.');
+
+    // Copy, then open LinkedIn's own article editor — the web's
+    // `SundayArticlePanel` does both on one button, because the article
+    // cannot be published through the API and pasting it is its only route.
+    //
+    // `openLinkKeepingClipboard`, never `openLinkOrCopy`: the clipboard is
+    // holding 1,200-1,800 words that took a model call to produce, and the
+    // copy fallback would replace them with a link to the editor.
+    final bool opened = await openLinkKeepingClipboard(
+      ref,
+      linkedInArticleComposerUrl,
+    );
+    if (!context.mounted) return;
+    _say(
+      context,
+      opened
+          ? 'Article copied — paste it into the editor.'
+          : 'Article copied. Open LinkedIn and start a new article to paste '
+                'it.',
+    );
   }
 
   void _say(BuildContext context, String message) {

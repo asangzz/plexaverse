@@ -5,6 +5,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/extensions/string_extensions.dart';
 import '../../../../core/router/auth_gate.dart';
 import '../../../../core/storage/session_store.dart';
+import '../../../../core/links/plexaverse.dart';
+import '../../../../core/ui/widgets/open_link.dart';
 import '../../../../core/ui/zave/zave_kit.dart';
 import '../../data/auth_repository_providers.dart';
 import '../../domain/auth_repository.dart';
@@ -131,8 +133,15 @@ class _AuthPageState extends ConsumerState<AuthPage>
 
   /// Owned here rather than built inline so they are disposed. A recognizer
   /// created in `build` leaks one per rebuild.
-  late final TapGestureRecognizer _termsTap = TapGestureRecognizer();
-  late final TapGestureRecognizer _privacyTap = TapGestureRecognizer();
+  ///
+  /// These were bare `TapGestureRecognizer()`s with no `onTap` — two spans
+  /// painted in link colour that did nothing when tapped. Worse than plain
+  /// text, which at least does not promise anything. They open the same two
+  /// pages the web's login footer links to.
+  late final TapGestureRecognizer _termsTap = TapGestureRecognizer()
+    ..onTap = () => openLinkAndReport(context, ref, plexaverseTermsUrl);
+  late final TapGestureRecognizer _privacyTap = TapGestureRecognizer()
+    ..onTap = () => openLinkAndReport(context, ref, plexaversePrivacyUrl);
 
   @override
   void dispose() {
@@ -407,7 +416,7 @@ class _AuthPageState extends ConsumerState<AuthPage>
                 ),
               ),
             ),
-            SizedBox(height: ZaveSpace.xl), 
+            SizedBox(height: ZaveSpace.xl),
             _ModeToggle(mode: _mode, onChanged: _setMode),
             SizedBox(height: ZaveSpace.xl),
 

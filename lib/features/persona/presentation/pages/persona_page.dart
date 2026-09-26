@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../../core/links/linkedin.dart';
+import '../../../../core/ui/widgets/open_link.dart';
 import '../../../../core/ui/zave/zave_kit.dart';
 import '../../application/persona_controller.dart';
 import '../../domain/persona_repository.dart';
@@ -380,9 +382,7 @@ class _Turn extends StatelessWidget {
       children: <Widget>[
         Container(
           padding: ZaveSpace.rowPad,
-          decoration: turn.fromUser
-              ? ZaveSurface.rowNow
-              : ZaveSurface.row,
+          decoration: turn.fromUser ? ZaveSurface.rowNow : ZaveSurface.row,
           child: Text(turn.text, style: ZaveType.body),
         ),
         if (turn.proposals.isNotEmpty) ...<Widget>[
@@ -476,7 +476,6 @@ class _PersonaSkeletonBody extends StatelessWidget {
   }
 }
 
-
 /// Imports the LinkedIn analytics export.
 ///
 /// LinkedIn shares no personal-profile analytics with any app — the export
@@ -487,8 +486,7 @@ class _ImportReachButton extends ConsumerStatefulWidget {
   const _ImportReachButton();
 
   @override
-  ConsumerState<_ImportReachButton> createState() =>
-      _ImportReachButtonState();
+  ConsumerState<_ImportReachButton> createState() => _ImportReachButtonState();
 }
 
 class _ImportReachButtonState extends ConsumerState<_ImportReachButton> {
@@ -502,7 +500,7 @@ class _ImportReachButtonState extends ConsumerState<_ImportReachButton> {
           .read(filePickingProvider)
           .pick(extensions: <String>['xlsx']);
       switch (picked) {
-        case PickedFile(): 
+        case PickedFile():
           note = await ref
               .read(personaControllerProvider.notifier)
               .importReach(picked);
@@ -525,10 +523,22 @@ class _ImportReachButtonState extends ConsumerState<_ImportReachButton> {
   Widget build(BuildContext context) => Column(
     crossAxisAlignment: CrossAxisAlignment.start,
     children: <Widget>[
+      // The old text sent the user down Settings › Data privacy › Get a copy
+      // of your data — a slower route than the web's, which links straight to
+      // creator analytics where the download button lives. The app was
+      // describing a longer journey AND not linking to it.
       Text(
-        'On LinkedIn: Settings › Data privacy › Get a copy of your data › '
-        'Posts. Then pick the .xlsx here.',
+        'Open your LinkedIn analytics, tap the download button at the top '
+        'right, then pick the .xlsx here.',
         style: ZaveType.caption,
+      ),
+      SizedBox(height: ZaveSpace.md),
+      ZaveButton(
+        label: 'Open LinkedIn analytics',
+        icon: const Icon(Icons.open_in_new_rounded),
+        expand: true,
+        onPressed: () =>
+            openLinkAndReport(context, ref, linkedInCreatorAnalyticsUrl),
       ),
       SizedBox(height: ZaveSpace.md),
       ZaveButton(

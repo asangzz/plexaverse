@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../../core/links/linkedin.dart';
+import '../../../../core/ui/widgets/open_link.dart';
 import '../../../../core/ui/zave/zave_kit.dart';
 import '../../application/headshots_controller.dart';
 import '../../domain/headshot_session.dart';
@@ -152,7 +154,8 @@ class _UploadStep extends StatelessWidget {
                     label: 'Choose photos',
                     icon: const Icon(Icons.photo_library_outlined),
                     expand: true,
-                    onPressed: () => _pick(context, controller, ImageSourceKind.gallery),
+                    onPressed: () =>
+                        _pick(context, controller, ImageSourceKind.gallery),
                   ),
                 ),
                 SizedBox(width: ZaveSpace.md),
@@ -161,7 +164,8 @@ class _UploadStep extends StatelessWidget {
                     label: 'Take one',
                     icon: const Icon(Icons.photo_camera_outlined),
                     expand: true,
-                    onPressed: () => _pick(context, controller, ImageSourceKind.camera),
+                    onPressed: () =>
+                        _pick(context, controller, ImageSourceKind.camera),
                   ),
                 ),
               ],
@@ -422,14 +426,14 @@ class _GeneratingStep extends StatelessWidget {
 }
 
 /// Step 4 — the four portraits.
-class _ResultsStep extends StatelessWidget {
+class _ResultsStep extends ConsumerWidget {
   const _ResultsStep({required this.session, required this.controller});
 
   final HeadshotSession session;
   final HeadshotsController controller;
 
   @override
-  Widget build(BuildContext context) => Column(
+  Widget build(BuildContext context, WidgetRef ref) => Column(
     crossAxisAlignment: CrossAxisAlignment.start,
     children: <Widget>[
       Row(
@@ -467,6 +471,16 @@ class _ResultsStep extends StatelessWidget {
         'Save one, then set it as your LinkedIn profile picture.',
         style: ZaveType.caption,
       ),
+      SizedBox(height: ZaveSpace.md),
+      // That sentence used to be the whole hand-off: the destination named
+      // and no way to reach it. The web opens exactly this URL in its panel
+      // once a headshot is downloaded.
+      ZaveButton(
+        label: 'Open my LinkedIn profile',
+        icon: const Icon(Icons.open_in_new_rounded),
+        expand: true,
+        onPressed: () => openLinkAndReport(context, ref, linkedInOwnProfileUrl),
+      ),
 
       SizedBox(height: ZaveSpace.lg),
       ZaveButton(
@@ -487,7 +501,6 @@ class _ResultsStep extends StatelessWidget {
   );
 }
 
-
 /// Runs the picker and reports only what is worth reporting.
 ///
 /// A cancelled picker says nothing — the user closed it on purpose. This
@@ -506,7 +519,6 @@ Future<void> _pick(
     ..hideCurrentSnackBar()
     ..showSnackBar(SnackBar(content: Text(message, style: ZaveType.body)));
 }
-
 
 /// Saves one generated headshot.
 ///

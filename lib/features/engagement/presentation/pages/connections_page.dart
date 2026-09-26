@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../../core/router/zave_routes.dart';
+import '../../../../core/ui/widgets/open_link.dart';
 import '../../../../core/ui/zave/zave_kit.dart';
 import '../../application/engagement_controllers.dart';
 import '../../domain/engagement_repository.dart';
@@ -38,9 +39,10 @@ import '../widgets/mission_header.dart';
 ///    since a Company Page cannot send connection requests at all. Here the
 ///    targets generate and work regardless; only the claim-your-XP action is
 ///    withheld, with a line saying why.
-/// 2. **No LinkedIn drawer.** The web opens a people search beside the list.
-///    This build has no URL launcher and no webview, so the search query is
-///    offered as a second copy action and the hand-off is stated plainly.
+/// 2. **No LinkedIn drawer.** The web opens a people search beside the list;
+///    a phone opens it in the LinkedIn app instead, through
+///    [ConnectionTarget.searchUrl]. Same destination, the user's own session,
+///    no drawer to fit on a 402-point screen.
 ///
 /// The progress denominator is the batch length, not the roadmap step's number.
 /// That asymmetry with `/comments` is the web's own — see
@@ -119,7 +121,8 @@ class ConnectionsPage extends ConsumerWidget {
               ),
             ],
           ),
-          data: (ConnectionBatch value) => _body(ref, value, m, sent, target),
+          data: (ConnectionBatch value) =>
+              _body(context, ref, value, m, sent, target),
         ),
       ),
     );
@@ -134,6 +137,7 @@ class ConnectionsPage extends ConsumerWidget {
   );
 
   Widget _body(
+    BuildContext context,
     WidgetRef ref,
     ConnectionBatch batch,
     EngagementMission? mission,
@@ -177,15 +181,25 @@ class ConnectionsPage extends ConsumerWidget {
               key: ValueKey<int>(i),
               index: i,
               target: batch.connections[i],
+              // Copy AND open — the web's `copyNote` does both, opening
+              // `connection.linkedinSearchUrl` straight after the copy.
               onCopyNote: () async {
                 await Clipboard.setData(
                   ClipboardData(text: batch.connections[i].note),
                 );
                 controller.markSent(i);
+                if (!context.mounted) return;
+                await _openSearch(
+                  context,
+                  ref,
+                  batch.connections[i],
+                  clipboardHoldsTheNote: true,
+                );
               },
-              onCopySearch: () async => Clipboard.setData(
-                ClipboardData(text: batch.connections[i].searchQuery),
-              ),
+              // No `markSent`: looking at who is out there is not the same as
+              // having written to them, and the target counts sends.
+              onOpenSearch: () =>
+                  _openSearch(context, ref, batch.connections[i]),
             ),
             SizedBox(height: ZaveSpace.md),
           ],
@@ -195,14 +209,14 @@ class ConnectionsPage extends ConsumerWidget {
         SizedBox(height: ZaveSpace.md),
         const HowItWorksCard(
           steps: <String>[
-            'Copy a note.',
-            'Copy its search query and paste it into LinkedIn search.',
+            'Copy & open LinkedIn — the note goes to your clipboard and '
+                'LinkedIn opens on a search for that role.',
             'Find a Premium account in the results — the gold badge.',
             'Connect, add a note, paste, send.',
           ],
           handoff:
-              'Plexaverse cannot open LinkedIn for you in this build — there '
-              'is no browser to hand off to. Copy, then switch apps.',
+              'Find people opens the same search without copying, so you can '
+              'look around before a request counts as sent.',
         ),
       ],
     );
@@ -244,6 +258,33 @@ class ConnectionsPage extends ConsumerWidget {
     } else {
       context.go(ZaveRoutes.dashboard);
     }
+  }
+
+  /// Opens LinkedIn's people search for [target].
+  ///
+  /// Uses [ConnectionTarget.searchUrl], which prefers the server's own
+  /// `linkedinSearchUrl` and only builds one when that arrived empty.
+  static Future<void> _openSearch(
+    BuildContext context,
+    WidgetRef ref,
+    ConnectionTarget target, {
+    bool clipboardHoldsTheNote = false,
+  }) async {
+    final String? url = target.searchUrl;
+    if (url == null) return;
+
+    // See the comments screen: after a copy the clipboard holds the note,
+    // and the copy fallback would overwrite it with this URL.
+    if (clipboardHoldsTheNote) {
+      final bool opened = await openLinkKeepingClipboard(ref, url);
+      if (!opened && context.mounted) {
+        _say(context, 'Note copied. Open LinkedIn and search for them.');
+      }
+      return;
+    }
+
+    final String? problem = await openLinkOrCopy(ref, url);
+    if (problem != null && context.mounted) _say(context, problem);
   }
 
   static void _say(BuildContext context, String message) {

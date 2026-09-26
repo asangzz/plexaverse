@@ -107,4 +107,59 @@ void main() {
     expect(message, isNotNull);
     expect(message, contains('copied'));
   });
+
+  testWidgets('openLinkKeepingClipboard never touches the clipboard', (
+    WidgetTester tester,
+  ) async {
+    // The rule this exists for. The engagement cards and the planner put a
+    // comment, a note or 1,200 words of article on the clipboard and THEN
+    // open LinkedIn. If the open fails, `openLinkOrCopy` would write the URL
+    // over the top of it — the user arrives at LinkedIn's editor holding a
+    // link to LinkedIn's editor, and the text is gone.
+    final List<String> clipboard = _captureClipboard(tester);
+    final _FakeLinkOpening service = _FakeLinkOpening(const LinkOpenFailed());
+
+    late WidgetRef captured;
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [linkOpeningProvider.overrideWithValue(service)],
+        child: Consumer(
+          builder: (BuildContext context, WidgetRef ref, Widget? _) {
+            captured = ref;
+            return const SizedBox.shrink();
+          },
+        ),
+      ),
+    );
+
+    final bool opened = await openLinkKeepingClipboard(captured, url);
+
+    expect(opened, isFalse, reason: 'the caller must learn it failed');
+    expect(
+      clipboard,
+      isEmpty,
+      reason: 'the draft the user is about to paste must survive',
+    );
+  });
+
+  testWidgets('openLinkKeepingClipboard reports a success', (
+    WidgetTester tester,
+  ) async {
+    final _FakeLinkOpening service = _FakeLinkOpening(const LinkOpened());
+
+    late WidgetRef captured;
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [linkOpeningProvider.overrideWithValue(service)],
+        child: Consumer(
+          builder: (BuildContext context, WidgetRef ref, Widget? _) {
+            captured = ref;
+            return const SizedBox.shrink();
+          },
+        ),
+      ),
+    );
+
+    expect(await openLinkKeepingClipboard(captured, url), isTrue);
+  });
 }

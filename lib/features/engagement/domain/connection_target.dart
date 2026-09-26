@@ -1,5 +1,7 @@
 import 'package:freezed_annotation/freezed_annotation.dart';
 
+import '../../../core/links/linkedin.dart';
+
 part 'connection_target.freezed.dart';
 part 'connection_target.g.dart';
 
@@ -29,8 +31,12 @@ abstract class ConnectionTarget with _$ConnectionTarget {
     /// What to type into LinkedIn's people search.
     @Default('') String searchQuery,
 
-    /// The server's deep link to that search. **The app cannot open it** —
-    /// this build has no URL launcher — so it is offered as copyable text.
+    /// The server's deep link to that search, stamped with
+    /// `origin=SWITCH_SEARCH_VERTICAL` by `findConnections()`.
+    ///
+    /// Read through [searchUrl], never directly — it carries `@Default('')`,
+    /// so a server that omits it hands the UI an empty string rather than
+    /// null, and an empty string is not a link.
     @Default('') String linkedinSearchUrl,
 
     /// The connection note / DM body, ready to paste.
@@ -47,6 +53,19 @@ abstract class ConnectionTarget with _$ConnectionTarget {
 
   factory ConnectionTarget.fromJson(Map<String, dynamic> json) =>
       _$ConnectionTargetFromJson(json);
+
+  /// The search to open for this target: the server's URL when it sent one,
+  /// otherwise one built from [searchQuery] with the server's own formula.
+  ///
+  /// Null when neither exists, which is the only case where the card has
+  /// nothing to open and must disable the action. Callers switch on null
+  /// rather than on `linkedinSearchUrl.isEmpty`, so the fallback cannot be
+  /// forgotten at one call site and honoured at another.
+  String? get searchUrl {
+    if (linkedinSearchUrl.trim().isNotEmpty) return linkedinSearchUrl.trim();
+    if (searchQuery.trim().isEmpty) return null;
+    return linkedInPeopleSearchUrl(searchQuery);
+  }
 
   /// LinkedIn's connection-note ceiling. The web shows `{len}/280` against it
   /// and turns the counter amber past 270.

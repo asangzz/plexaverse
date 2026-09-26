@@ -3,7 +3,9 @@ import 'package:flutter/services.dart' show Clipboard, ClipboardData;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../../core/links/linkedin.dart';
 import '../../../../core/router/zave_routes.dart';
+import '../../../../core/ui/widgets/open_link.dart';
 import '../../../../core/ui/zave/zave_kit.dart';
 import '../../application/engagement_controllers.dart';
 import '../../domain/engagement_repository.dart';
@@ -28,14 +30,18 @@ import '../widgets/mission_header.dart';
 /// deployed the moment it is copied** — the same rule the web uses, and the
 /// furthest either client can honestly go.
 ///
-/// ## What the web does that a phone cannot
+/// ## The hand-off, and how it differs from the web's
 ///
-/// The web opens LinkedIn's own content search in a side drawer
-/// (`LinkedInWebviewPanel`) as soon as a comment is copied. This build has
-/// neither a URL launcher nor a webview, so that drawer is absent: each card
-/// offers the search terms as a second copy action instead, and the
-/// how-it-works card says plainly that the user has to switch apps. Reported to
-/// the orchestrator rather than faked.
+/// The web opens LinkedIn's content search in a side drawer
+/// (`LinkedInWebviewPanel`) as soon as a comment is copied. A phone has no
+/// room for a drawer and no reason for one: "Copy & open LinkedIn" copies the
+/// comment, marks it sent and hands the search to the LinkedIn app, which is
+/// the same two steps with the user's own signed-in session instead of ours.
+///
+/// This screen used to say the app could not do that, because it could not —
+/// there was no URL launcher. There is now
+/// (`core/platform/link_opening.dart`), and the search URLs are built in
+/// `core/links/linkedin.dart`.
 ///
 /// The web also prices a regenerate at 50 XP. The mobile route never forwards
 /// the `force` flag that would buy one, so the control renders disabled with
@@ -132,7 +138,8 @@ class CommentsPage extends ConsumerWidget {
               ),
             ],
           ),
-          data: (CommentBatch value) => _body(ref, value, m, sent, target),
+          data: (CommentBatch value) =>
+              _body(context, ref, value, m, sent, target),
         ),
       ),
     );
@@ -147,6 +154,7 @@ class CommentsPage extends ConsumerWidget {
   );
 
   Widget _body(
+    BuildContext context,
     WidgetRef ref,
     CommentBatch batch,
     EngagementMission? mission,
@@ -201,15 +209,32 @@ class CommentsPage extends ConsumerWidget {
               draft: batch.comments[i],
               onChanged: (String value) => controller.edit(i, value),
               onEditFinished: () => controller.teachEdit(i),
+              // Copy AND open, which is one action on the web too
+              // (`copyComment` copies, marks sent, then opens the search).
+              // The two steps are back to back with nothing between them —
+              // the clipboard survives the app switch — so bundling them
+              // spends one tap instead of two on a card the user may have
+              // scrolled past by then.
               onCopyComment: () async {
                 await Clipboard.setData(
                   ClipboardData(text: batch.comments[i].comment),
                 );
                 controller.markSent(i);
+                // The clipboard write is an await, so the tree may be gone.
+                if (!context.mounted) return;
+                await _openSearch(
+                  context,
+                  ref,
+                  batch,
+                  i,
+                  clipboardHoldsTheComment: true,
+                );
               },
-              onCopySearch: () async => Clipboard.setData(
-                ClipboardData(text: batch.comments[i].searchKeywords),
-              ),
+              // Deliberately does NOT mark sent. `markSent` counts toward the
+              // mission's target, so scouting the results before committing
+              // must not claim credit for a comment not yet left. This is the
+              // web's separate `openSearch`, for the same reason.
+              onOpenSearch: () => _openSearch(context, ref, batch, i),
             ),
             SizedBox(height: ZaveSpace.md),
           ],
@@ -217,14 +242,14 @@ class CommentsPage extends ConsumerWidget {
         SizedBox(height: ZaveSpace.lg),
         const HowItWorksCard(
           steps: <String>[
-            'Copy a comment.',
-            'Copy its search terms and paste them into LinkedIn search.',
-            'Find a recent post from an active account in those results.',
+            'Copy & open LinkedIn — the comment goes to your clipboard and '
+                'LinkedIn opens on a search for posts about it.',
+            'Pick a recent post from an active account.',
             'Paste your comment and post it.',
           ],
           handoff:
-              'Plexaverse cannot open LinkedIn for you in this build — there '
-              'is no browser to hand off to. Copy, then switch apps.',
+              'Find posts opens the same search without copying, so you can '
+              'look around before a comment counts as sent.',
         ),
       ],
     );
@@ -268,6 +293,40 @@ class CommentsPage extends ConsumerWidget {
     } else {
       context.go(ZaveRoutes.dashboard);
     }
+  }
+
+  /// Opens LinkedIn's post search for comment [i].
+  ///
+  /// Falls back to the batch topic when a draft carries no keywords — the
+  /// same `searchKeywords || topic` the web guards with. The server already
+  /// substitutes the topic itself, so this is belt and braces.
+  static Future<void> _openSearch(
+    BuildContext context,
+    WidgetRef ref,
+    CommentBatch batch,
+    int i, {
+    bool clipboardHoldsTheComment = false,
+  }) async {
+    final String keywords = batch.comments[i].searchKeywords.trim().isEmpty
+        ? batch.topic
+        : batch.comments[i].searchKeywords;
+    if (keywords.trim().isEmpty) return;
+
+    final String url = linkedInContentSearchUrl(keywords);
+
+    // After a copy the clipboard holds the comment. `openLinkOrCopy` would
+    // replace it with this URL on failure — handing the user a link instead
+    // of the words they switched apps to paste.
+    if (clipboardHoldsTheComment) {
+      final bool opened = await openLinkKeepingClipboard(ref, url);
+      if (!opened && context.mounted) {
+        _say(context, 'Comment copied. Open LinkedIn and search for it.');
+      }
+      return;
+    }
+
+    final String? problem = await openLinkOrCopy(ref, url);
+    if (problem != null && context.mounted) _say(context, problem);
   }
 
   static void _say(BuildContext context, String message) {

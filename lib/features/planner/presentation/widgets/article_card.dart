@@ -146,34 +146,29 @@ class ArticleCard extends StatelessWidget {
             ),
           ],
           SizedBox(height: ZaveSpace.lg),
-          Row(
-            children: <Widget>[
-              // Flex 3 / 2: the primary action is the wider of the two. Giving
-              // both an equal Expanded squeezed the icon+label pair until its
-              // label wrapped.
-              Expanded(
-                flex: 3,
-                child: ZaveButton(
-                  label: 'Copy article',
-                  kind: ZaveButtonKind.primarySmall,
-                  icon: const Icon(Icons.copy_all_outlined),
-                  expand: true,
-                  onPressed: onCopy,
-                ),
-              ),
-              if (!article.isPublished) ...<Widget>[
-                SizedBox(width: ZaveSpace.md),
-                Expanded(
-                  flex: 2,
-                  child: ZaveButton(
-                    label: 'I published it',
-                    expand: true,
-                    onPressed: onMarkPublished,
-                  ),
-                ),
-              ],
-            ],
+          // Stacked, like the engagement cards and for the same arithmetic.
+          //
+          // The flex 3 / 2 this replaces was described as tuned so the
+          // primary label would fit; on a 402-point screen it was rendering
+          // "Copy & ..." and "I pu...". A button spends most of a narrow
+          // column on padding and its icon, so two of them in a card leave
+          // under a hundred points of text each. Full width is the only
+          // split that holds on a 375-point phone too.
+          ZaveButton(
+            label: 'Copy & open editor',
+            kind: ZaveButtonKind.primarySmall,
+            icon: const Icon(Icons.copy_all_outlined),
+            expand: true,
+            onPressed: onCopy,
           ),
+          if (!article.isPublished) ...<Widget>[
+            SizedBox(height: ZaveSpace.md),
+            ZaveButton(
+              label: 'I published it',
+              expand: true,
+              onPressed: onMarkPublished,
+            ),
+          ],
         ],
       ),
     );

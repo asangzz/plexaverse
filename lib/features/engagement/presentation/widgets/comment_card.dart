@@ -16,10 +16,10 @@ import '../../domain/engagement_repository.dart';
 ///    surface `#00DC82/5`. In Zave, depth is a fill step and colour names a
 ///    status — so the status is carried by the dot and its label, the way every
 ///    other list row in this app carries one.
-/// 2. **There is no "open LinkedIn" action.** The web's `LinkedInWebviewPanel`
-///    needs a browser; this build has neither a URL launcher nor a webview.
-///    The search terms are offered as a second copy action instead, so the
-///    user can paste them into the LinkedIn app themselves.
+/// 2. **Two actions, not a drawer.** "Copy & open LinkedIn" does what the
+///    web's copy-then-open-the-panel does; "Find posts" opens the same search
+///    without copying and without marking the card sent, which is the web's
+///    separate `openSearch`.
 /// 3. **Copy is a ghost button, not the primary one.** One white button per
 ///    screen, and on this screen that is "Finish step".
 ///
@@ -34,7 +34,7 @@ class CommentCard extends StatefulWidget {
     required this.onChanged,
     required this.onEditFinished,
     required this.onCopyComment,
-    required this.onCopySearch,
+    required this.onOpenSearch,
     super.key,
   });
 
@@ -49,7 +49,14 @@ class CommentCard extends StatefulWidget {
   final VoidCallback onEditFinished;
 
   final VoidCallback onCopyComment;
-  final VoidCallback onCopySearch;
+
+  /// Opens LinkedIn's post search for this draft's keywords.
+  ///
+  /// Was "Copy search", which handed the user the terms and left them to find
+  /// LinkedIn's search box themselves. The web has always opened the search
+  /// (`openSearch` in its comments page); the app only copied because it had
+  /// no launcher.
+  final VoidCallback onOpenSearch;
 
   @override
   State<CommentCard> createState() => _CommentCardState();
@@ -155,32 +162,32 @@ class _CommentCardState extends State<CommentCard> {
           ),
 
           SizedBox(height: ZaveSpace.lg),
-          Row(
-            children: <Widget>[
-              Expanded(
-                flex: 3,
-                child: ZaveButton(
-                  label: _justCopied ? 'Copied' : 'Copy comment',
-                  icon: Icon(
-                    _justCopied ? Icons.check : Icons.copy_all_outlined,
-                  ),
-                  expand: true,
-                  onPressed: draft.hasText ? _copy : null,
-                ),
-              ),
-              SizedBox(width: ZaveSpace.md),
-              Expanded(
-                flex: 2,
-                child: ZaveButton(
-                  label: 'Copy search',
-                  icon: const Icon(Icons.search),
-                  expand: true,
-                  onPressed: draft.searchKeywords.isEmpty
-                      ? null
-                      : widget.onCopySearch,
-                ),
-              ),
-            ],
+          // Stacked, not side by side.
+          //
+          // A ghost button spends 82 points before its label: 26 of padding
+          // each side, a 20-point icon, a 10-point gap. Two of them in a row
+          // inside a card (24 of card padding each side, 12 between) leave
+          // about 89 points each — roughly nine characters of Manrope 16.
+          //
+          // That is why the old "Copy search" rendered as "Copy s...": the
+          // secondary button has been truncating since before these labels
+          // changed. Widening the flex only moved the ellipsis. Full width
+          // gives each label ~272 points and stays correct on a 375-point
+          // iPhone SE, where a side-by-side pair cannot fit either label.
+          ZaveButton(
+            label: _justCopied ? 'Copied' : 'Copy & open LinkedIn',
+            icon: Icon(_justCopied ? Icons.check : Icons.copy_all_outlined),
+            expand: true,
+            onPressed: draft.hasText ? _copy : null,
+          ),
+          SizedBox(height: ZaveSpace.md),
+          ZaveButton(
+            label: 'Find posts',
+            icon: const Icon(Icons.search),
+            expand: true,
+            onPressed: draft.searchKeywords.isEmpty
+                ? null
+                : widget.onOpenSearch,
           ),
         ],
       ),

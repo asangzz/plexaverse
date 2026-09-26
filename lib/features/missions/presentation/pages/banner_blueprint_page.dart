@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../../core/links/linkedin.dart';
+import '../../../../core/ui/widgets/open_link.dart';
 import '../../../../core/ui/zave/zave_kit.dart';
 import '../../application/missions_controllers.dart';
 import '../../domain/missions_repository.dart';
@@ -230,12 +232,24 @@ class _BannerBlueprintPageState extends ConsumerState<BannerBlueprintPage> {
                     SizedBox(width: ZaveSpace.sm),
                     Expanded(
                       child: Text(
-                        'Save the banner, then set it as your LinkedIn cover '
-                        'photo from the LinkedIn app or the web.',
+                        'Save the banner, then set it as your LinkedIn '
+                        'cover photo.',
                         style: ZaveType.caption,
                       ),
                     ),
                   ],
+                ),
+                SizedBox(height: ZaveSpace.md),
+                // "…from the LinkedIn app or the web" used to end that
+                // sentence — an instruction to go and find it. The web opens
+                // the bare domain here for the same reason this does: the
+                // cover-photo editor has no addressable URL.
+                ZaveButton(
+                  label: 'Open LinkedIn',
+                  icon: const Icon(Icons.open_in_new_rounded),
+                  expand: true,
+                  onPressed: () =>
+                      openLinkAndReport(context, ref, linkedInHomeUrl),
                 ),
                 SizedBox(height: ZaveSpace.lg),
                 ZaveButton(

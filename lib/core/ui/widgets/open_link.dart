@@ -1,7 +1,9 @@
+import 'package:flutter/material.dart';
 import 'package:flutter/services.dart' show Clipboard, ClipboardData;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../platform/link_opening.dart';
+import '../zave/zave_kit.dart';
 
 /// What every screen should do with a link, in one place.
 ///
@@ -41,4 +43,43 @@ Future<String?> openLinkOrCopy(WidgetRef ref, String url) async {
 Future<String> _copy(String url) async {
   await Clipboard.setData(ClipboardData(text: url));
   return 'Could not open LinkedIn — link copied instead.';
+}
+
+/// Opens [url] and reports whether it worked — with NO clipboard fallback.
+///
+/// For the copy-then-open hand-offs: the engagement cards copy a comment or a
+/// note, the planner copies 1,200 words of article, and only then open
+/// LinkedIn. For those callers [openLinkOrCopy] is actively wrong. Its
+/// fallback writes the URL to the clipboard, which on that path overwrites
+/// the very thing the user is switching apps to paste — they would arrive at
+/// LinkedIn's editor holding a link to LinkedIn's editor.
+///
+/// So these callers take the failure and say something useful instead. The
+/// text they were given is still on the clipboard, which is the part that
+/// cannot be reconstructed; the destination can be reached by hand.
+Future<bool> openLinkKeepingClipboard(WidgetRef ref, String url) async =>
+    await ref.read(linkOpeningProvider).open(url) is LinkOpened;
+
+/// [openLinkOrCopy], reporting the fallback on this context's snackbar.
+///
+/// Most screens have no notifier of their own and would each hand-roll the
+/// same four lines. The screens that DO have one — the posts list, the post
+/// detail page, the engagement pages — keep using [openLinkOrCopy] directly
+/// so their message goes through the same channel as their other messages.
+Future<void> openLinkAndReport(
+  BuildContext context,
+  WidgetRef ref,
+  String url,
+) async {
+  final String? message = await openLinkOrCopy(ref, url);
+  if (message == null || !context.mounted) return;
+  ScaffoldMessenger.maybeOf(context)
+    ?..hideCurrentSnackBar()
+    ..showSnackBar(
+      SnackBar(
+        backgroundColor: ZaveColors.deep,
+        behavior: SnackBarBehavior.floating,
+        content: Text(message, style: ZaveType.body),
+      ),
+    );
 }

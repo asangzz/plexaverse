@@ -13,9 +13,9 @@ import '../../domain/engagement_repository.dart';
 ///
 /// ## What changed, and why
 ///
-/// * **No drawer.** This build has no URL launcher and no webview, so the
-///   search URL cannot be opened. The query is offered as a second copy action
-///   so the user can paste it into the LinkedIn app themselves.
+/// * **No drawer.** The web's panel becomes a hand-off to the LinkedIn app:
+///   "Copy & open LinkedIn" copies the note and opens the people search,
+///   "Find people" opens it without claiming the card as sent.
 /// * **The premium badge is a pill, not a red-on-amber chip.** In Zave, amber
 ///   is the "needs your attention" signal, which is exactly what a direct-
 ///   message card is: it behaves differently from the other four.
@@ -30,7 +30,7 @@ class ConnectionCard extends StatefulWidget {
     required this.index,
     required this.target,
     required this.onCopyNote,
-    required this.onCopySearch,
+    required this.onOpenSearch,
     super.key,
   });
 
@@ -39,7 +39,12 @@ class ConnectionCard extends StatefulWidget {
 
   final ConnectionTarget target;
   final VoidCallback onCopyNote;
-  final VoidCallback onCopySearch;
+
+  /// Opens LinkedIn's people search for this target.
+  ///
+  /// Was "Copy search". The web opens `connection.linkedinSearchUrl` here;
+  /// the app only copied the raw query because it had no launcher.
+  final VoidCallback onOpenSearch;
 
   @override
   State<ConnectionCard> createState() => _ConnectionCardState();
@@ -135,32 +140,33 @@ class _ConnectionCardState extends State<ConnectionCard> {
           ],
 
           SizedBox(height: ZaveSpace.lg),
-          Row(
-            children: <Widget>[
-              Expanded(
-                flex: 3,
-                child: ZaveButton(
-                  label: _justCopied ? 'Copied' : 'Copy note',
-                  icon: Icon(
-                    _justCopied ? Icons.check : Icons.copy_all_outlined,
-                  ),
-                  expand: true,
-                  onPressed: target.note.isEmpty ? null : _copy,
-                ),
-              ),
-              SizedBox(width: ZaveSpace.md),
-              Expanded(
-                flex: 2,
-                child: ZaveButton(
-                  label: 'Copy search',
-                  icon: const Icon(Icons.search),
-                  expand: true,
-                  onPressed: target.searchQuery.isEmpty
-                      ? null
-                      : widget.onCopySearch,
-                ),
-              ),
-            ],
+          // Stacked, not side by side.
+          //
+          // A ghost button spends 82 points before its label: 26 of padding
+          // each side, a 20-point icon, a 10-point gap. Two of them in a row
+          // inside a card (24 of card padding each side, 12 between) leave
+          // about 89 points each — roughly nine characters of Manrope 16.
+          //
+          // That is why the old "Copy search" rendered as "Copy s...": the
+          // secondary button has been truncating since before these labels
+          // changed. Widening the flex only moved the ellipsis. Full width
+          // gives each label ~272 points and stays correct on a 375-point
+          // iPhone SE, where a side-by-side pair cannot fit either label.
+          ZaveButton(
+            label: _justCopied ? 'Copied' : 'Copy & open LinkedIn',
+            icon: Icon(_justCopied ? Icons.check : Icons.copy_all_outlined),
+            expand: true,
+            onPressed: target.note.isEmpty ? null : _copy,
+          ),
+          SizedBox(height: ZaveSpace.md),
+          ZaveButton(
+            label: 'Find people',
+            icon: const Icon(Icons.search),
+            expand: true,
+            // Gated on the resolved URL, not on `searchQuery`: a target
+            // can carry the server's URL with an empty query, and that
+            // one is perfectly openable.
+            onPressed: target.searchUrl == null ? null : widget.onOpenSearch,
           ),
         ],
       ),
