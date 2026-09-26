@@ -99,7 +99,17 @@ class _CalendarPageState extends ConsumerState<CalendarPage> {
     return ZaveScrollView(
       children: <Widget>[
         Text('Calendar', style: ZaveType.h2),
-        SizedBox(height: ZaveSpace.lg),
+        SizedBox(height: ZaveSpace.md),
+        Text('Plan when each post goes out', style: ZaveType.lead),
+
+        // The two counts were a caption — `12 scheduled · 3 pending` — set at
+        // the smallest size on the screen, under a heading three times its
+        // size. They are the only two numbers the calendar has, so they get
+        // the tiles every other screen gives its numbers.
+        SizedBox(height: ZaveSpace.xl),
+        _CountTiles(buckets: buckets),
+
+        SizedBox(height: ZaveSpace.xl),
         _MonthStepper(
           viewMonth: _viewMonth,
           onPrevious: () => setState(() {
@@ -108,22 +118,9 @@ class _CalendarPageState extends ConsumerState<CalendarPage> {
           onNext: () => setState(() {
             _viewMonth = DateTime(_viewMonth.year, _viewMonth.month + 1);
           }),
-        ),
-        SizedBox(height: ZaveSpace.md),
-        Row(
-          children: <Widget>[
-            Expanded(
-              child: Text(
-                '${buckets.scheduled.length} scheduled · '
-                '${buckets.pending.length} pending',
-                style: ZaveType.caption,
-              ),
-            ),
-            ZaveButton(
-              label: 'Today',
-              onPressed: () => setState(() => _viewMonth = _currentMonth()),
-            ),
-          ],
+          // `Today` lived in the caption row that is now tiles. It belongs
+          // with the month controls anyway: it IS a month control.
+          onToday: () => setState(() => _viewMonth = _currentMonth()),
         ),
 
         if (_error != null) ...<Widget>[
@@ -168,6 +165,12 @@ class _CalendarPageState extends ConsumerState<CalendarPage> {
         // tapping a pending card arms pick-a-day mode, and the days it is
         // asking you to choose from are the very next thing on screen.
         SizedBox(height: ZaveSpace.xl),
+        ZaveSectionHeader(
+          title: 'Not yet placed',
+          actionLabel: '${buckets.pending.length}',
+          onTap: buckets.pending.isEmpty ? null : () {},
+        ),
+        SizedBox(height: ZaveSpace.md),
         CalendarPendingStrip(
           pending: buckets.pending,
           onPick: (CalendarPost post) => setState(() => _moving = post),
@@ -269,11 +272,13 @@ class _MonthStepper extends StatelessWidget {
     required this.viewMonth,
     required this.onPrevious,
     required this.onNext,
+    required this.onToday,
   });
 
   final DateTime viewMonth;
   final VoidCallback onPrevious;
   final VoidCallback onNext;
+  final VoidCallback onToday;
 
   @override
   Widget build(BuildContext context) => Row(
@@ -286,7 +291,10 @@ class _MonthStepper extends StatelessWidget {
       Expanded(
         child: Center(
           child: Text(
-            DateFormat.yMMMM().format(viewMonth),
+            // `yMMM` (Sep 2026), not `yMMMM` (September 2026). Today now
+            // shares this row, and the long form truncated to "September …"
+            // — which loses the year, the one part that is not obvious.
+            DateFormat.yMMM().format(viewMonth),
             style: ZaveType.h3,
             overflow: TextOverflow.ellipsis,
           ),
@@ -297,8 +305,56 @@ class _MonthStepper extends StatelessWidget {
         tooltip: 'Next month',
         onPressed: onNext,
       ),
+      SizedBox(width: ZaveSpace.sm),
+      ZaveButton(label: 'Today', onPressed: onToday),
     ],
   );
+}
+
+/// The calendar's two numbers, as tiles.
+///
+/// Scheduled is the FILLED one: it is what the grid below is showing, and the
+/// filled tile means "this is the one" everywhere else in the app. Pending
+/// carries the wedge, drawn from the share of posts still without a day —
+/// which is the one real ratio this screen has.
+class _CountTiles extends StatelessWidget {
+  const _CountTiles({required this.buckets});
+
+  final CalendarBuckets buckets;
+
+  @override
+  Widget build(BuildContext context) {
+    final int placed = buckets.scheduled.length;
+    final int waiting = buckets.pending.length;
+    final int total = placed + waiting;
+
+    return IntrinsicHeight(
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: <Widget>[
+          Expanded(
+            child: ZaveStatCard(
+              label: 'Scheduled',
+              sublabel: 'on the grid',
+              value: '$placed',
+              filled: true,
+            ),
+          ),
+          SizedBox(width: ZaveSpace.md),
+          Expanded(
+            child: ZaveStatCard(
+              label: 'Pending',
+              sublabel: waiting == 0 ? 'all placed' : 'no day yet',
+              value: '$waiting',
+              chart: total == 0
+                  ? null
+                  : ZaveAreaWedge(progress: waiting / total),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 }
 
 /// A one-line state banner: a status dot, a kicker, a line of body and an
@@ -333,9 +389,7 @@ class _Banner extends StatelessWidget {
           children: <Widget>[
             ZaveDot(tone),
             SizedBox(width: ZaveSpace.sm),
-            Expanded(
-              child: Text(kicker.toUpperCase(), style: ZaveType.kicker),
-            ),
+            Expanded(child: Text(kicker.toUpperCase(), style: ZaveType.kicker)),
           ],
         ),
         SizedBox(height: ZaveSpace.sm),
