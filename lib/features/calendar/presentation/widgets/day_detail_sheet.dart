@@ -77,9 +77,7 @@ class _DayDetailSheetState extends State<DayDetailSheet> {
   Widget build(BuildContext context) {
     // "Friday, September 18" — the web's
     // `toLocaleDateString(undefined, {weekday, month, day})`.
-    final String dateLabel = DateFormat(
-      'EEEE, MMMM d',
-    ).format(widget.day);
+    final String dateLabel = DateFormat('EEEE, MMMM d').format(widget.day);
 
     return CalendarSheet(
       footer: _footer(context),
@@ -120,19 +118,13 @@ class _DayDetailSheetState extends State<DayDetailSheet> {
   ];
 
   List<Widget> _pickerBody(BuildContext context) => <Widget>[
-    CalendarSheetTitle(
-      kicker: 'Pick a post',
-      title: 'Schedule here',
-    ),
+    CalendarSheetTitle(kicker: 'Pick a post', title: 'Schedule here'),
     SizedBox(height: ZaveSpace.xl),
     if (widget.pending.isEmpty)
       ZaveCard(
         size: ZaveCardSize.small,
         padding: ZaveSpace.rowPad,
-        child: Text(
-          'No pending posts to schedule.',
-          style: ZaveType.bodyMuted,
-        ),
+        child: Text('No pending posts to schedule.', style: ZaveType.bodyMuted),
       )
     else
       for (int i = 0; i < widget.pending.length; i++) ...<Widget>[
@@ -205,7 +197,10 @@ class _ScheduledRow extends StatelessWidget {
           ),
           SizedBox(height: ZaveSpace.md),
           Text(
-            truncate(post.content.isEmpty ? post.displayText : post.content, 220),
+            truncate(
+              post.content.isEmpty ? post.displayText : post.content,
+              220,
+            ),
             style: ZaveType.body,
           ),
           if (post.failureReason != null) ...<Widget>[

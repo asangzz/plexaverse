@@ -93,10 +93,7 @@ class _SchedulesPageState extends ConsumerState<SchedulesPage> {
 
     return ZaveScrollView(
       children: <Widget>[
-        Text(
-          'Configure when AI generates your posts.',
-          style: ZaveType.lead,
-        ),
+        Text('Configure when AI generates your posts.', style: ZaveType.lead),
         SizedBox(height: ZaveSpace.xl),
 
         if (accountsLoaded && connected.isEmpty) ...<Widget>[

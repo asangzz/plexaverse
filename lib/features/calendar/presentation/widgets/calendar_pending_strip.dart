@@ -36,7 +36,9 @@ class CalendarPendingStrip extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final List<CalendarPost> missed = pending
-        .where((CalendarPost p) => p.status == CalendarPostStatus.pendingApproval)
+        .where(
+          (CalendarPost p) => p.status == CalendarPostStatus.pendingApproval,
+        )
         .toList(growable: false);
     final List<CalendarPost> drafts = pending
         .where((CalendarPost p) => p.status == CalendarPostStatus.draft)
@@ -103,9 +105,7 @@ class _PendingGroup extends StatelessWidget {
           children: <Widget>[
             ZaveDot(tone),
             SizedBox(width: ZaveSpace.sm),
-            Expanded(
-              child: Text(title.toUpperCase(), style: ZaveType.kicker),
-            ),
+            Expanded(child: Text(title.toUpperCase(), style: ZaveType.kicker)),
             Text(hint, style: ZaveType.caption),
           ],
         ),
@@ -198,10 +198,7 @@ class _PendingEmpty extends StatelessWidget {
             children: <Widget>[
               Text('All caught up', style: ZaveType.label),
               SizedBox(height: ZaveSpace.xs),
-              Text(
-                'No drafts or missed approvals.',
-                style: ZaveType.caption,
-              ),
+              Text('No drafts or missed approvals.', style: ZaveType.caption),
             ],
           ),
         ),

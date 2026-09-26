@@ -28,10 +28,8 @@ const List<String> kScheduleDayNames = <String>[
 /// ignored, so this stays valid as the row grows.
 @freezed
 abstract class ScheduleTopic with _$ScheduleTopic {
-  const factory ScheduleTopic({
-    required String id,
-    @Default('') String name,
-  }) = _ScheduleTopic;
+  const factory ScheduleTopic({required String id, @Default('') String name}) =
+      _ScheduleTopic;
 
   factory ScheduleTopic.fromJson(Map<String, dynamic> json) =>
       _$ScheduleTopicFromJson(json);
@@ -108,7 +106,9 @@ abstract class PostSchedule with _$PostSchedule {
   /// rather than approximated.
   String get daysLabel {
     final List<int> days =
-        dayOfWeek.where((int d) => d >= 0 && d < kScheduleDayNames.length).toList()
+        dayOfWeek
+            .where((int d) => d >= 0 && d < kScheduleDayNames.length)
+            .toList()
           ..sort();
     if (days.isEmpty) return 'No days';
     if (days.length == 7) return 'Every day';
@@ -123,6 +123,5 @@ abstract class PostSchedule with _$PostSchedule {
 
   /// The account this schedule publishes to, or a placeholder if the join was
   /// not included.
-  String get accountLabel =>
-      linkedinAccount?.displayName ?? 'LinkedIn account';
+  String get accountLabel => linkedinAccount?.displayName ?? 'LinkedIn account';
 }

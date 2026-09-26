@@ -43,9 +43,7 @@ class ScheduleCard extends StatelessWidget {
         children: <Widget>[
           Row(
             children: <Widget>[
-              ZaveDot(
-                schedule.isActive ? ZaveColors.green : ZaveColors.ink35,
-              ),
+              ZaveDot(schedule.isActive ? ZaveColors.green : ZaveColors.ink35),
               SizedBox(width: ZaveSpace.sm),
               Expanded(
                 child: Text(

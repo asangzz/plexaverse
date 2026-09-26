@@ -47,10 +47,7 @@ class CalendarMonthGrid extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final List<DateTime> days = buildMonthGrid(
-      viewMonth.year,
-      viewMonth.month,
-    );
+    final List<DateTime> days = buildMonthGrid(viewMonth.year, viewMonth.month);
     final DateTime today = DateTime.now();
 
     return Column(
@@ -71,9 +68,7 @@ class CalendarMonthGrid extends StatelessWidget {
             children: <Widget>[
               for (int col = 0; col < 7; col++) ...<Widget>[
                 if (col > 0) SizedBox(width: ZaveSpace.xs),
-                Expanded(
-                  child: _cell(days[row * 7 + col], today),
-                ),
+                Expanded(child: _cell(days[row * 7 + col], today)),
               ],
             ],
           ),

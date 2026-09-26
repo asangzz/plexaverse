@@ -166,6 +166,15 @@ class ApiPaths {
   /// `data:` image inline. A five-row page is 2 KB here against 1.6 MB there.
   static const String postsFeed = '/posts/feed';
 
+  /// The calendar's two buckets in one call, date-windowed and pre-split.
+  ///
+  /// Wraps the same `getCalendarBuckets` the web has always used: no
+  /// `imageUrl`, content truncated to 280 chars, per-status caps, and a guard
+  /// that drops a thumbnail which turns out to be a `data:` URL. The calendar
+  /// used to read `/posts?limit=100` — 18 MB and 45 seconds on the live table
+  /// — which is why it timed out.
+  static const String calendar = '/calendar';
+
   /// `id` is the SERVER id (a cuid), never the local Drift autoincrement.
   /// Sending the local int is what made every publish 404.
   static String post(String id) => '/posts/$id';

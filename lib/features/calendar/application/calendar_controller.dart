@@ -1,12 +1,12 @@
 import 'dart:async';
 
-import 'package:flutter/widgets.dart'
-    show AppLifecycleState, WidgetsBinding;
+import 'package:clock/clock.dart';
+
+import 'package:flutter/widgets.dart' show AppLifecycleState, WidgetsBinding;
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 import '../data/calendar_repositories.dart';
 import '../domain/calendar_month.dart';
-import '../domain/calendar_post.dart';
 
 part 'calendar_controller.g.dart';
 
@@ -46,10 +46,24 @@ class CalendarController extends _$CalendarController {
     });
     ref.onDispose(timer.cancel);
 
-    final List<CalendarPost> posts = await ref
+    // Six months either side of today.
+    //
+    // The endpoint defaults to −7d/+60d, which is the web's grid window; this
+    // screen has a month stepper, so it needs enough either side to step
+    // through. 360 days also sits under the server's 400-day refusal.
+    //
+    // It is a fixed window rather than one that follows the visible month
+    // because `calendarControllerProvider` is watched and invalidated from
+    // Settings and Accounts too; making it a family keyed on the month would
+    // change those call sites for a screen that already covers more ground
+    // than the old "latest 100 posts regardless of date" ever did.
+    final DateTime now = clock.now();
+    return ref
         .watch(calendarRepositoryProvider)
-        .fetchPosts();
-    return splitCalendarBuckets(posts);
+        .fetchBuckets(
+          from: now.subtract(const Duration(days: 180)),
+          to: now.add(const Duration(days: 180)),
+        );
   }
 
   /// Moves [postId] to [when] and re-reads.

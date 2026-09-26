@@ -96,10 +96,7 @@ class _ScheduleFormSheetState extends State<ScheduleFormSheet> {
         ],
       ),
       children: <Widget>[
-        const CalendarSheetTitle(
-          kicker: 'Automate',
-          title: 'Create schedule',
-        ),
+        const CalendarSheetTitle(kicker: 'Automate', title: 'Create schedule'),
         SizedBox(height: ZaveSpace.xl),
 
         Text('LINKEDIN ACCOUNT', style: ZaveType.kicker),

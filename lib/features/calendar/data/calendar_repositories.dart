@@ -4,14 +4,14 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/config/env.dart';
 import '../../../core/network/api_paths.dart';
 import '../../../core/network/dio_client.dart';
+import '../domain/calendar_month.dart';
 import '../domain/calendar_post.dart';
 import '../domain/calendar_repository.dart';
 import '../domain/post_schedule.dart';
 
-/// The page size asked of `GET /posts`.
-///
-/// The server clamps to 100 (`MAX_LIST_LIMIT`), so asking for more is a lie to
-/// the reader rather than a bigger page.
+/// Retained for the fake repository's fixture slice. The real calendar no
+/// longer pages `GET /posts` — it asks `GET /calendar` for a date window and
+/// gets both buckets back already split.
 const int kCalendarPostPageSize = 100;
 
 /// Dio-backed [CalendarRepository].
@@ -25,23 +25,36 @@ class ApiCalendarRepository implements CalendarRepository {
   final DioClient _client;
 
   @override
-  Future<List<CalendarPost>> fetchPosts({
-    int limit = kCalendarPostPageSize,
-  }) async {
-    // `dynamic`, not `List<dynamic>`: the raw body is the envelope MAP, and Dio
-    // assigns the decoded body to `Response<T>.data` before DioClient unwraps
-    // it. Typing T as a List would fail that assignment with a cast error on
-    // every call, long before the unwrap runs.
+  Future<CalendarBuckets> fetchBuckets({DateTime? from, DateTime? to}) async {
+    // `/calendar`, not `/posts`. The old call selected `imageUrl` — 252 KB a
+    // row on the live table, because most posts hold a base64 `data:` image
+    // inline — for a screen that draws no images. A hundred rows of it was
+    // 18 MB and 45 seconds, against a 30-second receive timeout, which is
+    // what "The calendar did not load" actually was.
     final response = await _client.get<dynamic>(
-      ApiPaths.posts,
-      queryParameters: <String, dynamic>{'limit': limit},
+      ApiPaths.calendar,
+      queryParameters: <String, dynamic>{
+        'from': ?from?.toUtc().toIso8601String(),
+        'to': ?to?.toUtc().toIso8601String(),
+      },
     );
-    final Object? data = response.data;
-    if (data is! List) return const <CalendarPost>[];
-    return data
-        .whereType<Map<String, dynamic>>()
-        .map(CalendarPost.fromJson)
-        .toList(growable: false);
+
+    final dynamic data = response.data;
+    if (data is! Map<String, dynamic>) return const CalendarBuckets();
+
+    List<CalendarPost> bucket(Object? raw) => <CalendarPost>[
+      if (raw is List)
+        for (final dynamic row in raw)
+          if (row is Map<String, dynamic>) CalendarPost.fromJson(row),
+    ];
+
+    // Already split by the server, so `splitCalendarBuckets` is not used on
+    // this path. The rule it encodes still lives in the domain layer and is
+    // still what the FAKE repository applies.
+    return CalendarBuckets(
+      scheduled: bucket(data['scheduled']),
+      pending: bucket(data['pending']),
+    );
   }
 
   @override
@@ -148,9 +161,7 @@ class ApiCalendarRepository implements CalendarRepository {
 
   @override
   Future<List<ScheduleTopic>> fetchTopics() async {
-    final response = await _client.get<Map<String, dynamic>>(
-      ApiPaths.topics,
-    );
+    final response = await _client.get<Map<String, dynamic>>(ApiPaths.topics);
     final Object? raw = response.data?['topics'];
     if (raw is! List) return const <ScheduleTopic>[];
     return raw
@@ -176,13 +187,8 @@ class ApiCalendarRepository implements CalendarRepository {
 class FakeCalendarRepository implements CalendarRepository {
   FakeCalendarRepository() {
     final DateTime today = DateTime.now();
-    DateTime at(int dayOffset, int hour, int minute) => DateTime(
-      today.year,
-      today.month,
-      today.day + dayOffset,
-      hour,
-      minute,
-    );
+    DateTime at(int dayOffset, int hour, int minute) =>
+        DateTime(today.year, today.month, today.day + dayOffset, hour, minute);
 
     _posts = <CalendarPost>[
       CalendarPost(
@@ -304,11 +310,10 @@ class FakeCalendarRepository implements CalendarRepository {
   static const Duration _latency = Duration(milliseconds: 320);
 
   @override
-  Future<List<CalendarPost>> fetchPosts({
-    int limit = kCalendarPostPageSize,
-  }) async {
+  Future<CalendarBuckets> fetchBuckets({DateTime? from, DateTime? to}) async {
     await Future<void>.delayed(_latency);
-    return _posts.take(limit).toList(growable: false);
+    // The fixtures are not date-windowed; the split rule is the real thing.
+    return splitCalendarBuckets(_posts);
   }
 
   @override
