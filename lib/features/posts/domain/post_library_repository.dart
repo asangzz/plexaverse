@@ -7,7 +7,12 @@ export 'library_post.dart';
 /// The web's `useInfinitePosts` uses 10. A phone row is taller than a web row
 /// but a phone scroll is longer, and 10 would put a "Load more" after barely
 /// two screens, so this asks for 20. The server defaults to 50 and caps at 100.
-const int kPostPageLimit = 20;
+/// Five, matching the feed endpoint's own default.
+///
+/// The list shows two-and-a-bit rows on a phone, so a page fills the viewport
+/// and leaves one to scroll into — which is what starts the next fetch before
+/// the reader reaches the end rather than after.
+const int kPostPageLimit = 5;
 
 /// The seam between the post-library screens and the mobile API.
 ///

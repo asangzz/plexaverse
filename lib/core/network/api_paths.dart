@@ -160,6 +160,12 @@ class ApiPaths {
   // ── Posts ───────────────────────────────────────────────────────────────
   static const String posts = '/posts';
 
+  /// The posts LIST. Five lean rows per call — id, title, excerpt, status and
+  /// a thumbnail URL — against `/posts`, which carries `imageUrl` and on the
+  /// live table averages 252 KB per row because most posts hold a base64
+  /// `data:` image inline. A five-row page is 2 KB here against 1.6 MB there.
+  static const String postsFeed = '/posts/feed';
+
   /// `id` is the SERVER id (a cuid), never the local Drift autoincrement.
   /// Sending the local int is what made every publish 404.
   static String post(String id) => '/posts/$id';

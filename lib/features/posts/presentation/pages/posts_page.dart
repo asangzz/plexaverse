@@ -229,7 +229,12 @@ class _PostsPageState extends ConsumerState<PostsPage> {
           onOpen: () => context.push(ZaveRoutes.post(post.id)),
           onApprove: post.canApprove ? () => _approve(post) : null,
           onDelete: () => _delete(post),
-          onCopyLink: () => _copyLink(post),
+          // Offered only when there IS a link. It used to be offered
+          // always and `_copyLink` returned silently for a post with no
+          // LinkedIn URL — a menu item that did nothing. The list rows now
+          // come from the feed, which carries no `linkedinUrl` at all, so
+          // that silent no-op would have been every row.
+          onCopyLink: post.linkedinUrl == null ? null : () => _copyLink(post),
         ),
         SizedBox(height: ZaveSpace.md),
       ],

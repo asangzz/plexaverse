@@ -24,11 +24,16 @@ class ApiPostLibraryRepository implements PostLibraryRepository {
     String? cursor,
     int limit = kPostPageLimit,
   }) async {
-    // `dynamic`, not `List`: the body on the wire is the envelope MAP, and Dio
-    // casts the decoded body to `T` before DioClient ever sees it. Asking for
-    // `List` here throws on the envelope instead of on the payload.
+    // `/posts/feed`, not `/posts`.
+    //
+    // `/posts` carries `imageUrl`, which on the live table averages 252 KB a
+    // row because 152 of 324 posts hold a base64 `data:` image inline. A
+    // five-row page measured 1,686,633 bytes there and 2,416 bytes here. On a
+    // phone that difference IS the wall clock — a hundred-row page of the old
+    // endpoint took 45 seconds and 18 MB, which is how the calendar tab came
+    // to exceed a 30-second receive timeout.
     final response = await _client.get<dynamic>(
-      ApiPaths.posts,
+      ApiPaths.postsFeed,
       queryParameters: <String, dynamic>{
         'limit': limit,
         'status': ?status,
@@ -41,27 +46,62 @@ class ApiPostLibraryRepository implements PostLibraryRepository {
 
     final List<LibraryPost> posts = <LibraryPost>[
       for (final dynamic row in data)
-        if (row is Map<String, dynamic>) LibraryPost.fromJson(row),
+        if (row is Map<String, dynamic>) _summaryOf(row),
     ];
 
-    // The server reports `hasMore` and `nextCursor` in the envelope's `meta`,
-    // but DioClient's parse seam replaces the whole envelope with its `data`
-    // and the meta is gone by the time we get here. Rather than reach around
-    // the seam, both values are re-derived from the window itself — the cursor
-    // IS the last post's id (the server's own keyset rule), and a full window
-    // means there may be another.
+    // Read from the envelope's `meta`, not derived from the window.
     //
-    // The cost of deriving rather than reading: when the total is an exact
-    // multiple of the page size, the last "Load more" fetches an empty page and
-    // then disappears. That is one wasted request at the end of a scroll, and
-    // it is preferable to a client that silently stops at 20 posts. Ask the
-    // orchestrator for meta pass-through if this becomes worth fixing.
-    final bool hasMore = posts.length >= limit;
+    // This used to guess: a full window meant "probably more", and the cursor
+    // was assumed to be the last row's id. That cost one wasted request at
+    // the end of every scroll whose total was an exact multiple of the page
+    // size, and the note here said to ask for meta pass-through if it ever
+    // mattered. It exists — `DioClient` stashes the envelope's meta in
+    // `extra` before the payload replaces it — so the server's own answer is
+    // used and the guess is gone.
+    final Object? page = DioClient.envelopeMeta(response)?['pagination'];
+    if (page is Map) {
+      return PostPage(
+        posts: posts,
+        nextCursor: page['cursor'] as String?,
+        hasMore: page['hasMore'] == true,
+      );
+    }
 
+    // No meta — an older server. Fall back to the old guess rather than
+    // stopping the list dead at the first page.
+    final bool hasMore = posts.length >= limit;
     return PostPage(
       posts: posts,
       nextCursor: hasMore && posts.isNotEmpty ? posts.last.id : null,
       hasMore: hasMore,
+    );
+  }
+
+  /// One feed row as a [LibraryPost].
+  ///
+  /// Hand-written rather than `LibraryPost.fromJson`: the feed's field names
+  /// are deliberately not the full post's. `excerpt` is not `content` and
+  /// `thumbUrl` is not `imageThumbUrl`, because they do not hold the same
+  /// thing — the excerpt is truncated server-side and the thumbnail is
+  /// guaranteed never to be a `data:` URL. Mapping them through `fromJson`
+  /// would have meant naming them alike, and then nothing would stop the full
+  /// payload flowing back into the list.
+  ///
+  /// **`content` here is a PREVIEW.** Anything needing the whole body opens
+  /// the post, which fetches it by id. Every list row is a summary.
+  LibraryPost _summaryOf(Map<String, dynamic> row) {
+    DateTime? when(Object? value) =>
+        value is String ? DateTime.tryParse(value) : null;
+
+    return LibraryPost(
+      id: row['id'] as String? ?? '',
+      title: row['title'] as String?,
+      content: row['excerpt'] as String? ?? '',
+      imageThumbUrl: row['thumbUrl'] as String?,
+      status: PostLibraryStatus.fromWire(row['status']),
+      createdAt: when(row['createdAt']) ?? DateTime.now(),
+      publishedAt: when(row['publishedAt']),
+      scheduledFor: when(row['scheduledFor']),
     );
   }
 

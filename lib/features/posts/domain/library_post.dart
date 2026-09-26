@@ -56,6 +56,22 @@ enum PostLibraryStatus {
     PostLibraryStatus.failed => 'failed',
   };
 
+  /// The inverse of [wire] — a wire string back to the enum.
+  ///
+  /// Unknown strings fall to [draft] rather than throwing. A status this
+  /// client has not been taught yet must not take a whole list down; the row
+  /// still renders and the user can still open it.
+  static PostLibraryStatus fromWire(Object? value) => switch (value) {
+    'draft' => PostLibraryStatus.draft,
+    'pending_approval' => PostLibraryStatus.pendingApproval,
+    'approved' => PostLibraryStatus.approved,
+    'scheduled' => PostLibraryStatus.scheduled,
+    'published' => PostLibraryStatus.published,
+    'rejected' => PostLibraryStatus.rejected,
+    'failed' => PostLibraryStatus.failed,
+    _ => PostLibraryStatus.draft,
+  };
+
   /// The label the web prints in the status pill.
   String get label => switch (this) {
     PostLibraryStatus.draft => 'Draft',
