@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 import '../../../../core/ui/zave/zave_kit.dart';
@@ -34,12 +33,19 @@ class ArticleCard extends StatelessWidget {
   const ArticleCard({
     required this.state,
     required this.onOpen,
+    required this.onCopy,
     required this.onMarkPublished,
     super.key,
   });
 
   final ArticleState state;
   final VoidCallback onOpen;
+
+  /// Copying needs the BODY, which the summary does not carry — the page
+  /// fetches it. The card cannot do it itself without learning about the
+  /// repository, and a card that fetches is a card that cannot be previewed.
+  final VoidCallback onCopy;
+
   final VoidCallback onMarkPublished;
 
   @override
@@ -105,10 +111,7 @@ class ArticleCard extends StatelessWidget {
           SizedBox(height: ZaveSpace.lg),
           Row(
             children: <Widget>[
-              Text(
-                '${article.readMinutes} min read',
-                style: ZaveType.caption,
-              ),
+              Text('${article.readMinutes} min read', style: ZaveType.caption),
               if (state.newsletterName != null) ...<Widget>[
                 SizedBox(width: ZaveSpace.md),
                 Text('·', style: ZaveType.caption),
@@ -135,9 +138,7 @@ class ArticleCard extends StatelessWidget {
                   Expanded(
                     child: Text(
                       'You will need to create a newsletter on LinkedIn first.',
-                      style: ZaveType.caption.copyWith(
-                        color: ZaveColors.ink62,
-                      ),
+                      style: ZaveType.caption.copyWith(color: ZaveColors.ink62),
                     ),
                   ),
                 ],
@@ -157,11 +158,7 @@ class ArticleCard extends StatelessWidget {
                   kind: ZaveButtonKind.primarySmall,
                   icon: const Icon(Icons.copy_all_outlined),
                   expand: true,
-                  onPressed: () async {
-                    await Clipboard.setData(
-                      ClipboardData(text: article.body),
-                    );
-                  },
+                  onPressed: onCopy,
                 ),
               ),
               if (!article.isPublished) ...<Widget>[

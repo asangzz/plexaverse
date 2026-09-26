@@ -19,6 +19,7 @@ _WeeklyArticle _$WeeklyArticleFromJson(Map<String, dynamic> json) =>
               ?.map((e) => e as String)
               .toList() ??
           const <String>[],
+      readingMinutes: (json['readingMinutes'] as num?)?.toInt() ?? 0,
       status: json['status'] as String? ?? 'ready',
       publishedAt: json['publishedAt'] as String?,
       publishedUrl: json['publishedUrl'] as String?,
@@ -33,6 +34,7 @@ Map<String, dynamic> _$WeeklyArticleToJson(_WeeklyArticle instance) =>
       'thesis': instance.thesis,
       'body': instance.body,
       'sections': instance.sections,
+      'readingMinutes': instance.readingMinutes,
       'status': instance.status,
       'publishedAt': instance.publishedAt,
       'publishedUrl': instance.publishedUrl,

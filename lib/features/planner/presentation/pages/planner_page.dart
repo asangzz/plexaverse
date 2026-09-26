@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart' show Clipboard, ClipboardData;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/ui/zave/zave_kit.dart';
 import '../../application/planner_controller.dart';
+import '../../data/planner_repositories.dart';
 import '../../domain/plan_slot.dart';
 import '../../domain/weekly_article.dart';
 import '../widgets/article_card.dart';
@@ -47,11 +49,8 @@ class PlannerPage extends ConsumerWidget {
           error: (Object e, StackTrace _) => _PlannerError(
             onRetry: () => ref.invalidate(plannerControllerProvider),
           ),
-          data: (PlannerState state) => _PlannerBody(
-            state: state,
-            article: article,
-            ref: ref,
-          ),
+          data: (PlannerState state) =>
+              _PlannerBody(state: state, article: article, ref: ref),
         ),
       ),
     );
@@ -118,7 +117,8 @@ class _PlannerBody extends StatelessWidget {
           error: (Object e, StackTrace _) => const SizedBox.shrink(),
           data: (ArticleState a) => ArticleCard(
             state: a,
-            onOpen: () => _openArticle(context, a),
+            onOpen: () => _openArticle(context, ref, a),
+            onCopy: () => _copyArticle(context, ref, a),
             onMarkPublished: () =>
                 ref.read(articleControllerProvider.notifier).markPublished(),
           ),
@@ -145,8 +145,7 @@ class _PlannerBody extends StatelessWidget {
                     chart: plan.liveSlotCount == 0
                         ? null
                         : ZaveAreaWedge(
-                            progress:
-                                plan.publishedCount / plan.liveSlotCount,
+                            progress: plan.publishedCount / plan.liveSlotCount,
                           ),
                   ),
                 ),
@@ -197,8 +196,9 @@ class _PlannerBody extends StatelessWidget {
   /// back-date), and a slot with no generated post has nothing to queue at
   /// all. Both used to read as plain success.
   Future<void> _approve(BuildContext context, WidgetRef ref, int index) async {
-    final ApproveResult? result =
-        await ref.read(plannerControllerProvider.notifier).approve(index);
+    final ApproveResult? result = await ref
+        .read(plannerControllerProvider.notifier)
+        .approve(index);
     if (!context.mounted) return;
 
     final String message;
@@ -207,7 +207,8 @@ class _PlannerBody extends StatelessWidget {
     } else if (result.scheduledFor != null) {
       message = 'Approved — publishing ${_whenLabel(result.scheduledFor!)}.';
     } else if (result.postUpdated) {
-      message = "Approved. That slot's time has passed, so publish it "
+      message =
+          "Approved. That slot's time has passed, so publish it "
           'yourself when you are ready.';
     } else {
       message = 'Approved. Nothing is queued yet — this day has no post.';
@@ -220,11 +221,27 @@ class _PlannerBody extends StatelessWidget {
   /// "today at 09:00" / "Mon at 09:00" / "12 Oct at 09:00".
   static String _whenLabel(DateTime when) {
     const List<String> days = <String>[
-      'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun',
+      'Mon',
+      'Tue',
+      'Wed',
+      'Thu',
+      'Fri',
+      'Sat',
+      'Sun',
     ];
     const List<String> months = <String>[
-      'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-      'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
+      'Jan',
+      'Feb',
+      'Mar',
+      'Apr',
+      'May',
+      'Jun',
+      'Jul',
+      'Aug',
+      'Sep',
+      'Oct',
+      'Nov',
+      'Dec',
     ];
     final DateTime now = DateTime.now();
     final String time =
@@ -247,18 +264,70 @@ class _PlannerBody extends StatelessWidget {
       context: context,
       backgroundColor: Colors.transparent,
       isScrollControlled: true,
-      builder: (BuildContext ctx) => _SlotSheet(slot: slot, slotIndex: slotIndex),
+      builder: (BuildContext ctx) =>
+          _SlotSheet(slot: slot, slotIndex: slotIndex),
     );
   }
 
-  void _openArticle(BuildContext context, ArticleState a) {
+  /// The body, fetched when it is actually needed.
+  ///
+  /// The summary does not carry it — it was ninety percent of that response
+  /// for text the card never shows. Returns null if the fetch fails, and the
+  /// caller says so rather than opening an empty sheet or silently copying
+  /// nothing.
+  Future<String?> _articleBody(WidgetRef ref, ArticleState a) async {
+    if (a.article!.hasBody) return a.article!.body;
+    try {
+      return await ref
+          .read(plannerRepositoryProvider)
+          .fetchArticleBody(week: a.weekNumber, season: a.season);
+    } on Object {
+      return null;
+    }
+  }
+
+  Future<void> _openArticle(
+    BuildContext context,
+    WidgetRef ref,
+    ArticleState a,
+  ) async {
     if (a.article == null) return;
+    final String? body = await _articleBody(ref, a);
+    if (!context.mounted) return;
+    if (body == null) {
+      _say(context, "The article didn't load. Try again.");
+      return;
+    }
     showModalBottomSheet<void>(
       context: context,
       backgroundColor: Colors.transparent,
       isScrollControlled: true,
-      builder: (BuildContext ctx) => _ArticleSheet(article: a.article!),
+      builder: (BuildContext ctx) =>
+          _ArticleSheet(article: a.article!.copyWith(body: body)),
     );
+  }
+
+  Future<void> _copyArticle(
+    BuildContext context,
+    WidgetRef ref,
+    ArticleState a,
+  ) async {
+    if (a.article == null) return;
+    final String? body = await _articleBody(ref, a);
+    if (!context.mounted) return;
+    if (body == null || body.isEmpty) {
+      _say(context, "The article didn't load, so there was nothing to copy.");
+      return;
+    }
+    await Clipboard.setData(ClipboardData(text: body));
+    if (!context.mounted) return;
+    _say(context, 'Article copied.');
+  }
+
+  void _say(BuildContext context, String message) {
+    ScaffoldMessenger.of(context)
+      ..hideCurrentSnackBar()
+      ..showSnackBar(SnackBar(content: Text(message, style: ZaveType.body)));
   }
 }
 
@@ -292,7 +361,10 @@ class _WeekHeader extends ConsumerWidget {
           children: <Widget>[
             Text('Week $week', style: ZaveType.h2),
             SizedBox(width: ZaveSpace.sm),
-            Text('planner', style: plannerSerif(size: 26, color: ZaveColors.peri)),
+            Text(
+              'planner',
+              style: plannerSerif(size: 26, color: ZaveColors.peri),
+            ),
           ],
         ),
         if (phase != null) ...<Widget>[
@@ -330,16 +402,15 @@ class _WeekHeader extends ConsumerWidget {
               onPressed: week <= 1
                   ? null
                   : () => ref
-                      .read(plannerWeekProvider.notifier)
-                      .show(week - 1, season),
+                        .read(plannerWeekProvider.notifier)
+                        .show(week - 1, season),
             ),
             SizedBox(width: ZaveSpace.sm),
             ZaveButton(
               label: 'Next',
               trailing: const Icon(Icons.chevron_right),
-              onPressed: () => ref
-                  .read(plannerWeekProvider.notifier)
-                  .show(week + 1, season),
+              onPressed: () =>
+                  ref.read(plannerWeekProvider.notifier).show(week + 1, season),
             ),
             if (browsing) ...<Widget>[
               SizedBox(width: ZaveSpace.md),
@@ -366,15 +437,17 @@ class _WeekHeader extends ConsumerWidget {
     );
     if (next == null || !context.mounted) return;
 
-    final String? failure =
-        await ref.read(plannerControllerProvider.notifier).changeTopic(next);
+    final String? failure = await ref
+        .read(plannerControllerProvider.notifier)
+        .changeTopic(next);
     if (!context.mounted) return;
     ScaffoldMessenger.of(context)
       ..hideCurrentSnackBar()
       ..showSnackBar(
         SnackBar(
           content: Text(
-            failure ?? 'Re-planned. Days you have already written are unchanged.',
+            failure ??
+                'Re-planned. Days you have already written are unchanged.',
             style: ZaveType.body,
           ),
         ),
@@ -398,8 +471,9 @@ class _ChangeTopicDialog extends StatefulWidget {
 
 class _ChangeTopicDialogState extends State<_ChangeTopicDialog> {
   static const int _maxLength = 120;
-  late final TextEditingController _topic =
-      TextEditingController(text: widget.current);
+  late final TextEditingController _topic = TextEditingController(
+    text: widget.current,
+  );
 
   @override
   void dispose() {
@@ -411,7 +485,9 @@ class _ChangeTopicDialogState extends State<_ChangeTopicDialog> {
   Widget build(BuildContext context) {
     final String value = _topic.text.trim();
     final bool ready =
-        value.isNotEmpty && value != widget.current && value.length <= _maxLength;
+        value.isNotEmpty &&
+        value != widget.current &&
+        value.length <= _maxLength;
 
     return AlertDialog(
       title: const Text("This week's topic"),
@@ -486,7 +562,9 @@ class _UpcomingWeek extends StatelessWidget {
           ),
           SizedBox(height: ZaveSpace.md),
           Text(
-            state.upcomingTitle ?? state.upcomingTopic ?? 'This week is planned',
+            state.upcomingTitle ??
+                state.upcomingTopic ??
+                'This week is planned',
             style: ZaveType.h3,
           ),
           SizedBox(height: ZaveSpace.md),
@@ -595,8 +673,7 @@ class _SlotSheetState extends ConsumerState<_SlotSheet> {
           .generate(widget.slotIndex, force: force);
       note = switch (result) {
         null => "That didn't go through. Try again.",
-        GeneratedSlot(alreadyGenerated: true) =>
-          'That day already has a post.',
+        GeneratedSlot(alreadyGenerated: true) => 'That day already has a post.',
         _ => force ? 'Rewritten.' : 'Written. Review it, then approve.',
       };
     } on PlannerGenerateFailure catch (e) {

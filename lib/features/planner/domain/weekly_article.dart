@@ -33,10 +33,20 @@ abstract class WeeklyArticle with _$WeeklyArticle {
     String? thesis,
 
     /// The body, 1200–1800 words. What the user pastes into LinkedIn.
+    ///
+    /// **Empty on the summary.** `GET /planner/article` stopped sending it —
+    /// it was 6,422 of that response's 7,148 bytes for text the planner screen
+    /// never shows. It arrives from `GET /planner/article/body`, fetched when
+    /// the sheet opens or Copy is tapped. Check [hasBody] before using it.
     @Default('') String body,
     @Default(<String>[]) List<String> sections,
 
     /// 'ready' once written; stamped published only by the user.
+    /// Reading time, in minutes, as the SERVER counted it.
+    ///
+    /// It used to be derived here by counting words in [body] — which is
+    /// precisely what would have kept the body in the list payload.
+    @Default(0) int readingMinutes,
     @Default('ready') String status,
     String? publishedAt,
     String? publishedUrl,
@@ -48,12 +58,10 @@ abstract class WeeklyArticle with _$WeeklyArticle {
   bool get isPublished => publishedAt != null;
 
   /// Rough reading time, for the card's meta line.
-  int get readMinutes {
-    final int words = body.trim().isEmpty
-        ? 0
-        : body.trim().split(RegExp(r'\s+')).length;
-    return words == 0 ? 0 : (words / 220).ceil();
-  }
+  int get readMinutes => readingMinutes;
+
+  /// Whether the body has been fetched. The summary arrives without it.
+  bool get hasBody => body.trim().isNotEmpty;
 }
 
 /// The article endpoint's whole response.

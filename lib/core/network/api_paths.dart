@@ -136,6 +136,14 @@ class ApiPaths {
   /// pushes one — it prepares a body and the user pastes it.
   static const String plannerArticle = '/planner/article';
 
+  /// The article's body on its own.
+  ///
+  /// [plannerArticle] returns the summary the planner screen draws — title,
+  /// thesis, sections, status, reading time. The body was 6,422 of that
+  /// response's 7,148 bytes for text the screen never shows, so it moved
+  /// here and is fetched when the sheet opens or Copy is tapped.
+  static const String plannerArticleBody = '/planner/article/body';
+
   /// POST — writes the post for one planner slot. `{planId, slotIndex, force}`.
   ///
   /// The planner's primary action, and the last thing keeping the mobile

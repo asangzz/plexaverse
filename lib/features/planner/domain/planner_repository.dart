@@ -75,6 +75,13 @@ abstract class PlannerRepository {
   /// The week's Sunday article.
   Future<ArticleState> fetchArticle({int? week, int? season});
 
+  /// The article's BODY, fetched when it is actually read.
+  ///
+  /// [fetchArticle] returns the summary the planner screen draws and leaves
+  /// the body out — it was ninety percent of that response for text the
+  /// screen does not show. This is the call the article sheet and Copy make.
+  Future<String> fetchArticleBody({int? week, int? season});
+
   /// Records that the user pasted the article into LinkedIn themselves.
   Future<WeeklyArticle?> markArticlePublished({
     required int weekNumber,
@@ -82,7 +89,6 @@ abstract class PlannerRepository {
     String? publishedUrl,
   });
 }
-
 
 /// What approving a slot actually did.
 class ApproveResult {
@@ -105,13 +111,9 @@ class ApproveResult {
   final bool postUpdated;
 }
 
-
 /// The post a slot generation produced.
 class GeneratedSlot {
-  const GeneratedSlot({
-    required this.postId,
-    this.alreadyGenerated = false,
-  });
+  const GeneratedSlot({required this.postId, this.alreadyGenerated = false});
 
   final String? postId;
 

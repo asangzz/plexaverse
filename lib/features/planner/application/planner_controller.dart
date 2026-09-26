@@ -56,8 +56,9 @@ class PlannerController extends _$PlannerController {
     if (plan == null) return null;
 
     final List<PlanSlot> optimistic = List<PlanSlot>.of(plan.posts);
-    optimistic[slotIndex] =
-        optimistic[slotIndex].copyWith(status: SlotStatus.generating);
+    optimistic[slotIndex] = optimistic[slotIndex].copyWith(
+      status: SlotStatus.generating,
+    );
     state = AsyncData<PlannerState>(
       current!.copyWith(plan: plan.copyWith(posts: optimistic)),
     );
@@ -137,8 +138,9 @@ class PlannerController extends _$PlannerController {
     if (plan == null) return null;
 
     final List<PlanSlot> optimistic = List<PlanSlot>.of(plan.posts);
-    optimistic[slotIndex] =
-        optimistic[slotIndex].copyWith(status: SlotStatus.approved);
+    optimistic[slotIndex] = optimistic[slotIndex].copyWith(
+      status: SlotStatus.approved,
+    );
     state = AsyncData<PlannerState>(
       current!.copyWith(plan: plan.copyWith(posts: optimistic)),
     );

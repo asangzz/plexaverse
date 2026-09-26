@@ -23,10 +23,7 @@ class ApiPlannerRepository implements PlannerRepository {
   Future<PlannerState> fetchWeek({int? week, int? season}) async {
     final response = await _client.get<Map<String, dynamic>>(
       ApiPaths.planner,
-      queryParameters: <String, dynamic>{
-        'week': ?week,
-        'season': ?season,
-      },
+      queryParameters: <String, dynamic>{'week': ?week, 'season': ?season},
     );
     final Map<String, dynamic>? data = response.data;
     if (data == null) return const PlannerState();
@@ -217,14 +214,20 @@ class ApiPlannerRepository implements PlannerRepository {
   Future<ArticleState> fetchArticle({int? week, int? season}) async {
     final response = await _client.get<Map<String, dynamic>>(
       ApiPaths.plannerArticle,
-      queryParameters: <String, dynamic>{
-        'week': ?week,
-        'season': ?season,
-      },
+      queryParameters: <String, dynamic>{'week': ?week, 'season': ?season},
     );
     final Map<String, dynamic>? data = response.data;
     if (data == null) return const ArticleState();
     return ArticleState.fromJson(data);
+  }
+
+  @override
+  Future<String> fetchArticleBody({int? week, int? season}) async {
+    final response = await _client.get<Map<String, dynamic>>(
+      ApiPaths.plannerArticleBody,
+      queryParameters: <String, dynamic>{'week': ?week, 'season': ?season},
+    );
+    return response.data?['body'] as String? ?? '';
   }
 
   @override
@@ -312,11 +315,7 @@ class FakePlannerRepository implements PlannerRepository {
   @override
   Future<PlannerState> fetchWeek({int? week, int? season}) async {
     await Future<void>.delayed(const Duration(milliseconds: 350));
-    return PlannerState(
-      plan: _plan,
-      currentWeekNumber: 3,
-      currentSeason: 1,
-    );
+    return PlannerState(plan: _plan, currentWeekNumber: 3, currentSeason: 1);
   }
 
   @override
@@ -449,6 +448,14 @@ class FakePlannerRepository implements PlannerRepository {
         ],
       ),
     );
+  }
+
+  @override
+  Future<String> fetchArticleBody({int? week, int? season}) async {
+    await Future<void>.delayed(const Duration(milliseconds: 350));
+    // The fixture carries its body inline; the real one fetches it. The split
+    // is a wire concern, so the fake answers the same question either way.
+    return (await fetchArticle(week: week, season: season)).article?.body ?? '';
   }
 
   @override
