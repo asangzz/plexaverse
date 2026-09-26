@@ -111,17 +111,28 @@ class _HomeBody extends ConsumerWidget {
       preferencesControllerProvider,
     );
 
+    // Same rule as the timeline below: a value that is being refreshed is
+    // still a value. `when` treats any loading as "nothing to show", so every
+    // preferences invalidation used to blank the whole screen to a skeleton
+    // and rebuild the timeline underneath it.
+    if (prefs.hasValue) return _seasonBody(prefs.requireValue, topInset);
+
     return prefs.when(
       loading: () => HomeSkeleton(topInset: topInset),
       error: (Object _, StackTrace _) => HomeError(
         topInset: topInset,
         onRetry: () => ref.invalidate(preferencesControllerProvider),
       ),
-      // Three states, not two. A user past day 66 who has not chosen a
-      // Season 2 path belongs on the Season Complete screen — the route
-      // existed and nothing ever navigated to it, so finishing the 66-day
-      // arc simply carried on showing a roadmap with nothing left in it.
-      data: (UserPreferences preferences) => switch (preferences) {
+      data: (UserPreferences preferences) => _seasonBody(preferences, topInset),
+    );
+  }
+
+  /// Three states, not two. A user past day 66 who has not chosen a Season 2
+  /// path belongs on the Season Complete screen — the route existed and
+  /// nothing ever navigated to it, so finishing the 66-day arc simply carried
+  /// on showing a roadmap with nothing left in it.
+  Widget _seasonBody(UserPreferences preferences, double topInset) =>
+      switch (preferences) {
         final UserPreferences p when p.isSeason2 => _SeasonTwoBody(
           preferences: p,
           topInset: topInset,
@@ -129,9 +140,7 @@ class _HomeBody extends ConsumerWidget {
         final UserPreferences p when p.seasonOneFinished =>
           const _SeasonOneFinishedRedirect(),
         _ => _SeasonOneBody(topInset: topInset),
-      },
-    );
-  }
+      };
 }
 
 /// Opens a task's screen.
@@ -173,15 +182,27 @@ class _SeasonOneBody extends ConsumerWidget {
     );
     final AsyncValue<int> activeDay = ref.watch(activeRoadmapDayProvider);
 
-    if (levels.isLoading || activeDay.isLoading) {
+    // A VALUE beats a refresh. `isLoading` was checked first, and that is what
+    // made the timeline flicker: `activeRoadmapDay` watches the selected day,
+    // so every scroll that names a new day rebuilds it into a loading state —
+    // and this returned the skeleton, destroying RoadmapTimeline, its
+    // ScrollController and its scroll position, then rebuilding it a frame
+    // later at the new day. On screen that is a white card flashing over the
+    // planet and the timeline jumping instead of scrolling.
+    //
+    // A dependency rebuild KEEPS the previous data: the state is
+    // `AsyncLoading(value: …)` with `hasValue` true. So there is a day to draw
+    // the whole time, and the skeleton is only for when there genuinely is
+    // not one.
+    if (!levels.hasValue || !activeDay.hasValue) {
+      if (levels.hasError || activeDay.hasError) {
+        return HomeError(
+          topInset: topInset,
+          onRetry: () =>
+              ref.read(roadmapProgressControllerProvider.notifier).refresh(),
+        );
+      }
       return HomeSkeleton(topInset: topInset);
-    }
-    if (levels.hasError || activeDay.hasError) {
-      return HomeError(
-        topInset: topInset,
-        onRetry: () =>
-            ref.read(roadmapProgressControllerProvider.notifier).refresh(),
-      );
     }
 
     final List<RoadmapLevel> days = levels.requireValue;

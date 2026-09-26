@@ -22,6 +22,11 @@ class _Gate extends Notifier<bool> {
   @override
   bool build() => false;
   void signIn() => state = true;
+
+  // ignore: use_setters_to_change_properties
+  set state(bool value) => super.state = value;
+  @override
+  bool get state => super.state;
 }
 
 final _gate = NotifierProvider<_Gate, bool>(_Gate.new);
@@ -58,5 +63,38 @@ void main() {
 
     await Future<void>.delayed(const Duration(milliseconds: 60));
     expect(container.read(_prefs).value, 'preferences');
+  });
+
+  test('a DATA value DOES survive the rebuild, and the home screen needs it',
+      () async {
+    // The counterpart, and the opposite answer. `activeRoadmapDay` watches the
+    // selected day, so every scroll of the roadmap rebuilds it — and the home
+    // screen used to check `isLoading` and return its skeleton, destroying the
+    // timeline, its ScrollController and its scroll position, then rebuilding
+    // a frame later. On screen that was a white card flashing over the planet
+    // and the timeline jumping instead of scrolling.
+    //
+    // It now checks `hasValue`, which is only correct because a dependency
+    // rebuild keeps the previous DATA — unlike a previous error, above.
+    final container = ProviderContainer();
+    addTearDown(container.dispose);
+
+    container.listen(_prefs, (_, _) {});
+    container.read(_gate.notifier).signIn();
+    await Future<void>.delayed(const Duration(milliseconds: 60));
+    expect(container.read(_prefs).value, 'preferences');
+
+    // Something the provider depends on changes again.
+    container.read(_gate.notifier).signIn();
+    container.read(_gate.notifier).state = false;
+
+    final refetching = container.read(_prefs);
+    expect(refetching.isLoading, isTrue);
+    expect(
+      refetching.hasValue,
+      isTrue,
+      reason: 'the value must outlive the rebuild, or the timeline is torn '
+          'down on every scroll',
+    );
   });
 }
