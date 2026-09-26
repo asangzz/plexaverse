@@ -67,7 +67,7 @@ final class CalendarControllerProvider
 }
 
 String _$calendarControllerHash() =>
-    r'7f34ff25f7681dcc55f60f856b450416019a8f93';
+    r'56051d6cd36e399b8ff56d0138291464738435e3';
 
 /// The calendar's posts, already split into the grid bucket and the pending
 /// backlog.

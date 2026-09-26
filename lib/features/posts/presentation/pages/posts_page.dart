@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart' show Clipboard, ClipboardData;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../../core/router/zave_routes.dart';
+import '../../../../core/ui/widgets/open_link.dart';
 import '../../../../core/ui/zave/zave_kit.dart';
 import '../../application/post_library_controllers.dart';
 import '../../domain/library_post.dart';
@@ -118,11 +118,14 @@ class _PostsPageState extends ConsumerState<PostsPage> {
     }
   }
 
-  Future<void> _copyLink(LibraryPost post) async {
+  /// Opens the published post in the LinkedIn app, the way the web's
+  /// `target="_blank"` link does. Falls back to the clipboard only when
+  /// nothing on the device can open it.
+  Future<void> _openOnLinkedIn(LibraryPost post) async {
     final String? url = post.linkedinUrl;
     if (url == null) return;
-    await Clipboard.setData(ClipboardData(text: url));
-    _notify('LinkedIn link copied.');
+    final String? message = await openLinkOrCopy(ref, url);
+    if (message != null) _notify(message);
   }
 
   @override
@@ -229,12 +232,13 @@ class _PostsPageState extends ConsumerState<PostsPage> {
           onOpen: () => context.push(ZaveRoutes.post(post.id)),
           onApprove: post.canApprove ? () => _approve(post) : null,
           onDelete: () => _delete(post),
-          // Offered only when there IS a link. It used to be offered
-          // always and `_copyLink` returned silently for a post with no
-          // LinkedIn URL — a menu item that did nothing. The list rows now
-          // come from the feed, which carries no `linkedinUrl` at all, so
-          // that silent no-op would have been every row.
-          onCopyLink: post.linkedinUrl == null ? null : () => _copyLink(post),
+          // Offered only when there IS a link, which is every published
+          // post and nothing else. The feed carries `linkedinUrl` for
+          // exactly this — before it did, the action was wired to a field
+          // that was null on every row and so never appeared at all.
+          onOpenLinkedIn: post.linkedinUrl == null
+              ? null
+              : () => _openOnLinkedIn(post),
         ),
         SizedBox(height: ZaveSpace.md),
       ],

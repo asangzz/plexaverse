@@ -26,7 +26,7 @@ class PostCard extends StatelessWidget {
     required this.onOpen,
     this.onApprove,
     this.onDelete,
-    this.onCopyLink,
+    this.onOpenLinkedIn,
     this.busy = false,
     super.key,
   });
@@ -40,10 +40,14 @@ class PostCard extends StatelessWidget {
 
   final VoidCallback? onDelete;
 
-  /// Offered instead of the web's "View on LinkedIn" link. The app has no
-  /// `url_launcher` dependency, so it cannot open an external browser; copying
-  /// the URL is the honest thing it CAN do. See the screen's summary.
-  final VoidCallback? onCopyLink;
+  /// The web's "View on LinkedIn" link, which this now is rather than
+  /// approximates: the URL opens in the LinkedIn app through the same
+  /// App Link / Universal Link hand-off the web's `target="_blank"` uses.
+  /// Copying is the fallback when nothing on the device can open it — see
+  /// `core/platform/link_opening.dart`.
+  ///
+  /// Null when there is no URL, which is every unpublished post.
+  final VoidCallback? onOpenLinkedIn;
 
   /// A mutation is in flight for this post.
   final bool busy;
@@ -130,7 +134,7 @@ class PostCard extends StatelessWidget {
             busy: busy,
             onApprove: onApprove,
             onDelete: onDelete,
-            onCopyLink: onCopyLink,
+            onOpenLinkedIn: onOpenLinkedIn,
           ),
         ],
       ),
@@ -249,14 +253,14 @@ class _Actions extends StatelessWidget {
     required this.busy,
     this.onApprove,
     this.onDelete,
-    this.onCopyLink,
+    this.onOpenLinkedIn,
   });
 
   final LibraryPost post;
   final bool busy;
   final VoidCallback? onApprove;
   final VoidCallback? onDelete;
-  final VoidCallback? onCopyLink;
+  final VoidCallback? onOpenLinkedIn;
 
   @override
   Widget build(BuildContext context) {
@@ -290,9 +294,9 @@ class _Actions extends StatelessWidget {
     } else if (post.isPublished && post.linkedinUrl != null) {
       fills = true;
       leading = ZaveButton(
-        label: 'Copy link',
-        icon: const Icon(Icons.link),
-        onPressed: onCopyLink,
+        label: 'View on LinkedIn',
+        icon: const Icon(Icons.open_in_new_rounded),
+        onPressed: onOpenLinkedIn,
       );
     } else {
       fills = false;

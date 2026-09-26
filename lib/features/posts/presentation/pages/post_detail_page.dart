@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
+import '../../../../core/ui/widgets/open_link.dart';
 import '../../../../core/ui/zave/zave_kit.dart';
 import '../../application/post_library_controllers.dart';
 import '../../domain/library_post.dart';
@@ -31,11 +32,16 @@ import '../widgets/schedule_sheet.dart';
 ///
 /// ## What the web does that a phone cannot
 ///
-/// The web's edit mode attaches an image (`POST /api/upload/image`) and opens
-/// the published post in a new tab. This app has neither an image picker nor
-/// `url_launcher` as a dependency, so image attachment is absent and "View on
-/// LinkedIn" is "Copy link" instead. Both are reported to the orchestrator
-/// rather than faked.
+/// The web's edit mode attaches an image (`POST /api/upload/image`). This app
+/// has no image picker on this screen, so that is absent and reported rather
+/// than faked.
+///
+/// The web's other browser-shaped behaviour — opening the published post in a
+/// new tab, both from the "View on LinkedIn" link and automatically on a
+/// successful publish — IS ported. `target="_blank"` on a phone is not a
+/// browser tab: the OS hands `linkedin.com` to the LinkedIn app, and
+/// `core/platform/link_opening.dart` reproduces that. The clipboard remains
+/// only as the fallback for a device where nothing can open a link.
 class PostDetailPage extends ConsumerStatefulWidget {
   const PostDetailPage({required this.postId, super.key});
 
@@ -116,9 +122,21 @@ class _PostDetailPageState extends ConsumerState<PostDetailPage> {
     _notify('Post approved. It will go out on schedule.');
   }, 'Could not approve that post.');
 
+  /// Publish, then open the post — the web does both
+  /// (`window.open(data.linkedinUrl, '_blank')` in its `handlePublish`).
+  ///
+  /// The publish is what succeeded; opening is a courtesy on top of it. So a
+  /// failure to open never becomes a failure to publish: the success notice
+  /// is replaced by the fallback's message, and the post stays published
+  /// either way.
   Future<void> _publish() => _run(() async {
-    await _controller.publish();
-    _notify('Published to LinkedIn.');
+    final String? url = await _controller.publish();
+    if (url == null) {
+      _notify('Published to LinkedIn.');
+      return;
+    }
+    final String? problem = await openLinkOrCopy(ref, url);
+    _notify(problem ?? 'Published to LinkedIn.');
   }, 'Could not publish that post.');
 
   Future<void> _save({required bool asDraft}) => _run(() async {
@@ -167,11 +185,13 @@ class _PostDetailPageState extends ConsumerState<PostDetailPage> {
     }
   }
 
-  Future<void> _copyLink(LibraryPost post) async {
+  /// Opens the published post in the LinkedIn app, the way the web's
+  /// `target="_blank"` link does.
+  Future<void> _openOnLinkedIn(LibraryPost post) async {
     final String? url = post.linkedinUrl;
     if (url == null) return;
-    await Clipboard.setData(ClipboardData(text: url));
-    _notify('LinkedIn link copied.');
+    final String? message = await openLinkOrCopy(ref, url);
+    if (message != null) _notify(message);
   }
 
   Future<void> _copyBody(LibraryPost post) async {
@@ -285,7 +305,7 @@ class _PostDetailPageState extends ConsumerState<PostDetailPage> {
           onEdit: () => setState(() => _editing = true),
           onSchedule: () => _schedule(post),
           onDelete: _delete,
-          onCopyLink: () => _copyLink(post),
+          onOpenLinkedIn: () => _openOnLinkedIn(post),
           onCopyBody: () => _copyBody(post),
         ),
 
@@ -462,7 +482,7 @@ class _ActionBar extends StatelessWidget {
     required this.onEdit,
     required this.onSchedule,
     required this.onDelete,
-    required this.onCopyLink,
+    required this.onOpenLinkedIn,
     required this.onCopyBody,
   });
 
@@ -473,7 +493,7 @@ class _ActionBar extends StatelessWidget {
   final VoidCallback onEdit;
   final VoidCallback onSchedule;
   final VoidCallback onDelete;
-  final VoidCallback onCopyLink;
+  final VoidCallback onOpenLinkedIn;
   final VoidCallback onCopyBody;
 
   @override
@@ -522,9 +542,9 @@ class _ActionBar extends StatelessWidget {
             ),
             if (post.linkedinUrl != null)
               ZaveButton(
-                label: 'Copy link',
-                icon: const Icon(Icons.link),
-                onPressed: onCopyLink,
+                label: 'View on LinkedIn',
+                icon: const Icon(Icons.open_in_new_rounded),
+                onPressed: onOpenLinkedIn,
               ),
             ZaveIconButton(
               icon: const Icon(Icons.delete_outline),

@@ -99,6 +99,10 @@ class ApiPostLibraryRepository implements PostLibraryRepository {
       content: row['excerpt'] as String? ?? '',
       imageThumbUrl: row['thumbUrl'] as String?,
       status: PostLibraryStatus.fromWire(row['status']),
+      // Null on everything unpublished, which is what hides the row's
+      // "View on LinkedIn". The feed carries it because the web's list shows
+      // that link too; it is a ~70-byte share URL, not a payload risk.
+      linkedinUrl: row['linkedinUrl'] as String?,
       createdAt: when(row['createdAt']) ?? DateTime.now(),
       publishedAt: when(row['publishedAt']),
       scheduledFor: when(row['scheduledFor']),
