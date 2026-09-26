@@ -22,11 +22,7 @@ class _Gate extends Notifier<bool> {
   @override
   bool build() => false;
   void signIn() => state = true;
-
-  // ignore: use_setters_to_change_properties
-  set state(bool value) => super.state = value;
-  @override
-  bool get state => super.state;
+  void signOut() => state = false;
 }
 
 final _gate = NotifierProvider<_Gate, bool>(_Gate.new);
@@ -85,8 +81,7 @@ void main() {
     expect(container.read(_prefs).value, 'preferences');
 
     // Something the provider depends on changes again.
-    container.read(_gate.notifier).signIn();
-    container.read(_gate.notifier).state = false;
+    container.read(_gate.notifier).signOut();
 
     final refetching = container.read(_prefs);
     expect(refetching.isLoading, isTrue);
