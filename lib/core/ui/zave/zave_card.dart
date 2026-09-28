@@ -61,9 +61,17 @@ class _ZaveCardState extends State<ZaveCard> {
   Widget build(BuildContext context) {
     final bool lifted = widget.isNow || (_pressed && widget.onTap != null);
 
-    // Fill and edge move together, one step at a time. They are separate
-    // tokens so a surface cannot end up with a `now` pane behind a `rest`
-    // hairline, which is what made the old flat cards read as stickers.
+    // One ladder, four things on it: how much light the face catches, how
+    // bright its lit rim is, how thick it reads, and how far above the ground
+    // it sits. They are separate tokens so they can be tuned, not so they can
+    // disagree — a `now` pane behind a `rest` hairline is what made the old
+    // flat cards read as stickers.
+    //
+    // Pressed moves DOWN, not up: the fill brightens the way the web's hover
+    // does, but the shadow tightens toward the ground. A press that grows its
+    // shadow feels wrong for a reason people cannot usually name.
+    final bool pressed = _pressed && widget.onTap != null;
+
     final BoxDecoration deco = BoxDecoration(
       gradient: widget.isNow
           ? ZaveFill.now
@@ -73,7 +81,11 @@ class _ZaveCardState extends State<ZaveCard> {
             ? ZaveEdge.now
             : (lifted ? ZaveEdge.hover : ZaveEdge.rest),
         highlight: widget.isNow ? ZaveEdge.bevelNow : ZaveEdge.bevel,
+        underside: ZaveEdge.underside,
       ),
+      boxShadow: widget.isNow
+          ? ZaveShadow.lifted
+          : (pressed ? ZaveShadow.pressed : ZaveShadow.resting),
       borderRadius: BorderRadius.circular(_radius),
     );
 

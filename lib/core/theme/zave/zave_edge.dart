@@ -31,6 +31,7 @@ class ZaveEdgeBorder extends BoxBorder {
   const ZaveEdgeBorder({
     required this.gradient,
     this.highlight,
+    this.underside,
     this.width = 1,
   });
 
@@ -49,6 +50,20 @@ class ZaveEdgeBorder extends BoxBorder {
   /// Only the top. A bevel on all four sides reads as a bezel or a button, not
   /// as glass, and the light is above anyway.
   final Gradient? highlight;
+
+  /// The bevel's opposite: a dark line just inside the BOTTOM edge.
+  ///
+  /// The top face of a pane's thickness catches the light; the bottom face is
+  /// turned away from it and goes darker than the pane itself. With only the
+  /// top highlight a card reads as having a lit rim; with both it reads as
+  /// having a body between them, which is the difference between an outline
+  /// and an object.
+  ///
+  /// Subtler than [highlight] by design. Shadow carries less information than
+  /// light here — the ground is already almost black, so there is not much
+  /// room below the fill to go darker before the line becomes a hard black
+  /// stripe.
+  final Gradient? underside;
 
   final double width;
 
@@ -70,6 +85,7 @@ class ZaveEdgeBorder extends BoxBorder {
   ShapeBorder scale(double t) => ZaveEdgeBorder(
     gradient: gradient,
     highlight: highlight,
+    underside: underside,
     width: width * t,
   );
 
@@ -86,6 +102,7 @@ class ZaveEdgeBorder extends BoxBorder {
       ? ZaveEdgeBorder(
           gradient: Gradient.lerp(a.gradient, gradient, t)!,
           highlight: Gradient.lerp(a.highlight, highlight, t),
+          underside: Gradient.lerp(a.underside, underside, t),
           width: lerpDouble(a.width, width, t)!,
         )
       : super.lerpFrom(a, t);
@@ -95,6 +112,7 @@ class ZaveEdgeBorder extends BoxBorder {
       ? ZaveEdgeBorder(
           gradient: Gradient.lerp(gradient, b.gradient, t)!,
           highlight: Gradient.lerp(highlight, b.highlight, t),
+          underside: Gradient.lerp(underside, b.underside, t),
           width: lerpDouble(width, b.width, t)!,
         )
       : super.lerpTo(b, t);
@@ -124,25 +142,38 @@ class ZaveEdgeBorder extends BoxBorder {
     final BorderRadius radius = borderRadius ?? BorderRadius.zero;
     canvas.drawRRect(radius.toRRect(rect).deflate(width / 2), paint);
 
-    if (highlight == null) return;
+    // Both faces of the pane's thickness. Each runs between the corner arcs
+    // rather than across them: carried into a corner a bevel reads as a
+    // second, misaligned outline. Stopping short of each radius is also what
+    // gives the line its soft ends.
+    _face(canvas, rect, radius, highlight, rect.top + width + 0.5, 0.6);
+    _face(canvas, rect, radius, underside, rect.bottom - width - 0.5, 0.75);
+  }
 
-    // The bevel runs between the corner arcs, not across them: carried into a
-    // corner it reads as a second, misaligned outline. Starting it a little
-    // inside each radius is also what gives it its soft ends.
-    final double y = rect.top + width + 0.5;
-    final double x1 = rect.left + radius.topLeft.x * 0.6 + width;
-    final double x2 = rect.right - radius.topRight.x * 0.6 - width;
+  /// One horizontal inner line at [y], inset from each corner by [corner] of
+  /// its radius.
+  static void _face(
+    Canvas canvas,
+    Rect rect,
+    BorderRadius radius,
+    Gradient? paint,
+    double y,
+    double corner,
+  ) {
+    if (paint == null) return;
+
+    final double x1 = rect.left + radius.topLeft.x * corner + 1;
+    final double x2 = rect.right - radius.topRight.x * corner - 1;
     if (x2 <= x1) return;
 
     // A one-pixel-tall rect, not the line itself: a shader needs area, and a
     // degenerate rect yields a gradient with nothing to interpolate across.
-    final Rect band = Rect.fromLTRB(x1, y, x2, y + 1);
     canvas.drawLine(
       Offset(x1, y),
       Offset(x2, y),
       Paint()
         ..strokeWidth = 1
-        ..shader = highlight!.createShader(band),
+        ..shader = paint.createShader(Rect.fromLTRB(x1, y, x2, y + 1)),
     );
   }
 
@@ -151,10 +182,11 @@ class ZaveEdgeBorder extends BoxBorder {
       other is ZaveEdgeBorder &&
       other.gradient == gradient &&
       other.highlight == highlight &&
+      other.underside == underside &&
       other.width == width;
 
   @override
-  int get hashCode => Object.hash(gradient, highlight, width);
+  int get hashCode => Object.hash(gradient, highlight, underside, width);
 }
 
 /// The lit-edge gradients, one per depth step.
@@ -219,5 +251,21 @@ class ZaveEdge {
       Color(0x00FFFFFF),
     ],
     stops: const <double>[0.0, 0.22, 0.85],
+  );
+
+  /// The underside of a card — the bevel's dark twin.
+  ///
+  /// Centred rather than left-weighted: the top face is lit from one side, but
+  /// the bottom face is simply turned away from the light everywhere, so its
+  /// darkness does not have a direction.
+  static final LinearGradient underside = LinearGradient(
+    begin: Alignment.centerLeft,
+    end: Alignment.centerRight,
+    colors: const <Color>[
+      Color(0x00000000),
+      Color(0x45000000),
+      Color(0x00000000),
+    ],
+    stops: const <double>[0.0, 0.5, 1.0],
   );
 }

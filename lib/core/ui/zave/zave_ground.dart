@@ -39,7 +39,14 @@ class ZaveGroundBox extends StatelessWidget {
               decoration: const BoxDecoration(gradient: ZaveGround.counter),
               child: DecoratedBox(
                 decoration: const BoxDecoration(gradient: ZaveGround.bloom),
-                child: child,
+                child: DecoratedBox(
+                  // Last, so it darkens the corners of both lights rather
+                  // than being lit back up by them.
+                  decoration: const BoxDecoration(
+                    gradient: ZaveGround.vignette,
+                  ),
+                  child: child,
+                ),
               ),
             )
           : child,
@@ -210,7 +217,6 @@ class _ZaveHeader extends StatelessWidget implements PreferredSizeWidget {
     );
   }
 }
-
 
 /// Carries the height of the [ZaveScaffold] header above a body, so a
 /// scrolling child can clear it. Read via [ZaveScaffold.contentTop].

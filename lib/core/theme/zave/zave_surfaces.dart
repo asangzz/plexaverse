@@ -296,22 +296,113 @@ class ZaveGround {
     stops: <double>[0.0, 0.68],
   );
 
+  /// A vignette, over both lights and under the content.
+  ///
+  /// Nothing in the room is brighter at its corners than at its centre, and
+  /// until now every screen was: the wash ran edge to edge at full strength,
+  /// so the page had no frame and cards floating near the margins had nothing
+  /// to float against. Darkening the last fifth costs nothing and gives the
+  /// whole screen a centre.
+  ///
+  /// Deliberately weak. A vignette you can see as a vignette is a filter; one
+  /// you cannot is depth. Radius 1.25 keeps the falloff entirely in the
+  /// corners on a phone's aspect ratio.
+  static const RadialGradient vignette = RadialGradient(
+    center: Alignment.center,
+    radius: 1.25,
+    colors: <Color>[Color(0x00000000), Color(0x00000000), Color(0x4D000000)],
+    stops: <double>[0.0, 0.55, 1.0],
+  );
+
   /// Deprecated alias for [bloom], kept so existing call sites keep compiling.
   /// New code should say [bloom].
   static const RadialGradient glow = bloom;
 }
 
-/// The only shadow in the system.
+/// Light spill, and the shadows that go with it.
 ///
-/// Not a lift — light. [ZaveColors.violet] is a saturated fill on a near-black
-/// ground, and in the Aura reference it spills onto the ground around it. That
-/// spill is what stops the primary action reading as a sticker laid on the
-/// page.
+/// ## Why this class grew
 ///
-/// Nothing else in the app casts anything. A card that needs to look raised
-/// moves up a [ZaveGlass] step instead — see the rule on [ZaveSurface].
+/// It used to hold exactly one entry and a rule: nothing casts anything, and a
+/// card that needs to look raised moves up a fill step instead. That rule was
+/// right for a flat system. It stopped being right the moment the surfaces got
+/// a light on them, because a lit scene with no shadows is not a flat scene —
+/// it is an incoherent one. The eye reads the bevel and the lit edge, expects
+/// the card to sit above the ground, finds nothing underneath, and settles on
+/// "sticker".
+///
+/// So depth is now three things moving together, not one:
+///
+///   fill step  →  how much light the face catches
+///   bevel      →  how thick the pane reads
+///   shadow     →  how far above the ground it sits
+///
+/// [ZaveCard] moves all three on the same ladder. They are separate tokens so
+/// they can be tuned, not so they can disagree.
+///
+/// ## Two layers, always
+///
+/// Every elevation here is a tight contact shadow plus a wide ambient one.
+/// That pairing is the whole trick: the tight layer is the dark seam where an
+/// object meets what it rests on, and the wide layer is the room's own
+/// occlusion. One alone looks like a drop shadow from a 2008 button; the two
+/// together look like an object.
+///
+/// Both are pure black. On a #0F0E13 ground a tinted shadow just muddies the
+/// hue — the ground is already almost black, so the only way to read "darker"
+/// is to remove light, not to add colour.
 class ZaveShadow {
   const ZaveShadow._();
+
+  /// A card at rest. Close to the ground: a short seam and a soft halo.
+  static const List<BoxShadow> resting = <BoxShadow>[
+    BoxShadow(
+      color: Color(0x5E000000),
+      blurRadius: 8,
+      offset: Offset(0, 3),
+      spreadRadius: -3,
+    ),
+    BoxShadow(
+      color: Color(0x40000000),
+      blurRadius: 22,
+      offset: Offset(0, 10),
+      spreadRadius: -10,
+    ),
+  ];
+
+  /// Pressed, and the web's hover. Nearer the ground, not further from it —
+  /// a press pushes DOWN, so the seam tightens and the halo shrinks. Getting
+  /// this backwards is the most common way a press animation feels wrong.
+  static const List<BoxShadow> pressed = <BoxShadow>[
+    BoxShadow(
+      color: Color(0x6B000000),
+      blurRadius: 5,
+      offset: Offset(0, 1),
+      spreadRadius: -2,
+    ),
+    BoxShadow(
+      color: Color(0x33000000),
+      blurRadius: 12,
+      offset: Offset(0, 4),
+      spreadRadius: -6,
+    ),
+  ];
+
+  /// "This is the one happening now" — the only surface that genuinely floats.
+  static const List<BoxShadow> lifted = <BoxShadow>[
+    BoxShadow(
+      color: Color(0x73000000),
+      blurRadius: 14,
+      offset: Offset(0, 6),
+      spreadRadius: -4,
+    ),
+    BoxShadow(
+      color: Color(0x54000000),
+      blurRadius: 40,
+      offset: Offset(0, 20),
+      spreadRadius: -14,
+    ),
+  ];
 
   /// Under a violet primary action. No offset: light spills in every
   /// direction, and an offset would read as a drop shadow, which is the thing
