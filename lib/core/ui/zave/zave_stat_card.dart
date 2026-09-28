@@ -331,3 +331,76 @@ class _WedgePainter extends CustomPainter {
   @override
   bool shouldRepaint(_WedgePainter old) => old.progress != progress;
 }
+
+/// A proportion bar — [value] of a whole, drawn as a filled track.
+///
+/// ## Why the kit needed one
+///
+/// [ZaveSparkline] wants a series and [ZaveAreaWedge] wants a progress, and a
+/// lot of this app's numbers are neither: a post's reactions, comments and
+/// shares are three point-in-time counts. Drawing a sparkline through one of
+/// them would mean inventing the other points, which is the one thing a
+/// readout must never do — a fabricated trend is worse than no chart, because
+/// the user cannot tell it is fabricated.
+///
+/// A proportion is the honest chart for a count, because the denominator is
+/// also real. `reactions / (reactions + comments + shares)` is a fact about
+/// the post, not an illustration of one.
+///
+/// The track is always drawn, including at zero. An empty track says "none of
+/// this"; a missing track says "we did not measure", and those are different
+/// claims.
+class ZaveMeter extends StatelessWidget {
+  const ZaveMeter({required this.value, this.height = 4, super.key});
+
+  /// 0..1. Clamped rather than asserted: a caller dividing by a total it did
+  /// not compute should get a full bar, not a crash in a release build.
+  final double value;
+
+  final double height;
+
+  @override
+  Widget build(BuildContext context) => SizedBox(
+    height: height,
+    width: double.infinity,
+    child: CustomPaint(
+      // Size.infinite, not the default. A childless CustomPaint with no size
+      // collapses to zero and the painter draws into nothing — which, with a
+      // minimum-width hair, renders as a single dot per bar.
+      size: Size.infinite,
+      painter: _MeterPainter(value.clamp(0.0, 1.0)),
+    ),
+  );
+}
+
+class _MeterPainter extends CustomPainter {
+  _MeterPainter(this.value);
+
+  final double value;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final Radius r = Radius.circular(size.height / 2);
+
+    canvas.drawRRect(
+      RRect.fromRectAndRadius(Offset.zero & size, r),
+      Paint()..color = const Color(0x14FFFFFF),
+    );
+
+    if (value <= 0) return;
+
+    // A hair of minimum width, so a real-but-tiny share reads as a sliver
+    // rather than as nothing. 3% of a post's engagement is still 3%.
+    final double w = math.max(size.height, size.width * value);
+    canvas.drawRRect(
+      RRect.fromRectAndRadius(Rect.fromLTWH(0, 0, w, size.height), r),
+      Paint()
+        ..shader = ZaveAccent.lavender.createShader(
+          Rect.fromLTWH(0, 0, size.width, size.height),
+        ),
+    );
+  }
+
+  @override
+  bool shouldRepaint(_MeterPainter old) => old.value != value;
+}

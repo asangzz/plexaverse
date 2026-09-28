@@ -559,75 +559,148 @@ class _ActionBar extends StatelessWidget {
 }
 
 /// Impressions / reactions / comments / shares, in the web's order.
+/// What the post actually did, in the two shapes the numbers support.
+///
+/// ## Why it is no longer four boxes with a number in each
+///
+/// It was four equal tiles: impressions, reactions, comments, shares, each a
+/// figure above a caption. Nothing in that layout said which number mattered,
+/// and nothing related any number to any other — 214 reactions is meaningless
+/// until you know it sat under 4,821 impressions.
+///
+/// So it is now a lead and a breakdown. Impressions is the denominator of
+/// everything else and gets the hero card; the three engagement counts sit
+/// under it as shares of their own total.
+///
+/// ## Every figure here is derived, not decorative
+///
+/// There is no time series on a [PostMetrics] — it is four point-in-time
+/// counts — so there is no sparkline, because drawing one would mean inventing
+/// the points between. What IS available is real: the engagement rate is
+/// (reactions + comments + shares) / impressions, the standard definition, and
+/// each meter is that metric's share of engagement. Both are facts about the
+/// post. A chart on this screen is arithmetic, never illustration.
 class _MetricsGrid extends StatelessWidget {
   const _MetricsGrid({required this.metrics});
 
   final PostMetrics metrics;
 
+  int get _engagement => metrics.reactions + metrics.comments + metrics.shares;
+
+  /// The LinkedIn definition. Null when there is nothing to divide by — a post
+  /// with no impressions yet has no rate, which is not the same as 0%.
+  double? get _rate =>
+      metrics.impressions <= 0 ? null : _engagement / metrics.impressions;
+
   @override
   Widget build(BuildContext context) {
     final NumberFormat number = NumberFormat.decimalPattern();
+    final NumberFormat percent = NumberFormat.decimalPercentPattern(
+      decimalDigits: 1,
+    );
+    final double? rate = _rate;
+
     return Column(
       children: <Widget>[
-        Row(
-          children: <Widget>[
-            Expanded(
-              child: _Tile(
-                value: number.format(metrics.impressions),
-                label: 'Impressions',
+        ZaveCard(
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: <Widget>[
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: <Widget>[
+                    Text('IMPRESSIONS', style: ZaveType.kicker),
+                    SizedBox(height: ZaveSpace.sm),
+                    // The gradient numeral is the reference's treatment for
+                    // the one figure a card is about. Exactly one per screen.
+                    ZaveGradientText(
+                      number.format(metrics.impressions),
+                      style: ZaveType.statNumber,
+                    ),
+                    SizedBox(height: ZaveSpace.xs),
+                    Text(
+                      rate == null
+                          ? 'No reach recorded yet'
+                          : '${percent.format(rate)} engaged',
+                      style: ZaveType.caption,
+                    ),
+                  ],
+                ),
               ),
-            ),
-            SizedBox(width: ZaveSpace.md),
-            Expanded(
-              child: _Tile(
-                value: number.format(metrics.reactions),
-                label: 'Reactions',
-              ),
-            ),
-          ],
+              // The wedge reads the real rate. Scaled against 10%, which is a
+              // strong post on LinkedIn — against 100% every honest rate would
+              // draw as a flat line and the chart would say nothing.
+              if (rate != null)
+                SizedBox(
+                  width: 96,
+                  height: 56,
+                  child: ZaveAreaWedge(progress: (rate / 0.10).clamp(0.0, 1.0)),
+                ),
+            ],
+          ),
         ),
         SizedBox(height: ZaveSpace.md),
-        Row(
-          children: <Widget>[
-            Expanded(
-              child: _Tile(
-                value: number.format(metrics.comments),
+        // One card, three rows — not three cards.
+        //
+        // Three side-by-side tiles put each bar on its own axis, so a long bar
+        // in a narrow card and a short bar in a wide one are not comparable,
+        // which defeats the point of drawing them. Stacked, the bars share a
+        // left edge and a length, and the shape of the post's engagement is
+        // legible at a glance.
+        //
+        // It also gives each label the full width. Three across could not fit
+        // "Comments" and rendered it "Comme…".
+        ZaveCard(
+          child: Column(
+            children: <Widget>[
+              _Share(
+                label: 'Reactions',
+                value: number.format(metrics.reactions),
+                share: _engagement == 0 ? 0 : metrics.reactions / _engagement,
+              ),
+              SizedBox(height: ZaveSpace.lg),
+              _Share(
                 label: 'Comments',
+                value: number.format(metrics.comments),
+                share: _engagement == 0 ? 0 : metrics.comments / _engagement,
               ),
-            ),
-            SizedBox(width: ZaveSpace.md),
-            Expanded(
-              child: _Tile(
-                value: number.format(metrics.shares),
+              SizedBox(height: ZaveSpace.lg),
+              _Share(
                 label: 'Shares',
+                value: number.format(metrics.shares),
+                share: _engagement == 0 ? 0 : metrics.shares / _engagement,
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ],
     );
   }
 }
 
-class _Tile extends StatelessWidget {
-  const _Tile({required this.value, required this.label});
+/// One engagement count as a labelled bar.
+class _Share extends StatelessWidget {
+  const _Share({required this.label, required this.value, required this.share});
 
-  final String value;
   final String label;
+  final String value;
+  final double share;
 
   @override
   Widget build(BuildContext context) {
-    return ZaveCard(
-      size: ZaveCardSize.small,
-      padding: ZaveSpace.rowPad,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: <Widget>[
-          Text(value, style: ZaveType.h3),
-          SizedBox(height: ZaveSpace.xs),
-          Text(label, style: ZaveType.caption),
-        ],
-      ),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: <Widget>[
+        Row(
+          children: <Widget>[
+            Expanded(child: Text(label, style: ZaveType.body)),
+            Text(value, style: ZaveType.label),
+          ],
+        ),
+        SizedBox(height: ZaveSpace.sm),
+        ZaveMeter(value: share),
+      ],
     );
   }
 }
