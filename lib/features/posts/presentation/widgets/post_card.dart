@@ -1,3 +1,5 @@
+import 'dart:typed_data';
+
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
@@ -332,6 +334,45 @@ class _Actions extends StatelessWidget {
 /// for the `data:` URLs some older posts still carry in `imageUrl` (generated
 /// before the Supabase upload pipeline was wired into Cloud Tasks), so those
 /// fall through to a placeholder rather than throwing during paint.
+/// Decoded `data:` payloads, held so a rebuild does not decode them again.
+///
+/// Two reasons, and the second is the one that matters. The obvious one is
+/// cost: these run to 1.6 MB of base64 on the live table, and the preview
+/// rebuilds on every "see more" tap. The subtler one is that Flutter's own
+/// image cache is keyed on the [Uint8List] IDENTITY — hand `Image.memory` a
+/// fresh list each build and it re-rasterises a megabyte every time, which is
+/// far dearer than the base64 decode.
+///
+/// Capped at one full carousel. A decoded JPEG here is roughly three quarters
+/// of its base64 length, so the ceiling is a few megabytes of bytes plus
+/// whatever Flutter's `ImageCache` keeps of the rasters.
+const int _dataUriCacheLimit = 9;
+final Map<String, Uint8List?> _dataUriCache = <String, Uint8List?>{};
+
+/// Bytes for a `data:` URL, or null when it will not parse.
+///
+/// A null is cached too: a malformed payload is malformed on every rebuild,
+/// and re-parsing it to fail again is the same waste as re-parsing a good one.
+Uint8List? _decodeDataUri(String url) {
+  if (_dataUriCache.containsKey(url)) return _dataUriCache[url];
+
+  Uint8List? bytes;
+  try {
+    bytes = UriData.parse(url).contentAsBytes();
+  } on Object {
+    // Truncated base64, a missing comma, a mime type we cannot read. The
+    // placeholder is the honest answer; a thrown exception in a build is not.
+    bytes = null;
+  }
+
+  // Insertion-ordered, so the first key is the oldest.
+  if (_dataUriCache.length >= _dataUriCacheLimit) {
+    _dataUriCache.remove(_dataUriCache.keys.first);
+  }
+  _dataUriCache[url] = bytes;
+  return bytes;
+}
+
 class _PostImage extends StatelessWidget {
   const _PostImage({required this.url, this.fit = BoxFit.cover});
 
@@ -340,6 +381,32 @@ class _PostImage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // A `data:` URL is an image, not an address.
+    //
+    // This branch is why the LinkedIn preview was drawing an empty grey box
+    // instead of the post. `image_url` holds an inline base64 JPEG on 152 of
+    // the 246 posts that have an image at all — the generated poster is
+    // written straight into the column — and the guard below rejects anything
+    // that is not `http`, so `CachedNetworkImage` never saw them and the
+    // placeholder was all that was ever drawn.
+    //
+    // The web has no such branch because it does not need one: it renders
+    // `<img src={post.imageUrl}>` and a browser reads `data:` natively. This
+    // is the same behaviour, spelled out for a toolkit that does not.
+    if (url.startsWith('data:')) {
+      final Uint8List? bytes = _decodeDataUri(url);
+      if (bytes == null) return const ColoredBox(color: ZaveGlass.rest);
+      return Image.memory(
+        bytes,
+        fit: fit,
+        // The preview toggles "see more" under the image; without this the
+        // picture blinks out and back on every tap.
+        gaplessPlayback: true,
+        errorBuilder: (BuildContext _, Object _, StackTrace? _) =>
+            const ColoredBox(color: ZaveGlass.rest),
+      );
+    }
+
     if (!url.startsWith('http')) {
       return const ColoredBox(color: ZaveGlass.rest);
     }
@@ -355,8 +422,11 @@ class _PostImage extends StatelessWidget {
   }
 }
 
-/// The post's images, as the detail screen shows them. Exported from here so
-/// the loader and its `data:`-URL caveat live in one place.
+/// The post's images, as the detail screen shows them.
+///
+/// Exported from here so one loader serves the list thumbnail, the preview's
+/// single image and its carousel — and so the `data:` branch they all depend
+/// on cannot be fixed in one of the three and missed in the others.
 class PostImage extends StatelessWidget {
   const PostImage({required this.url, this.fit = BoxFit.cover, super.key});
 
