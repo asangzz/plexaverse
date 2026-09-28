@@ -61,15 +61,18 @@ class _ZaveCardState extends State<ZaveCard> {
   Widget build(BuildContext context) {
     final bool lifted = widget.isNow || (_pressed && widget.onTap != null);
 
+    // Fill and edge move together, one step at a time. They are separate
+    // tokens so a surface cannot end up with a `now` pane behind a `rest`
+    // hairline, which is what made the old flat cards read as stickers.
     final BoxDecoration deco = BoxDecoration(
-      color: widget.isNow
-          ? ZaveGlass.now
-          : (lifted ? ZaveGlass.hover : ZaveGlass.rest),
-      border: Border.all(
-        color: widget.isNow
-            ? ZaveGlass.nowBorder
-            : (lifted ? ZaveGlass.hoverBorder : ZaveGlass.restBorder),
-        width: 1,
+      gradient: widget.isNow
+          ? ZaveFill.now
+          : (lifted ? ZaveFill.hover : ZaveFill.rest),
+      border: ZaveEdgeBorder(
+        gradient: widget.isNow
+            ? ZaveEdge.now
+            : (lifted ? ZaveEdge.hover : ZaveEdge.rest),
+        highlight: widget.isNow ? ZaveEdge.bevelNow : ZaveEdge.bevel,
       ),
       borderRadius: BorderRadius.circular(_radius),
     );
@@ -117,4 +120,3 @@ class ZaveDot extends StatelessWidget {
     );
   }
 }
-

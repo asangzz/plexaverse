@@ -24,12 +24,23 @@ class ZaveGroundBox extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Three fixed layers, cheapest first: the vertical wash, the cool fill
+    // light at the bottom-right, then the violet key at the top-left. The key
+    // goes on last so it sits over the fill where the two overlap — a fill
+    // light painted on top of a key is how you get a flat, milky middle.
+    //
+    // All three are plain gradients on DecoratedBoxes: no blur, no shader
+    // layers, nothing that repaints on scroll. The ground is behind every
+    // screen in the app, so it has to be free.
     return DecoratedBox(
       decoration: const BoxDecoration(gradient: ZaveGround.base),
       child: glow
           ? DecoratedBox(
-              decoration: const BoxDecoration(gradient: ZaveGround.glow),
-              child: child,
+              decoration: const BoxDecoration(gradient: ZaveGround.counter),
+              child: DecoratedBox(
+                decoration: const BoxDecoration(gradient: ZaveGround.bloom),
+                child: child,
+              ),
             )
           : child,
     );

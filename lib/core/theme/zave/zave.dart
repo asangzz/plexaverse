@@ -20,6 +20,11 @@
 ///    blue is the XP path. Nothing is tinted for decoration. — [ZaveColors]
 /// 2. **Depth is a fill step, never a shadow.** rest → hover → now. There are
 ///    three and only three. — [ZaveGlass], [ZaveSurface]
+///
+///    Each step is now a *lit pane* rather than a flat wash: the fill falls
+///    off across the surface and the hairline runs bright-to-dim, both aimed
+///    at [ZaveGround.bloom] in the top-left. The ladder is unchanged — what
+///    changed is that a step now has a light on it. — [ZaveFill], [ZaveEdge]
 /// 3. **Manrope names, Urbanist reads.** Headings, nav and buttons are heavy
 ///    tight Manrope; everything you actually read is Urbanist. — [ZaveType]
 /// 4. **Motion is short and physical. Nothing bounces.** — [ZaveMotion]
@@ -36,6 +41,7 @@
 library;
 
 export 'zave_colors.dart';
+export 'zave_edge.dart';
 export 'zave_geometry.dart';
 export 'zave_motion.dart';
 export 'zave_surfaces.dart';

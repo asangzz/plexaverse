@@ -1,17 +1,34 @@
 import 'package:flutter/widgets.dart';
 
 import 'zave_colors.dart';
+import 'zave_edge.dart';
 import 'zave_geometry.dart';
 
 /// Ready-made Zave surface decorations.
 ///
-/// Every surface in this system is the same recipe — a white fill at a low
-/// opacity, a slightly brighter white hairline, and a radius chosen by what the
-/// element is — so it is written once here rather than re-derived per screen.
+/// Every surface is the same recipe — a translucent white pane that falls off
+/// across its own face, a hairline that is bright where the light hits it, and
+/// a radius chosen by what the element is — written once here rather than
+/// re-derived per screen.
 ///
-/// **Depth is still the fill step** ([ZaveGlass.rest] → [ZaveGlass.hover] →
-/// [ZaveGlass.now]). Do not add a `BoxShadow` to lift a card; if a surface
+/// **Depth is still the fill step** ([ZaveFill.rest] → [ZaveFill.hover] →
+/// [ZaveFill.now]). Do not add a `BoxShadow` to lift a card; if a surface
 /// needs to read as raised, move it up a step.
+///
+/// ## What changed, and what did not
+///
+/// The ladder did not change. Each rung did: a rung used to be one flat
+/// alpha, and is now a short gradient with the same average, plus a
+/// [ZaveEdgeBorder] instead of a uniform hairline. Nothing got brighter
+/// overall — the light was redistributed toward the top-left, where
+/// [ZaveGround.bloom] already is.
+///
+/// That is the whole of "glass": a flat 5% wash inside a flat 9% outline is a
+/// rectangle of lighter paint, and the same quantity of light with a falloff
+/// on it is a pane. It costs one gradient and one shader stroke per surface,
+/// and no blur — real [BackdropFilter] is reserved for the few surfaces that
+/// actually sit over moving content (see [header]), because a blur per row in
+/// a scrolling list is how a list stops being 60fps.
 ///
 /// The one shadow in the system is [ZaveShadow.bloom], and it is not a lift —
 /// it is light. The primary action is a saturated violet on a near-black
@@ -20,64 +37,86 @@ import 'zave_geometry.dart';
 class ZaveSurface {
   const ZaveSurface._();
 
-  static BoxDecoration _glass(Color fill, Color border, double radius) =>
-      BoxDecoration(
-        color: fill,
-        border: Border.all(color: border, width: 1),
-        borderRadius: BorderRadius.circular(radius),
-      );
+  static BoxDecoration _glass(
+    Gradient fill,
+    Gradient edge,
+    double radius, {
+    Gradient? bevel,
+  }) => BoxDecoration(
+    gradient: fill,
+    border: ZaveEdgeBorder(gradient: edge, highlight: bevel),
+    borderRadius: BorderRadius.circular(radius),
+  );
 
   /// `.card` — the default card. rest fill, rest border, r24.
-  static BoxDecoration get card =>
-      _glass(ZaveGlass.rest, ZaveGlass.restBorder, ZaveRadius.card);
+  static BoxDecoration get card => _glass(
+    ZaveFill.rest,
+    ZaveEdge.rest,
+    ZaveRadius.card,
+    bevel: ZaveEdge.bevel,
+  );
 
   /// `.cardLg` — r28.
-  static BoxDecoration get cardLg =>
-      _glass(ZaveGlass.rest, ZaveGlass.restBorder, ZaveRadius.cardLg);
+  static BoxDecoration get cardLg => _glass(
+    ZaveFill.rest,
+    ZaveEdge.rest,
+    ZaveRadius.cardLg,
+    bevel: ZaveEdge.bevel,
+  );
 
   /// `.zv-row` — the compact in-app row. r20.
-  static BoxDecoration get cardCompact =>
-      _glass(ZaveGlass.rest, ZaveGlass.restBorder, ZaveRadius.cardCompact);
+  static BoxDecoration get cardCompact => _glass(
+    ZaveFill.rest,
+    ZaveEdge.rest,
+    ZaveRadius.cardCompact,
+    bevel: ZaveEdge.bevel,
+  );
 
   /// `.zv-panel` / `.listRow` at rest — r22. The canonical in-app panel.
-  static BoxDecoration get listRow =>
-      _glass(ZaveGlass.rest, ZaveGlass.restBorder, ZaveRadius.cardMd);
+  static BoxDecoration get listRow => _glass(
+    ZaveFill.rest,
+    ZaveEdge.rest,
+    ZaveRadius.cardMd,
+    bevel: ZaveEdge.bevel,
+  );
 
   /// `.listRow:hover` — on a touch device this is the PRESSED state.
-  static BoxDecoration get listRowPressed =>
-      _glass(ZaveGlass.hover, ZaveGlass.hoverBorder, ZaveRadius.cardMd);
+  static BoxDecoration get listRowPressed => _glass(
+    ZaveFill.hover,
+    ZaveEdge.hover,
+    ZaveRadius.cardMd,
+    bevel: ZaveEdge.bevel,
+  );
 
   /// `.row` — r18, a half-step fill of its own.
   static BoxDecoration get row =>
-      _glass(ZaveGlass.rowFill, ZaveGlass.rowBorder, ZaveRadius.cardSm);
+      _glass(ZaveFill.row, ZaveEdge.control, ZaveRadius.cardSm);
 
   /// `.rowNow` — "this is the one happening now". The only correct use of the
   /// [ZaveGlass.now] step: today's row, the active slot, the live item.
-  static BoxDecoration get rowNow =>
-      _glass(ZaveGlass.now, ZaveGlass.nowBorder, ZaveRadius.cardSm);
+  static BoxDecoration get rowNow => _glass(
+    ZaveFill.now,
+    ZaveEdge.now,
+    ZaveRadius.cardSm,
+    bevel: ZaveEdge.bevelNow,
+  );
 
   /// `.zv-input` at rest.
   static BoxDecoration get input =>
-      _glass(ZaveGlass.inputFill, ZaveGlass.inputBorder, ZaveRadius.input);
+      _glass(ZaveFill.input, ZaveEdge.control, ZaveRadius.input);
 
   /// `.zv-input:focus` — focus BRIGHTENS the border. Never draw a platform
   /// focus ring on top of this.
-  static BoxDecoration get inputFocused => _glass(
-    ZaveGlass.inputFill,
-    ZaveGlass.inputBorderFocused,
-    ZaveRadius.input,
-  );
+  static BoxDecoration get inputFocused =>
+      _glass(ZaveFill.input, ZaveEdge.focused, ZaveRadius.input);
 
   /// `.field` — the larger field variant, r18.
   static BoxDecoration get field =>
-      _glass(ZaveGlass.controlFill, ZaveColors.rule, ZaveRadius.cardSm);
+      _glass(ZaveFill.control, ZaveEdge.control, ZaveRadius.cardSm);
 
   /// `.chip` unselected.
-  static BoxDecoration get chip => _glass(
-    ZaveGlass.controlFill,
-    ZaveColors.rule,
-    ZaveRadius.pill,
-  );
+  static BoxDecoration get chip =>
+      _glass(ZaveFill.control, ZaveEdge.control, ZaveRadius.pill);
 
   /// `.chipOn` — selected fills with the lavender ramp and takes ink letters.
   ///
@@ -94,23 +133,19 @@ class ZaveSurface {
   );
 
   /// `.pill` — a static (non-selectable) pill.
-  static BoxDecoration get pill => _glass(
-    ZaveGlass.controlFill,
-    ZaveGlass.controlBorder,
-    ZaveRadius.pill,
-  );
+  static BoxDecoration get pill =>
+      _glass(ZaveFill.control, ZaveEdge.control, ZaveRadius.pill);
 
   /// `.iconBtn` — a 38px circle.
   static BoxDecoration get iconButton => BoxDecoration(
-    color: ZaveGlass.controlFill,
-    border: Border.all(color: ZaveGlass.controlBorder, width: 1),
+    gradient: ZaveFill.control,
+    border: ZaveEdgeBorder(gradient: ZaveEdge.control),
     shape: BoxShape.circle,
   );
 
   /// `.navItem` at rest.
-  static BoxDecoration get navItem => BoxDecoration(
-    borderRadius: BorderRadius.circular(ZaveRadius.navItem),
-  );
+  static BoxDecoration get navItem =>
+      BoxDecoration(borderRadius: BorderRadius.circular(ZaveRadius.navItem));
 
   /// `.navItemOn` — the active nav item inverts to solid white, exactly like a
   /// selected chip.
@@ -121,16 +156,14 @@ class ZaveSurface {
 
   /// `.mono` — the code / readout block.
   static BoxDecoration get codeBlock =>
-      _glass(ZaveGlass.codeFill, ZaveGlass.restBorder, ZaveRadius.input);
+      _glass(ZaveFill.code, ZaveEdge.rest, ZaveRadius.input);
 
   /// The sticky header: midnight at 78% over an 18px backdrop blur, with a
   /// single bottom hairline. Pair with a [BackdropFilter] — the colour alone is
   /// not the effect.
   static BoxDecoration get header => BoxDecoration(
     color: ZaveGlass.headerFill,
-    border: Border(
-      bottom: BorderSide(color: ZaveGlass.headerBorder, width: 1),
-    ),
+    border: Border(bottom: BorderSide(color: ZaveGlass.headerBorder, width: 1)),
   );
 
   /// The blur sigma behind [header] — CSS `backdrop-filter: blur(18px)`.
@@ -139,6 +172,55 @@ class ZaveSurface {
   /// of N maps to sigma N/2. 18px therefore becomes sigma 9, which is why this
   /// is a named constant and not an inline `18`.
   static const double headerBlurSigma = 9;
+}
+
+/// The pane fills — each depth step as a lit surface rather than a flat wash.
+///
+/// Every one runs top-left to bottom-right, aimed at [ZaveGround.bloom], and
+/// every one averages the flat alpha it replaces. `rest` was a uniform 5%; it
+/// is now 8% falling to 3%. The card is not brighter, it is *lit* — which is
+/// the difference between a rectangle of lighter paint and a pane of glass.
+///
+/// Keeping the averages is what lets this change ship everywhere at once
+/// without re-balancing a single screen: contrast against text, against the
+/// ground, and between adjacent steps all land where they already were.
+class ZaveFill {
+  const ZaveFill._();
+
+  static LinearGradient _pane(int hi, int lo) => LinearGradient(
+    begin: Alignment.topLeft,
+    end: Alignment.bottomRight,
+    colors: <Color>[Color(hi), Color(lo)],
+  );
+
+  /// Replaces [ZaveGlass.rest] (5%). 8% → 3%.
+  static final LinearGradient rest = _pane(0x14FFFFFF, 0x08FFFFFF);
+
+  /// Replaces [ZaveGlass.hover] (9%). 13% → 5%.
+  static final LinearGradient hover = _pane(0x21FFFFFF, 0x0DFFFFFF);
+
+  /// Replaces [ZaveGlass.now] (12%). 17% → 7%.
+  static final LinearGradient now = _pane(0x2BFFFFFF, 0x12FFFFFF);
+
+  /// Replaces [ZaveGlass.controlFill] (7%). 10% → 4%.
+  static final LinearGradient control = _pane(0x1AFFFFFF, 0x0AFFFFFF);
+
+  /// Replaces [ZaveGlass.inputFill] (6%). 9% → 3%.
+  static final LinearGradient input = _pane(0x17FFFFFF, 0x08FFFFFF);
+
+  /// Replaces [ZaveGlass.rowFill] (6%). Same range as [input]; a row and a
+  /// field sit at the same depth and always did.
+  static final LinearGradient row = _pane(0x17FFFFFF, 0x08FFFFFF);
+
+  /// Replaces [ZaveGlass.codeFill] — a readout is a WELL, not a pane, so this
+  /// one runs the other way: darkest where the light would be. It is the only
+  /// inverted surface in the system, and that is what makes a code block read
+  /// as cut into the card rather than laid on it.
+  static final LinearGradient code = LinearGradient(
+    begin: Alignment.topLeft,
+    end: Alignment.bottomRight,
+    colors: const <Color>[Color(0x66000000), Color(0x40000000)],
+  );
 }
 
 /// The app ground — the gradient every signed-in screen is painted on.
@@ -181,10 +263,37 @@ class ZaveGround {
     center: Alignment(-0.64, -1.12),
     radius: 1.1,
     colors: <Color>[
-      Color(0x8C5B3BD1),
+      // Raised from 0x8C. The bloom used to fall on flat surfaces that could
+      // not show it; now that every pane has an edge aimed at it, there is
+      // something for the extra light to land on.
+      Color(0xA35B3BD1),
       Color(0x005B3BD1),
     ],
-    stops: <double>[0.0, 0.62],
+    stops: <double>[0.0, 0.66],
+  );
+
+  /// The counter-light, bottom-right, under everything else.
+  ///
+  /// ## This is not a second bloom
+  ///
+  /// The rule above still holds: the KEY light appears once, at the top-left,
+  /// and must not be repeated down a scroll view. This is a fill light, which
+  /// is a different instrument. A key light alone gives you a lit top and a
+  /// dead bottom — on a phone, where most of the viewport is below the key's
+  /// falloff, that dead bottom is most of what the user looks at, and it is
+  /// why the lower half of every screen read as flat black.
+  ///
+  /// So it is dim (a sixth of the key), cool where the key is warm-violet, and
+  /// anchored at the opposite corner. Those three together are what keep it
+  /// reading as the same room lit from one side rather than as two lamps: a
+  /// fill light that competes with the key does not add depth, it removes it.
+  ///
+  /// Like the key, it is fixed to the viewport and does not scroll.
+  static const RadialGradient counter = RadialGradient(
+    center: Alignment(0.92, 1.05),
+    radius: 1.0,
+    colors: <Color>[Color(0x24AFB1FC), Color(0x00AFB1FC)],
+    stops: <double>[0.0, 0.68],
   );
 
   /// Deprecated alias for [bloom], kept so existing call sites keep compiling.
@@ -208,11 +317,7 @@ class ZaveShadow {
   /// direction, and an offset would read as a drop shadow, which is the thing
   /// this system does not have.
   static List<BoxShadow> get bloom => const <BoxShadow>[
-    BoxShadow(
-      color: Color(0x665939CF),
-      blurRadius: 24,
-      spreadRadius: -4,
-    ),
+    BoxShadow(color: Color(0x665939CF), blurRadius: 24, spreadRadius: -4),
   ];
 }
 
