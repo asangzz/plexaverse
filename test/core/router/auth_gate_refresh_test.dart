@@ -7,31 +7,16 @@ import 'package:plexaverse/core/storage/session_store.dart';
 
 /// A session whose answers are set by the test rather than by a keychain.
 class _FakeSession implements SessionStore {
-  _FakeSession({
-    this.access,
-    this.refresh,
-    this.idle = false,
-  });
+  _FakeSession({this.access, this.refresh});
 
   String? access;
   String? refresh;
-  bool idle;
-
-  /// Set when a refresh writes new tokens, so the test can prove a refresh
-  /// that happened AFTER the idle read cannot have moved the idle clock.
-  bool activityTouched = false;
 
   @override
   Future<String?> activeAccessToken() async => access;
 
   @override
   Future<String?> refreshToken() async => refresh;
-
-  @override
-  Future<bool> isIdleExpired() async => idle;
-
-  @override
-  Future<void> touchActivity() async => activityTouched = true;
 
   @override
   dynamic noSuchMethod(Invocation invocation) =>
@@ -49,13 +34,8 @@ class _FakeRefresher implements TokenRefresher {
   @override
   Future<String?> refresh() async {
     calls++;
-    if (_result != null) {
-      // The real refresher persists through SessionStore.writeTokens, which
-      // touches activity. Reproduced, because that is the thing the ordering
-      // in `authGate` exists to stay ahead of.
-      session.access = _result;
-      await session.touchActivity();
-    }
+    // The real refresher persists through SessionStore.writeTokens.
+    if (_result != null) session.access = _result;
     return _result;
   }
 
@@ -64,7 +44,10 @@ class _FakeRefresher implements TokenRefresher {
       throw UnimplementedError('${invocation.memberName} is not used here');
 }
 
-ProviderContainer _containerFor(_FakeSession session, _FakeRefresher refresher) {
+ProviderContainer _containerFor(
+  _FakeSession session,
+  _FakeRefresher refresher,
+) {
   final container = ProviderContainer(
     overrides: [
       sessionStoreProvider.overrideWithValue(session),
@@ -80,8 +63,10 @@ void main() {
     final session = _FakeSession(access: 'live', refresh: 'r');
     final refresher = _FakeRefresher('new', session: session);
 
-    final gate = await _containerFor(session, refresher)
-        .read(authGateProvider.future);
+    final gate = await _containerFor(
+      session,
+      refresher,
+    ).read(authGateProvider.future);
 
     expect(gate.signedIn, isTrue);
     expect(refresher.calls, 0);
@@ -94,8 +79,10 @@ void main() {
     final session = _FakeSession(refresh: 'still-good');
     final refresher = _FakeRefresher('fresh', session: session);
 
-    final gate = await _containerFor(session, refresher)
-        .read(authGateProvider.future);
+    final gate = await _containerFor(
+      session,
+      refresher,
+    ).read(authGateProvider.future);
 
     expect(gate.signedIn, isTrue);
     expect(refresher.calls, 1);
@@ -105,8 +92,10 @@ void main() {
     final session = _FakeSession(refresh: 'revoked');
     final refresher = _FakeRefresher(null, session: session);
 
-    final gate = await _containerFor(session, refresher)
-        .read(authGateProvider.future);
+    final gate = await _containerFor(
+      session,
+      refresher,
+    ).read(authGateProvider.future);
 
     expect(gate.signedIn, isFalse);
     expect(refresher.calls, 1);
@@ -116,39 +105,65 @@ void main() {
     final session = _FakeSession();
     final refresher = _FakeRefresher(null, session: session);
 
-    final gate = await _containerFor(session, refresher)
-        .read(authGateProvider.future);
+    final gate = await _containerFor(
+      session,
+      refresher,
+    ).read(authGateProvider.future);
 
     expect(gate.signedIn, isFalse);
   });
 
-  group('the idle timeout', () {
-    test('is never resurrected by a refresh', () async {
-      // The ordering trap. Refreshing writes tokens, writing tokens touches
-      // activity, and activity is what idle is measured from — so a refresh
-      // run before the idle check would reset the clock the timeout depends
-      // on and the three-hour timeout would never fire again.
-      final session = _FakeSession(refresh: 'still-good', idle: true);
-      final refresher = _FakeRefresher('fresh', session: session);
-
-      final gate = await _containerFor(session, refresher)
-          .read(authGateProvider.future);
-
-      expect(refresher.calls, 0, reason: 'an idle session must not refresh');
-      expect(session.activityTouched, isFalse);
-      expect(gate.idleExpired, isTrue);
+  group('the session outlives the app', () {
+    test('a spent access token is refreshed, however long the app was shut', () {
+      // The bug this replaces: a three-hour idle timer ran from the last TOKEN
+      // WRITE — not from any activity, since nothing ever called
+      // touchActivity — and the router then wiped the tokens. Killing the app
+      // over lunch was enough to lose a refresh token good for another
+      // twenty-nine days.
+      //
+      // There is no clock in the gate now. However long the app was closed,
+      // the only question asked is whether the refresh token still works.
     });
 
-    test('is still reported when the access token is alive', () async {
-      // The guard clears the session on this pair, so it has to survive.
-      final session = _FakeSession(access: 'live', refresh: 'r', idle: true);
+    test('an expired access token always attempts a refresh', () async {
+      final session = _FakeSession(refresh: 'still-good');
+      final refresher = _FakeRefresher('fresh', session: session);
+
+      final gate = await _containerFor(
+        session,
+        refresher,
+      ).read(authGateProvider.future);
+
+      expect(refresher.calls, 1);
+      expect(gate.signedIn, isTrue);
+    });
+
+    test('the server refusing the refresh is what ends the session', () async {
+      // The only remaining way to be signed out: the refresh token is spent,
+      // revoked or absent, and the SERVER says so. Not a client-side timer.
+      final session = _FakeSession(refresh: 'revoked');
+      final refresher = _FakeRefresher(null, session: session);
+
+      final gate = await _containerFor(
+        session,
+        refresher,
+      ).read(authGateProvider.future);
+
+      expect(refresher.calls, 1);
+      expect(gate.signedIn, isFalse);
+    });
+
+    test('a live access token is used without a refresh round trip', () async {
+      final session = _FakeSession(access: 'live', refresh: 'r');
       final refresher = _FakeRefresher('new', session: session);
 
-      final gate = await _containerFor(session, refresher)
-          .read(authGateProvider.future);
+      final gate = await _containerFor(
+        session,
+        refresher,
+      ).read(authGateProvider.future);
 
+      expect(refresher.calls, 0, reason: 'nothing was wrong with the token');
       expect(gate.signedIn, isTrue);
-      expect(gate.idleExpired, isTrue);
     });
   });
 }

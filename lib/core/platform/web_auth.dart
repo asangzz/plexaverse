@@ -61,6 +61,34 @@ class WebAuthService {
       final callbackUrl = await FlutterWebAuth2.authenticate(
         url: url,
         callbackUrlScheme: callbackUrlScheme,
+        options: const FlutterWebAuth2Options(
+          // ANDROID ONLY, and the reason the Android flow showed its account
+          // picker twice.
+          //
+          // The default flags are SINGLE_TOP | NEW_TASK, which leave the
+          // Chrome Custom Tab alive in its own task. When Google redirects to
+          // `plexaverse://`, `CallbackActivity` resolves the Dart future and
+          // calls `finishAndRemoveTask()` — on ITS task, not the browser's.
+          // The tab stays, still showing the last page Google drew, which is
+          // the account picker. The user reads that as the picker appearing a
+          // second time; closing it reveals an app that signed in on the first
+          // pass, which is why dismissing it still left them logged in.
+          //
+          // `ephemeralIntentFlags` is those two plus FLAG_ACTIVITY_NO_HISTORY,
+          // which finishes the tab the moment it stops being the top activity.
+          // The redirect does exactly that, so the tab closes itself.
+          //
+          // iOS never had the bug: ASWebAuthenticationSession dismisses itself
+          // when the callback scheme fires.
+          //
+          // NOT `preferEphemeral: true`, which would OR in the same flag and
+          // also fix Android — but on iOS it sets
+          // `prefersEphemeralWebBrowserSession`, dropping the shared Safari
+          // cookie jar, so every sign-in would demand the Google password
+          // again. The iOS plugin never reads `intentFlags`, so this setting
+          // cannot reach it.
+          intentFlags: ephemeralIntentFlags,
+        ),
       );
       return WebAuthSuccess(callbackUrl);
     } on PlatformException catch (e) {

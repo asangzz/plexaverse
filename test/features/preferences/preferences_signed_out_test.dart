@@ -28,7 +28,7 @@ ProviderContainer _containerFor(
     overrides: [
       preferencesRepositoryProvider.overrideWithValue(repo),
       authGateProvider.overrideWith(
-        (Ref ref) async => AuthGate(signedIn: signedIn, idleExpired: false),
+        (Ref ref) async => AuthGate(signedIn: signedIn),
       ),
     ],
   );

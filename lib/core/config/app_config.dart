@@ -24,11 +24,6 @@ class AppConfig {
 
   // -- Session / storage / sync tunables -------------------------------------
 
-  /// Idle window after which the router forces a re-auth / app unlock.
-  /// Read by `SessionStore.isIdleExpired()` against `lastActivityAt`
-  /// (ProHealth §8). 3h mirrors the reference default.
-  static const Duration idleTimeout = Duration(hours: 3);
-
   /// How long an encrypted media blob may live in the on-disk cache before
   /// the boot-time `MediaCacheSweeper` is allowed to evict it — provided its
   /// `jobId` is not still referenced by a queued `SyncQueue.batchId`

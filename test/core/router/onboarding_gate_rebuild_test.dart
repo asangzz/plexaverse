@@ -34,62 +34,70 @@ final _prefs = FutureProvider<String>((ref) async {
 });
 
 void main() {
-  test('an errored provider reads as loading, not error, while it refetches',
-      () async {
-    final container = ProviderContainer();
-    addTearDown(container.dispose);
+  test(
+    'an errored provider reads as loading, not error, while it refetches',
+    () async {
+      final container = ProviderContainer();
+      addTearDown(container.dispose);
 
-    // The router subscribes before there is a session, so the first state is
-    // the 401.
-    container.listen(_prefs, (_, _) {}, fireImmediately: false);
-    await Future<void>.delayed(const Duration(milliseconds: 10));
+      // The router subscribes before there is a session, so the first state is
+      // the 401.
+      container.listen(_prefs, (_, _) {}, fireImmediately: false);
+      await Future<void>.delayed(const Duration(milliseconds: 10));
 
-    final signedOut = container.read(_prefs);
-    expect(signedOut, isA<AsyncError<String>>());
+      final signedOut = container.read(_prefs);
+      expect(signedOut, isA<AsyncError<String>>());
 
-    container.read(_gate.notifier).signIn();
+      container.read(_gate.notifier).signIn();
 
-    // The instant the session lands: no value yet, and NOT an error — so
-    // `appRedirect` counts this as resolving and holds the splash.
-    final refetching = container.read(_prefs);
-    expect(refetching.hasValue, isFalse);
-    expect(refetching, isNot(isA<AsyncError<String>>()),
-        reason: 'the stale 401 must not outlive the sign-in that fixes it');
-    expect(refetching.isLoading, isTrue);
+      // The instant the session lands: no value yet, and NOT an error — so
+      // `appRedirect` counts this as resolving and holds the splash.
+      final refetching = container.read(_prefs);
+      expect(refetching.hasValue, isFalse);
+      expect(
+        refetching,
+        isNot(isA<AsyncError<String>>()),
+        reason: 'the stale 401 must not outlive the sign-in that fixes it',
+      );
+      expect(refetching.isLoading, isTrue);
 
-    await Future<void>.delayed(const Duration(milliseconds: 60));
-    expect(container.read(_prefs).value, 'preferences');
-  });
+      await Future<void>.delayed(const Duration(milliseconds: 60));
+      expect(container.read(_prefs).value, 'preferences');
+    },
+  );
 
-  test('a DATA value DOES survive the rebuild, and the home screen needs it',
-      () async {
-    // The counterpart, and the opposite answer. `activeRoadmapDay` watches the
-    // selected day, so every scroll of the roadmap rebuilds it — and the home
-    // screen used to check `isLoading` and return its skeleton, destroying the
-    // timeline, its ScrollController and its scroll position, then rebuilding
-    // a frame later. On screen that was a white card flashing over the planet
-    // and the timeline jumping instead of scrolling.
-    //
-    // It now checks `hasValue`, which is only correct because a dependency
-    // rebuild keeps the previous DATA — unlike a previous error, above.
-    final container = ProviderContainer();
-    addTearDown(container.dispose);
+  test(
+    'a DATA value DOES survive the rebuild, and the home screen needs it',
+    () async {
+      // The counterpart, and the opposite answer. `activeRoadmapDay` watches the
+      // selected day, so every scroll of the roadmap rebuilds it — and the home
+      // screen used to check `isLoading` and return its skeleton, destroying the
+      // timeline, its ScrollController and its scroll position, then rebuilding
+      // a frame later. On screen that was a white card flashing over the planet
+      // and the timeline jumping instead of scrolling.
+      //
+      // It now checks `hasValue`, which is only correct because a dependency
+      // rebuild keeps the previous DATA — unlike a previous error, above.
+      final container = ProviderContainer();
+      addTearDown(container.dispose);
 
-    container.listen(_prefs, (_, _) {});
-    container.read(_gate.notifier).signIn();
-    await Future<void>.delayed(const Duration(milliseconds: 60));
-    expect(container.read(_prefs).value, 'preferences');
+      container.listen(_prefs, (_, _) {});
+      container.read(_gate.notifier).signIn();
+      await Future<void>.delayed(const Duration(milliseconds: 60));
+      expect(container.read(_prefs).value, 'preferences');
 
-    // Something the provider depends on changes again.
-    container.read(_gate.notifier).signOut();
+      // Something the provider depends on changes again.
+      container.read(_gate.notifier).signOut();
 
-    final refetching = container.read(_prefs);
-    expect(refetching.isLoading, isTrue);
-    expect(
-      refetching.hasValue,
-      isTrue,
-      reason: 'the value must outlive the rebuild, or the timeline is torn '
-          'down on every scroll',
-    );
-  });
+      final refetching = container.read(_prefs);
+      expect(refetching.isLoading, isTrue);
+      expect(
+        refetching.hasValue,
+        isTrue,
+        reason:
+            'the value must outlive the rebuild, or the timeline is torn '
+            'down on every scroll',
+      );
+    },
+  );
 }

@@ -4,7 +4,6 @@ import 'dart:convert';
 import 'package:clock/clock.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
-import '../config/app_config.dart';
 import 'secure_storage.dart';
 import 'storage_keys.dart';
 
@@ -15,11 +14,27 @@ part 'session_store.g.dart';
 /// on top of [SecureStorageService]. The old Drift `SessionsTable` is dropped
 /// — nothing else stores the session.
 ///
-/// Consumed by the auth interceptor and the auth feature. `touchActivity()`
-/// is serialised through `_writeLock` (future-identity single-flight) so
-/// concurrent 2xx responses can't race to a stale `lastActivityAt`. Token
-/// freshness is validated against the JWT `exp` claim before the interceptor
-/// attaches the Authorization header, with a small clock-skew margin.
+/// Consumed by the auth interceptor and the auth feature. Token freshness is
+/// validated against the JWT `exp` claim before the interceptor attaches the
+/// Authorization header, with a small clock-skew margin.
+///
+/// ## There is no activity clock here any more
+///
+/// This used to keep `lastActivityAt` and an `isIdleExpired()` built on it,
+/// and the router signed the user out three hours after it. Both are gone —
+/// see `authGate` for the reasoning. Two things are worth recording so the
+/// idea is not reinvented:
+///
+/// `touchActivity` was documented as running on every 2xx response. It never
+/// did: `AuthInterceptor` has no `onResponse` hook, so the only writers were
+/// login and refresh and the timestamp was really `lastTokenWriteAt`. Using
+/// the app did not move it. It also cost a secure-storage write on a path
+/// that gained nothing from one.
+///
+/// And the session's boundary is the refresh token, which the server owns.
+/// A client-side timer can only end a session EARLY, never extend it, so it
+/// can only ever disagree with the server in the one direction that loses the
+/// user their login.
 ///
 /// All time reads go through `package:clock` so tests can inject a fixed now.
 class SessionStore {
@@ -27,7 +42,6 @@ class SessionStore {
 
   final SecureStorageService _secure;
 
-  Future<void>? _writeLock;
 
   /// Tokens issued within this margin of expiry are treated as expired so we
   /// refresh proactively rather than relying on a server 401.
@@ -56,37 +70,6 @@ class SessionStore {
   }) async {
     await _secure.write(StorageKeys.accessToken, accessToken);
     await _secure.write(StorageKeys.refreshToken, refreshToken);
-    await touchActivity();
-  }
-
-  /// Updated on every 2xx response. Serialised so concurrent callers can't
-  /// race the timestamp into an inconsistent state.
-  Future<void> touchActivity() {
-    final previous = _writeLock ?? Future<void>.value();
-    final next = previous.then((_) {
-      return _secure.write(
-        StorageKeys.lastActivityAt,
-        clock.now().toUtc().toIso8601String(),
-      );
-    });
-    _writeLock = next.whenComplete(() {
-      if (identical(_writeLock, next)) _writeLock = null;
-    });
-    return next;
-  }
-
-  Future<DateTime?> lastActivityAt() async {
-    final raw = await _secure.read(StorageKeys.lastActivityAt);
-    if (raw == null) return null;
-    return DateTime.tryParse(raw);
-  }
-
-  /// True when the last successful API call is older than the configured idle
-  /// timeout (§8). Drives the router idle-redirect.
-  Future<bool> isIdleExpired() async {
-    final last = await lastActivityAt();
-    if (last == null) return false;
-    return clock.now().toUtc().difference(last) > AppConfig.idleTimeout;
   }
 
   /// Called on sign-out. Wipes tokens + activity; the encrypted DB / media
@@ -95,6 +78,8 @@ class SessionStore {
   Future<void> clear() async {
     await _secure.delete(StorageKeys.accessToken);
     await _secure.delete(StorageKeys.refreshToken);
+    // Legacy: nothing writes this any more, but installs from before the idle
+    // timeout was removed still carry one. Deleted so sign-out leaves nothing.
     await _secure.delete(StorageKeys.lastActivityAt);
   }
 

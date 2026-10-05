@@ -35,7 +35,6 @@ enum RedirectTarget { stay, splash, onboarding, login, home, unlock }
 ///   0. /styleguide is public (dev/design reference) → stay.
 ///   1. Session / lock / onboarding state still resolving on cold start →
 ///      hold on the splash.
-///   2. Signed in && idle > timeout → /login (clearSession).
 ///   3. Signed in && locked → /unlock (precedence over every signed-in
 ///      destination).
 ///   4. At /unlock but no longer locked / signed in → move on.
@@ -82,12 +81,15 @@ enum RedirectTarget { stay, splash, onboarding, login, home, unlock }
   }
 
   final signedIn = gate != null && gate.signedIn;
-  final idleExpired = gate != null && gate.idleExpired;
 
-  // An expired idle session is signed out — clear and bounce to /login.
-  if (signedIn && idleExpired) {
-    return (target: RedirectTarget.login, clearSession: true);
-  }
+  // There is no idle branch any more. A three-hour timer used to land here and
+  // sign the user out WITH `clearSession: true`, destroying a refresh token
+  // good for another twenty-nine days. See [authGate] for why it went: the
+  // policy came from the health app this was skinned from, the web has no
+  // equivalent, and the thing it measured was the last token write rather than
+  // any activity. The session now ends when the refresh token does, and the
+  // biometric lock below — which holds the session instead of wiping it — is
+  // what guards an unattended phone.
 
   // Signed in but the app is locked → hold everything behind the unlock gate
   // (resume / relaunch re-authentication). Takes precedence over every

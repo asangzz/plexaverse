@@ -6,23 +6,14 @@ part 'auth_gate.g.dart';
 
 /// Snapshot of auth state the router needs to make redirect decisions (§14).
 ///
-/// A deliberately minimal value object: just the two facts the guard branches
-/// on. The full `AuthController` (under `features/auth/`) overrides
-/// [authGateProvider] once the auth feature is built — the override point is
-/// the provider, not the router. Until then this stub reads token presence +
-/// idle state straight from [SessionStore] so the router already enforces the
-/// post-auth boundary.
+/// One fact now, not two. It used to carry `idleExpired` as well — see the
+/// note on [authGate] for why that is gone.
 class AuthGate {
-  const AuthGate({
-    required this.signedIn,
-    required this.idleExpired,
-  });
+  const AuthGate({required this.signedIn});
 
-  /// True iff a non-expired access token is present.
+  /// True iff a usable access token is present, after a refresh has been
+  /// attempted.
   final bool signedIn;
-
-  /// True iff the last successful API call is older than the idle timeout.
-  final bool idleExpired;
 }
 
 /// Resolves the session, refreshing the access token if that is all that is
@@ -47,34 +38,47 @@ class AuthGate {
 /// network call at all: it read the keychain, concluded "signed out", and
 /// showed the login screen.
 ///
-/// ## The order matters
+/// ## The idle timeout is gone, and why
 ///
-/// Idle is read FIRST, and the refresh is skipped when it has expired.
-/// Refreshing writes new tokens, and writing them calls
-/// `SessionStore.touchActivity` — so a refresh performed before the idle check
-/// would reset the very clock the idle timeout is measured on, and the
-/// three-hour timeout would never fire again.
+/// This used to read `SessionStore.isIdleExpired()` first and skip the refresh
+/// when it fired, and the router then signed the user out and WIPED the
+/// tokens. Three hours after your last token write, a refresh token with
+/// twenty-nine days left on it was deleted. That is what "the login does not
+/// last when I kill the app" was.
 ///
-/// An idle-expired session is left with its tokens in place rather than
-/// scrubbed here. Clearing is a side effect and this is a read; the guard owns
-/// that, and it holds — `lastActivityAt` does not move, so the session stays
-/// idle-expired on every subsequent launch too.
+/// It was wrong twice over:
+///
+/// 1. **The policy is not this product's.** Three hours came from the health
+///    app this codebase was skinned from, where a short idle window protects
+///    patient data. The Plexaverse web app sets no `maxAge` at all — NextAuth
+///    defaults to thirty days and has no idle concept — so the two halves of
+///    the same product disagreed about how long a login lasts.
+///
+/// 2. **It did not measure activity.** `touchActivity` was documented as
+///    running on every 2xx response; `AuthInterceptor` has no `onResponse`
+///    hook and never called it. The only writers were login and refresh, so
+///    the window ran from the last TOKEN WRITE. Using the app did not extend
+///    it.
+///
+/// The session's real boundary is the refresh token, and it always was: when
+/// that expires the refresh below returns null and `signedIn` is false on its
+/// own. A second timer could only ever end the session EARLY.
+///
+/// Protecting an unattended phone is a different job and already has an
+/// owner — the opt-in biometric lock, armed in `PlexaverseApp` when the app
+/// leaves the foreground. That holds the session rather than destroying it,
+/// which is what a lock should do.
 @Riverpod(keepAlive: true)
 Future<AuthGate> authGate(Ref ref) async {
   final session = ref.watch(sessionStoreProvider);
 
-  final idle = await session.isIdleExpired();
-  var token = await session.activeAccessToken();
+  // Single-flight inside the refresher, and it answers null for every failure
+  // including "there is no refresh token", so this needs no guard of its own.
+  // A null from the refresh IS the session ending: the refresh token is spent,
+  // revoked or absent.
+  final String? token =
+      await session.activeAccessToken() ??
+      await ref.read(tokenRefresherProvider).refresh();
 
-  if (token == null && !idle) {
-    // Single-flight inside the refresher, and it answers null for every
-    // failure including "there is no refresh token", so this needs no guard
-    // of its own.
-    token = await ref.read(tokenRefresherProvider).refresh();
-  }
-
-  return AuthGate(
-    signedIn: token != null,
-    idleExpired: idle,
-  );
+  return AuthGate(signedIn: token != null);
 }
