@@ -646,12 +646,20 @@ class _SlotSheetState extends ConsumerState<_SlotSheet> {
   PlanSlot get slot => widget.slot;
 
   /// Nothing written yet — the day is a title and an angle and no post.
+  /// Only a post day has anything to generate.
+  ///
+  /// `isPublishable` first, because the server refuses the other five days
+  /// with NOT_A_POST_DAY and a button that can only ever fail is worse than no
+  /// button — the user spends a tap and a round trip to be told no.
   bool get _canGenerate =>
-      slot.postId == null && slot.status != SlotStatus.generating;
+      slot.isPublishable &&
+      slot.postId == null &&
+      slot.status != SlotStatus.generating;
 
   /// A draft exists and can be thrown away for a different one. Never once it
   /// is on LinkedIn: there is nothing to replace at that point.
   bool get _canRegenerate =>
+      slot.isPublishable &&
       slot.postId != null &&
       slot.status != SlotStatus.generating &&
       slot.status != SlotStatus.published;
@@ -710,6 +718,10 @@ class _SlotSheetState extends ConsumerState<_SlotSheet> {
           e.message ?? 'Not enough XP to write this one.',
         PlannerGenerateFailureKind.noLinkedinAccount =>
           'Connect a LinkedIn account first — Settings › Connected Accounts.',
+        // Never "try again". A retry cannot succeed on a day the week gives no
+        // post to, and the server's own message names which kind of day it is.
+        PlannerGenerateFailureKind.notAPostDay =>
+          e.message ?? 'This day is not a post — there is nothing to write.',
         PlannerGenerateFailureKind.failed =>
           e.message ?? "That didn't go through. Try again.",
       };

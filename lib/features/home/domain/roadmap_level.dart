@@ -301,6 +301,19 @@ int plannerSlotForToday([DateTime? now]) => (now ?? DateTime.now()).weekday - 1;
 /// extras land on days 1–4), then progress is folded over it in one forward
 /// pass that carries `allDoneSoFar` — that carry is what unlocks a day the
 /// user has run ahead to.
+/// The next day of the week that takes a post, starting after [slot].
+///
+/// Wraps, and falls back to [slot] itself if the week somehow has no posting
+/// day — a table with no posts is a configuration error, not a reason to
+/// return an index outside the week.
+int _nextPostingSlotAfter(int slot) {
+  for (int i = 1; i <= 7; i++) {
+    final int candidate = (slot + i) % 7;
+    if (dayKindAt(candidate) == DayKind.post) return candidate;
+  }
+  return slot;
+}
+
 /// How far back the roadmap is built from today. Mirrors `DAYS_BEHIND`.
 const int roadmapDaysBehind = 13;
 
@@ -469,12 +482,19 @@ List<RoadmapLevel> buildRoadmap(RoadmapProgress progress, {DateTime? now}) {
                           '$scheduledWhen. Tap to review or edit it.';
               } else {
                 // Nothing pending or scheduled — the auto-post did not run.
-                // Prompt a manual generate on TOMORROW's slot.
-                title = "📝 Generate tomorrow's post";
+                //
+                // Prompt a manual generate on the next slot that actually
+                // takes a post, not simply on tomorrow. Tomorrow is a video
+                // script, the newsletter or a rest day five times in seven,
+                // and the planner refuses to generate on all of them — so the
+                // old `(slotToday + 1) % 7` deep-linked to a dead end most
+                // days of the week.
+                final int next = _nextPostingSlotAfter(slotToday);
+                title = "📝 Generate the next post";
                 description =
-                    'No post lined up for tomorrow yet. Generate it now — the '
-                    "Content Planner opens right on tomorrow's slot.";
-                moduleLink = '/planner?slot=${(slotToday + 1) % 7}';
+                    'No post lined up yet. Generate it now — the Content '
+                    'Planner opens right on the next posting day.';
+                moduleLink = '/planner?slot=$next';
               }
             }
           }

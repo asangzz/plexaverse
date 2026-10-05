@@ -141,6 +141,14 @@ enum PlannerGenerateFailureKind {
   /// 400. Nothing to publish to, so nothing to generate for.
   noLinkedinAccount,
 
+  /// 400 `NOT_A_POST_DAY`. This day is a video script, the newsletter, or
+  /// rest — there is nothing for the post generator to make.
+  ///
+  /// A retry can never succeed, which is what separates it from [failed]: the
+  /// answer is not "try again" but "this is not that kind of day". The server
+  /// refuses before spending any XP.
+  notAPostDay,
+
   /// Anything else — the slot has been rolled back and a retry is sensible.
   failed,
 }

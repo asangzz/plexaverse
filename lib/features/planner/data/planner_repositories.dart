@@ -98,6 +98,12 @@ class ApiPlannerRepository implements PlannerRepository {
     if (code == 'NO_LINKEDIN_ACCOUNT') {
       return PlannerGenerateFailureKind.noLinkedinAccount;
     }
+    // The week stopped being seven posts, so the generator now refuses five
+    // days in seven. Without this branch those came back as `failed`, which
+    // offers a retry that cannot ever succeed.
+    if (code == 'NOT_A_POST_DAY') {
+      return PlannerGenerateFailureKind.notAPostDay;
+    }
     return PlannerGenerateFailureKind.failed;
   }
 

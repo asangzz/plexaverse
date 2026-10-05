@@ -95,4 +95,40 @@ void main() {
       expect(DayKind.rest.isHandoff, isFalse);
     });
   });
+
+  group('the next posting day', () {
+    // The roadmap deep-links "generate the next post" at a planner slot. It
+    // used to use (today + 1) % 7, which lands on a video script, the
+    // newsletter or a rest day five times in seven — and the planner refuses
+    // to generate on every one of them, so the link was a dead end most days.
+    int nextAfter(int slot) {
+      for (int i = 1; i <= 7; i++) {
+        final int c = (slot + i) % 7;
+        if (dayKindAt(c) == DayKind.post) return c;
+      }
+      return slot;
+    }
+
+    test('every day of the week points at a day that takes a post', () {
+      for (int slot = 0; slot < 7; slot++) {
+        expect(
+          dayKindAt(nextAfter(slot)).isPublishable,
+          isTrue,
+          reason: 'from day $slot the link must reach a posting day',
+        );
+      }
+    });
+
+    test('it never points at the day it started from', () {
+      for (int slot = 0; slot < 7; slot++) {
+        expect(nextAfter(slot), isNot(slot));
+      }
+    });
+
+    test('from Monday the next one is Tuesday, and from Tuesday it wraps', () {
+      expect(nextAfter(0), 1); // Mon -> Tue
+      expect(nextAfter(1), 0); // Tue -> Mon, the week's only other post day
+      expect(nextAfter(4), 0); // Fri -> Mon, over the weekend
+    });
+  });
 }
