@@ -1,6 +1,7 @@
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 import '../../../core/router/zave_routes.dart';
+import '../../../core/week/comment_targets.dart';
 import '../data/engagement_repositories.dart';
 import '../domain/engagement_repository.dart';
 
@@ -33,7 +34,13 @@ Future<EngagementMission?> engagementMission(Ref ref, String moduleLink) async {
     // The web's own defaults when the step description carries no number:
     // 3 comments, 10 connections. (Connections then overrides the whole thing
     // with the batch length — see `ConnectionBatch.targetCount`.)
-    fallbackTarget: moduleLink == ZaveRoutes.connections ? 10 : 3,
+    // Declared, not scraped, and no longer inverted: comments ask for ten a
+    // day (five curated Top Voices plus five from the user's niche) and
+    // connections for a posting day's twelve. It read `connections ? 10 : 3`,
+    // which had the larger number on the smaller task.
+    fallbackTarget: moduleLink == ZaveRoutes.connections
+        ? invitesPerPostingDay
+        : dailyCommentTarget,
   );
 }
 

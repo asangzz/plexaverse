@@ -104,20 +104,24 @@ class EngagementMission {
       title: step.title,
       description: step.description,
       xpReward: step.xpReward,
-      targetCount: targetCountFrom(step.description, fallbackTarget),
+      targetCount: fallbackTarget,
       isCompleted: step.isCompleted,
     );
   }
 
-  /// The web's rule, verbatim: the first integer anywhere in the step's
-  /// description, or [fallback] when it has none.
+  /// The target is DECLARED, not scraped.
   ///
-  /// Exposed rather than inlined because it is the one piece of this that is
-  /// genuinely surprising — the target count is parsed out of display copy, so
-  /// rewording a description can change what "done" means.
-  static int targetCountFrom(String description, int fallback) {
-    final RegExpMatch? match = RegExp(r'\d+').firstMatch(description);
-    if (match == null) return fallback;
-    return int.tryParse(match.group(0)!) ?? fallback;
-  }
+  /// This used to be `targetCountFrom(step.description, fallback)` — the first
+  /// integer anywhere in the step's sentence — which made a display string
+  /// load-bearing: rewording a description changed what "done" meant. The web
+  /// carried the same rule and dropped it when the daily target moved from 3
+  /// to 10, declaring `DAILY_COMMENT_TARGET` in its own module instead.
+  ///
+  /// Keeping the scrape here would have been worse than stale. The comments
+  /// screen now receives five drafts in its generated half and asks for ten
+  /// across both halves, and no sentence in the copy says either number — so
+  /// the RegExp found nothing, fell back to 3, and the user was shown five
+  /// cards against a bar reading 3 that could never reach its own total.
+  ///
+  /// Callers pass the declared target from `core/week/comment_targets.dart`.
 }

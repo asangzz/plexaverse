@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../../../core/links/linkedin.dart';
 import '../../../../core/router/zave_routes.dart';
+import '../../../../core/week/comment_targets.dart';
 import '../../../../core/ui/widgets/open_link.dart';
 import '../../../../core/ui/zave/zave_kit.dart';
 import '../../application/engagement_controllers.dart';
@@ -59,7 +60,11 @@ class CommentsPage extends ConsumerWidget {
 
   /// The web's own default when the roadmap step's description carries no
   /// number, and also what the service generates.
-  static const int _defaultTarget = 3;
+  /// Ten: five curated Top Voices posts plus five from the user's own niche.
+  /// Declared in `core/week/comment_targets.dart`, mirroring the web, rather
+  /// than written here — it was 3 against a batch of 5, so the bar could not
+  /// reach its own total.
+  static const int _defaultTarget = dailyCommentTarget;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
