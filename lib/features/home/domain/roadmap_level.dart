@@ -300,6 +300,24 @@ int plannerSlotForToday([DateTime? now]) => (now ?? DateTime.now()).weekday - 1;
 /// extras land on days 1–4), then progress is folded over it in one forward
 /// pass that carries `allDoneSoFar` — that carry is what unlocks a day the
 /// user has run ahead to.
+/// How far back the roadmap is built from today. Mirrors `DAYS_BEHIND`.
+const int roadmapDaysBehind = 13;
+
+/// How far forward. Mirrors `DAYS_AHEAD`.
+const int roadmapDaysAhead = 7;
+
+/// First day the roadmap builds, clamped to the start of the arc.
+int _windowStart(int today) {
+  final int from = today - roadmapDaysBehind;
+  return from < 1 ? 1 : from;
+}
+
+/// Last day the roadmap builds, clamped to the end of the arc.
+int _windowEnd(int today) {
+  final int to = today + roadmapDaysAhead;
+  return to > roadmapTotalDays ? roadmapTotalDays : to;
+}
+
 List<RoadmapLevel> buildRoadmap(RoadmapProgress progress, {DateTime? now}) {
   final bool isCompany = progress.isCompany;
   final DateTime today = now ?? DateTime.now();
@@ -321,9 +339,26 @@ List<RoadmapLevel> buildRoadmap(RoadmapProgress progress, {DateTime? now}) {
       : DateFormat('EEE, h:mm a').format(progress.scheduledPostAt!.toLocal());
 
   final List<RoadmapLevel> levels = <RoadmapLevel>[];
+  // Days before the window are behind the user and necessarily "done so far"
+  // as far as unlocking is concerned — the window always starts at or before
+  // today, so nothing it skips is a future day that could still be locked.
   bool allDoneSoFar = true;
 
-  for (int day = 1; day <= roadmapTotalDays; day++) {
+  // A WINDOW, not the whole arc.
+  //
+  // This loop ran to `roadmapTotalDays`, which was 66. It is a thousand now,
+  // and building every day eagerly means a thousand RoadmapLevels of three to
+  // five steps each — several thousand objects rebuilt on every progress
+  // change, for a screen that shows about twenty rows.
+  //
+  // The web windows the same list to today − 13 … today + 7
+  // (`DAYS_BEHIND` / `DAYS_AHEAD` in GamifiedRoadmap.tsx) and this matches it.
+  // Thirteen behind is what makes the catch-up stretch reachable without
+  // scrolling a year; seven ahead is one planning week.
+  final int from = _windowStart(progress.currentDay);
+  final int to = _windowEnd(progress.currentDay);
+
+  for (int day = from; day <= to; day++) {
     final bool isToday = progress.currentDay == day;
     final bool isPast = progress.currentDay > day;
     final bool isUnlocked = day == 1 || isToday || isPast || allDoneSoFar;

@@ -1,5 +1,7 @@
 import 'package:freezed_annotation/freezed_annotation.dart';
 
+import '../../home/domain/roadmap_planets.dart';
+
 part 'user_preferences.freezed.dart';
 part 'user_preferences.g.dart';
 
@@ -104,18 +106,24 @@ abstract class UserPreferences with _$UserPreferences {
   /// Season 2 dashboard over the planet roadmap.
   bool get isSeason2 => currentSeason >= 2;
 
-  /// True once Season 1's 66 days are behind the user but they have not
-  /// chosen a Season 2 path yet — the state the Season Complete screen
-  /// exists for.
+  /// True once Season 1 is behind the user but they have not chosen a Season 2
+  /// path yet — the state the Season Complete screen exists for.
   ///
   /// Ported from `isSeasonOneFinished` in lib/narrative-phases.ts, including
-  /// its day arithmetic: the roadmap is 1-indexed (the start day is day 1),
-  /// so the season is over strictly AFTER day 66, not on it.
+  /// its day arithmetic: the roadmap is 1-indexed (the start day is day 1), so
+  /// the season is over strictly AFTER the last day, not on it.
+  ///
+  /// **The length is [roadmapTotalDays], not a literal.** It was `day > 66`
+  /// here while the web had already moved to a thousand, which did not read as
+  /// a stale number — it read as the product ending. Every user past their
+  /// sixty-sixth day was shown the Season Complete screen 934 days early,
+  /// while the server still considered them mid-Season-1, so nothing on the
+  /// backend agreed with what they were being told.
   bool get seasonOneFinished {
     final DateTime? started = roadmapStartedAt;
     if (started == null || currentSeason >= 2) return false;
     final int day = DateTime.now().difference(started).inDays + 1;
-    return day > 66;
+    return day > roadmapTotalDays;
   }
 
   /// Maintenance mode — the reduced cadence. The Sunday article still

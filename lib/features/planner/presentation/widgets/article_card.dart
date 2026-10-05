@@ -22,7 +22,12 @@ TextStyle plannerSerif({required double size, Color? color}) =>
       height: 1.15,
     );
 
-/// The week's Sunday article, as a card on the planner.
+/// The week's newsletter, as a card on the planner.
+///
+/// It ran on SUNDAY before the week was rebuilt and now runs on
+/// THURSDAY — `WEEK_SHAPE` in the web's `lib/week-shape.ts`. Sunday is
+/// a rest day. The day is no longer written into the labels here,
+/// because the one place that decides it is that table.
 ///
 /// The action is **Copy**, not Publish, and that is the whole design. LinkedIn's
 /// API cannot publish an article or a newsletter edition, so the app prepares
@@ -61,7 +66,7 @@ class ArticleCard extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: <Widget>[
-            Text('SUNDAY ARTICLE', style: ZaveType.kicker),
+            Text('NEWSLETTER', style: ZaveType.kicker),
             SizedBox(height: ZaveSpace.md),
             Text(
               'No article for this week yet',
@@ -85,7 +90,7 @@ class ArticleCard extends StatelessWidget {
         children: <Widget>[
           Row(
             children: <Widget>[
-              Text('SUNDAY', style: ZaveType.kicker),
+              Text('THURSDAY', style: ZaveType.kicker),
               SizedBox(width: ZaveSpace.sm),
               Text(
                 'article',

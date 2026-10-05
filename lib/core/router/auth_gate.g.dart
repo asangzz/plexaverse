@@ -30,18 +30,36 @@ part of 'auth_gate.dart';
 /// network call at all: it read the keychain, concluded "signed out", and
 /// showed the login screen.
 ///
-/// ## The order matters
+/// ## The idle timeout is gone, and why
 ///
-/// Idle is read FIRST, and the refresh is skipped when it has expired.
-/// Refreshing writes new tokens, and writing them calls
-/// `SessionStore.touchActivity` — so a refresh performed before the idle check
-/// would reset the very clock the idle timeout is measured on, and the
-/// three-hour timeout would never fire again.
+/// This used to read `SessionStore.isIdleExpired()` first and skip the refresh
+/// when it fired, and the router then signed the user out and WIPED the
+/// tokens. Three hours after your last token write, a refresh token with
+/// twenty-nine days left on it was deleted. That is what "the login does not
+/// last when I kill the app" was.
 ///
-/// An idle-expired session is left with its tokens in place rather than
-/// scrubbed here. Clearing is a side effect and this is a read; the guard owns
-/// that, and it holds — `lastActivityAt` does not move, so the session stays
-/// idle-expired on every subsequent launch too.
+/// It was wrong twice over:
+///
+/// 1. **The policy is not this product's.** Three hours came from the health
+///    app this codebase was skinned from, where a short idle window protects
+///    patient data. The Plexaverse web app sets no `maxAge` at all — NextAuth
+///    defaults to thirty days and has no idle concept — so the two halves of
+///    the same product disagreed about how long a login lasts.
+///
+/// 2. **It did not measure activity.** `touchActivity` was documented as
+///    running on every 2xx response; `AuthInterceptor` has no `onResponse`
+///    hook and never called it. The only writers were login and refresh, so
+///    the window ran from the last TOKEN WRITE. Using the app did not extend
+///    it.
+///
+/// The session's real boundary is the refresh token, and it always was: when
+/// that expires the refresh below returns null and `signedIn` is false on its
+/// own. A second timer could only ever end the session EARLY.
+///
+/// Protecting an unattended phone is a different job and already has an
+/// owner — the opt-in biometric lock, armed in `PlexaverseApp` when the app
+/// leaves the foreground. That holds the session rather than destroying it,
+/// which is what a lock should do.
 
 @ProviderFor(authGate)
 final authGateProvider = AuthGateProvider._();
@@ -68,18 +86,36 @@ final authGateProvider = AuthGateProvider._();
 /// network call at all: it read the keychain, concluded "signed out", and
 /// showed the login screen.
 ///
-/// ## The order matters
+/// ## The idle timeout is gone, and why
 ///
-/// Idle is read FIRST, and the refresh is skipped when it has expired.
-/// Refreshing writes new tokens, and writing them calls
-/// `SessionStore.touchActivity` — so a refresh performed before the idle check
-/// would reset the very clock the idle timeout is measured on, and the
-/// three-hour timeout would never fire again.
+/// This used to read `SessionStore.isIdleExpired()` first and skip the refresh
+/// when it fired, and the router then signed the user out and WIPED the
+/// tokens. Three hours after your last token write, a refresh token with
+/// twenty-nine days left on it was deleted. That is what "the login does not
+/// last when I kill the app" was.
 ///
-/// An idle-expired session is left with its tokens in place rather than
-/// scrubbed here. Clearing is a side effect and this is a read; the guard owns
-/// that, and it holds — `lastActivityAt` does not move, so the session stays
-/// idle-expired on every subsequent launch too.
+/// It was wrong twice over:
+///
+/// 1. **The policy is not this product's.** Three hours came from the health
+///    app this codebase was skinned from, where a short idle window protects
+///    patient data. The Plexaverse web app sets no `maxAge` at all — NextAuth
+///    defaults to thirty days and has no idle concept — so the two halves of
+///    the same product disagreed about how long a login lasts.
+///
+/// 2. **It did not measure activity.** `touchActivity` was documented as
+///    running on every 2xx response; `AuthInterceptor` has no `onResponse`
+///    hook and never called it. The only writers were login and refresh, so
+///    the window ran from the last TOKEN WRITE. Using the app did not extend
+///    it.
+///
+/// The session's real boundary is the refresh token, and it always was: when
+/// that expires the refresh below returns null and `signedIn` is false on its
+/// own. A second timer could only ever end the session EARLY.
+///
+/// Protecting an unattended phone is a different job and already has an
+/// owner — the opt-in biometric lock, armed in `PlexaverseApp` when the app
+/// leaves the foreground. That holds the session rather than destroying it,
+/// which is what a lock should do.
 
 final class AuthGateProvider
     extends
@@ -107,18 +143,36 @@ final class AuthGateProvider
   /// network call at all: it read the keychain, concluded "signed out", and
   /// showed the login screen.
   ///
-  /// ## The order matters
+  /// ## The idle timeout is gone, and why
   ///
-  /// Idle is read FIRST, and the refresh is skipped when it has expired.
-  /// Refreshing writes new tokens, and writing them calls
-  /// `SessionStore.touchActivity` — so a refresh performed before the idle check
-  /// would reset the very clock the idle timeout is measured on, and the
-  /// three-hour timeout would never fire again.
+  /// This used to read `SessionStore.isIdleExpired()` first and skip the refresh
+  /// when it fired, and the router then signed the user out and WIPED the
+  /// tokens. Three hours after your last token write, a refresh token with
+  /// twenty-nine days left on it was deleted. That is what "the login does not
+  /// last when I kill the app" was.
   ///
-  /// An idle-expired session is left with its tokens in place rather than
-  /// scrubbed here. Clearing is a side effect and this is a read; the guard owns
-  /// that, and it holds — `lastActivityAt` does not move, so the session stays
-  /// idle-expired on every subsequent launch too.
+  /// It was wrong twice over:
+  ///
+  /// 1. **The policy is not this product's.** Three hours came from the health
+  ///    app this codebase was skinned from, where a short idle window protects
+  ///    patient data. The Plexaverse web app sets no `maxAge` at all — NextAuth
+  ///    defaults to thirty days and has no idle concept — so the two halves of
+  ///    the same product disagreed about how long a login lasts.
+  ///
+  /// 2. **It did not measure activity.** `touchActivity` was documented as
+  ///    running on every 2xx response; `AuthInterceptor` has no `onResponse`
+  ///    hook and never called it. The only writers were login and refresh, so
+  ///    the window ran from the last TOKEN WRITE. Using the app did not extend
+  ///    it.
+  ///
+  /// The session's real boundary is the refresh token, and it always was: when
+  /// that expires the refresh below returns null and `signedIn` is false on its
+  /// own. A second timer could only ever end the session EARLY.
+  ///
+  /// Protecting an unattended phone is a different job and already has an
+  /// owner — the opt-in biometric lock, armed in `PlexaverseApp` when the app
+  /// leaves the foreground. That holds the session rather than destroying it,
+  /// which is what a lock should do.
   AuthGateProvider._()
     : super(
         from: null,
@@ -144,4 +198,4 @@ final class AuthGateProvider
   }
 }
 
-String _$authGateHash() => r'a2960fe10dad62b4003ff981b55ddcf682cba497';
+String _$authGateHash() => r'a59eae82957a773058d1bacff28c3d90c1b7da88';

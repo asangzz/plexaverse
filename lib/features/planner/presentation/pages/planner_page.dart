@@ -179,7 +179,12 @@ class _PlannerBody extends StatelessWidget {
             slot: plan.posts[i],
             isToday: plan.posts[i].day == today,
             onTap: () => _openSlot(context, plan.posts[i], i),
-            onApprove: plan.posts[i].needsApproval
+            // Approve is a publish action: it moves a slot to `approved` and
+            // the chain ships it. A video script and the newsletter are never
+            // shipped by us, so offering it there would promise something the
+            // product cannot do. `needsApproval` alone used to be the gate.
+            onApprove:
+                plan.posts[i].isPublishable && plan.posts[i].needsApproval
                 ? () => _approve(context, ref, i)
                 : null,
           ),
@@ -807,7 +812,7 @@ class _ArticleSheet extends StatelessWidget {
   Widget build(BuildContext context) {
     return _Sheet(
       children: <Widget>[
-        Text('SUNDAY ARTICLE', style: ZaveType.kicker),
+        Text('NEWSLETTER', style: ZaveType.kicker),
         SizedBox(height: ZaveSpace.md),
         Text(article.title, style: plannerSerif(size: 28)),
         if (article.thesis != null) ...<Widget>[

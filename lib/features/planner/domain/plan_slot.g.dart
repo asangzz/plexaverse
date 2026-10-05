@@ -24,6 +24,7 @@ _PlanSlot _$PlanSlotFromJson(Map<String, dynamic> json) => _PlanSlot(
       ) ??
       SlotStatus.planned,
   postId: json['postId'] as String?,
+  rawKind: json['kind'] as String?,
   restDay: json['restDay'] as bool? ?? false,
   artifact: json['artifact'] as String?,
   posterTag: json['posterTag'] as String?,
@@ -39,6 +40,7 @@ Map<String, dynamic> _$PlanSlotToJson(_PlanSlot instance) => <String, dynamic>{
   'hashtags': instance.hashtags,
   'status': _$SlotStatusEnumMap[instance.status]!,
   'postId': instance.postId,
+  'kind': instance.rawKind,
   'restDay': instance.restDay,
   'artifact': instance.artifact,
   'posterTag': instance.posterTag,

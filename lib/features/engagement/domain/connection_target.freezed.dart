@@ -16,8 +16,12 @@ T _$identity<T>(T value) => value;
 mixin _$ConnectionTarget {
 
  String get role; String get company;/// What to type into LinkedIn's people search.
- String get searchQuery;/// The server's deep link to that search. **The app cannot open it** —
-/// this build has no URL launcher — so it is offered as copyable text.
+ String get searchQuery;/// The server's deep link to that search, stamped with
+/// `origin=SWITCH_SEARCH_VERTICAL` by `findConnections()`.
+///
+/// Read through [searchUrl], never directly — it carries `@Default('')`,
+/// so a server that omits it hands the UI an empty string rather than
+/// null, and an empty string is not a link.
  String get linkedinSearchUrl;/// The connection note / DM body, ready to paste.
  String get note; bool get isDirectMessage;/// Copied at least once. Local only — the server has no per-target state,
 /// and copying is the last thing this app can observe before the user
@@ -229,8 +233,12 @@ class _ConnectionTarget extends ConnectionTarget {
 @override@JsonKey() final  String company;
 /// What to type into LinkedIn's people search.
 @override@JsonKey() final  String searchQuery;
-/// The server's deep link to that search. **The app cannot open it** —
-/// this build has no URL launcher — so it is offered as copyable text.
+/// The server's deep link to that search, stamped with
+/// `origin=SWITCH_SEARCH_VERTICAL` by `findConnections()`.
+///
+/// Read through [searchUrl], never directly — it carries `@Default('')`,
+/// so a server that omits it hands the UI an empty string rather than
+/// null, and an empty string is not a link.
 @override@JsonKey() final  String linkedinSearchUrl;
 /// The connection note / DM body, ready to paste.
 @override@JsonKey() final  String note;

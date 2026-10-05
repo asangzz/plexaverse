@@ -17,8 +17,25 @@ import '../../domain/plan_slot.dart';
 /// Note there is deliberately no red anywhere: Zave has none, and none of these
 /// states is an error.
 ({Color color, String label}) slotSignal(PlanSlot slot) {
-  if (slot.restDay) {
-    return (color: ZaveColors.ink35, label: 'Rest day');
+  // Kind first, because three of the four kinds are not about a post's
+  // progress at all. A video script and the newsletter are work WE prepare and
+  // the USER posts, so the publish ladder below — scheduled, published —
+  // describes something that will never happen to them. Reading `status` on a
+  // hand-off day is how the planner came to promise that a video script would
+  // go out on its own.
+  switch (slot.kind) {
+    case DayKind.rest:
+      return (color: ZaveColors.ink35, label: 'Rest day');
+    case DayKind.videoScript:
+      return slot.status == SlotStatus.planned
+          ? (color: ZaveColors.ink35, label: 'Script to write')
+          : (color: ZaveColors.peri, label: 'Script ready');
+    case DayKind.article:
+      return slot.status == SlotStatus.planned
+          ? (color: ZaveColors.ink35, label: 'Newsletter to write')
+          : (color: ZaveColors.peri, label: 'Newsletter ready');
+    case DayKind.post:
+      break;
   }
   return switch (slot.status) {
     SlotStatus.published => (color: ZaveColors.green, label: 'Published'),
@@ -60,7 +77,7 @@ class SlotCard extends StatelessWidget {
     return ZaveCard(
       size: ZaveCardSize.medium,
       isNow: isToday,
-      onTap: slot.restDay ? null : onTap,
+      onTap: slot.kind == DayKind.rest ? null : onTap,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: <Widget>[
@@ -106,9 +123,9 @@ class SlotCard extends StatelessWidget {
                     ),
                     SizedBox(height: ZaveSpace.xs),
                     Text(
-                      slot.restDay ? 'No post scheduled' : slot.title,
+                      slot.kind == DayKind.rest ? 'Nothing today' : slot.title,
                       style: ZaveType.h3.copyWith(
-                        color: slot.restDay
+                        color: slot.kind == DayKind.rest
                             ? ZaveColors.ink45
                             : ZaveColors.white,
                       ),
@@ -118,7 +135,18 @@ class SlotCard extends StatelessWidget {
               ),
             ],
           ),
-          if (!slot.restDay) ...<Widget>[
+          // A hand-off day says who does what, because that is the only thing
+          // about it the user needs and it is the opposite of a post day.
+          if (slot.isHandoff) ...<Widget>[
+            SizedBox(height: ZaveSpace.sm),
+            Text(
+              slot.kind == DayKind.videoScript
+                  ? 'We write the script — you record and post it.'
+                  : 'We write the newsletter — you paste it into LinkedIn.',
+              style: ZaveType.caption,
+            ),
+          ],
+          if (slot.kind != DayKind.rest) ...<Widget>[
             SizedBox(height: ZaveSpace.md),
             // Wrap, not Row: the leading circle took 56pt off this line and a
             // third tag no longer fits beside the other two. Wrapping keeps
@@ -128,10 +156,18 @@ class SlotCard extends StatelessWidget {
               spacing: ZaveSpace.sm,
               runSpacing: ZaveSpace.sm,
               children: <Widget>[
-                _FormatChip(format: slot.format),
-                if (slot.posterTag != null)
-                  _FormatChip(format: slot.posterTag!),
-                if (slot.artifact != null) _FormatChip(format: slot.artifact!),
+                // Only on a post day. `format` is populated on every day so
+                // the server's XP pre-gate can index it before the plan is
+                // fetched, but on a script or a newsletter it describes a
+                // LinkedIn shape we never send — drawing it claims the day
+                // produces a text post.
+                if (slot.kind == DayKind.post) ...<Widget>[
+                  _FormatChip(format: slot.format),
+                  if (slot.posterTag != null)
+                    _FormatChip(format: slot.posterTag!),
+                  if (slot.artifact != null)
+                    _FormatChip(format: slot.artifact!),
+                ],
               ],
             ),
           ],

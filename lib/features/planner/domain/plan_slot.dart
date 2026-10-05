@@ -40,12 +40,70 @@ enum SlotStatus {
   String get wire => name;
 }
 
+/// What a day produces. Mirrors `DayKind` in the web's `lib/week-shape.ts`.
+///
+/// This is not the same question as [PlanSlot.format]. Format is what we hand
+/// LinkedIn; kind is whether we hand LinkedIn anything at all. A video script
+/// and a newsletter are both work the user does and we cannot publish for
+/// them.
+enum DayKind {
+  /// We write it and the chain publishes it.
+  post,
+
+  /// We write a script; the user records and posts it themselves. LinkedIn
+  /// video upload is a different API (initialize → binary PUT → finalize → a
+  /// share referencing the video URN) and nothing in this product speaks it.
+  videoScript,
+
+  /// The weekly newsletter. The user pastes it into LinkedIn and confirms.
+  article,
+
+  /// Nothing.
+  rest;
+
+  static DayKind parse(String? raw) => switch (raw) {
+    'video_script' => DayKind.videoScript,
+    'article' => DayKind.article,
+    'rest' => DayKind.rest,
+    _ => DayKind.post,
+  };
+
+  String get wire => switch (this) {
+    DayKind.videoScript => 'video_script',
+    DayKind.article => 'article',
+    DayKind.rest => 'rest',
+    DayKind.post => 'post',
+  };
+
+  /// True when the chain can publish this day on the user's behalf.
+  bool get isPublishable => this == DayKind.post;
+
+  /// True when we prepare something the USER then posts. Both of these end in
+  /// a hand-off rather than in our publish pipeline.
+  bool get isHandoff => this == DayKind.videoScript || this == DayKind.article;
+}
+
 /// One day of the week's plan.
 ///
-/// A week is NOT seven posts that share a topic. It is **one long-form article
-/// plus six posts that argue facets of it** (CLAUDE.md §6b). The weekday titles
-/// are chosen from the Sunday article's own section headings, which is why they
-/// read as one argument rather than seven angles on a subject.
+/// ## The week is no longer seven posts
+///
+/// It is two posts, two video scripts, one newsletter and a weekend off —
+/// `WEEK_SHAPE` in the web's `lib/week-shape.ts`:
+///
+///   Mon  post            we write it, the chain publishes it
+///   Tue  post (hero)     the week's biggest swing
+///   Wed  video script    we write it, the user records and posts it
+///   Thu  article         the newsletter, pasted in by the user
+///   Fri  video script
+///   Sat  rest
+///   Sun  rest
+///
+/// That is a deliberate reduction from seven published posts to two: at seven,
+/// the server's grounding runs out of banked material after the first few and
+/// the rest come from its generic no-story branch.
+///
+/// **Sunday is a rest day now.** The article moved to Thursday. Anything still
+/// drawing an article card on Sunday is describing the previous product.
 @freezed
 abstract class PlanSlot with _$PlanSlot {
   const PlanSlot._();
@@ -72,9 +130,18 @@ abstract class PlanSlot with _$PlanSlot {
     /// The server id of the generated post, once one exists.
     String? postId,
 
-    /// A maintenance-mode rest day. Reduced-cadence users (3 posts a week) get
-    /// these; the Sunday article still generates regardless, because it is the
-    /// week's spine rather than one of its posts.
+    /// What this day produces. **Absent on every plan written before the
+    /// pivot**, which is why it is nullable and why nothing reads it directly
+    /// — go through [kind], the mirror of the web's `slotKind()`.
+    ///
+    /// Reading the raw field would resolve those rows to null and blank the
+    /// grid for anyone mid-week when this shipped.
+    @JsonKey(name: 'kind') String? rawKind,
+
+    /// A maintenance-mode rest day. Reduced-cadence users get these.
+    ///
+    /// Pre-pivot rows carry only this, which is how [kind] reconstructs their
+    /// kind: the product had exactly two states then, rest or a post.
     @Default(false) bool restDay,
 
     /// This slot carries a takeaway in its first comment. Decided by the
@@ -89,6 +156,22 @@ abstract class PlanSlot with _$PlanSlot {
 
   factory PlanSlot.fromJson(Map<String, dynamic> json) =>
       _$PlanSlotFromJson(json);
+
+  /// What this day produces, with pre-pivot rows reconstructed.
+  ///
+  /// The exact mirror of `slotKind()` in the web's `lib/week-shape.ts`:
+  /// a row written before `kind` existed carries only `restDay`, so it
+  /// resolves to the two states the product had at the time.
+  DayKind get kind => rawKind != null
+      ? DayKind.parse(rawKind)
+      : (restDay ? DayKind.rest : DayKind.post);
+
+  /// True when the chain publishes this day for the user. Mirrors
+  /// `slotIsPublishable()`.
+  bool get isPublishable => kind.isPublishable;
+
+  /// We prepare it; the user posts it. Video scripts and the newsletter.
+  bool get isHandoff => kind.isHandoff;
 
   /// Something exists to read.
   bool get hasPost => postId != null && postId!.isNotEmpty;

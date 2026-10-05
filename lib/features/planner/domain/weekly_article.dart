@@ -3,7 +3,10 @@ import 'package:freezed_annotation/freezed_annotation.dart';
 part 'weekly_article.freezed.dart';
 part 'weekly_article.g.dart';
 
-/// The week's Sunday long-form article.
+/// The week's long-form newsletter.
+///
+/// Thursday's, since the week was rebuilt — it was Sunday's, and
+/// Sunday is now a rest day.
 ///
 /// **This is not a post, and it is never published by the app.** LinkedIn's API
 /// has no article or newsletter endpoint, and our scope set (`w_member_social`)
