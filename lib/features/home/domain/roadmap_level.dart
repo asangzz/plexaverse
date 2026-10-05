@@ -12,6 +12,7 @@ library;
 
 import 'package:intl/intl.dart';
 
+import '../../../core/week/week_shape.dart';
 import 'roadmap_planets.dart';
 import 'roadmap_progress.dart';
 
@@ -363,15 +364,33 @@ List<RoadmapLevel> buildRoadmap(RoadmapProgress progress, {DateTime? now}) {
     final bool isPast = progress.currentDay > day;
     final bool isUnlocked = day == 1 || isToday || isPast || allDoneSoFar;
 
+    // Does this day produce a post at all?
+    //
+    // Five of seven days no longer do: Wednesday and Friday are video scripts,
+    // Thursday is the newsletter, and the weekend is off. Asking for a post on
+    // those days is asking for something the plan does not contain — the
+    // planner has no slot to generate and the publish chain has nothing to
+    // send, so the mission could only ever sit there unfinished.
+    //
+    // Without a start date the weekday is unknowable, so the step stays. That
+    // is what every caller wanting only a step's copy or route gets today, and
+    // it is the safe direction to be wrong in. The web reasons identically
+    // (`dayPosts` in lib/roadmap-data.ts).
+    final DateTime? startedAt = progress.roadmapStartedAt;
+    final bool dayPosts =
+        startedAt == null ||
+        dayKindAt(weekdayIndexForDay(day, startedAt)) == DayKind.post;
+
     final List<RoadmapStep> steps = <RoadmapStep>[
-      RoadmapStep(
-        id: 1,
-        key: 'publish-post',
-        title: 'Publish a post',
-        description: 'Write and publish a post to grow your authority.',
-        xpReward: 100,
-        moduleLink: postCreateRoute,
-      ),
+      if (dayPosts)
+        RoadmapStep(
+          id: 1,
+          key: 'publish-post',
+          title: 'Publish a post',
+          description: 'Write and publish a post to grow your authority.',
+          xpReward: 100,
+          moduleLink: postCreateRoute,
+        ),
       RoadmapStep(
         id: 2,
         key: 'comment',

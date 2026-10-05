@@ -1,5 +1,12 @@
 import 'package:freezed_annotation/freezed_annotation.dart';
 
+// DayKind lives in core/week, not here: the home roadmap reads it too, to
+// decide whether a day gets a "Publish a post" mission, and neither feature
+// should depend on the other. The web splits it out for the same reason.
+export '../../../core/week/week_shape.dart' show DayKind;
+
+import '../../../core/week/week_shape.dart';
+
 part 'plan_slot.freezed.dart';
 part 'plan_slot.g.dart';
 
@@ -38,49 +45,6 @@ enum SlotStatus {
   };
 
   String get wire => name;
-}
-
-/// What a day produces. Mirrors `DayKind` in the web's `lib/week-shape.ts`.
-///
-/// This is not the same question as [PlanSlot.format]. Format is what we hand
-/// LinkedIn; kind is whether we hand LinkedIn anything at all. A video script
-/// and a newsletter are both work the user does and we cannot publish for
-/// them.
-enum DayKind {
-  /// We write it and the chain publishes it.
-  post,
-
-  /// We write a script; the user records and posts it themselves. LinkedIn
-  /// video upload is a different API (initialize → binary PUT → finalize → a
-  /// share referencing the video URN) and nothing in this product speaks it.
-  videoScript,
-
-  /// The weekly newsletter. The user pastes it into LinkedIn and confirms.
-  article,
-
-  /// Nothing.
-  rest;
-
-  static DayKind parse(String? raw) => switch (raw) {
-    'video_script' => DayKind.videoScript,
-    'article' => DayKind.article,
-    'rest' => DayKind.rest,
-    _ => DayKind.post,
-  };
-
-  String get wire => switch (this) {
-    DayKind.videoScript => 'video_script',
-    DayKind.article => 'article',
-    DayKind.rest => 'rest',
-    DayKind.post => 'post',
-  };
-
-  /// True when the chain can publish this day on the user's behalf.
-  bool get isPublishable => this == DayKind.post;
-
-  /// True when we prepare something the USER then posts. Both of these end in
-  /// a hand-off rather than in our publish pipeline.
-  bool get isHandoff => this == DayKind.videoScript || this == DayKind.article;
 }
 
 /// One day of the week's plan.

@@ -184,7 +184,22 @@ class OnboardingChatController extends _$OnboardingChatController {
             ? role
             : analysis.profession,
         industry: analysis.industry,
-        postCategories: analysis.suggestedCategories,
+        // postCategories is deliberately NOT sent.
+        //
+        // The server now validates it against the forty Top Voice category
+        // ids (`isTopVoiceCategoryId`), and the suggestions this screen has
+        // come from `/ai/analyze-profession`, whose PROFILE_CATEGORIES is an
+        // older, private vocabulary of eight. Five of those eight — tech_ai,
+        // personal_growth, industry_news, startups, career_tips — are not
+        // category ids at all, so the whole preferences PATCH came back
+        // "Unknown category" and onboarding could not finish.
+        //
+        // Sending a mapped subset would be the wrong fix: the server already
+        // derives categories itself from `profession` whenever the user has
+        // none yet (`suggestCategoriesForProfession`), which is exactly why
+        // the web never sends them either. Omitting the field is what asks
+        // for that, and it keeps one vocabulary on the server rather than two
+        // that have to agree.
       ),
     );
   }
