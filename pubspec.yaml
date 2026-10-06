@@ -70,6 +70,11 @@ dependencies:
   # constraint, so it sits outside the pinned-version comments above.
   google_fonts: ^6.2.1
   cupertino_icons: ^1.0.8
+  # The app's icon vocabulary — see core/ui/app_icons.dart, which points
+  # IconData at this package's bundled faces by family name. It was reachable
+  # only from pub-cache before, so nothing was bundled and EVERY AppIcons
+  # glyph rendered as the missing-glyph box.
+  font_awesome_flutter: ^10.8.0
 
   # Media & imagery
   cached_network_image: ^3.4.1
