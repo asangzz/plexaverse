@@ -132,11 +132,33 @@ GoRouter appRouter(Ref ref) {
       // Branch order is canonical and MUST match `tabRoutes`; ZaveShellHost
       // indexes into that list to name the current route. Tab switches use
       // NoTransitionPage — the shell owns any tab-switch animation.
+      //
+      // EVERY BRANCH PRELOADS, and that is what stops the tab flash.
+      //
+      // `preload` defaults to false, which means a branch is not BUILT until
+      // the first time it is navigated to. Each tab page opens with
+      // `provider.when(loading: → skeleton)`, so building it on tap is the
+      // moment its fetch starts: the user tapped Plan and got a bare grey
+      // skeleton with no header for as long as the request took — measured at
+      // 400-500ms against the mock's own latency, and worse against the real
+      // backend, which is in Tokyo.
+      //
+      // Preloading builds all four at shell construction, so their fetches run
+      // in parallel while the user is still reading Home, and the data is
+      // there before the tab is ever tapped. The IndexedStack then keeps them
+      // alive, so this cost is paid once per launch rather than once per tab.
+      //
+      // It is not free: four tabs fetch at sign-in instead of on demand, which
+      // is four requests a user who never leaves Home did not need. That is
+      // the right trade for a bottom bar — these are the four surfaces the
+      // product expects someone to touch daily, and go_router's own note calls
+      // branch preloading's primary purpose exactly this.
       StatefulShellRoute.indexedStack(
         builder: (_, _, navigationShell) =>
             ZaveShellHost(navigationShell: navigationShell),
         branches: <StatefulShellBranch>[
           StatefulShellBranch(
+            preload: true,
             routes: <RouteBase>[
               GoRoute(
                 path: ZaveRoutes.dashboard,
@@ -148,6 +170,7 @@ GoRouter appRouter(Ref ref) {
             ],
           ),
           StatefulShellBranch(
+            preload: true,
             routes: <RouteBase>[
               GoRoute(
                 path: ZaveRoutes.planner,
@@ -159,6 +182,7 @@ GoRouter appRouter(Ref ref) {
             ],
           ),
           StatefulShellBranch(
+            preload: true,
             routes: <RouteBase>[
               GoRoute(
                 path: ZaveRoutes.calendar,
@@ -170,6 +194,7 @@ GoRouter appRouter(Ref ref) {
             ],
           ),
           StatefulShellBranch(
+            preload: true,
             routes: <RouteBase>[
               GoRoute(
                 path: ZaveRoutes.posts,
@@ -234,7 +259,10 @@ GoRouter appRouter(Ref ref) {
       _fullScreen(ZaveRoutes.seasonComplete, const SeasonCompletePage()),
       _fullScreen(ZaveRoutes.roadmapAboutOdyssey, const AboutOdysseyPage()),
       _fullScreen(ZaveRoutes.roadmapHeadlineHook, const HeadlineHookPage()),
-      _fullScreen(ZaveRoutes.roadmapBannerBlueprint, const BannerBlueprintPage()),
+      _fullScreen(
+        ZaveRoutes.roadmapBannerBlueprint,
+        const BannerBlueprintPage(),
+      ),
 
       // ── Company mode. Analytics and Inbox are nav-visible to company
       // brands; Advocacy and Banner are admin-only in v1. The nav gates them
@@ -317,7 +345,9 @@ class _RouterRefresh extends ChangeNotifier {
     // Re-run when first-run onboarding is completed so the carousel gate
     // releases to the auth flow.
     _subs.add(
-      ref.listen(onboardingControllerProvider, (_, _) => notifyListeners()).close,
+      ref
+          .listen(onboardingControllerProvider, (_, _) => notifyListeners())
+          .close,
     );
     // Preferences are subscribed in [_syncPreferences], and ONLY while signed
     // in — see there for why this cannot be a plain listen.
