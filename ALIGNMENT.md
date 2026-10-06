@@ -60,16 +60,6 @@ earlier notes still resolve — 6 and 12 are closed and listed at the bottom.
 
 ### High — broken
 
-**B. The base64 in `posts.image_url` is an ONGOING LEAK, not a backfill.**
-Recorded as a historical 78 MB; it is not. Three web planner paths still PATCH
-a fresh multi-megabyte `data:` URL today. Mobile is the client that gets this
-right (`compose_controller.dart:407-421` uploads first and hard-fails rather
-than falling back) and inherits the cost through the shared `/posts/[id]`
-payload. Because those paths never write `imageThumbUrl`, every web-generated
-post also shows a permanent placeholder in the mobile feed.
-→ make the three call sites do what `tasks/execute/route.ts:1133-1139` already
-does, then reject `data:` in `createUserPost`/`updateUserPost`, then backfill.
-
 ### High — missing
 
 **7. Follower capture — narrower than recorded.** The `.xlsx` import is fully
@@ -153,6 +143,7 @@ swapping it, so the next shape change cannot re-break it.
 |---|---|---|
 | 2 | Generate button on hand-off days always failed | `49ca63d` — the `NOT_A_POST_DAY` branch (`planner_repositories.dart:104-106`), its copy (`planner_page.dart:723`), and the `slot.isPublishable` gate that removes the button entirely (`:654-664`) |
 | 3 | The video script had no mobile surface at all — `7ff913e` added the route and nothing called it, so Wednesday and Friday opened a sheet whose only action was rewriting the title of a script the app could not show. Both hand-off rows were also pinned at "to write" for ever, reading a `status` column that a hand-off day never reaches | A `VideoScript` model, three repository methods, `VideoScriptsController`, and the shot list in the slot sheet. `slotSignal` now takes a `HandoffState` resolved from the script row (or the article row for Thursday) instead of `slot.status`. The mock plan carries the real `weekShape` too — it built all seven days as posts, so the flavor this app is manually tested on showed a week the product stopped producing |
+| B | Inline base64 in `posts.image_url` was an ONGOING leak, not a historical 78 MB — measured at **154 posts / 78.6 MB**, up from the 152 first recorded. `/api/ai/poster` returns a `data:` URL; the auto-post chain converted it, five client call sites did not, and none of them wrote a thumb, so every such post is also a permanent placeholder in the mobile feed | The guard went into `createUserPost`/`updateUserPost` rather than the five call sites — they are the only two paths that write the column, so nothing can reintroduce it. It REPAIRS rather than rejects: the auto-post chain deliberately falls back to an inline URL when Storage is down, and a hard rejection would turn a Storage blip into a missing image on an unattended publish. Plus `scripts/backfill-inline-post-images.ts` for what is already there |
 | 9 | Newsletter naming dead-ended. The web route is session-authenticated so a bearer could not reach it, and the preferences PATCH could not carry the name either — that schema is `.strict()` with no `newsletterName` field, so a client that tried had the WHOLE patch rejected. `isFirstArticle` is `!newsletterName`, so it stayed true for ever: the planner asked the user to create a newsletter they already had, every week, and captions kept naming the article generically | `POST /api/mobile/v1/planner/newsletter`, plus the naming sheet on the article card. The model's five candidate names were already on the wire and dropped on the floor. The fake held the name as a literal, so `isFirstArticle` was false for ever under the mock and this whole flow was unreachable on the build the app is tested on |
 | 5 | Top Voices: a phone-only user got **zero** curated posts anywhere (the generator's only caller was a web-session route), and the Comments step asked for ten against a screen that could supply five, so Finish could never enable | `GET`/`PATCH /api/mobile/v1/top-voices`, the `TopVoicesSection` card, `reachableCommentTarget`, a Dart port of the forty category ids and a picker in Settings. The two fakes that seeded category LABELS are fixed too — they would have had every preferences PATCH rejected by the server's refine |
 | 6 | *(folded into 4 during the first pass)* | — |
