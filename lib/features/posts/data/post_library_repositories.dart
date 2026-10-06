@@ -274,9 +274,32 @@ class FakePostLibraryRepository implements PostLibraryRepository {
         : _posts
               .where((LibraryPost p) => p.status.wire == status)
               .toList(growable: false);
-    // The mock holds one page; a cursor therefore always means "the end".
-    if (cursor != null) return const PostPage();
-    return PostPage(posts: List<LibraryPost>.of(filtered));
+    // Real cursor pagination over the fixture.
+    //
+    // This used to ignore `limit` and treat ANY cursor as the end of the
+    // list, so the library always had exactly one short page: infinite scroll
+    // never fired a second request, and an off-by-one or a cursor that failed
+    // to advance — the two ways paging actually breaks — could not happen in
+    // mock. The server pages on (createdAt, id) and over-fetches by one to
+    // decide `hasMore`; this does the same on id alone, which is enough
+    // because the fixture is already in order.
+    int start = 0;
+    if (cursor != null) {
+      final int at = filtered.indexWhere((LibraryPost p) => p.id == cursor);
+      // A cursor naming a post that has since been filtered out or deleted is
+      // the end of the list, not the beginning of it again.
+      if (at < 0) return const PostPage();
+      start = at + 1;
+    }
+
+    final List<LibraryPost> window = filtered.skip(start).take(limit).toList();
+    final bool hasMore = start + window.length < filtered.length;
+
+    return PostPage(
+      posts: window,
+      nextCursor: hasMore ? window.last.id : null,
+      hasMore: hasMore,
+    );
   }
 
   @override

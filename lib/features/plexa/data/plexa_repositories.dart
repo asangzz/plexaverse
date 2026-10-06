@@ -91,63 +91,187 @@ class FakePlexaRepository implements PlexaRepository {
     return PlexaDay(
       session: FakeDaySession.current,
       topic: 'onboarding',
-      ready: const PlexaReady(
-        comments: true,
-        connections: true,
-        topVoices: true,
+      // Derived from what is actually here, not asserted.
+      //
+      // The server reports a lane not-ready when nothing was prepared for it
+      // or the read failed, and that flag is the client's cue to offer
+      // explicit generation — the only place the XP charge is attached. All
+      // three hardcoded true meant the not-ready branch, and the charge with
+      // it, could not be reached in mock.
+      ready: PlexaReady(
+        comments: _items.any((DayItem i) => i.id.startsWith('nw:')),
+        connections: _items.any((DayItem i) => i.lane == PlexaLane.connections),
+        topVoices: _items.any((DayItem i) => i.id.startsWith('tv:')),
       ),
-      items: const <DayItem>[
-        DayItem(
-          id: 'tv:shown-1',
-          lane: PlexaLane.comments,
-          headline:
-              'Most onboarding decks are written for the person who '
-              'wrote them.',
-          context: 'Priya Raman · priyaraman',
-          draft:
-              'The decks that worked for us were the ones a new joiner '
-              'could skip entirely and still land.',
-          url: 'https://www.linkedin.com/feed/update/urn:li:share:tv1',
-          topVoiceId: 'shown-1',
-        ),
-        DayItem(
-          id: 'tv:shown-2',
-          lane: PlexaLane.comments,
-          headline: 'We stopped doing week-one demos. Retention went up.',
-          context: 'Dev Kulkarni · devk',
-          draft:
-              'Curious whether the demo was the cost, or the rehearsal '
-              'around it.',
-          url: 'https://www.linkedin.com/feed/update/urn:li:share:tv2',
-          topVoiceId: 'shown-2',
-        ),
-        DayItem(
-          id: 'nw:0',
-          lane: PlexaLane.comments,
-          headline: 'A founder post about onboarding',
-          context: 'search: remote onboarding first week',
-          draft:
-              'The part people miss is that a first week is a design '
-              'problem, not a documentation one.',
-          url:
-              'https://www.linkedin.com/search/results/content/'
-              '?keywords=remote%20onboarding%20first%20week',
-        ),
-        DayItem(
-          id: 'cn:0',
-          lane: PlexaLane.connections,
-          headline: 'Head of Product at Razorpay',
-          draft:
-              'Hi — I lead product on a small team shipping into Indian '
-              'fintech, and I have been following how your payments surface '
-              'handles failed-retry UX. Would be glad to connect.',
-          url:
-              'https://www.linkedin.com/search/results/people/'
-              '?keywords=Head%20of%20Product%20Razorpay',
-        ),
-      ],
+      items: _items,
     );
   }
+
+  /// The day's work, matching item for item what the engagement fakes hold.
+  ///
+  /// These two surfaces share one `plexa_day` row (see [FakeDaySession]), so
+  /// their item sets have to BE the same set — that sharing is the feature.
+  /// Open Plexa used to carry 2 Top Voices, 1 comment draft and 1 connection
+  /// against the engagement screens' 5, 3 and 5: clearing `nw:2` on the
+  /// comments screen wrote to a shared row that Open Plexa had no item for, so
+  /// the two could never be caught disagreeing because disagreeing was their
+  /// normal state.
+  static const List<DayItem> _items = <DayItem>[
+    DayItem(
+      id: 'tv:shown-1',
+      lane: PlexaLane.comments,
+      headline:
+          'Most onboarding decks are written for the person who '
+          'wrote them.',
+      context: 'Priya Raman · priyaraman',
+      draft:
+          'The decks that worked for us were the ones a new joiner '
+          'could skip entirely and still land.',
+      url: 'https://www.linkedin.com/feed/update/urn:li:share:tv1',
+      topVoiceId: 'shown-1',
+    ),
+    DayItem(
+      id: 'tv:shown-2',
+      lane: PlexaLane.comments,
+      headline: 'We stopped doing week-one demos. Retention went up.',
+      context: 'Dev Kulkarni · devk',
+      draft:
+          'Curious whether the demo was the cost, or the rehearsal '
+          'around it.',
+      url: 'https://www.linkedin.com/feed/update/urn:li:share:tv2',
+      topVoiceId: 'shown-2',
+    ),
+    DayItem(
+      id: 'tv:shown-3',
+      lane: PlexaLane.comments,
+      headline:
+          'Hiring for the job you will have in a year, not the one you posted.',
+      context: 'Anita Shah · anitashah',
+      draft:
+          'The spec that aged best for us was the one written after the last '
+          'person left, not before.',
+      url: 'https://www.linkedin.com/feed/update/urn:li:share:tv3',
+      topVoiceId: 'shown-3',
+    ),
+    DayItem(
+      id: 'tv:shown-4',
+      lane: PlexaLane.comments,
+      headline: 'Your first ninety days are a budget line, not a kindness.',
+      context: 'Rohit Menon · rohitmenon',
+      draft:
+          'We costed it once and stopped arguing about it — the number was '
+          'larger than the recruiting fee.',
+      url: 'https://www.linkedin.com/feed/update/urn:li:share:tv4',
+      topVoiceId: 'shown-4',
+    ),
+    DayItem(
+      id: 'tv:shown-5',
+      lane: PlexaLane.comments,
+      headline: 'Nobody writes down the handover. Then somebody leaves.',
+      context: 'Sneha Iyer · snehaiyer',
+      draft:
+          'The cheapest version we found was a fifteen-minute recording on the '
+          'last Friday. Not a document anyone maintains.',
+      url: 'https://www.linkedin.com/feed/update/urn:li:share:tv5',
+      topVoiceId: 'shown-5',
+    ),
+    DayItem(
+      id: 'nw:0',
+      lane: PlexaLane.comments,
+      headline: 'A founder post about onboarding',
+      context: 'search: remote onboarding first week',
+      draft:
+          'The part people miss is that a first week is a design '
+          'problem, not a documentation one.',
+      url:
+          'https://www.linkedin.com/search/results/content/'
+          '?keywords=remote%20onboarding%20first%20week',
+    ),
+    DayItem(
+      id: 'nw:1',
+      lane: PlexaLane.comments,
+      headline: 'A hiring manager on why most CVs get six seconds',
+      context: 'search: resume screening hiring',
+      draft:
+          'Six seconds is generous. What changed my shortlist was whether '
+          'line one said what the person actually owned.',
+      url:
+          'https://www.linkedin.com/search/results/content/'
+          '?keywords=resume%20screening%20hiring',
+    ),
+    DayItem(
+      id: 'nw:2',
+      lane: PlexaLane.comments,
+      headline: 'A founder post about saying no to good work',
+      context: 'search: focus prioritisation founders',
+      draft:
+          'The hard nos are never the bad ideas. They are the good ones '
+          'arriving in the wrong quarter.',
+      url:
+          'https://www.linkedin.com/search/results/content/'
+          '?keywords=focus%20prioritisation%20founders',
+    ),
+    DayItem(
+      id: 'cn:0',
+      lane: PlexaLane.connections,
+      headline: 'Head of Product at Razorpay',
+      draft:
+          'Hi — I lead product on a small team shipping into Indian '
+          'fintech, and I have been following how your payments surface '
+          'handles failed-retry UX. Would be glad to connect.',
+      url:
+          'https://www.linkedin.com/search/results/people/'
+          '?keywords=Head%20of%20Product%20Razorpay',
+    ),
+    DayItem(
+      id: 'cn:1',
+      lane: PlexaLane.connections,
+      headline: 'VP Engineering at Zerodha',
+      draft:
+          'Hi — we are solving a similar reliability problem on a much '
+          'smaller team, and your writing on trading-day load has been '
+          'useful. Would be glad to connect.',
+      url:
+          'https://www.linkedin.com/search/results/people/'
+          '?keywords=VP%20Engineering%20Zerodha',
+    ),
+    DayItem(
+      id: 'cn:2',
+      lane: PlexaLane.connections,
+      headline: 'Director of Design at Swiggy',
+      draft:
+          'Hi — I work on onboarding for a product with a similar '
+          'first-session problem, and the way your order flow handles a '
+          'cold start is something I keep coming back to.',
+      url:
+          'https://www.linkedin.com/search/results/people/'
+          '?keywords=Director%20of%20Design%20Swiggy',
+    ),
+    DayItem(
+      id: 'cn:3',
+      lane: PlexaLane.connections,
+      headline: 'Engineering Manager at CRED',
+      draft:
+          'Hi — we are about to go through the hiring ramp you wrote '
+          'about last month, and I would rather learn it from someone who '
+          'has than from scratch. Would be glad to connect.',
+      url:
+          'https://www.linkedin.com/search/results/people/'
+          '?keywords=Engineering%20Manager%20CRED',
+    ),
+    DayItem(
+      id: 'cn:4',
+      lane: PlexaLane.connections,
+      headline: 'Head of People at Postman',
+      draft:
+          'Hi — your note on distributed onboarding matched what we found '
+          'the hard way, down to the week-two drop-off. Would be glad to '
+          'connect.',
+      url:
+          'https://www.linkedin.com/search/results/people/'
+          '?keywords=Head%20of%20People%20Postman',
+    ),
+  ];
 
   @override
   Future<PlexaSession> setItemDone({

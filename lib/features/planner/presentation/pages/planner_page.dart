@@ -572,7 +572,15 @@ class _WeekHeader extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final String? topic = plan?.topic ?? state.upcomingTopic;
     final String? phase = plan?.phase ?? state.upcomingPhase;
-    final int week = plan?.weekNumber ?? state.currentWeekNumber;
+    // The week being VIEWED. `plan` is null for any week the Saturday run
+    // has not reached, so falling back to `currentWeekNumber` put "Week 3"
+    // above week 9's locked preview — the heading contradicting the card
+    // under it. The pinned week is the only thing that knows where the user
+    // navigated to.
+    final int week =
+        ref.watch(plannerWeekProvider).week ??
+        plan?.weekNumber ??
+        state.currentWeekNumber;
     final int season = plan?.season ?? 1;
     // Null means "whatever the server calls now" — so a pinned week is the
     // only way to know the user has navigated away from it.
@@ -618,35 +626,46 @@ class _WeekHeader extends ConsumerWidget {
           ),
         ],
         SizedBox(height: ZaveSpace.lg),
-        Row(
-          children: <Widget>[
-            ZaveButton(
-              label: 'Previous',
-              icon: const Icon(Icons.chevron_left),
-              // Week 1 is the floor — there is no week 0 to fetch, and a
-              // disabled control says that better than an error would.
-              onPressed: week <= 1
-                  ? null
-                  : () => ref
-                        .read(plannerWeekProvider.notifier)
-                        .show(week - 1, season),
-            ),
-            SizedBox(width: ZaveSpace.sm),
-            ZaveButton(
-              label: 'Next',
-              trailing: const Icon(Icons.chevron_right),
-              onPressed: () =>
-                  ref.read(plannerWeekProvider.notifier).show(week + 1, season),
-            ),
-            if (browsing) ...<Widget>[
-              SizedBox(width: ZaveSpace.md),
+        // Scrolls sideways rather than overflowing. Three buttons do not fit a
+        // phone's width, and the third only appears once the user navigates
+        // away from the current week — the same door the ungenerated-week
+        // preview sat behind, which is why a 114px overflow lived here unseen.
+        // A Wrap was the other option; it stacked all three full-width and
+        // pushed the week itself below the fold. These are navigation, not
+        // the content.
+        SingleChildScrollView(
+          scrollDirection: Axis.horizontal,
+          child: Row(
+            children: <Widget>[
               ZaveButton(
-                label: 'This week',
-                onPressed: () =>
-                    ref.read(plannerWeekProvider.notifier).showCurrent(),
+                label: 'Previous',
+                icon: const Icon(Icons.chevron_left),
+                // Week 1 is the floor — there is no week 0 to fetch, and a
+                // disabled control says that better than an error would.
+                onPressed: week <= 1
+                    ? null
+                    : () => ref
+                          .read(plannerWeekProvider.notifier)
+                          .show(week - 1, season),
               ),
+              SizedBox(width: ZaveSpace.sm),
+              ZaveButton(
+                label: 'Next',
+                trailing: const Icon(Icons.chevron_right),
+                onPressed: () => ref
+                    .read(plannerWeekProvider.notifier)
+                    .show(week + 1, season),
+              ),
+              if (browsing) ...<Widget>[
+                SizedBox(width: ZaveSpace.md),
+                ZaveButton(
+                  label: 'This week',
+                  onPressed: () =>
+                      ref.read(plannerWeekProvider.notifier).showCurrent(),
+                ),
+              ],
             ],
-          ],
+          ),
         ),
       ],
     );

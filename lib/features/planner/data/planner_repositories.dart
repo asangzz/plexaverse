@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/config/env.dart';
 import '../../../core/network/api_paths.dart';
+import '../../../core/mock/fake_autopost_state.dart';
 import '../../../core/week/week_shape.dart';
 import '../../../core/network/dio_client.dart';
 import '../domain/plan_slot.dart';
@@ -393,16 +394,6 @@ class FakePlannerRepository implements PlannerRepository {
     'Sunday',
   ];
 
-  static const List<String> _formats = <String>[
-    'image',
-    'text',
-    'image',
-    'image',
-    'poll',
-    'image',
-    'text',
-  ];
-
   WeekPlan _plan = WeekPlan(
     id: 'mock-plan-1',
     weekNumber: 3,
@@ -421,8 +412,13 @@ class FakePlannerRepository implements PlannerRepository {
       for (int i = 0; i < 7; i++)
         PlanSlot(
           day: _days[i],
-          format: _formats[i],
-          type: i == 4 ? 'poll' : (i.isEven ? 'niche' : 'productive'),
+          // Read off the shared table, not written out again. These used to
+          // be two literals here: formats of 'image'/'poll' — values the
+          // server's PostFormat does not contain, rendered straight onto the
+          // pill the user reads — and a Friday poll, which is a day the week
+          // stopped having when Friday became a video script.
+          format: dayFormatAt(i),
+          type: dayTypeAt(i),
           rawKind: dayKindAt(i).wire,
           restDay: dayKindAt(i) == DayKind.rest,
           title: <String>[
@@ -446,11 +442,87 @@ class FakePlannerRepository implements PlannerRepository {
     ],
   );
 
+  /// The week the fake pretends it is. Weeks after this have no plan yet.
+  static const int _currentWeek = 3;
+
   @override
   Future<PlannerState> fetchWeek({int? week, int? season}) async {
     await Future<void>.delayed(const Duration(milliseconds: 350));
-    return PlannerState(plan: _plan, currentWeekNumber: 3, currentSeason: 1);
+
+    final int asked = week ?? _currentWeek;
+
+    // A week that has not been generated yet.
+    //
+    // This used to ignore its arguments entirely and hand back week 3's plan
+    // whatever was asked for, so `plan == null` — the whole locked-preview
+    // branch at the top of PlannerPage.build, and the `_UpcomingWeek` card it
+    // renders — was unreachable on the build this app is manually tested on.
+    // The server answers exactly this for any week the Saturday run has not
+    // reached: no plan, plus the season roadmap's own topic so the week can
+    // still be previewed.
+    if (asked > _currentWeek) {
+      final int ahead = asked - _currentWeek;
+      return PlannerState(
+        plan: null,
+        currentWeekNumber: _currentWeek,
+        currentSeason: 1,
+        upcomingTopic: _upcoming[(ahead - 1) % _upcoming.length].$1,
+        upcomingPhase: _upcoming[(ahead - 1) % _upcoming.length].$2,
+        upcomingTitle: _upcoming[(ahead - 1) % _upcoming.length].$3,
+      );
+    }
+
+    // A week already behind us is finished: every post day published, and
+    // nothing left to approve. Returning the CURRENT week's plan verbatim for
+    // week 2 put a half-done week under a "Week 2" heading and left the
+    // finished-week state — the one a user browsing back actually sees —
+    // without a fixture. The titles are reused; the state is not.
+    if (asked < _currentWeek) {
+      return PlannerState(
+        plan: _plan.copyWith(
+          weekNumber: asked,
+          posts: <PlanSlot>[
+            for (final PlanSlot slot in _plan.posts)
+              slot.isPublishable
+                  ? slot.copyWith(
+                      status: SlotStatus.published,
+                      postId: 'mock-post-w$asked-${slot.day}',
+                    )
+                  : slot,
+          ],
+        ),
+        currentWeekNumber: _currentWeek,
+        currentSeason: 1,
+      );
+    }
+
+    return PlannerState(
+      plan: _plan,
+      currentWeekNumber: _currentWeek,
+      currentSeason: 1,
+    );
   }
+
+  /// What the season roadmap already holds for weeks nobody has generated.
+  /// `title` is the Thursday newsletter's, as the season plan writes it.
+  static const List<(String, String, String)> _upcoming =
+      <(String, String, String)>[
+        (
+          'What the first ninety days should actually cost',
+          'Credibility',
+          'Onboarding is a budget line, not a kindness',
+        ),
+        (
+          'The handover nobody writes down',
+          'Credibility',
+          'Every departure takes a manual with it',
+        ),
+        (
+          'Hiring for the job you will have in a year',
+          'Authority',
+          'Most job specs describe the last person who left',
+        ),
+      ];
 
   @override
   Future<ApproveResult> approveSlot({
@@ -463,6 +535,11 @@ class FakePlannerRepository implements PlannerRepository {
       status: SlotStatus.approved,
     );
     final PlanSlot slot = plan.posts[slotIndex];
+
+    // The roadmap's "awaiting approval" card becomes "scheduled" — the same
+    // move the server makes, on the same event. Both surfaces read one row.
+    FakeAutoPostState.approved();
+
     return ApproveResult(
       plan: plan,
       // The fake has no calendar, so it reports the honest "approved but not
@@ -480,6 +557,19 @@ class FakePlannerRepository implements PlannerRepository {
   }) async {
     await Future<void>.delayed(const Duration(milliseconds: 1200));
     final PlanSlot slot = _plan.posts[slotIndex];
+
+    // Five days in seven have nothing for the post generator to make, and the
+    // server refuses them with NOT_A_POST_DAY before spending any XP. The fake
+    // used to generate a post for any index, so the one failure kind a user
+    // can actually reach by tapping — and the branch that tells them a retry
+    // will never work — could not be walked in mock at all.
+    if (!slot.isPublishable) {
+      throw const PlannerGenerateFailure(
+        kind: PlannerGenerateFailureKind.notAPostDay,
+        message: 'That day is not a post day.',
+      );
+    }
+
     if (!force && slot.postId != null) {
       return GeneratedSlot(postId: slot.postId, alreadyGenerated: true);
     }
@@ -695,45 +785,12 @@ class FakePlannerRepository implements PlannerRepository {
       newsletterName: _newsletterName,
       // Exactly how the server computes it.
       isFirstArticle: _newsletterName == null,
-      article:
-          const WeeklyArticle(
-            id: 'mock-article-1',
-            weekNumber: 3,
-            season: 1,
-            newsletterNameSuggestions: <String>[
-              'The Onboarding Letter',
-              'First Week',
-              'Day One',
-              'The Joining Note',
-              'Week One Review',
-            ],
-            // The SERVER counts this, from a body this fixture only stubs.
-            // Left unset it rendered "0 min read" on the one build the app is
-            // manually tested on — a number that is never zero in production,
-            // for an article the spec puts at 1200–1800 words.
-            readingMinutes: 7,
-            title:
-                'Onboarding is a design problem, not a documentation problem',
-            thesis:
-                'Teams keep fixing onboarding by writing more documentation, when '
-                'the failure is almost always a design failure in the first week.',
-            body:
-                'Most teams treat onboarding as a documentation exercise. Write '
-                'enough down, the thinking goes, and a new joiner will find their '
-                'way.\n\nIt does not work, and the reason is not effort.\n\n'
-                '(…full article body…)',
-            sections: <String>[
-              'The first week decides the year',
-              'Three metrics nobody tracks',
-              'The handover problem',
-              'A checklist you can steal',
-            ],
-          ).copyWith(
-            // Read back from what setArticleSchedule and markArticlePublished
-            // stored, so both flows are walkable end to end against the fake.
-            scheduledFor: _articleScheduledFor,
-            publishedAt: _articlePublishedAt,
-          ),
+      article: _articleFixture.copyWith(
+        // Read back from what setArticleSchedule and markArticlePublished
+        // stored, so both flows are walkable end to end against the fake.
+        scheduledFor: _articleScheduledFor,
+        publishedAt: _articlePublishedAt,
+      ),
     );
   }
 
@@ -783,7 +840,11 @@ class FakePlannerRepository implements PlannerRepository {
       );
     }
     _articleScheduledFor = when?.toUtc().toIso8601String();
-    return null;
+    // The updated article, as the route answers. Returning null meant any
+    // caller that reconciles from the response — rather than re-fetching —
+    // took the empty branch in mock and the real one against a server, which
+    // is a difference the fake exists to NOT have.
+    return _articleNow();
   }
 
   @override
@@ -794,8 +855,51 @@ class FakePlannerRepository implements PlannerRepository {
   }) async {
     await Future<void>.delayed(const Duration(milliseconds: 250));
     _articlePublishedAt = DateTime.now().toUtc().toIso8601String();
-    return null;
+    return _articleNow();
   }
+
+  /// The one article every path in this fake reads from.
+  static final WeeklyArticle _articleFixture = const WeeklyArticle(
+    id: 'mock-article-1',
+    weekNumber: 3,
+    season: 1,
+    newsletterNameSuggestions: <String>[
+      'The Onboarding Letter',
+      'First Week',
+      'Day One',
+      'The Joining Note',
+      'Week One Review',
+    ],
+    // The SERVER counts this, from a body this fixture only stubs.
+    // Left unset it rendered "0 min read" on the one build the app is
+    // manually tested on — a number that is never zero in production,
+    // for an article the spec puts at 1200–1800 words.
+    readingMinutes: 7,
+    title: 'Onboarding is a design problem, not a documentation problem',
+    thesis:
+        'Teams keep fixing onboarding by writing more documentation, when '
+        'the failure is almost always a design failure in the first week.',
+    body:
+        'Most teams treat onboarding as a documentation exercise. Write '
+        'enough down, the thinking goes, and a new joiner will find their '
+        'way.\n\nIt does not work, and the reason is not effort.\n\n'
+        '(…full article body…)',
+    sections: <String>[
+      'The first week decides the year',
+      'Three metrics nobody tracks',
+      'The handover problem',
+      'A checklist you can steal',
+    ],
+  );
+
+  /// The article as it stands, body stripped — the shape the route returns
+  /// from both POST actions. Built from the same two fields `fetchArticle`
+  /// reads back, so the three can never drift apart.
+  WeeklyArticle _articleNow() => _articleFixture.copyWith(
+    body: '',
+    scheduledFor: _articleScheduledFor,
+    publishedAt: _articlePublishedAt,
+  );
 }
 
 /// Mock ↔ real switch on `useFakeBackend`. A release build can never resolve

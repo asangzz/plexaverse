@@ -76,6 +76,49 @@ const List<DayKind> weekShape = <DayKind>[
   DayKind.rest, // Sunday
 ];
 
+/// The post format per day. Mirrors `WEEK_SHAPE[i].format`.
+///
+/// These are the SERVER's `PostFormat` values — `text`, `text_image`,
+/// `carousel`, `poll` — not prettier short ones. The planner renders the
+/// string straight onto a pill, so a client-side spelling would show the user
+/// a word the server never sends.
+///
+/// Note what is NOT here: a poll. The pre-pivot week had one on Friday;
+/// Friday is a video script now and no day carries a poll, so a fixture
+/// offering one is offering a day the product cannot produce.
+const List<String> weekFormats = <String>[
+  'text_image', // Monday
+  'text_image', // Tuesday
+  'text', // Wednesday — the script itself is text
+  'text', // Thursday — the newsletter
+  'text', // Friday
+  'text', // Saturday
+  'text', // Sunday
+];
+
+/// The post type per day. Mirrors `WEEK_SHAPE[i].type`.
+const List<String> weekTypes = <String>[
+  'niche', // Monday
+  'general', // Tuesday — the hero
+  'productive', // Wednesday
+  'niche', // Thursday
+  'general', // Friday
+  'productive', // Saturday
+  'light', // Sunday
+];
+
+/// Mirrors `daySpec(index).format`.
+String dayFormatAt(int index) {
+  if (index < 0 || index >= weekFormats.length) return weekFormats.first;
+  return weekFormats[index];
+}
+
+/// Mirrors `daySpec(index).type`.
+String dayTypeAt(int index) {
+  if (index < 0 || index >= weekTypes.length) return weekTypes.first;
+  return weekTypes[index];
+}
+
 /// The kind for a day index, clamped so an out-of-range index cannot throw.
 /// Mirrors `daySpec(index).kind`.
 DayKind dayKindAt(int index) {

@@ -22,10 +22,12 @@ class FakeDaySession {
   const FakeDaySession._();
 
   static PlexaSession _session = const PlexaSession(
-    // One Top Voice already cleared, so the resume line in Open Plexa ("Picking
-    // up at 2 of 4") is exercised rather than assumed — and so the comments
-    // screen opens at 1/10 rather than 0, which is the state that showed the
-    // counting bug.
+    // One Top Voice already cleared, so Open Plexa's resume line is exercised
+    // rather than assumed, and the comments screen opens part-done rather
+    // than at zero — the state that showed the counting bug.
+    //
+    // The day is 5 Top Voices + 3 comment drafts + 5 connections, matching the
+    // engagement fakes item for item; this row is the one they share.
     comments: <String>['tv:shown-1'],
   );
 

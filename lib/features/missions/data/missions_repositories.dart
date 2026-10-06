@@ -1,4 +1,6 @@
 import '../../../core/mock/mock_constants.dart';
+import '../../home/domain/roadmap_level.dart';
+import '../../home/domain/roadmap_planets.dart';
 import 'package:flutter/foundation.dart' show kReleaseMode;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -295,8 +297,22 @@ class FakeMissionsRepository implements MissionsRepository {
     required int stepId,
   }) async {
     await Future<void>.delayed(_latency);
-    return const MissionStepResult(xpAwarded: 50);
+    // The step's OWN reward, not a flat 50. Publishing and the weekly reach
+    // log are both 100 on the real roadmap, so a flat answer here meant the
+    // XP a card promised and the XP the gain animation reported disagreed for
+    // three of the five steps — and the fake was the one lying.
+    return MissionStepResult(xpAwarded: _rewardFor(stepId));
   }
+
+  /// Mirrors the rewards in `getBaseRoadmap`.
+  static int _rewardFor(int stepId) => switch (stepId) {
+    1 => 100, // Publish a post
+    2 => 50, // Comment on posts
+    3 => 50, // Send connection requests
+    4 => 100, // The day's extra
+    weeklyReachStepId => 100, // Log this week's reach
+    _ => 50,
+  };
 
   @override
   Future<String> suggestHeadline({
@@ -386,9 +402,16 @@ class FakeMissionsRepository implements MissionsRepository {
   @override
   Future<SeasonRecap> fetchSeasonRecap() async {
     await Future<void>.delayed(_latency);
+    // A finished SEASON, on the arc the product actually runs.
+    //
+    // This was day 66 with 54 posts — the old sixty-six-day season at seven
+    // posts a week. The roadmap is 1000 days now and the week publishes
+    // twice, so a completed season is ~286 posts, not 54, and day 66 is not
+    // the end of anything. A recap screen that can only show a number the
+    // product cannot produce cannot be checked against one that it can.
     return const SeasonRecap(
-      roadmapDay: 66,
-      postsPublished: 54,
+      roadmapDay: roadmapTotalDays,
+      postsPublished: 286,
       xpBalance: kMockXpBalance,
     );
   }

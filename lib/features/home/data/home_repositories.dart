@@ -1,3 +1,4 @@
+import '../../../core/mock/fake_autopost_state.dart';
 import '../../../core/mock/mock_constants.dart';
 import 'package:flutter/foundation.dart' show kReleaseMode;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -84,7 +85,13 @@ class FakeHomeRepository implements HomeRepository {
         '$_currentDay-2',
       ],
       roadmapStartedAt: startedAt,
-      pendingPostIdToday: 'mock-post-today',
+      // Read off the shared auto-post row, not pinned here. These three are
+      // mutually exclusive on the server and the transition between them is
+      // an APPROVAL, which happens in the planner — so pinning `pending` here
+      // left two of the three branches in roadmap_level.dart unreachable.
+      pendingPostIdToday: FakeAutoPostState.pendingPostId,
+      scheduledPostId: FakeAutoPostState.scheduledPostId,
+      scheduledPostAt: FakeAutoPostState.scheduledAt,
     );
   }
 

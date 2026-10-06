@@ -259,6 +259,17 @@ class ApiEngagementRepository implements EngagementRepository {
 /// and a note deliberately pushed past 270 characters so the amber counter
 /// renders.
 class FakeEngagementRepository implements EngagementRepository {
+  /// Whether today's batch has been generated yet, per lane.
+  ///
+  /// The server stores ONE batch per user per day: the first ask generates it
+  /// and charges `xpCost`, every later ask replays it free with
+  /// `cached: true`. Both fakes hardcoded `cached: true` and an xpCost that
+  /// was never spent — so the charging branch, the one the real routes bill
+  /// for and the only one a user can be surprised by, never ran in mock, and
+  /// `CachedBatchNote` was permanently on screen.
+  bool _commentsGenerated = false;
+  bool _connectionsGenerated = false;
+
   FakeEngagementRepository();
 
   final Set<String> _completed = <String>{};
@@ -269,9 +280,12 @@ class FakeEngagementRepository implements EngagementRepository {
     final String picked = (topic == null || topic.trim().isEmpty)
         ? 'career growth'
         : topic.trim();
+    final bool replay = _commentsGenerated;
+    _commentsGenerated = true;
+
     return CommentBatch(
       topic: picked,
-      cached: true,
+      cached: replay,
       xpCost: 50,
       comments: const <CommentDraft>[
         CommentDraft(
@@ -323,9 +337,13 @@ class FakeEngagementRepository implements EngagementRepository {
   @override
   Future<ConnectionBatch> findConnections() async {
     await Future<void>.delayed(const Duration(milliseconds: 400));
-    return const ConnectionBatch(
+
+    final bool replay = _connectionsGenerated;
+    _connectionsGenerated = true;
+
+    return ConnectionBatch(
       profession: 'Senior Product Manager',
-      cached: true,
+      cached: replay,
       xpCost: 50,
       connections: <ConnectionTarget>[
         ConnectionTarget(
