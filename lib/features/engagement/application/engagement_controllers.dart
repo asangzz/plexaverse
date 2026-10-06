@@ -102,22 +102,73 @@ Future<EngagementMission?> engagementMission(Ref ref, String moduleLink) async {
 @riverpod
 class CommentsController extends _$CommentsController {
   @override
-  Future<CommentBatch> build(String? topic) =>
-      ref.watch(engagementRepositoryProvider).generateComments(topic: topic);
+  Future<CommentBatch> build(String? topic) async {
+    final EngagementRepository repo = ref.watch(engagementRepositoryProvider);
+
+    // Both at once. The session is a small read and the batch is the slow one,
+    // so waiting for them in sequence would put the ledger's latency in front
+    // of the content for no reason.
+    final (CommentBatch batch, PlexaSession session) = await (
+      repo.generateComments(topic: topic),
+      repo.fetchDaySession(),
+    ).wait;
+
+    return batch.copyWith(
+      comments: <CommentDraft>[
+        for (int i = 0; i < batch.comments.length; i++)
+          batch.comments[i].copyWith(
+            isSent: session
+                .doneIn(PlexaLane.comments)
+                .contains(plexaItemId(PlexaLane.comments, i)),
+          ),
+      ],
+    );
+  }
 
   /// The user copied this comment, so it counts as deployed.
   ///
-  /// Local only, and deliberately so: the last thing this app can observe is
-  /// the copy. Whether the comment was actually posted happens inside LinkedIn,
-  /// where we have no visibility — claiming otherwise would be a lie the
-  /// progress bar tells.
-  void markSent(int index) {
+  /// "Sent" still means COPIED, and that has not changed: the copy is the last
+  /// thing this app can observe, and what happens inside LinkedIn afterwards is
+  /// invisible to us. What changed is where the tick is kept.
+  ///
+  /// It used to live only in this controller's state — and the controller is
+  /// auto-dispose, so it did not survive the screen being popped. Tapping
+  /// through to the dashboard and back showed `0 of 10` over work the user had
+  /// done, while Open Plexa, reading the shared row, showed the real count. Two
+  /// surfaces disagreeing about the same morning.
+  ///
+  /// Optimistic, and the same argument Plexa's own mark makes: the user is
+  /// telling US they acted, the server stores exactly that, and the only
+  /// failure mode is a tick that comes back.
+  Future<void> markSent(int index) async {
     final CommentBatch? batch = state.value;
     if (batch == null || index < 0 || index >= batch.comments.length) return;
     if (batch.comments[index].isSent) return;
+
     state = AsyncData<CommentBatch>(
       batch.copyWith(comments: _replace(batch.comments, index, isSent: true)),
     );
+
+    try {
+      await ref
+          .read(engagementRepositoryProvider)
+          .setDayItemDone(
+            lane: PlexaLane.comments,
+            itemId: plexaItemId(PlexaLane.comments, index),
+          );
+    } on Object {
+      // Put it back. A tick that stays after a failed write tells the user the
+      // day is recorded when it is not — which is the whole failure this
+      // change exists to end, just in the other direction.
+      final CommentBatch? current = state.value;
+      if (current != null) {
+        state = AsyncData<CommentBatch>(
+          current.copyWith(
+            comments: _replace(current.comments, index, isSent: false),
+          ),
+        );
+      }
+    }
   }
 
   /// The user rewrote a draft.
@@ -181,23 +232,67 @@ class CommentsController extends _$CommentsController {
 @riverpod
 class ConnectionsController extends _$ConnectionsController {
   @override
-  Future<ConnectionBatch> build() =>
-      ref.watch(engagementRepositoryProvider).findConnections();
+  Future<ConnectionBatch> build() async {
+    final EngagementRepository repo = ref.watch(engagementRepositoryProvider);
+
+    final (ConnectionBatch batch, PlexaSession session) = await (
+      repo.findConnections(),
+      repo.fetchDaySession(),
+    ).wait;
+
+    final List<String> done = session.doneIn(PlexaLane.connections);
+    return batch.copyWith(
+      connections: <ConnectionTarget>[
+        for (int i = 0; i < batch.connections.length; i++)
+          batch.connections[i].copyWith(
+            isSent: done.contains(plexaItemId(PlexaLane.connections, i)),
+          ),
+      ],
+    );
+  }
 
   /// The user copied this note, so the request counts as sent.
   ///
-  /// Same caveat as comments: copying is the last observable moment. The send
-  /// itself happens in LinkedIn.
-  void markSent(int index) {
+  /// Same caveat as comments — copying is the last observable moment, and the
+  /// send itself happens in LinkedIn — and the same fix: the tick is written to
+  /// the shared day row rather than held in an auto-dispose controller that
+  /// forgot it the moment the screen was popped.
+  Future<void> markSent(int index) async {
     final ConnectionBatch? batch = state.value;
     if (batch == null || index < 0 || index >= batch.connections.length) return;
     if (batch.connections[index].isSent) return;
 
-    final List<ConnectionTarget> next = List<ConnectionTarget>.of(
-      batch.connections,
+    state = AsyncData<ConnectionBatch>(
+      batch.copyWith(connections: _withSent(batch.connections, index, true)),
     );
-    next[index] = next[index].copyWith(isSent: true);
-    state = AsyncData<ConnectionBatch>(batch.copyWith(connections: next));
+
+    try {
+      await ref
+          .read(engagementRepositoryProvider)
+          .setDayItemDone(
+            lane: PlexaLane.connections,
+            itemId: plexaItemId(PlexaLane.connections, index),
+          );
+    } on Object {
+      final ConnectionBatch? current = state.value;
+      if (current != null) {
+        state = AsyncData<ConnectionBatch>(
+          current.copyWith(
+            connections: _withSent(current.connections, index, false),
+          ),
+        );
+      }
+    }
+  }
+
+  static List<ConnectionTarget> _withSent(
+    List<ConnectionTarget> targets,
+    int index,
+    bool isSent,
+  ) {
+    final List<ConnectionTarget> next = List<ConnectionTarget>.of(targets);
+    next[index] = next[index].copyWith(isSent: isSent);
+    return next;
   }
 }
 

@@ -21,6 +21,25 @@ enum PlexaLane {
   String get noun => this == PlexaLane.comments ? 'Comment' : 'Request';
 }
 
+/// The id the shared `plexa_day` row uses for one item in a lane.
+///
+/// **The SERVER authors these**, in `app/api/mobile/v1/plexa/day/route.ts`, and
+/// Open Plexa never builds one — it reads them off the aggregate. This mirror
+/// exists for the two engagement screens, which fetch their own batches and so
+/// never see the aggregate's ids, but write their progress into the same row.
+///
+/// It is a mirror and not a second scheme. Both halves index the SAME stored
+/// daily batch — `/ai/comments` replays the row that `readDailyBatch` reads —
+/// so position `i` means the same draft on both paths. If that ever stops
+/// being true the ids diverge silently and the two surfaces go back to
+/// disagreeing, which is the bug this whole shared row exists to prevent.
+///
+/// Top Voices items are deliberately absent: their ids carry a durable
+/// `TopVoiceShown` row id (`tv:<shownId>`), not a position, and that lane has
+/// its own `actedAt` column which the comments screen already reads.
+String plexaItemId(PlexaLane lane, int index) =>
+    lane == PlexaLane.comments ? 'nw:$index' : 'cn:$index';
+
 /// One thing to do, flattened from three sources into one shape so the
 /// conversation does not have to branch on where it came from.
 ///

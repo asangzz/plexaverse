@@ -1,4 +1,5 @@
 import '../../home/domain/roadmap_progress.dart';
+import '../../plexa/domain/plexa_day.dart';
 import 'comment_draft.dart';
 import 'connection_target.dart';
 import 'top_voice.dart';
@@ -6,6 +7,8 @@ import 'top_voice.dart';
 export '../../home/domain/roadmap_progress.dart';
 export 'comment_draft.dart';
 export 'connection_target.dart';
+export '../../plexa/domain/plexa_day.dart'
+    show PlexaLane, PlexaSession, plexaItemId;
 export 'top_voice.dart';
 export 'engagement_mission.dart';
 
@@ -104,6 +107,28 @@ abstract class EngagementRepository {
   /// Returns false when the row was already stamped — by Plexa, or by a second
   /// tap. Not an error: the button has done its job either way.
   Future<bool> markTopVoiceActed(String shownId);
+
+  /// `GET /plexa/day` — which individual items the user has already cleared.
+  ///
+  /// The two halves of a daily habit are kept in ONE row, which Open Plexa
+  /// also reads and writes. These screens used to track it in memory only, and
+  /// the controllers are auto-dispose: tapping through to the dashboard and
+  /// back already showed `0 of 10` over work that had been done, while the
+  /// chat two taps away showed the correct count. Two surfaces openly
+  /// disagreeing about the same day.
+  ///
+  /// Only the session is read. The aggregate's `items` belong to the chat —
+  /// these screens have their own batches and their own rendering.
+  Future<PlexaSession> fetchDaySession();
+
+  /// `POST /plexa/day` — record that one item was cleared, or undo it.
+  ///
+  /// [itemId] comes from [plexaItemId], which mirrors the server's scheme.
+  Future<PlexaSession> setDayItemDone({
+    required PlexaLane lane,
+    required String itemId,
+    bool done,
+  });
 
   /// `GET /roadmap/progress` — which day it is and what is already done.
   Future<RoadmapProgress> fetchRoadmapProgress();

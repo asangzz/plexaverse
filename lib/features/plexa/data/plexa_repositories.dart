@@ -6,6 +6,7 @@ import '../../../core/network/api_paths.dart';
 import '../../../core/network/dio_client.dart';
 import '../domain/plexa_day.dart';
 import '../domain/plexa_repository.dart';
+import 'fake_day_session.dart';
 
 /// Dio-backed [PlexaRepository].
 ///
@@ -82,13 +83,13 @@ class ApiPlexaRepository implements PlexaRepository {
 /// used a different scheme would hide the one bug this shape exists to
 /// prevent.
 class FakePlexaRepository implements PlexaRepository {
-  PlexaSession _session = const PlexaSession(comments: <String>['tv:shown-1']);
+  // The row is shared with the engagement fakes — see FakeDaySession.
 
   @override
   Future<PlexaDay> fetchDay() async {
     await Future<void>.delayed(const Duration(milliseconds: 400));
     return PlexaDay(
-      session: _session,
+      session: FakeDaySession.current,
       topic: 'onboarding',
       ready: const PlexaReady(
         comments: true,
@@ -156,16 +157,7 @@ class FakePlexaRepository implements PlexaRepository {
     String? topVoiceId,
   }) async {
     await Future<void>.delayed(const Duration(milliseconds: 150));
-    final List<String> current = List<String>.of(_session.doneIn(lane));
-    if (done) {
-      if (!current.contains(itemId)) current.add(itemId);
-    } else {
-      current.remove(itemId);
-    }
-    _session = lane == PlexaLane.comments
-        ? _session.copyWith(comments: current)
-        : _session.copyWith(connections: current);
-    return _session;
+    return FakeDaySession.setDone(lane: lane, itemId: itemId, done: done);
   }
 
   /// Recorded rather than ignored, so a mock run can assert that finishing a

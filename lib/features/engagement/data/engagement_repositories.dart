@@ -6,6 +6,7 @@ import '../../../core/config/env.dart';
 import '../../../core/network/api_paths.dart';
 import '../../../core/network/dio_client.dart';
 import '../../../core/network/failure.dart';
+import '../../plexa/data/fake_day_session.dart';
 import '../domain/engagement_repository.dart';
 
 /// Dio-backed [EngagementRepository].
@@ -136,6 +137,42 @@ class ApiEngagementRepository implements EngagementRepository {
       // textarea blur. The user did not ask for this call and cannot act on
       // its failure; surfacing it would be noise on top of their own edit.
     }
+  }
+
+  @override
+  Future<PlexaSession> fetchDaySession() async {
+    try {
+      final response = await _client.get<Map<String, dynamic>>(
+        ApiPaths.plexaDay,
+      );
+      return PlexaSession.fromWire(
+        response.data?['session'] as Map<String, dynamic>?,
+      );
+    } on DioException {
+      // An empty session, not a throw. This screen's job is the batch; losing
+      // the ledger costs the user their ticks, which a reload restores, and
+      // taking the whole screen down over it would cost them the work.
+      return const PlexaSession();
+    }
+  }
+
+  @override
+  Future<PlexaSession> setDayItemDone({
+    required PlexaLane lane,
+    required String itemId,
+    bool done = true,
+  }) async {
+    final response = await _client.post<Map<String, dynamic>>(
+      ApiPaths.plexaDay,
+      data: <String, dynamic>{
+        'lane': lane.wire,
+        'itemId': itemId,
+        'done': done,
+      },
+    );
+    return PlexaSession.fromWire(
+      response.data?['session'] as Map<String, dynamic>?,
+    );
   }
 
   @override
@@ -481,6 +518,25 @@ class FakeEngagementRepository implements EngagementRepository {
   @override
   Future<void> teachStyle({required String text, String? topic}) async {
     await Future<void>.delayed(const Duration(milliseconds: 120));
+  }
+
+  // The SAME row Open Plexa's fake reads and writes — see FakeDaySession.
+  // Two separate sessions would have let the mock show the two surfaces
+  // disagreeing, which is the exact bug this shared row exists to prevent.
+  @override
+  Future<PlexaSession> fetchDaySession() async {
+    await Future<void>.delayed(const Duration(milliseconds: 120));
+    return FakeDaySession.current;
+  }
+
+  @override
+  Future<PlexaSession> setDayItemDone({
+    required PlexaLane lane,
+    required String itemId,
+    bool done = true,
+  }) async {
+    await Future<void>.delayed(const Duration(milliseconds: 100));
+    return FakeDaySession.setDone(lane: lane, itemId: itemId, done: done);
   }
 
   @override
