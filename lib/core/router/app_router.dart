@@ -28,6 +28,7 @@ import '../../features/company/presentation/pages/company_inbox_page.dart';
 import '../../features/compose/presentation/pages/compose_page.dart';
 import '../../features/engagement/presentation/pages/comments_page.dart';
 import '../../features/engagement/presentation/pages/connections_page.dart';
+import '../../features/plexa/presentation/pages/plexa_page.dart';
 import '../../features/home/presentation/pages/home_page.dart';
 import '../../features/onboarding/application/onboarding_controller.dart';
 import '../../features/onboarding/presentation/pages/onboarding_chat_page.dart';
@@ -229,6 +230,7 @@ GoRouter appRouter(Ref ref) {
         ),
       ),
       _fullScreen(ZaveRoutes.connections, const ConnectionsPage()),
+      _fullScreen(ZaveRoutes.plexa, const PlexaPage()),
       _fullScreen(ZaveRoutes.topics, const TopicsPage()),
       _fullScreen(ZaveRoutes.pricing, const PricingPage()),
       _fullScreen(ZaveRoutes.seasonComplete, const SeasonCompletePage()),

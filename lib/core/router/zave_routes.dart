@@ -95,6 +95,9 @@ class ZaveRoutes {
   // another screen (a daily habit, a roadmap task, an upsell).
 
   /// Opened from the "comment on posts" daily habit.
+  /// Open Plexa — the day's missions as one conversation.
+  static const String plexa = '/plexa';
+
   static const String comments = '/comments';
 
   /// Opened from the "send connection requests" daily habit.

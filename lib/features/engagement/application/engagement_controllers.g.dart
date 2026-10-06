@@ -145,7 +145,7 @@ final class EngagementMissionProvider
   }
 }
 
-String _$engagementMissionHash() => r'11badf3a828fbfc475724ac035b93f3217435ad8';
+String _$engagementMissionHash() => r'484bce24311b2fc969d2f9278c4f46e73b236948';
 
 /// Today's roadmap step for one of the two habit screens.
 ///

@@ -332,6 +332,16 @@ class _MissionSheet extends StatelessWidget {
                 ),
               ),
               SizedBox(height: ZaveSpace.lg),
+              // Open Plexa is the primary of the two: it is the day's work,
+              // where the planner is the week's shape. The web mounts the
+              // same chat on its roadmap for the same reason.
+              ZaveButton.primary(
+                label: 'Open Plexa',
+                icon: const Icon(Icons.auto_awesome_outlined),
+                expand: true,
+                onPressed: () => _start(context, ZaveRoutes.plexa),
+              ),
+              SizedBox(height: ZaveSpace.md),
               Align(
                 alignment: Alignment.centerRight,
                 child: ZaveButton(

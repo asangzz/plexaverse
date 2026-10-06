@@ -125,6 +125,21 @@ class ApiPaths {
   /// GET returns roadmap progress; POST records a completed step.
   static const String roadmapProgress = '/roadmap/progress';
 
+  // ── Plexa ───────────────────────────────────────────────────────────────
+  /// The day's missions as one conversation.
+  ///
+  /// GET returns every lane AND the cleared-item session in ONE call. The web
+  /// builds the same thread from four requests because its dashboard pages
+  /// have already warmed those caches; a phone opening cold would pay four
+  /// sequential trips to Tokyo for one screen.
+  ///
+  /// It never generates and never charges — a lane with nothing prepared comes
+  /// back `ready: false`, and generating goes through [aiComments] /
+  /// [aiConnections] where the XP cost is attached to a decision the user made.
+  ///
+  /// POST marks one item done, or undoes it.
+  static const String plexaDay = '/plexa/day';
+
   // ── Planner ─────────────────────────────────────────────────────────────
   // Added to the mobile API by the web-alignment work; there was no planner
   // surface on mobile before, so the Plan tab had nothing to call.
