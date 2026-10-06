@@ -6,58 +6,46 @@ part of 'plexa_day.dart';
 // JsonSerializableGenerator
 // **************************************************************************
 
-_PlexaComment _$PlexaCommentFromJson(Map<String, dynamic> json) =>
-    _PlexaComment(
-      id: json['id'] as String? ?? '',
-      comment: json['comment'] as String? ?? '',
-      searchKeywords: json['searchKeywords'] as String? ?? '',
-      targetPostTitle: json['targetPostTitle'] as String? ?? '',
-    );
+_DayItem _$DayItemFromJson(Map<String, dynamic> json) => _DayItem(
+  id: json['id'] as String? ?? '',
+  lane:
+      $enumDecodeNullable(
+        _$PlexaLaneEnumMap,
+        json['lane'],
+        unknownValue: PlexaLane.comments,
+      ) ??
+      PlexaLane.comments,
+  headline: json['headline'] as String? ?? '',
+  context: json['context'] as String?,
+  draft: json['draft'] as String? ?? '',
+  url: json['url'] as String? ?? '',
+  topVoiceId: json['topVoiceId'] as String?,
+);
 
-Map<String, dynamic> _$PlexaCommentToJson(_PlexaComment instance) =>
+Map<String, dynamic> _$DayItemToJson(_DayItem instance) => <String, dynamic>{
+  'id': instance.id,
+  'lane': _$PlexaLaneEnumMap[instance.lane]!,
+  'headline': instance.headline,
+  'context': instance.context,
+  'draft': instance.draft,
+  'url': instance.url,
+  'topVoiceId': instance.topVoiceId,
+};
+
+const _$PlexaLaneEnumMap = {
+  PlexaLane.comments: 'comments',
+  PlexaLane.connections: 'connections',
+};
+
+_PlexaReady _$PlexaReadyFromJson(Map<String, dynamic> json) => _PlexaReady(
+  comments: json['comments'] as bool? ?? false,
+  connections: json['connections'] as bool? ?? false,
+  topVoices: json['topVoices'] as bool? ?? false,
+);
+
+Map<String, dynamic> _$PlexaReadyToJson(_PlexaReady instance) =>
     <String, dynamic>{
-      'id': instance.id,
-      'comment': instance.comment,
-      'searchKeywords': instance.searchKeywords,
-      'targetPostTitle': instance.targetPostTitle,
-    };
-
-_PlexaConnection _$PlexaConnectionFromJson(Map<String, dynamic> json) =>
-    _PlexaConnection(
-      id: json['id'] as String? ?? '',
-      role: json['role'] as String? ?? '',
-      company: json['company'] as String? ?? '',
-      note: json['note'] as String? ?? '',
-      searchUrl: json['searchUrl'] as String? ?? '',
-      isDirectMessage: json['isDirectMessage'] as bool? ?? false,
-    );
-
-Map<String, dynamic> _$PlexaConnectionToJson(_PlexaConnection instance) =>
-    <String, dynamic>{
-      'id': instance.id,
-      'role': instance.role,
-      'company': instance.company,
-      'note': instance.note,
-      'searchUrl': instance.searchUrl,
-      'isDirectMessage': instance.isDirectMessage,
-    };
-
-_PlexaTopVoice _$PlexaTopVoiceFromJson(Map<String, dynamic> json) =>
-    _PlexaTopVoice(
-      id: json['id'] as String? ?? '',
-      postUrl: json['postUrl'] as String? ?? '',
-      authorName: json['authorName'] as String? ?? '',
-      firstLine: json['firstLine'] as String? ?? '',
-      comment: json['comment'] as String? ?? '',
-      actedAt: json['actedAt'] as String?,
-    );
-
-Map<String, dynamic> _$PlexaTopVoiceToJson(_PlexaTopVoice instance) =>
-    <String, dynamic>{
-      'id': instance.id,
-      'postUrl': instance.postUrl,
-      'authorName': instance.authorName,
-      'firstLine': instance.firstLine,
-      'comment': instance.comment,
-      'actedAt': instance.actedAt,
+      'comments': instance.comments,
+      'connections': instance.connections,
+      'topVoices': instance.topVoices,
     };

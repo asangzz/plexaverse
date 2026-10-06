@@ -29,4 +29,17 @@ abstract class PlexaRepository {
     bool done,
     String? topVoiceId,
   });
+
+  /// `POST /roadmap/progress` — credit today's roadmap step for a finished
+  /// lane.
+  ///
+  /// The web does this the moment the last comment or the last request clears
+  /// (`laneComplete` in `PlexaDayChat.tsx`), and it is the only XP this
+  /// surface awards. Without it a user who works the whole day inside the chat
+  /// finds the roadmap still showing the step undone, and goes to the
+  /// engagement screens to redo work they have already done.
+  ///
+  /// Idempotent server-side, so a wrap-around that re-clears a lane cannot
+  /// double-award.
+  Future<void> completeStep({required int levelId, required int stepId});
 }

@@ -58,75 +58,93 @@ class ApiPlexaRepository implements PlexaRepository {
       response.data?['session'] as Map<String, dynamic>?,
     );
   }
+
+  @override
+  Future<void> completeStep({required int levelId, required int stepId}) async {
+    // No `task: 'complete_step'`. The web sends one because its route
+    // multiplexes several writes onto one endpoint; the mobile route reads
+    // only these two fields and has no discriminator.
+    await _client.post<Map<String, dynamic>>(
+      ApiPaths.roadmapProgress,
+      data: <String, dynamic>{'levelId': levelId, 'stepId': stepId},
+    );
+  }
 }
 
 /// In-memory [PlexaRepository] for the `mock` flavor.
 ///
-/// Seeded so every state the screen can render is reachable without a server:
-/// one lane prepared and partly cleared, one prepared and untouched, and one
-/// NOT prepared — that last is the state most likely to be got wrong, because
-/// "nothing generated yet" and "nothing left to do" look identical unless the
-/// screen is built to tell them apart.
+/// Seeded so every state the conversation can reach is walkable without a
+/// server: a curated post, two niche comments, one connection request, and one
+/// item already cleared so the resume line ("Picking up at 2 of 4") is
+/// exercised rather than assumed.
+///
+/// The ids carry the web's `tv:` / `nw:` / `cn:` prefixes, because a fake that
+/// used a different scheme would hide the one bug this shape exists to
+/// prevent.
 class FakePlexaRepository implements PlexaRepository {
-  PlexaSession _session = const PlexaSession(comments: <String>['comments:0']);
+  PlexaSession _session = const PlexaSession(comments: <String>['tv:shown-1']);
 
   @override
   Future<PlexaDay> fetchDay() async {
-    await Future<void>.delayed(const Duration(milliseconds: 300));
+    await Future<void>.delayed(const Duration(milliseconds: 400));
     return PlexaDay(
       session: _session,
       topic: 'onboarding',
-      comments: const PlexaLaneState<PlexaComment>(
-        ready: true,
-        items: <PlexaComment>[
-          PlexaComment(
-            id: 'comments:0',
-            comment:
-                'The part people miss is that a first week is a design '
-                'problem, not a documentation one. Writing more down does not '
-                'fix a week nobody shaped.',
-            searchKeywords: 'remote onboarding first week',
-            targetPostTitle: 'a founder post about onboarding',
-          ),
-          PlexaComment(
-            id: 'comments:1',
-            comment:
-                'Time-to-first-commit is the only onboarding metric most '
-                'teams measure, and it is the least interesting of the three.',
-            searchKeywords: 'engineering onboarding metrics',
-            targetPostTitle: 'an engineering-leadership post',
-          ),
-        ],
+      ready: const PlexaReady(
+        comments: true,
+        connections: true,
+        topVoices: true,
       ),
-      topVoices: const PlexaLaneState<PlexaTopVoice>(
-        ready: true,
-        items: <PlexaTopVoice>[
-          PlexaTopVoice(
-            id: 'shown-1',
-            postUrl: 'https://www.linkedin.com/feed/update/urn:li:share:tv1',
-            authorName: 'Priya Raman',
-            firstLine:
-                'Most onboarding decks are written for the person who wrote '
-                'them.',
-            comment:
-                'The decks that worked for us were the ones a new joiner '
-                'could skip entirely and still land.',
-          ),
-          PlexaTopVoice(
-            id: 'shown-2',
-            postUrl: 'https://www.linkedin.com/feed/update/urn:li:share:tv2',
-            authorName: 'Dev Kulkarni',
-            firstLine: 'We stopped doing week-one demos. Retention went up.',
-            comment:
-                'Curious whether the demo was the cost, or the rehearsal '
-                'around it.',
-            actedAt: '2026-10-06T09:00:00.000Z',
-          ),
-        ],
-      ),
-      // Deliberately not ready: the screen must offer to prepare it rather
-      // than render an empty lane that looks finished.
-      connections: const PlexaLaneState<PlexaConnection>(),
+      items: const <DayItem>[
+        DayItem(
+          id: 'tv:shown-1',
+          lane: PlexaLane.comments,
+          headline:
+              'Most onboarding decks are written for the person who '
+              'wrote them.',
+          context: 'Priya Raman · priyaraman',
+          draft:
+              'The decks that worked for us were the ones a new joiner '
+              'could skip entirely and still land.',
+          url: 'https://www.linkedin.com/feed/update/urn:li:share:tv1',
+          topVoiceId: 'shown-1',
+        ),
+        DayItem(
+          id: 'tv:shown-2',
+          lane: PlexaLane.comments,
+          headline: 'We stopped doing week-one demos. Retention went up.',
+          context: 'Dev Kulkarni · devk',
+          draft:
+              'Curious whether the demo was the cost, or the rehearsal '
+              'around it.',
+          url: 'https://www.linkedin.com/feed/update/urn:li:share:tv2',
+          topVoiceId: 'shown-2',
+        ),
+        DayItem(
+          id: 'nw:0',
+          lane: PlexaLane.comments,
+          headline: 'A founder post about onboarding',
+          context: 'search: remote onboarding first week',
+          draft:
+              'The part people miss is that a first week is a design '
+              'problem, not a documentation one.',
+          url:
+              'https://www.linkedin.com/search/results/content/'
+              '?keywords=remote%20onboarding%20first%20week',
+        ),
+        DayItem(
+          id: 'cn:0',
+          lane: PlexaLane.connections,
+          headline: 'Head of Product at Razorpay',
+          draft:
+              'Hi — I lead product on a small team shipping into Indian '
+              'fintech, and I have been following how your payments surface '
+              'handles failed-retry UX. Would be glad to connect.',
+          url:
+              'https://www.linkedin.com/search/results/people/'
+              '?keywords=Head%20of%20Product%20Razorpay',
+        ),
+      ],
     );
   }
 
@@ -137,7 +155,7 @@ class FakePlexaRepository implements PlexaRepository {
     bool done = true,
     String? topVoiceId,
   }) async {
-    await Future<void>.delayed(const Duration(milliseconds: 180));
+    await Future<void>.delayed(const Duration(milliseconds: 150));
     final List<String> current = List<String>.of(_session.doneIn(lane));
     if (done) {
       if (!current.contains(itemId)) current.add(itemId);
@@ -148,6 +166,16 @@ class FakePlexaRepository implements PlexaRepository {
         ? _session.copyWith(comments: current)
         : _session.copyWith(connections: current);
     return _session;
+  }
+
+  /// Recorded rather than ignored, so a mock run can assert that finishing a
+  /// lane credited exactly one step.
+  final List<({int levelId, int stepId})> completed =
+      <({int levelId, int stepId})>[];
+
+  @override
+  Future<void> completeStep({required int levelId, required int stepId}) async {
+    completed.add((levelId: levelId, stepId: stepId));
   }
 }
 

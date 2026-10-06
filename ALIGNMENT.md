@@ -41,6 +41,12 @@ with the old UI**, which is why most of the high-severity rows below say
 | Session loss | 3h idle timer wiped a 30-day refresh token (a health-app policy; the web has none) | `85807b9` |
 | Planner dead ends | Generate offered on days the server refuses; "tomorrow's post" deep-linked to a non-post day | `49ca63d` |
 | **Open Plexa** | absent on mobile — now one aggregate call, three lanes, server-side progress | `95f01f9` `3474e1a` |
+| **Open Plexa, again** | the port was a scrolling card list with a separate "I did this" button. The web is a **conversation** that deals one item at a time, where one tap is opened AND counted — the web file argues explicitly that asking a second time "would add a turn per item, ten times a day, to collect an answer nothing can verify" | *this pass* |
+| Plexa session ids | mobile wrote `comments:0` / a bare `shownId`; the web writes `tv:` / `nw:` / `cn:`. **Both clients write the same `plexa_day` row**, so a user who worked on the browser in the morning and the phone in the evening was shown the same posts twice | `8f11fde` |
+| Roadmap credit from Plexa | finishing a lane in the chat credited nothing — the web calls `complete_step` the moment the last comment or request clears. A user who worked the whole day inside the chat found the roadmap still showing the step undone | *this pass* |
+| **Every `AppIcons` glyph** | `font_awesome_flutter` was **not in `pubspec.yaml`** — only `cupertino_icons` and the engine's MaterialIcons shipped, so the entire house icon layer rendered the missing-glyph box. Visible on More (Write/Persona/Settings), the offline overlay, and Plexa's close button | *this pass* |
+| `AppIcons.linkedin` / `.google` | pointed at `FontAwesomeSolid`; brand marks live in `FontAwesomeBrands` and have **no codepoint in solid at all** | *this pass* |
+| Plexa pluralisation | a day with one item read "1 comments. I've written all of them." — fixed on **both** platforms so the first line a new user sees has no grammar mistake | *this pass* |
 | Android Google OAuth | Custom Tab survived the redirect and re-showed the account picker | `85807b9` |
 
 ---

@@ -1,239 +1,155 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:plexaverse/features/plexa/domain/plexa_day.dart';
 
-/// [PlexaDay] — the wire shape of Open Plexa's day.
-///
-/// The mapping is hand-written because the server nests lanes under `lanes`
-/// and the session under `done`, so these pin the two places that nesting can
-/// be got wrong, plus the one distinction the whole screen is built around:
-/// a lane that is NOT READY is not a lane that is FINISHED.
 void main() {
-  Map<String, dynamic> wire({
-    Object? session,
-    Object? lanes,
-    String topic = '',
-  }) => <String, dynamic>{
-    'session': ?session,
-    'lanes': ?lanes,
-    'topic': topic,
-  };
-
-  final Map<String, dynamic> lanes = <String, dynamic>{
-    'comments': <String, dynamic>{
-      'ready': true,
-      'items': <dynamic>[
-        <String, dynamic>{
-          'id': 'comments:0',
-          'comment': 'a remark',
-          'searchKeywords': 'onboarding',
-          'targetPostTitle': 'a founder post',
-        },
-      ],
-    },
-    'connections': <String, dynamic>{
-      'ready': true,
-      'items': <dynamic>[
-        <String, dynamic>{
-          'id': 'connections:0',
-          'role': 'Head of Product',
-          'company': 'Razorpay',
-          'note': 'hello',
-          'searchUrl': 'https://www.linkedin.com/search/x',
-          'isDirectMessage': true,
-        },
-      ],
-    },
-    'topVoices': <String, dynamic>{
-      'ready': true,
-      'items': <dynamic>[
-        <String, dynamic>{
-          'id': 'shown-1',
-          'postUrl': 'https://www.linkedin.com/feed/x',
-          'authorName': 'A Person',
-          'firstLine': 'An opening line.',
-          'comment': 'well put',
-          'actedAt': null,
-        },
-        <String, dynamic>{
-          'id': 'shown-2',
-          'postUrl': 'https://www.linkedin.com/feed/y',
-          'authorName': 'Another',
-          'firstLine': 'Another line.',
-          'comment': 'agreed',
-          'actedAt': '2026-10-06T09:00:00.000Z',
-        },
-      ],
-    },
-  };
-
-  group('the session', () {
-    test('reads the ids out of the nested done map', () {
-      final PlexaDay d = PlexaDay.fromWire(
-        wire(
-          session: <String, dynamic>{
-            'done': <String, dynamic>{
-              'comments': <String>['comments:0', 'comments:2'],
-              'connections': <String>['connections:1'],
-            },
+  group('PlexaDay.fromWire', () {
+    test('reads the aggregate the mobile route sends', () {
+      final PlexaDay day = PlexaDay.fromWire(<String, dynamic>{
+        'session': <String, dynamic>{
+          'done': <String, dynamic>{
+            'comments': <String>['tv:shown-1'],
+            'connections': <String>[],
           },
-        ),
-      );
+        },
+        'items': <Map<String, dynamic>>[
+          <String, dynamic>{
+            'id': 'tv:shown-1',
+            'lane': 'comments',
+            'headline': 'A curated post',
+            'context': 'Priya Raman · priyaraman',
+            'draft': 'A comment',
+            'url': 'https://www.linkedin.com/feed/update/urn:li:share:1',
+            'topVoiceId': 'shown-1',
+          },
+          <String, dynamic>{
+            'id': 'cn:0',
+            'lane': 'connections',
+            'headline': 'Head of Product',
+            'draft': 'A note',
+            'url': 'https://www.linkedin.com/search/results/people/',
+          },
+        ],
+        'ready': <String, dynamic>{
+          'comments': true,
+          'connections': true,
+          'topVoices': true,
+        },
+        'topic': 'onboarding',
+      });
 
-      expect(d.session.comments, <String>['comments:0', 'comments:2']);
-      expect(d.session.connections, <String>['connections:1']);
-      expect(d.session.isDone(PlexaLane.comments, 'comments:2'), isTrue);
-      expect(d.session.isDone(PlexaLane.connections, 'comments:2'), isFalse);
+      expect(day.items, hasLength(2));
+      expect(day.items.first.lane, PlexaLane.comments);
+      expect(day.items.first.topVoiceId, 'shown-1');
+      expect(day.items.last.lane, PlexaLane.connections);
+      // Absent, not empty string — the sub-line is skipped when there is none.
+      expect(day.items.last.context, isNull);
+      expect(day.topic, 'onboarding');
+      expect(day.clearedCount, 1);
     });
 
-    test('a missing or malformed session is empty, not a crash', () {
-      // The server's own read never throws — it returns an empty session on a
-      // database error so the user gets a day they can still work through.
-      // The client must not be the thing that breaks instead.
-      expect(PlexaDay.fromWire(wire()).session.comments, isEmpty);
-      expect(
-        PlexaDay.fromWire(wire(session: 'nonsense')).session.connections,
-        isEmpty,
-      );
-      expect(
-        PlexaDay.fromWire(
-          wire(session: <String, dynamic>{'done': 42}),
-        ).session.comments,
-        isEmpty,
-      );
+    test('ids keep the web prefixes they arrived with', () {
+      // The two clients write cleared ids into the SAME `plexa_day` row. If
+      // this port ever re-derived ids locally, a user who worked on the
+      // browser in the morning and the phone in the evening would be shown
+      // the same five posts twice.
+      final PlexaDay day = PlexaDay.fromWire(<String, dynamic>{
+        'items': <Map<String, dynamic>>[
+          <String, dynamic>{'id': 'tv:abc', 'lane': 'comments'},
+          <String, dynamic>{'id': 'nw:0', 'lane': 'comments'},
+          <String, dynamic>{'id': 'cn:3', 'lane': 'connections'},
+        ],
+      });
+
+      expect(day.items.map((DayItem i) => i.id), <String>[
+        'tv:abc',
+        'nw:0',
+        'cn:3',
+      ]);
     });
 
-    test('non-string ids are dropped rather than coerced', () {
-      final PlexaDay d = PlexaDay.fromWire(
-        wire(
-          session: <String, dynamic>{
-            'done': <String, dynamic>{
-              'comments': <dynamic>['comments:0', 7, null],
-            },
-          },
-        ),
-      );
-      expect(d.session.comments, <String>['comments:0']);
+    test('survives a malformed payload instead of taking the sheet down', () {
+      // The server answers an empty session on a database error so the user
+      // still gets a day they can work through. The client must not be the
+      // thing that throws instead.
+      final PlexaDay day = PlexaDay.fromWire(<String, dynamic>{
+        'session': 'nonsense',
+        'items': 'nonsense',
+        'ready': 42,
+      });
+
+      expect(day.items, isEmpty);
+      expect(day.session.comments, isEmpty);
+      expect(day.ready.nothingPrepared, isTrue);
+    });
+
+    test('an unknown lane falls back to comments rather than throwing', () {
+      final PlexaDay day = PlexaDay.fromWire(<String, dynamic>{
+        'items': <Map<String, dynamic>>[
+          <String, dynamic>{'id': 'x:1', 'lane': 'endorsements'},
+        ],
+      });
+
+      expect(day.items.single.lane, PlexaLane.comments);
     });
   });
 
-  group('ready is not the same as empty', () {
-    // THE DISTINCTION THE SCREEN IS BUILT ON. `ready: false` means today's
-    // work has not been generated, which costs XP to fix and needs a button.
-    // An empty list means it was generated and cleared. Collapsing the two
-    // hides that button behind a day that looks finished.
-    test('a lane with no items and ready:false is not ready', () {
-      final PlexaDay d = PlexaDay.fromWire(
-        wire(
-          lanes: <String, dynamic>{
-            'comments': <String, dynamic>{'ready': false, 'items': <dynamic>[]},
-          },
-        ),
-      );
-      expect(d.comments.ready, isFalse);
-      expect(d.comments.items, isEmpty);
+  group('PlexaSession', () {
+    const DayItem comment = DayItem(id: 'tv:1', lane: PlexaLane.comments);
+    const DayItem connection = DayItem(id: 'cn:0', lane: PlexaLane.connections);
+
+    test('isDone reads the item’s own lane, not both', () {
+      // Both lanes can hold the same index — `nw:0` and `cn:0` coexist — so a
+      // session that searched both lists would mark one lane's item done
+      // because the other lane had cleared its own.
+      const PlexaSession session = PlexaSession(comments: <String>['cn:0']);
+
+      expect(session.isDone(connection), isFalse);
     });
 
-    test('a lane with no items but ready:true IS ready', () {
-      final PlexaDay d = PlexaDay.fromWire(
-        wire(
-          lanes: <String, dynamic>{
-            'comments': <String, dynamic>{'ready': true, 'items': <dynamic>[]},
-          },
-        ),
-      );
-      expect(d.comments.ready, isTrue);
+    test('withDone adds, removes, and never duplicates', () {
+      const PlexaSession empty = PlexaSession();
+
+      final PlexaSession once = empty.withDone(comment, done: true);
+      final PlexaSession twice = once.withDone(comment, done: true);
+      expect(twice.comments, <String>['tv:1']);
+
+      final PlexaSession undone = twice.withDone(comment, done: false);
+      expect(undone.comments, isEmpty);
     });
 
-    test('a day with nothing prepared anywhere reports itself empty', () {
-      expect(PlexaDay.fromWire(wire()).isEmpty, isTrue);
-    });
+    test('fromWire reads the nested done map', () {
+      final PlexaSession session = PlexaSession.fromWire(<String, dynamic>{
+        'done': <String, dynamic>{
+          'comments': <dynamic>['a', 7, 'b'],
+        },
+      });
 
-    test('one prepared lane is enough to not be empty', () {
-      final PlexaDay d = PlexaDay.fromWire(
-        wire(
-          lanes: <String, dynamic>{
-            'topVoices': <String, dynamic>{'ready': true, 'items': <dynamic>[]},
-          },
-        ),
-      );
-      expect(d.isEmpty, isFalse);
+      // 7 is dropped rather than crashing the parse or becoming "7".
+      expect(session.comments, <String>['a', 'b']);
+      expect(session.connections, isEmpty);
     });
   });
 
-  group('items', () {
-    test('every lane parses', () {
-      final PlexaDay d = PlexaDay.fromWire(
-        wire(lanes: lanes, topic: 'onboarding'),
-      );
-      expect(d.comments.items.single.comment, 'a remark');
-      expect(d.connections.items.single.isDirectMessage, isTrue);
-      expect(d.topVoices.items, hasLength(2));
-      expect(d.topic, 'onboarding');
-    });
-
-    test('a Top Voice knows it is done from its own stamp', () {
-      // That lane does not use the session: the comments screen reads the same
-      // rows, so the stamp has to be the shared truth.
-      final PlexaDay d = PlexaDay.fromWire(wire(lanes: lanes));
-      expect(d.topVoices.items[0].isDone, isFalse);
-      expect(d.topVoices.items[1].isDone, isTrue);
-    });
-
-    test('an unparseable lane is empty rather than fatal', () {
-      final PlexaDay d = PlexaDay.fromWire(
-        wire(
-          lanes: <String, dynamic>{
-            'comments': 'not a lane',
-            'connections': <String, dynamic>{'items': 'not a list'},
-          },
-        ),
-      );
-      expect(d.comments.items, isEmpty);
-      expect(d.connections.items, isEmpty);
+  group('PlexaReady', () {
+    test('nothingPrepared separates "not generated" from "all cleared"', () {
+      // The two need different answers: a day with nothing PREPARED can be
+      // fixed by generating it, which costs XP; a day that was generated and
+      // cleared is simply finished.
+      expect(const PlexaReady().nothingPrepared, isTrue);
+      expect(const PlexaReady(topVoices: true).nothingPrepared, isFalse);
     });
   });
 
-  group('the day’s count', () {
-    test('totals every lane and counts both kinds of done', () {
-      // Two sources of truth meet here: the session covers the generated
-      // lanes, the stamp covers Top Voices. Counting only one of them is how
-      // a finished day reads as half done.
-      final PlexaDay d = PlexaDay.fromWire(
-        wire(
-          session: <String, dynamic>{
-            'done': <String, dynamic>{
-              'comments': <String>['comments:0'],
-            },
-          },
-          lanes: <String, dynamic>{
-            'comments': <String, dynamic>{
-              'ready': true,
-              'items': <dynamic>[
-                <String, dynamic>{'id': 'comments:0'},
-                <String, dynamic>{'id': 'comments:1'},
-              ],
-            },
-            'topVoices': <String, dynamic>{
-              'ready': true,
-              'items': <dynamic>[
-                <String, dynamic>{
-                  'id': 's1',
-                  'actedAt': '2026-10-06T00:00:00Z',
-                },
-              ],
-            },
-          },
-        ),
-      );
-
-      expect(d.total, 3);
-      expect(d.done, 2); // one session id + one stamped Top Voice
+  group('PlexaLane', () {
+    test('the noun is what heads an item line', () {
+      expect(PlexaLane.comments.noun, 'Comment');
+      expect(PlexaLane.connections.noun, 'Request');
     });
 
-    test('an untouched day is zero of its total', () {
-      final PlexaDay d = PlexaDay.fromWire(wire(lanes: lanes));
-      expect(d.done, 1); // shown-2 arrives already stamped
-      expect(d.total, 4);
+    test('parse defaults to comments', () {
+      expect(PlexaLane.parse('connections'), PlexaLane.connections);
+      expect(PlexaLane.parse('comments'), PlexaLane.comments);
+      expect(PlexaLane.parse(null), PlexaLane.comments);
     });
   });
 }

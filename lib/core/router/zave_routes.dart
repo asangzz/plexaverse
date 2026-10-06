@@ -94,10 +94,11 @@ class ZaveRoutes {
   // These have no sidebar entry on the web either; they are opened from inside
   // another screen (a daily habit, a roadmap task, an upsell).
 
-  /// Opened from the "comment on posts" daily habit.
-  /// Open Plexa — the day's missions as one conversation.
-  static const String plexa = '/plexa';
+  // Open Plexa has no entry here, and that is deliberate: it has no URL on
+  // the web either. It is a modal over whatever screen you are standing on —
+  // see `showPlexaDay` in features/plexa.
 
+  /// Opened from the "comment on posts" daily habit.
   static const String comments = '/comments';
 
   /// Opened from the "send connection requests" daily habit.

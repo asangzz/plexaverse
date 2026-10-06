@@ -11,6 +11,7 @@ import '../widgets/home_states.dart';
 import '../widgets/levels_panel.dart';
 import '../widgets/roadmap_timeline.dart';
 import '../widgets/season_two_view.dart';
+import '../../../plexa/presentation/plexa_day_sheet.dart';
 import '../../../preferences/application/preferences_controller.dart';
 import '../../../../core/router/zave_routes.dart';
 
@@ -335,11 +336,15 @@ class _MissionSheet extends StatelessWidget {
               // Open Plexa is the primary of the two: it is the day's work,
               // where the planner is the week's shape. The web mounts the
               // same chat on its roadmap for the same reason.
+              //
+              // A sheet, not a route. The roadmap stays underneath it, which
+              // is what the web does and what makes closing the chat feel
+              // like putting something down rather than going back.
               ZaveButton.primary(
                 label: 'Open Plexa',
                 icon: const Icon(Icons.auto_awesome_outlined),
                 expand: true,
-                onPressed: () => _start(context, ZaveRoutes.plexa),
+                onPressed: () => showPlexaDay(context),
               ),
               SizedBox(height: ZaveSpace.md),
               Align(

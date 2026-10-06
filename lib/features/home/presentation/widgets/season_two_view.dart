@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../../../core/responsive/screen_util.dart';
 import '../../../../core/ui/zave/zave_kit.dart';
+import '../../../plexa/presentation/plexa_day_sheet.dart';
 import '../../domain/roadmap_progress.dart';
 import '../../domain/season_two.dart';
 import 'black_hole_visual.dart';
@@ -305,6 +306,20 @@ class _Sheet extends StatelessWidget {
               ],
             ),
             SizedBox(height: ZaveSpace.md),
+            // Season 1 reaches Open Plexa from its mission sheet; Season 2
+            // replaces that whole surface, so finishing the 66 days used to
+            // take the day's conversation away from the users who had been
+            // here longest and earned it. This is the only other door to it —
+            // same chat, same day, same counts.
+            if (!allDone) ...<Widget>[
+              ZaveButton.primary(
+                label: 'Open Plexa',
+                icon: const Icon(Icons.auto_awesome_outlined),
+                expand: true,
+                onPressed: () => showPlexaDay(context),
+              ),
+              SizedBox(height: ZaveSpace.md),
+            ],
             for (final DailyHabit habit in habits) ...<Widget>[
               _HabitRow(
                 habit: habit,

@@ -3,40 +3,62 @@ import 'package:freezed_annotation/freezed_annotation.dart';
 part 'plexa_day.freezed.dart';
 part 'plexa_day.g.dart';
 
-/// The day's missions, as one conversation.
-///
-/// The web counterpart is `components/automate/PlexaDayChat.tsx` over
-/// `lib/services/plexa-day.service.ts`. The wire shape is whatever
-/// `GET /plexa/day` returns.
-///
-/// ## Why progress lives on the server
-///
-/// Per-item progress used to be React state on the web's mission pages, so it
-/// died on a refresh: someone who did seven of ten comments and came back saw
-/// zero of ten. Flutter had the same bug in a different place — `markSent` is
-/// in-memory on the engagement controllers, so killing the app resets the day.
-///
-/// A conversation makes that worse rather than better: a thread that restarts
-/// from item one is unusable. So the cleared ids are a server row now, keyed on
-/// the user's own day in their own timezone, and this model is what reads it
-/// back.
-///
-/// ## None of it is proof
-///
-/// LinkedIn tells us nothing back — it cannot be asked whether a comment was
-/// posted or an invitation sent, on any scope this app holds. Every id in
-/// [PlexaSession] is the user saying they did it. The same honesty the rest of
-/// the hand-off surfaces are documented with.
-
 /// Which lane an item belongs to.
 ///
 /// The post has its own pipeline and is deliberately not one of these: it is
-/// generated, approved and published by the chain, so it has nothing to clear.
+/// generated, approved and published by the chain, so it has nothing to hand
+/// over.
 enum PlexaLane {
   comments,
   connections;
 
+  static PlexaLane parse(String? raw) =>
+      raw == 'connections' ? PlexaLane.connections : PlexaLane.comments;
+
   String get wire => name;
+
+  /// What one of these is called at the head of a line.
+  String get noun => this == PlexaLane.comments ? 'Comment' : 'Request';
+}
+
+/// One thing to do, flattened from three sources into one shape so the
+/// conversation does not have to branch on where it came from.
+///
+/// Mirrors `DayItem` in the web's `components/automate/PlexaDayChat.tsx`,
+/// including [id]'s `tv:` / `nw:` / `cn:` prefixes. Both clients write cleared
+/// ids into the same `plexa_day` row, so an id invented here would make a user
+/// who worked on the browser and the phone in one day disagree with
+/// themselves. The server builds them, for that reason.
+@freezed
+abstract class DayItem with _$DayItem {
+  const DayItem._();
+
+  const factory DayItem({
+    @Default('') String id,
+    @JsonKey(unknownEnumValue: PlexaLane.comments)
+    @Default(PlexaLane.comments)
+    PlexaLane lane,
+
+    /// What the user is being pointed at.
+    @Default('') String headline,
+
+    /// The sub-line: an author, a company, the context for the headline.
+    String? context,
+
+    /// The thing Plexa wrote, copied to the clipboard on open.
+    @Default('') String draft,
+
+    /// Where "open" goes.
+    @Default('') String url,
+
+    /// Set only for Top Voices rows, which have their own durable stamp.
+    String? topVoiceId,
+  }) = _DayItem;
+
+  factory DayItem.fromJson(Map<String, dynamic> json) =>
+      _$DayItemFromJson(json);
+
+  bool get canOpen => url.isNotEmpty;
 }
 
 /// What the user has already cleared today.
@@ -49,8 +71,7 @@ abstract class PlexaSession with _$PlexaSession {
     @Default(<String>[]) List<String> connections,
   }) = _PlexaSession;
 
-  /// The server nests these under `done`, so this is hand-mapped rather than
-  /// generated — `{ done: { comments: [...], connections: [...] } }`.
+  /// The server nests these under `done`, so this is hand-mapped.
   factory PlexaSession.fromWire(Map<String, dynamic>? json) {
     final Object? done = json?['done'];
     List<String> lane(String key) {
@@ -70,127 +91,62 @@ abstract class PlexaSession with _$PlexaSession {
   List<String> doneIn(PlexaLane lane) =>
       lane == PlexaLane.comments ? comments : connections;
 
-  bool isDone(PlexaLane lane, String itemId) => doneIn(lane).contains(itemId);
+  bool isDone(DayItem item) => doneIn(item.lane).contains(item.id);
+
+  PlexaSession withDone(DayItem item, {required bool done}) {
+    final List<String> next = List<String>.of(doneIn(item.lane));
+    if (done) {
+      if (!next.contains(item.id)) next.add(item.id);
+    } else {
+      next.remove(item.id);
+    }
+    return item.lane == PlexaLane.comments
+        ? copyWith(comments: next)
+        : copyWith(connections: next);
+  }
 }
 
-/// One comment the user can leave on somebody else's post.
-@freezed
-abstract class PlexaComment with _$PlexaComment {
-  const factory PlexaComment({
-    @Default('') String id,
-    @Default('') String comment,
-    @Default('') String searchKeywords,
-
-    /// The KIND of high-reach post this comment fits, not a real post. Nothing
-    /// in the product knows which post the user will actually comment on.
-    @Default('') String targetPostTitle,
-  }) = _PlexaComment;
-
-  factory PlexaComment.fromJson(Map<String, dynamic> json) =>
-      _$PlexaCommentFromJson(json);
-}
-
-/// One person to reach out to. A role, not a person — the product never sees a
-/// real profile.
-@freezed
-abstract class PlexaConnection with _$PlexaConnection {
-  const factory PlexaConnection({
-    @Default('') String id,
-    @Default('') String role,
-    @Default('') String company,
-    @Default('') String note,
-    @Default('') String searchUrl,
-
-    /// The one card in five that is a DM rather than a connection request —
-    /// LinkedIn's free plan caps personalised notes at roughly five a week.
-    @Default(false) bool isDirectMessage,
-  }) = _PlexaConnection;
-
-  factory PlexaConnection.fromJson(Map<String, dynamic> json) =>
-      _$PlexaConnectionFromJson(json);
-}
-
-/// One curated Top Voices post, with its comment already written.
-@freezed
-abstract class PlexaTopVoice with _$PlexaTopVoice {
-  const PlexaTopVoice._();
-
-  const factory PlexaTopVoice({
-    @Default('') String id,
-    @Default('') String postUrl,
-    @Default('') String authorName,
-    @Default('') String firstLine,
-    @Default('') String comment,
-
-    /// This lane carries its own durable stamp rather than relying on the
-    /// session map, because the comments screen reads the same rows.
-    String? actedAt,
-  }) = _PlexaTopVoice;
-
-  factory PlexaTopVoice.fromJson(Map<String, dynamic> json) =>
-      _$PlexaTopVoiceFromJson(json);
-
-  bool get isDone => actedAt != null && actedAt!.isNotEmpty;
-}
-
-/// One lane of the day.
+/// Which lanes have had today's work prepared.
 ///
-/// [ready] is "has today's work been prepared", NOT "is it done". False means
-/// nothing has been generated yet, which is the screen's cue to offer
-/// generation — and generating costs XP, which is exactly why the two states
-/// are distinguished rather than both rendering as an empty list.
+/// Not the same question as whether they are finished. `false` means nothing
+/// has been generated, which costs XP to fix and needs an offer; an empty list
+/// of items means it was generated and cleared. The web never needs this
+/// because it generates on open; the mobile route deliberately will not.
 @freezed
-abstract class PlexaLaneState<T> with _$PlexaLaneState<T> {
-  const factory PlexaLaneState({
-    @Default(false) bool ready,
-    @Default(<Never>[]) List<T> items,
-  }) = _PlexaLaneState<T>;
+abstract class PlexaReady with _$PlexaReady {
+  const PlexaReady._();
+
+  const factory PlexaReady({
+    @Default(false) bool comments,
+    @Default(false) bool connections,
+    @Default(false) bool topVoices,
+  }) = _PlexaReady;
+
+  factory PlexaReady.fromJson(Map<String, dynamic> json) =>
+      _$PlexaReadyFromJson(json);
+
+  /// Nothing prepared anywhere — a day the user has not started.
+  bool get nothingPrepared => !comments && !connections && !topVoices;
 }
 
-/// Everything one screen needs for the day, in the shape one call returns it.
+/// Everything one conversation needs for the day.
 @freezed
 abstract class PlexaDay with _$PlexaDay {
   const PlexaDay._();
 
   const factory PlexaDay({
     @Default(PlexaSession()) PlexaSession session,
-    @Default(PlexaLaneState<PlexaComment>())
-    PlexaLaneState<PlexaComment> comments,
-    @Default(PlexaLaneState<PlexaConnection>())
-    PlexaLaneState<PlexaConnection> connections,
-    @Default(PlexaLaneState<PlexaTopVoice>())
-    PlexaLaneState<PlexaTopVoice> topVoices,
+    @Default(<DayItem>[]) List<DayItem> items,
+    @Default(PlexaReady()) PlexaReady ready,
 
     /// The topic today's comments were written around.
     @Default('') String topic,
   }) = _PlexaDay;
 
-  /// Hand-mapped: the wire nests lanes under `lanes` and the session under
-  /// `done`, and generated `fromJson` for a generic lane type would need a
-  /// converter per item type for no gain.
   factory PlexaDay.fromWire(Map<String, dynamic> json) {
-    List<T> items<T>(String lane, T Function(Map<String, dynamic>) parse) {
-      final Object? lanes = json['lanes'];
-      if (lanes is! Map) return <T>[];
-      final Object? l = lanes[lane];
-      if (l is! Map) return <T>[];
-      final Object? raw = l['items'];
-      if (raw is! List) return <T>[];
-      return raw
-          .whereType<Map<String, dynamic>>()
-          .map(parse)
-          .toList(growable: false);
-    }
-
-    bool ready(String lane) {
-      final Object? lanes = json['lanes'];
-      if (lanes is! Map) return false;
-      final Object? l = lanes[lane];
-      return l is Map && l['ready'] == true;
-    }
-
+    final Object? rawItems = json['items'];
     return PlexaDay(
-      // A cast, not an `as`. The server's own read never throws — it answers
+      // A check, not an `as`. The server's own read never throws — it answers
       // an empty session on a database error so the user still gets a day they
       // can work through — and the client must not be the thing that breaks
       // instead.
@@ -199,33 +155,21 @@ abstract class PlexaDay with _$PlexaDay {
             ? json['session'] as Map<String, dynamic>
             : null,
       ),
-      comments: PlexaLaneState<PlexaComment>(
-        ready: ready('comments'),
-        items: items('comments', PlexaComment.fromJson),
-      ),
-      connections: PlexaLaneState<PlexaConnection>(
-        ready: ready('connections'),
-        items: items('connections', PlexaConnection.fromJson),
-      ),
-      topVoices: PlexaLaneState<PlexaTopVoice>(
-        ready: ready('topVoices'),
-        items: items('topVoices', PlexaTopVoice.fromJson),
-      ),
+      items: rawItems is List
+          ? rawItems
+                .whereType<Map<String, dynamic>>()
+                .map(DayItem.fromJson)
+                .toList(growable: false)
+          : const <DayItem>[],
+      ready: json['ready'] is Map<String, dynamic>
+          ? PlexaReady.fromJson(json['ready'] as Map<String, dynamic>)
+          : const PlexaReady(),
       topic: json['topic'] as String? ?? '',
     );
   }
 
-  /// How many items the day asks for across every lane.
-  int get total =>
-      comments.items.length + connections.items.length + topVoices.items.length;
+  int get clearedCount => items.where(session.isDone).length;
 
-  /// How many are cleared. Top Voices count their own stamp; the other two
-  /// read the session.
-  int get done =>
-      session.comments.length +
-      session.connections.length +
-      topVoices.items.where((PlexaTopVoice t) => t.isDone).length;
-
-  /// Nothing has been prepared in any lane — a day the user has not started.
-  bool get isEmpty => !comments.ready && !connections.ready && !topVoices.ready;
+  List<DayItem> inLane(PlexaLane lane) =>
+      items.where((DayItem i) => i.lane == lane).toList(growable: false);
 }
