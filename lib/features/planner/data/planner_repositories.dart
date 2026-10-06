@@ -309,6 +309,19 @@ class ApiPlannerRepository implements PlannerRepository {
   }
 
   @override
+  Future<String> setNewsletterName(String name) async {
+    final String trimmed = name.trim();
+    final response = await _client.post<Map<String, dynamic>>(
+      ApiPaths.plannerNewsletter,
+      data: <String, dynamic>{'name': trimmed},
+    );
+    // The server trims too and its answer is authoritative, but it is the same
+    // string — so falling back to ours keeps the caller from having to handle
+    // a null it can reason about perfectly well.
+    return response.data?['newsletterName'] as String? ?? trimmed;
+  }
+
+  @override
   Future<WeeklyArticle?> markArticlePublished({
     required int weekNumber,
     required int season,
@@ -639,14 +652,27 @@ class FakePlannerRepository implements PlannerRepository {
   @override
   Future<ArticleState> fetchArticle({int? week, int? season}) async {
     await Future<void>.delayed(const Duration(milliseconds: 350));
-    return const ArticleState(
+    return ArticleState(
       weekNumber: 3,
       season: 1,
-      newsletterName: 'The Onboarding Letter',
-      article: WeeklyArticle(
+      // Held, not hardcoded. It used to be a literal, which meant
+      // `isFirstArticle` was false for ever under the fake and the whole
+      // name-your-newsletter flow — the one this fixture exists to let someone
+      // walk — was unreachable on the build the app is manually tested on.
+      newsletterName: _newsletterName,
+      // Exactly how the server computes it.
+      isFirstArticle: _newsletterName == null,
+      article: const WeeklyArticle(
         id: 'mock-article-1',
         weekNumber: 3,
         season: 1,
+        newsletterNameSuggestions: <String>[
+          'The Onboarding Letter',
+          'First Week',
+          'Day One',
+          'The Joining Note',
+          'Week One Review',
+        ],
         title: 'Onboarding is a design problem, not a documentation problem',
         thesis:
             'Teams keep fixing onboarding by writing more documentation, when '
@@ -672,6 +698,17 @@ class FakePlannerRepository implements PlannerRepository {
     // The fixture carries its body inline; the real one fetches it. The split
     // is a wire concern, so the fake answers the same question either way.
     return (await fetchArticle(week: week, season: season)).article?.body ?? '';
+  }
+
+  /// Null to begin with, so the first-article flow is the state the mock
+  /// opens in. Set by [setNewsletterName] and read back by [fetchArticle],
+  /// which is what makes the whole loop walkable without a server.
+  String? _newsletterName;
+
+  @override
+  Future<String> setNewsletterName(String name) async {
+    await Future<void>.delayed(const Duration(milliseconds: 200));
+    return _newsletterName = name.trim();
   }
 
   @override

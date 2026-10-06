@@ -347,6 +347,60 @@ class ArticleController extends _$ArticleController {
         .fetchArticle(week: target.week, season: target.season);
   }
 
+  /// Records the name of the newsletter the user created on LinkedIn.
+  ///
+  /// Returns an error sentence, or null on success.
+  ///
+  /// Optimistic on the NAME, which is safe — the user typed it and the server
+  /// stores it verbatim — and deliberately NOT optimistic on
+  /// `isFirstArticle`. That flag does not mean "has a name"; it means LinkedIn
+  /// will ask them to create the newsletter while they publish, which is true
+  /// for this edition whatever we record. The web makes the same distinction
+  /// and for the same reason: flipping it here would delete the
+  /// create-a-newsletter step from under the user at exactly the moment they
+  /// open LinkedIn and are asked to create one.
+  Future<String?> setNewsletterName(String name) async {
+    final String trimmed = name.trim();
+    if (trimmed.isEmpty) return 'Give the newsletter a name first.';
+
+    final ArticleState? current = state.value;
+    if (current != null) {
+      state = AsyncData<ArticleState>(
+        current.copyWith(newsletterName: trimmed),
+      );
+    }
+
+    try {
+      await ref.read(plannerRepositoryProvider).setNewsletterName(trimmed);
+      // DELIBERATELY NOT `invalidateSelf()`.
+      //
+      // The server answers `isFirstArticle: !newsletterName`, so a refetch
+      // here would come back false — and the card's create-a-newsletter note
+      // is keyed on that flag. The user would watch the step disappear
+      // seconds after naming it, at precisely the moment they tap "Copy &
+      // open editor" and LinkedIn asks them to create one.
+      //
+      // The flag does not mean "has a name". It means LinkedIn will ask them
+      // to CREATE the newsletter while they publish THIS edition, which is
+      // still true. Recording the name is not creating the newsletter;
+      // LinkedIn is where it comes into being. So the local patch stands and
+      // the server's answer is picked up on the next natural read — next
+      // week, or a pull-to-refresh — by which time it is correct.
+      //
+      // The web guards the same moment the same way, with its
+      // `serverSaysFirst || savedNewsletterName !== null`. Nothing on this
+      // screen reads `newsletterCreatedAt`, so skipping the refetch costs
+      // nothing.
+      return null;
+    } on Failure catch (f) {
+      if (current != null) state = AsyncData<ArticleState>(current);
+      return f.message;
+    } on Object {
+      if (current != null) state = AsyncData<ArticleState>(current);
+      return 'That did not save. Try again.';
+    }
+  }
+
   /// Records that the user pasted the article into LinkedIn themselves.
   ///
   /// This is the ONLY way an article is ever marked published: the API cannot

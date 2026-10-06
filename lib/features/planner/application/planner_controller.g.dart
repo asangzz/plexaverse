@@ -282,7 +282,7 @@ final class ArticleControllerProvider
   ArticleController create() => ArticleController();
 }
 
-String _$articleControllerHash() => r'3512b4541af17ab96f25d6e464eab759f2e6a1b9';
+String _$articleControllerHash() => r'cc77ff777c59e9e3852c59d05afca2e617a84bad';
 
 /// The week's Sunday article.
 ///

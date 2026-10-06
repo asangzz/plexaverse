@@ -123,6 +123,16 @@ abstract class PlannerRepository {
   /// screen does not show. This is the call the article sheet and Copy make.
   Future<String> fetchArticleBody({int? week, int? season});
 
+  /// Records the name of the newsletter the user created on LinkedIn.
+  ///
+  /// The only way this value is ever set. Nothing syncs it because nothing
+  /// can, and until it is set `isFirstArticle` stays true — so the planner
+  /// keeps asking the user to create a newsletter they already have, and every
+  /// caption that mentions the article refers to it generically.
+  ///
+  /// Returns the stored name, which is [name] trimmed.
+  Future<String> setNewsletterName(String name);
+
   /// Records that the user pasted the article into LinkedIn themselves.
   Future<WeeklyArticle?> markArticlePublished({
     required int weekNumber,

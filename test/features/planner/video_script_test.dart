@@ -28,10 +28,7 @@ void main() {
       expect(const VideoScript().runtimeSeconds, 0);
       expect(
         const VideoScript(
-          beats: <VideoBeat>[
-            VideoBeat(seconds: 0),
-            VideoBeat(seconds: 26),
-          ],
+          beats: <VideoBeat>[VideoBeat(seconds: 0), VideoBeat(seconds: 26)],
         ).runtimeSeconds,
         26,
       );
@@ -107,10 +104,7 @@ void main() {
         slotSignal(video, handoff: HandoffState.posted).color,
         ZaveColors.green,
       );
-      expect(
-        slotSignal(article, handoff: HandoffState.posted).label,
-        'Posted',
-      );
+      expect(slotSignal(article, handoff: HandoffState.posted).label, 'Posted');
     });
 
     test('never reads slot.status on a hand-off day', () {
@@ -153,10 +147,7 @@ void main() {
     test('a rest day says so regardless', () {
       const PlanSlot rest = PlanSlot(day: 'Saturday', rawKind: 'rest');
       expect(slotSignal(rest).label, 'Rest day');
-      expect(
-        slotSignal(rest, handoff: HandoffState.ready).label,
-        'Rest day',
-      );
+      expect(slotSignal(rest, handoff: HandoffState.ready).label, 'Rest day');
     });
   });
 }

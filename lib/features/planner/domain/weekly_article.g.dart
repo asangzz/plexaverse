@@ -23,6 +23,11 @@ _WeeklyArticle _$WeeklyArticleFromJson(Map<String, dynamic> json) =>
       status: json['status'] as String? ?? 'ready',
       publishedAt: json['publishedAt'] as String?,
       publishedUrl: json['publishedUrl'] as String?,
+      newsletterNameSuggestions:
+          (json['newsletterNameSuggestions'] as List<dynamic>?)
+              ?.map((e) => e as String)
+              .toList() ??
+          const <String>[],
     );
 
 Map<String, dynamic> _$WeeklyArticleToJson(_WeeklyArticle instance) =>
@@ -38,6 +43,7 @@ Map<String, dynamic> _$WeeklyArticleToJson(_WeeklyArticle instance) =>
       'status': instance.status,
       'publishedAt': instance.publishedAt,
       'publishedUrl': instance.publishedUrl,
+      'newsletterNameSuggestions': instance.newsletterNameSuggestions,
     };
 
 _ArticleState _$ArticleStateFromJson(Map<String, dynamic> json) =>

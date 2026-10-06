@@ -53,6 +53,16 @@ abstract class WeeklyArticle with _$WeeklyArticle {
     @Default('ready') String status,
     String? publishedAt,
     String? publishedUrl,
+
+    /// Five candidate names for the newsletter, written with the FIRST
+    /// article and empty on every one after it.
+    ///
+    /// Already on the wire — the mobile route spreads the service's row and
+    /// strips only `body` — and dropped on the floor until the naming flow
+    /// existed to use them. Naming a newsletter from nothing is the hardest
+    /// blank page in the product, so the model is asked for candidates in the
+    /// same call that writes the article.
+    @Default(<String>[]) List<String> newsletterNameSuggestions,
   }) = _WeeklyArticle;
 
   factory WeeklyArticle.fromJson(Map<String, dynamic> json) =>

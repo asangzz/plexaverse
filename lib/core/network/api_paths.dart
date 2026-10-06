@@ -149,6 +149,14 @@ class ApiPaths {
   /// GET the Sunday article; POST to record that the user published it
   /// themselves. LinkedIn's API cannot publish an article, so the app never
   /// pushes one — it prepares a body and the user pastes it.
+  /// Records the newsletter's name, which only the user can tell us.
+  ///
+  /// LinkedIn has no read API for newsletters and no write one: the user
+  /// creates it by hand while publishing their first article. The preferences
+  /// PATCH cannot carry it either — that schema is `.strict()` and has no such
+  /// field, so a client that tried had the WHOLE patch rejected.
+  static const String plannerNewsletter = '/planner/newsletter';
+
   /// The week's two video scripts.
   ///
   /// GET returns the week's; POST writes one on demand or marks one posted.

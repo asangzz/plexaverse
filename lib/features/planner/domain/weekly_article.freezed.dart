@@ -30,7 +30,15 @@ mixin _$WeeklyArticle {
 ///
 /// It used to be derived here by counting words in [body] — which is
 /// precisely what would have kept the body in the list payload.
- int get readingMinutes; String get status; String? get publishedAt; String? get publishedUrl;
+ int get readingMinutes; String get status; String? get publishedAt; String? get publishedUrl;/// Five candidate names for the newsletter, written with the FIRST
+/// article and empty on every one after it.
+///
+/// Already on the wire — the mobile route spreads the service's row and
+/// strips only `body` — and dropped on the floor until the naming flow
+/// existed to use them. Naming a newsletter from nothing is the hardest
+/// blank page in the product, so the model is asked for candidates in the
+/// same call that writes the article.
+ List<String> get newsletterNameSuggestions;
 /// Create a copy of WeeklyArticle
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
@@ -43,16 +51,16 @@ $WeeklyArticleCopyWith<WeeklyArticle> get copyWith => _$WeeklyArticleCopyWithImp
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is WeeklyArticle&&(identical(other.id, id) || other.id == id)&&(identical(other.weekNumber, weekNumber) || other.weekNumber == weekNumber)&&(identical(other.season, season) || other.season == season)&&(identical(other.title, title) || other.title == title)&&(identical(other.thesis, thesis) || other.thesis == thesis)&&(identical(other.body, body) || other.body == body)&&const DeepCollectionEquality().equals(other.sections, sections)&&(identical(other.readingMinutes, readingMinutes) || other.readingMinutes == readingMinutes)&&(identical(other.status, status) || other.status == status)&&(identical(other.publishedAt, publishedAt) || other.publishedAt == publishedAt)&&(identical(other.publishedUrl, publishedUrl) || other.publishedUrl == publishedUrl));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is WeeklyArticle&&(identical(other.id, id) || other.id == id)&&(identical(other.weekNumber, weekNumber) || other.weekNumber == weekNumber)&&(identical(other.season, season) || other.season == season)&&(identical(other.title, title) || other.title == title)&&(identical(other.thesis, thesis) || other.thesis == thesis)&&(identical(other.body, body) || other.body == body)&&const DeepCollectionEquality().equals(other.sections, sections)&&(identical(other.readingMinutes, readingMinutes) || other.readingMinutes == readingMinutes)&&(identical(other.status, status) || other.status == status)&&(identical(other.publishedAt, publishedAt) || other.publishedAt == publishedAt)&&(identical(other.publishedUrl, publishedUrl) || other.publishedUrl == publishedUrl)&&const DeepCollectionEquality().equals(other.newsletterNameSuggestions, newsletterNameSuggestions));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
-int get hashCode => Object.hash(runtimeType,id,weekNumber,season,title,thesis,body,const DeepCollectionEquality().hash(sections),readingMinutes,status,publishedAt,publishedUrl);
+int get hashCode => Object.hash(runtimeType,id,weekNumber,season,title,thesis,body,const DeepCollectionEquality().hash(sections),readingMinutes,status,publishedAt,publishedUrl,const DeepCollectionEquality().hash(newsletterNameSuggestions));
 
 @override
 String toString() {
-  return 'WeeklyArticle(id: $id, weekNumber: $weekNumber, season: $season, title: $title, thesis: $thesis, body: $body, sections: $sections, readingMinutes: $readingMinutes, status: $status, publishedAt: $publishedAt, publishedUrl: $publishedUrl)';
+  return 'WeeklyArticle(id: $id, weekNumber: $weekNumber, season: $season, title: $title, thesis: $thesis, body: $body, sections: $sections, readingMinutes: $readingMinutes, status: $status, publishedAt: $publishedAt, publishedUrl: $publishedUrl, newsletterNameSuggestions: $newsletterNameSuggestions)';
 }
 
 
@@ -63,7 +71,7 @@ abstract mixin class $WeeklyArticleCopyWith<$Res>  {
   factory $WeeklyArticleCopyWith(WeeklyArticle value, $Res Function(WeeklyArticle) _then) = _$WeeklyArticleCopyWithImpl;
 @useResult
 $Res call({
- String id, int weekNumber, int season, String title, String? thesis, String body, List<String> sections, int readingMinutes, String status, String? publishedAt, String? publishedUrl
+ String id, int weekNumber, int season, String title, String? thesis, String body, List<String> sections, int readingMinutes, String status, String? publishedAt, String? publishedUrl, List<String> newsletterNameSuggestions
 });
 
 
@@ -80,7 +88,7 @@ class _$WeeklyArticleCopyWithImpl<$Res>
 
 /// Create a copy of WeeklyArticle
 /// with the given fields replaced by the non-null parameter values.
-@pragma('vm:prefer-inline') @override $Res call({Object? id = null,Object? weekNumber = null,Object? season = null,Object? title = null,Object? thesis = freezed,Object? body = null,Object? sections = null,Object? readingMinutes = null,Object? status = null,Object? publishedAt = freezed,Object? publishedUrl = freezed,}) {
+@pragma('vm:prefer-inline') @override $Res call({Object? id = null,Object? weekNumber = null,Object? season = null,Object? title = null,Object? thesis = freezed,Object? body = null,Object? sections = null,Object? readingMinutes = null,Object? status = null,Object? publishedAt = freezed,Object? publishedUrl = freezed,Object? newsletterNameSuggestions = null,}) {
   return _then(_self.copyWith(
 id: null == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
 as String,weekNumber: null == weekNumber ? _self.weekNumber : weekNumber // ignore: cast_nullable_to_non_nullable
@@ -93,7 +101,8 @@ as List<String>,readingMinutes: null == readingMinutes ? _self.readingMinutes : 
 as int,status: null == status ? _self.status : status // ignore: cast_nullable_to_non_nullable
 as String,publishedAt: freezed == publishedAt ? _self.publishedAt : publishedAt // ignore: cast_nullable_to_non_nullable
 as String?,publishedUrl: freezed == publishedUrl ? _self.publishedUrl : publishedUrl // ignore: cast_nullable_to_non_nullable
-as String?,
+as String?,newsletterNameSuggestions: null == newsletterNameSuggestions ? _self.newsletterNameSuggestions : newsletterNameSuggestions // ignore: cast_nullable_to_non_nullable
+as List<String>,
   ));
 }
 
@@ -178,10 +187,10 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String id,  int weekNumber,  int season,  String title,  String? thesis,  String body,  List<String> sections,  int readingMinutes,  String status,  String? publishedAt,  String? publishedUrl)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String id,  int weekNumber,  int season,  String title,  String? thesis,  String body,  List<String> sections,  int readingMinutes,  String status,  String? publishedAt,  String? publishedUrl,  List<String> newsletterNameSuggestions)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _WeeklyArticle() when $default != null:
-return $default(_that.id,_that.weekNumber,_that.season,_that.title,_that.thesis,_that.body,_that.sections,_that.readingMinutes,_that.status,_that.publishedAt,_that.publishedUrl);case _:
+return $default(_that.id,_that.weekNumber,_that.season,_that.title,_that.thesis,_that.body,_that.sections,_that.readingMinutes,_that.status,_that.publishedAt,_that.publishedUrl,_that.newsletterNameSuggestions);case _:
   return orElse();
 
 }
@@ -199,10 +208,10 @@ return $default(_that.id,_that.weekNumber,_that.season,_that.title,_that.thesis,
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String id,  int weekNumber,  int season,  String title,  String? thesis,  String body,  List<String> sections,  int readingMinutes,  String status,  String? publishedAt,  String? publishedUrl)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String id,  int weekNumber,  int season,  String title,  String? thesis,  String body,  List<String> sections,  int readingMinutes,  String status,  String? publishedAt,  String? publishedUrl,  List<String> newsletterNameSuggestions)  $default,) {final _that = this;
 switch (_that) {
 case _WeeklyArticle():
-return $default(_that.id,_that.weekNumber,_that.season,_that.title,_that.thesis,_that.body,_that.sections,_that.readingMinutes,_that.status,_that.publishedAt,_that.publishedUrl);case _:
+return $default(_that.id,_that.weekNumber,_that.season,_that.title,_that.thesis,_that.body,_that.sections,_that.readingMinutes,_that.status,_that.publishedAt,_that.publishedUrl,_that.newsletterNameSuggestions);case _:
   throw StateError('Unexpected subclass');
 
 }
@@ -219,10 +228,10 @@ return $default(_that.id,_that.weekNumber,_that.season,_that.title,_that.thesis,
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String id,  int weekNumber,  int season,  String title,  String? thesis,  String body,  List<String> sections,  int readingMinutes,  String status,  String? publishedAt,  String? publishedUrl)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String id,  int weekNumber,  int season,  String title,  String? thesis,  String body,  List<String> sections,  int readingMinutes,  String status,  String? publishedAt,  String? publishedUrl,  List<String> newsletterNameSuggestions)?  $default,) {final _that = this;
 switch (_that) {
 case _WeeklyArticle() when $default != null:
-return $default(_that.id,_that.weekNumber,_that.season,_that.title,_that.thesis,_that.body,_that.sections,_that.readingMinutes,_that.status,_that.publishedAt,_that.publishedUrl);case _:
+return $default(_that.id,_that.weekNumber,_that.season,_that.title,_that.thesis,_that.body,_that.sections,_that.readingMinutes,_that.status,_that.publishedAt,_that.publishedUrl,_that.newsletterNameSuggestions);case _:
   return null;
 
 }
@@ -234,7 +243,7 @@ return $default(_that.id,_that.weekNumber,_that.season,_that.title,_that.thesis,
 @JsonSerializable()
 
 class _WeeklyArticle extends WeeklyArticle {
-  const _WeeklyArticle({required this.id, required this.weekNumber, required this.season, this.title = '', this.thesis, this.body = '', final  List<String> sections = const <String>[], this.readingMinutes = 0, this.status = 'ready', this.publishedAt, this.publishedUrl}): _sections = sections,super._();
+  const _WeeklyArticle({required this.id, required this.weekNumber, required this.season, this.title = '', this.thesis, this.body = '', final  List<String> sections = const <String>[], this.readingMinutes = 0, this.status = 'ready', this.publishedAt, this.publishedUrl, final  List<String> newsletterNameSuggestions = const <String>[]}): _sections = sections,_newsletterNameSuggestions = newsletterNameSuggestions,super._();
   factory _WeeklyArticle.fromJson(Map<String, dynamic> json) => _$WeeklyArticleFromJson(json);
 
 @override final  String id;
@@ -269,6 +278,29 @@ class _WeeklyArticle extends WeeklyArticle {
 @override@JsonKey() final  String status;
 @override final  String? publishedAt;
 @override final  String? publishedUrl;
+/// Five candidate names for the newsletter, written with the FIRST
+/// article and empty on every one after it.
+///
+/// Already on the wire — the mobile route spreads the service's row and
+/// strips only `body` — and dropped on the floor until the naming flow
+/// existed to use them. Naming a newsletter from nothing is the hardest
+/// blank page in the product, so the model is asked for candidates in the
+/// same call that writes the article.
+ final  List<String> _newsletterNameSuggestions;
+/// Five candidate names for the newsletter, written with the FIRST
+/// article and empty on every one after it.
+///
+/// Already on the wire — the mobile route spreads the service's row and
+/// strips only `body` — and dropped on the floor until the naming flow
+/// existed to use them. Naming a newsletter from nothing is the hardest
+/// blank page in the product, so the model is asked for candidates in the
+/// same call that writes the article.
+@override@JsonKey() List<String> get newsletterNameSuggestions {
+  if (_newsletterNameSuggestions is EqualUnmodifiableListView) return _newsletterNameSuggestions;
+  // ignore: implicit_dynamic_type
+  return EqualUnmodifiableListView(_newsletterNameSuggestions);
+}
+
 
 /// Create a copy of WeeklyArticle
 /// with the given fields replaced by the non-null parameter values.
@@ -283,16 +315,16 @@ Map<String, dynamic> toJson() {
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is _WeeklyArticle&&(identical(other.id, id) || other.id == id)&&(identical(other.weekNumber, weekNumber) || other.weekNumber == weekNumber)&&(identical(other.season, season) || other.season == season)&&(identical(other.title, title) || other.title == title)&&(identical(other.thesis, thesis) || other.thesis == thesis)&&(identical(other.body, body) || other.body == body)&&const DeepCollectionEquality().equals(other._sections, _sections)&&(identical(other.readingMinutes, readingMinutes) || other.readingMinutes == readingMinutes)&&(identical(other.status, status) || other.status == status)&&(identical(other.publishedAt, publishedAt) || other.publishedAt == publishedAt)&&(identical(other.publishedUrl, publishedUrl) || other.publishedUrl == publishedUrl));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is _WeeklyArticle&&(identical(other.id, id) || other.id == id)&&(identical(other.weekNumber, weekNumber) || other.weekNumber == weekNumber)&&(identical(other.season, season) || other.season == season)&&(identical(other.title, title) || other.title == title)&&(identical(other.thesis, thesis) || other.thesis == thesis)&&(identical(other.body, body) || other.body == body)&&const DeepCollectionEquality().equals(other._sections, _sections)&&(identical(other.readingMinutes, readingMinutes) || other.readingMinutes == readingMinutes)&&(identical(other.status, status) || other.status == status)&&(identical(other.publishedAt, publishedAt) || other.publishedAt == publishedAt)&&(identical(other.publishedUrl, publishedUrl) || other.publishedUrl == publishedUrl)&&const DeepCollectionEquality().equals(other._newsletterNameSuggestions, _newsletterNameSuggestions));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
-int get hashCode => Object.hash(runtimeType,id,weekNumber,season,title,thesis,body,const DeepCollectionEquality().hash(_sections),readingMinutes,status,publishedAt,publishedUrl);
+int get hashCode => Object.hash(runtimeType,id,weekNumber,season,title,thesis,body,const DeepCollectionEquality().hash(_sections),readingMinutes,status,publishedAt,publishedUrl,const DeepCollectionEquality().hash(_newsletterNameSuggestions));
 
 @override
 String toString() {
-  return 'WeeklyArticle(id: $id, weekNumber: $weekNumber, season: $season, title: $title, thesis: $thesis, body: $body, sections: $sections, readingMinutes: $readingMinutes, status: $status, publishedAt: $publishedAt, publishedUrl: $publishedUrl)';
+  return 'WeeklyArticle(id: $id, weekNumber: $weekNumber, season: $season, title: $title, thesis: $thesis, body: $body, sections: $sections, readingMinutes: $readingMinutes, status: $status, publishedAt: $publishedAt, publishedUrl: $publishedUrl, newsletterNameSuggestions: $newsletterNameSuggestions)';
 }
 
 
@@ -303,7 +335,7 @@ abstract mixin class _$WeeklyArticleCopyWith<$Res> implements $WeeklyArticleCopy
   factory _$WeeklyArticleCopyWith(_WeeklyArticle value, $Res Function(_WeeklyArticle) _then) = __$WeeklyArticleCopyWithImpl;
 @override @useResult
 $Res call({
- String id, int weekNumber, int season, String title, String? thesis, String body, List<String> sections, int readingMinutes, String status, String? publishedAt, String? publishedUrl
+ String id, int weekNumber, int season, String title, String? thesis, String body, List<String> sections, int readingMinutes, String status, String? publishedAt, String? publishedUrl, List<String> newsletterNameSuggestions
 });
 
 
@@ -320,7 +352,7 @@ class __$WeeklyArticleCopyWithImpl<$Res>
 
 /// Create a copy of WeeklyArticle
 /// with the given fields replaced by the non-null parameter values.
-@override @pragma('vm:prefer-inline') $Res call({Object? id = null,Object? weekNumber = null,Object? season = null,Object? title = null,Object? thesis = freezed,Object? body = null,Object? sections = null,Object? readingMinutes = null,Object? status = null,Object? publishedAt = freezed,Object? publishedUrl = freezed,}) {
+@override @pragma('vm:prefer-inline') $Res call({Object? id = null,Object? weekNumber = null,Object? season = null,Object? title = null,Object? thesis = freezed,Object? body = null,Object? sections = null,Object? readingMinutes = null,Object? status = null,Object? publishedAt = freezed,Object? publishedUrl = freezed,Object? newsletterNameSuggestions = null,}) {
   return _then(_WeeklyArticle(
 id: null == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
 as String,weekNumber: null == weekNumber ? _self.weekNumber : weekNumber // ignore: cast_nullable_to_non_nullable
@@ -333,7 +365,8 @@ as List<String>,readingMinutes: null == readingMinutes ? _self.readingMinutes : 
 as int,status: null == status ? _self.status : status // ignore: cast_nullable_to_non_nullable
 as String,publishedAt: freezed == publishedAt ? _self.publishedAt : publishedAt // ignore: cast_nullable_to_non_nullable
 as String?,publishedUrl: freezed == publishedUrl ? _self.publishedUrl : publishedUrl // ignore: cast_nullable_to_non_nullable
-as String?,
+as String?,newsletterNameSuggestions: null == newsletterNameSuggestions ? _self._newsletterNameSuggestions : newsletterNameSuggestions // ignore: cast_nullable_to_non_nullable
+as List<String>,
   ));
 }
 

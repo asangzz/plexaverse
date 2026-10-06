@@ -134,6 +134,7 @@ class _PlannerBody extends StatelessWidget {
             onCopy: () => _copyArticle(context, ref, a),
             onMarkPublished: () =>
                 ref.read(articleControllerProvider.notifier).markPublished(),
+            onNameNewsletter: () => _nameNewsletter(context, ref, a),
           ),
         ),
 
@@ -313,6 +314,48 @@ class _PlannerBody extends StatelessWidget {
       case DayKind.rest:
         return null;
     }
+  }
+
+  /// Asks for the newsletter's name, and records it.
+  ///
+  /// A sheet rather than a dialog, because the model's five candidate names
+  /// are the point: naming a newsletter from nothing is the hardest blank page
+  /// in the product, and the candidates are written in the same call as the
+  /// first article precisely so the user never faces it empty.
+  Future<void> _nameNewsletter(
+    BuildContext context,
+    WidgetRef ref,
+    ArticleState state,
+  ) async {
+    final String? name = await showModalBottomSheet<String>(
+      context: context,
+      isScrollControlled: true,
+      useSafeArea: true,
+      useRootNavigator: true,
+      backgroundColor: Colors.transparent,
+      barrierColor: const Color(0xB3000000),
+      builder: (BuildContext ctx) => _NewsletterSheet(
+        suggestions:
+            state.article?.newsletterNameSuggestions ?? const <String>[],
+      ),
+    );
+    if (name == null) return;
+
+    final String? failure = await ref
+        .read(articleControllerProvider.notifier)
+        .setNewsletterName(name);
+
+    if (!context.mounted) return;
+    ScaffoldMessenger.of(context)
+      ..hideCurrentSnackBar()
+      ..showSnackBar(
+        SnackBar(
+          content: Text(
+            failure ?? 'Saved. Captions will name it from now on.',
+            style: ZaveType.body,
+          ),
+        ),
+      );
   }
 
   void _openSlot(BuildContext context, PlanSlot slot, int slotIndex) {
@@ -1245,4 +1288,130 @@ class _ScriptBody extends StatelessWidget {
       ],
     );
   }
+}
+
+/// Name the newsletter.
+///
+/// The candidates are the whole reason this is a sheet and not a one-line
+/// dialog. A newsletter name is the hardest blank page in the product — it is
+/// permanent, public, and the user is being asked for it in the middle of
+/// publishing something else — so the model writes five with the first article
+/// and they are offered before the keyboard is.
+///
+/// Tapping one fills the field rather than submitting. The user should see
+/// what they are about to commit to, and they frequently want to edit a
+/// candidate by a word.
+class _NewsletterSheet extends StatefulWidget {
+  const _NewsletterSheet({required this.suggestions});
+
+  final List<String> suggestions;
+
+  @override
+  State<_NewsletterSheet> createState() => _NewsletterSheetState();
+}
+
+class _NewsletterSheetState extends State<_NewsletterSheet> {
+  final TextEditingController _controller = TextEditingController();
+
+  /// The server's cap, mirrored so the field cannot compose a name the save
+  /// will refuse.
+  static const int _maxLength = 120;
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  void _save() {
+    final String name = _controller.text.trim();
+    if (name.isEmpty) return;
+    Navigator.of(context).pop(name);
+  }
+
+  @override
+  Widget build(BuildContext context) => Padding(
+    padding: EdgeInsets.only(bottom: MediaQuery.viewInsetsOf(context).bottom),
+    child: Container(
+      clipBehavior: Clip.antiAlias,
+      decoration: BoxDecoration(
+        gradient: ZaveGround.base,
+        border: Border.all(color: ZaveGlass.headerBorder),
+        borderRadius: BorderRadius.vertical(
+          top: Radius.circular(ZaveRadius.cardMd),
+        ),
+      ),
+      child: SafeArea(
+        top: false,
+        child: SingleChildScrollView(
+          padding: EdgeInsets.all(ZaveSpace.gutter),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: <Widget>[
+              Text('Name your newsletter', style: ZaveType.h3),
+              SizedBox(height: ZaveSpace.sm),
+              Text(
+                // Says plainly what this is and is not. The user is about to
+                // be asked for the same thing by LinkedIn, and a screen that
+                // implied we had created it for them would be a lie they
+                // discover thirty seconds later.
+                'Create it in LinkedIn’s own composer while you publish, then '
+                'tell us what you called it. Every later edition goes into the '
+                'same newsletter.',
+                style: ZaveType.bodyMuted,
+              ),
+
+              if (widget.suggestions.isNotEmpty) ...<Widget>[
+                SizedBox(height: ZaveSpace.xl),
+                Text('IDEAS', style: ZaveType.kicker),
+                SizedBox(height: ZaveSpace.sm),
+                Wrap(
+                  spacing: ZaveSpace.sm,
+                  runSpacing: ZaveSpace.sm,
+                  children: <Widget>[
+                    for (final String s in widget.suggestions)
+                      ZaveChip(
+                        label: s,
+                        selected: _controller.text.trim() == s,
+                        // Fills the field, does not submit. The user should
+                        // see what they are committing to, and they often
+                        // want to change a candidate by one word.
+                        onTap: () => setState(() {
+                          _controller
+                            ..text = s
+                            ..selection = TextSelection.collapsed(
+                              offset: s.length,
+                            );
+                        }),
+                      ),
+                  ],
+                ),
+              ],
+
+              SizedBox(height: ZaveSpace.xl),
+              ZaveField(
+                controller: _controller,
+                hint: 'The Onboarding Letter',
+                maxLength: _maxLength,
+                textInputAction: TextInputAction.done,
+                onChanged: (_) => setState(() {}),
+                onSubmitted: (_) => _save(),
+              ),
+
+              SizedBox(height: ZaveSpace.lg),
+              ZaveButton.primary(
+                label: 'Save the name',
+                expand: true,
+                // Disabled on empty rather than saving and failing: the server
+                // refuses a blank name, and a button that can only error is
+                // worse than one that waits.
+                onPressed: _controller.text.trim().isEmpty ? null : _save,
+              ),
+            ],
+          ),
+        ),
+      ),
+    ),
+  );
 }

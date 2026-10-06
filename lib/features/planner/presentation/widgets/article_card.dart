@@ -40,6 +40,7 @@ class ArticleCard extends StatelessWidget {
     required this.onOpen,
     required this.onCopy,
     required this.onMarkPublished,
+    required this.onNameNewsletter,
     super.key,
   });
 
@@ -52,6 +53,10 @@ class ArticleCard extends StatelessWidget {
   final VoidCallback onCopy;
 
   final VoidCallback onMarkPublished;
+
+  /// Opens the name-your-newsletter sheet. Only reachable while
+  /// [ArticleState.isFirstArticle] and no name has been recorded.
+  final VoidCallback onNameNewsletter;
 
   @override
   Widget build(BuildContext context) {
@@ -131,21 +136,50 @@ class ArticleCard extends StatelessWidget {
               ],
             ],
           ),
+          // The create-a-newsletter note stays up even after the name is
+          // recorded, and that is deliberate: `isFirstArticle` does not mean
+          // "has a name", it means LinkedIn will ask the user to CREATE the
+          // newsletter while they publish this edition. Saving the name here
+          // records it; LinkedIn is where the thing comes into being. The web
+          // keeps the step for the same reason.
           if (state.isFirstArticle) ...<Widget>[
             SizedBox(height: ZaveSpace.lg),
             Container(
               padding: ZaveSpace.rowPad,
               decoration: ZaveSurface.row,
-              child: Row(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: <Widget>[
-                  const ZaveDot(ZaveColors.amber),
-                  SizedBox(width: ZaveSpace.md),
-                  Expanded(
-                    child: Text(
-                      'You will need to create a newsletter on LinkedIn first.',
-                      style: ZaveType.caption.copyWith(color: ZaveColors.ink62),
-                    ),
+                  Row(
+                    children: <Widget>[
+                      const ZaveDot(ZaveColors.amber),
+                      SizedBox(width: ZaveSpace.md),
+                      Expanded(
+                        child: Text(
+                          'You will need to create a newsletter on LinkedIn '
+                          'first.',
+                          style: ZaveType.caption.copyWith(
+                            color: ZaveColors.ink62,
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
+                  // The way out of the loop. Without it this note was a
+                  // standing instruction with nothing behind it: the name
+                  // could not be recorded from a phone at all, so the note
+                  // came back every week however many newsletters the user
+                  // had made.
+                  if (state.newsletterName == null) ...<Widget>[
+                    SizedBox(height: ZaveSpace.md),
+                    Align(
+                      alignment: Alignment.centerLeft,
+                      child: ZaveButton(
+                        label: 'Name your newsletter',
+                        onPressed: onNameNewsletter,
+                      ),
+                    ),
+                  ],
                 ],
               ),
             ),
