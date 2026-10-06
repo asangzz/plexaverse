@@ -6,18 +6,33 @@ import '../../../preferences/domain/user_preferences.dart';
 import '../../../preferences/application/preferences_controller.dart';
 import 'settings_section.dart';
 
-/// **Mission Schedule** — when the week publishes, and how often.
+/// **Mission Schedule** — when the daily mission arrives, and in which zone.
 ///
-/// The web's Settings page carries only the time and the timezone here; the
-/// cadence itself (`postsPerWeek`, `preferredDays`) is captured during
-/// onboarding and never shown again. Both are exposed on this screen, because
-/// mobile has no other surface that can reach them and the mobile API's
-/// preferences PATCH already accepts them. Flagged as a departure in the
-/// hand-off summary.
+/// ## Why there is no cadence here any more
 ///
-/// **Day numbering is the server's, not Dart's.** The zod schema is
-/// `min(0).max(6)` over a Sunday-first week; `DateTime.weekday` is Monday-first
-/// and 1-based. The conversion happens here, at the edge, and nowhere else.
+/// This screen used to offer POSTS PER WEEK (3 / 5 / 7) and PUBLISHING DAYS
+/// (a Sun–Sat picker). Both wrote real columns. Neither changed anything.
+///
+/// `preferredDays` is validated by the zod schema, stored on
+/// `UserPreferences`, and **read by nothing** — no scheduler, no planner, no
+/// publish path. The week's shape comes from `WEEK_SHAPE`, which is fixed.
+///
+/// `postsPerWeek` is read in exactly one place, `generateWeekPlan`'s
+/// maintenance mode, and that is now a no-op: the kept set is
+/// `postingDays().slice(0, 3)` and the week has two post days, so a cap of
+/// three blanks nothing. The field is NOT dead — `season.service` still sets
+/// it to 3 when a user picks the maintenance path at the end of a season, and
+/// if the week ever regains a fourth posting day the cap bites again. What was
+/// wrong was letting someone set it HERE, where it reads as a promise about
+/// how often they will post.
+///
+/// The web has no cadence UI at all; it captures these at onboarding and never
+/// shows them again. So this is not mobile losing something the web has — it
+/// is mobile no longer offering a choice the product cannot honour, which is
+/// the thing the alignment work exists to fix.
+///
+/// What is left is live: `preferredTime` feeds the publish time, the chain
+/// fire time, the daily mission and the calendar event.
 class CadenceSection extends ConsumerStatefulWidget {
   const CadenceSection({required this.preferences, super.key});
 
@@ -28,26 +43,6 @@ class CadenceSection extends ConsumerStatefulWidget {
 }
 
 class _CadenceSectionState extends ConsumerState<CadenceSection> {
-  /// Sunday-first, matching the server's 0–6.
-  static const List<String> _dayLabels = <String>[
-    'Sun',
-    'Mon',
-    'Tue',
-    'Wed',
-    'Thu',
-    'Fri',
-    'Sat',
-  ];
-
-  /// The cadences the product actually supports. 3 is "maintenance mode" —
-  /// the server caps posting days while the Thursday newsletter still
-  /// generates, because the article is the week's spine and not one of its
-  /// posts (CLAUDE.md §6b). With two post days a week the cap is already met,
-  /// so today it blanks nothing.
-  static const List<int> _cadences = <int>[3, 5, 7];
-
-  late final Set<int> _days = <int>{...widget.preferences.preferredDays};
-  late int _postsPerWeek = widget.preferences.postsPerWeek;
   late TimeOfDay _time = _parseTime(widget.preferences.preferredTime);
   bool _saving = false;
 
@@ -81,15 +76,12 @@ class _CadenceSectionState extends ConsumerState<CadenceSection> {
   Future<void> _save() async {
     setState(() => _saving = true);
     try {
-      final List<int> days = _days.toList()..sort();
       await ref
           .read(preferencesControllerProvider.notifier)
-          .saveCadence(
-            postsPerWeek: _postsPerWeek,
-            preferredDays: days,
-            preferredTime: _formatTime(_time),
-          );
-      if (mounted) showSettingsMessage(context, 'Profile updated successfully!');
+          .saveMissionTime(_formatTime(_time));
+      if (mounted) {
+        showSettingsMessage(context, 'Schedule updated.');
+      }
     } on Object {
       if (mounted) showSettingsMessage(context, 'Failed to update profile.');
     } finally {
@@ -104,50 +96,6 @@ class _CadenceSectionState extends ConsumerState<CadenceSection> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: <Widget>[
-          Text('POSTS PER WEEK', style: ZaveType.kicker),
-          SizedBox(height: ZaveSpace.sm),
-          Wrap(
-            spacing: ZaveSpace.sm,
-            runSpacing: ZaveSpace.sm,
-            children: <Widget>[
-              for (final int n in _cadences)
-                ZaveChip(
-                  label: '$n',
-                  selected: _postsPerWeek == n,
-                  onTap: () => setState(() => _postsPerWeek = n),
-                ),
-            ],
-          ),
-          if (_postsPerWeek <= 3) ...<Widget>[
-            SizedBox(height: ZaveSpace.sm),
-            Text(
-              'Maintenance mode. Your Thursday newsletter still gets written — '
-              'it is the week’s spine, not one of its posts.',
-              style: ZaveType.caption,
-            ),
-          ],
-
-          const SettingsDivider(),
-
-          Text('PUBLISHING DAYS', style: ZaveType.kicker),
-          SizedBox(height: ZaveSpace.sm),
-          Wrap(
-            spacing: ZaveSpace.sm,
-            runSpacing: ZaveSpace.sm,
-            children: <Widget>[
-              for (int day = 0; day < _dayLabels.length; day++)
-                ZaveChip(
-                  label: _dayLabels[day],
-                  selected: _days.contains(day),
-                  onTap: () => setState(() {
-                    if (!_days.remove(day)) _days.add(day);
-                  }),
-                ),
-            ],
-          ),
-
-          const SettingsDivider(),
-
           Text('DAILY MISSION TIME', style: ZaveType.kicker),
           SizedBox(height: ZaveSpace.sm),
           Align(

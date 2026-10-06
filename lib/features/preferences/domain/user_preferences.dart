@@ -126,7 +126,11 @@ abstract class UserPreferences with _$UserPreferences {
     return day > roadmapTotalDays;
   }
 
-  /// Maintenance mode — the reduced cadence. The Thursday newsletter still
-  /// generates; only the post slots shrink.
-  bool get isMaintenance => postsPerWeek <= 3;
+  // `isMaintenance` lived here — `postsPerWeek <= 3` — with a doc saying the
+  // post slots shrink. It had no callers, and the claim stopped being true at
+  // the pivot: the kept set is `postingDays().slice(0, 3)` and the week has
+  // two post days, so a cap of three blanks nothing. A dead getter is cheap;
+  // a dead getter that asserts something false is what the next person reads
+  // and believes. If maintenance needs a client-side notion again, derive it
+  // from the week shape rather than from a number that no longer implies it.
 }

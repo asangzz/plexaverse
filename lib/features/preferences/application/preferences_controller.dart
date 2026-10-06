@@ -121,22 +121,21 @@ class PreferencesController extends _$PreferencesController {
   Future<void> saveBrandType(String brandType) =>
       _patch(<String, dynamic>{'brandType': brandType});
 
-  /// Cadence — how often and when the week publishes.
+  /// When the daily mission arrives — `HH:mm` in the user's own timezone.
   ///
-  /// `preferredDays` is a list of `DateTime.weekday`-style day numbers in the
-  /// server's convention, which is **0 = Sunday** (the zod schema is
-  /// `min(0).max(6)`), NOT Dart's 1 = Monday. The UI converts at the edge.
-  Future<void> saveCadence({
-    int? postsPerWeek,
-    List<int>? preferredDays,
-    String? preferredTime,
-  }) {
-    final Map<String, dynamic> patch = <String, dynamic>{};
-    if (postsPerWeek != null) patch['postsPerWeek'] = postsPerWeek;
-    if (preferredDays != null) patch['preferredDays'] = preferredDays;
-    if (preferredTime != null) patch['preferredTime'] = preferredTime;
-    return _patch(patch);
-  }
+  /// One field, where this used to be `saveCadence(postsPerWeek,
+  /// preferredDays, preferredTime)`. The other two were removed from the
+  /// screen because neither changed anything: `preferredDays` is read by
+  /// nothing at all, and `postsPerWeek`'s only reader — maintenance mode in
+  /// `generateWeekPlan` — is a no-op at the current week shape. They are still
+  /// columns, and `season.service` still writes `postsPerWeek`; what went was
+  /// the control that let someone set them and believe it mattered.
+  ///
+  /// Not re-widened without a reader. A partial-patch helper that accepts
+  /// fields nothing acts on is how the inert controls got built in the first
+  /// place.
+  Future<void> saveMissionTime(String preferredTime) =>
+      _patch(<String, dynamic>{'preferredTime': preferredTime});
 
   /// Where approval requests are delivered. Wire values are
   /// `slack` | `whatsapp` | `email`; the web offers the first two.
