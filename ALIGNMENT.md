@@ -73,23 +73,6 @@ handed** (`persona_repositories.dart:148-188` reads `identity`/`bank`/
 
 ### Medium
 
-**1. `completeRoadmapStep` writes the completion row before it knows the step
-exists, then silently awards 0 XP.** The trigger recorded was wrong — both UIs
-already filter `publish-post`, so no user can tap it; the path that fires it is
-`getRoadmapProgress`'s auto-credit calling `getBaseRoadmap(brandType)` **bare**
-at `roadmap.service.ts:188` and then `completeRoadmapStep` at `:228`, which
-rebuilds the roadmap *with* `roadmapStartedAt` at `:301`. A self-inconsistency
-between two call sites 113 lines apart.
-**Open Plexa does NOT make it more frequent** — it credits only `comment` and
-`connect`, from `buildRoadmap`, which already drops what the server drops.
-**But it exposed the same root bug on a step that costs real XP:** the WEB chat
-resolves its lane steps from a bare `getBaseRoadmap()`
-(`PlexaDayChat.tsx:117`), which keeps `connect` for everyone, while
-`roadmap-data.ts:255` drops step 3 for company brand. A company-brand user
-clearing the connections lane is told "Requests done. Logged." and loses the
-50 XP permanently — the row is marked complete, so the idempotency guard at
-`:275` means nothing can award it later. The Flutter port is correct here.
-
 **4. Engagement progress dies on screen pop, not app kill.** Both controllers
 are auto-dispose (`engagement_controllers.g.dart:224,351`, no `keepAlive`), so
 tapping to the dashboard and back already shows 0 of 3. The two surfaces openly
@@ -143,6 +126,7 @@ swapping it, so the next shape change cannot re-break it.
 |---|---|---|
 | 2 | Generate button on hand-off days always failed | `49ca63d` — the `NOT_A_POST_DAY` branch (`planner_repositories.dart:104-106`), its copy (`planner_page.dart:723`), and the `slot.isPublishable` gate that removes the button entirely (`:654-664`) |
 | 3 | The video script had no mobile surface at all — `7ff913e` added the route and nothing called it, so Wednesday and Friday opened a sheet whose only action was rewriting the title of a script the app could not show. Both hand-off rows were also pinned at "to write" for ever, reading a `status` column that a hand-off day never reaches | A `VideoScript` model, three repository methods, `VideoScriptsController`, and the shot list in the slot sheet. `slotSignal` now takes a `HandoffState` resolved from the script row (or the article row for Thursday) instead of `slot.status`. The mock plan carries the real `weekShape` too — it built all seven days as posts, so the flavor this app is manually tested on showed a week the product stopped producing |
+| 1 | `completeRoadmapStep` upserted the completion row BEFORE resolving the step, so a miss wrote a phantom completed row — and the already-completed guard then made it permanent. Six resolvers called `getBaseRoadmap()` bare or half-bare, describing a different roadmap from the one the award path rebuilt | The step is resolved first and a miss throws NOT_FOUND writing nothing; all six resolvers now pass `brandType` AND `roadmapStartedAt` (the chat, the auto-credit, and the four dashboard pages that POST a step id); the web route maps NOT_FOUND to 404 instead of 500. **Correction to the original note:** for the company/`connect` case no XP was ever *owed* — step 3 is not on a company roadmap — so the damage was a phantom row, not a refundable 50 XP. The Flutter port was already correct |
 | B | Inline base64 in `posts.image_url` was an ONGOING leak, not a historical 78 MB — measured at **154 posts / 78.6 MB**, up from the 152 first recorded. `/api/ai/poster` returns a `data:` URL; the auto-post chain converted it, five client call sites did not, and none of them wrote a thumb, so every such post is also a permanent placeholder in the mobile feed | The guard went into `createUserPost`/`updateUserPost` rather than the five call sites — they are the only two paths that write the column, so nothing can reintroduce it. It REPAIRS rather than rejects: the auto-post chain deliberately falls back to an inline URL when Storage is down, and a hard rejection would turn a Storage blip into a missing image on an unattended publish. Plus `scripts/backfill-inline-post-images.ts` for what is already there |
 | 9 | Newsletter naming dead-ended. The web route is session-authenticated so a bearer could not reach it, and the preferences PATCH could not carry the name either — that schema is `.strict()` with no `newsletterName` field, so a client that tried had the WHOLE patch rejected. `isFirstArticle` is `!newsletterName`, so it stayed true for ever: the planner asked the user to create a newsletter they already had, every week, and captions kept naming the article generically | `POST /api/mobile/v1/planner/newsletter`, plus the naming sheet on the article card. The model's five candidate names were already on the wire and dropped on the floor. The fake held the name as a literal, so `isFirstArticle` was false for ever under the mock and this whole flow was unreachable on the build the app is tested on |
 | 5 | Top Voices: a phone-only user got **zero** curated posts anywhere (the generator's only caller was a web-session route), and the Comments step asked for ten against a screen that could supply five, so Finish could never enable | `GET`/`PATCH /api/mobile/v1/top-voices`, the `TopVoicesSection` card, `reachableCommentTarget`, a Dart port of the forty category ids and a picker in Settings. The two fakes that seeded category LABELS are fixed too — they would have had every preferences PATCH rejected by the server's refine |
