@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
+import '../../../../core/ui/app_icons.dart';
 import '../../../../core/ui/zave/zave_kit.dart';
 import '../../domain/weekly_article.dart';
 
@@ -41,6 +42,7 @@ class ArticleCard extends StatelessWidget {
     required this.onCopy,
     required this.onMarkPublished,
     required this.onNameNewsletter,
+    required this.onSetReminder,
     super.key,
   });
 
@@ -57,6 +59,10 @@ class ArticleCard extends StatelessWidget {
   /// Opens the name-your-newsletter sheet. Only reachable while
   /// [ArticleState.isFirstArticle] and no name has been recorded.
   final VoidCallback onNameNewsletter;
+
+  /// Picks a time to be reminded, or clears the one that is set. Never
+  /// offered on a published article — there is nothing left to remind about.
+  final VoidCallback onSetReminder;
 
   @override
   Widget build(BuildContext context) {
@@ -184,6 +190,13 @@ class ArticleCard extends StatelessWidget {
               ),
             ),
           ],
+          // The reminder. Only before publishing, and worded so it cannot be
+          // read as scheduling a publish: LinkedIn has no articles endpoint on
+          // our scopes, so the only thing a time buys is a nudge.
+          if (!article.isPublished) ...<Widget>[
+            SizedBox(height: ZaveSpace.lg),
+            _ReminderRow(at: article.reminderAt(), onTap: onSetReminder),
+          ],
           SizedBox(height: ZaveSpace.lg),
           // Stacked, like the engagement cards and for the same arithmetic.
           //
@@ -211,5 +224,89 @@ class ArticleCard extends StatelessWidget {
         ],
       ),
     );
+  }
+}
+
+/// "Remind me when it is time to paste this in."
+///
+/// Says `Remind me` when nothing is set and the time when one is — the same
+/// row either way, because a control that disappears once used gives no way
+/// back when the plan changes.
+class _ReminderRow extends StatelessWidget {
+  const _ReminderRow({required this.at, required this.onTap});
+
+  /// Null when no reminder is set, or when the time has already passed — a
+  /// nudge that has already fired is not a reminder.
+  final DateTime? at;
+
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) => ZavePress(
+    child: GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTap: onTap,
+      child: Container(
+        padding: ZaveSpace.rowPad,
+        decoration: ZaveSurface.row,
+        child: Row(
+          children: <Widget>[
+            Icon(
+              AppIcons.schedule,
+              size: 15,
+              color: at == null ? ZaveColors.ink45 : ZaveColors.lavenderLo,
+            ),
+            SizedBox(width: ZaveSpace.md),
+            Expanded(
+              child: Text(
+                at == null
+                    // Names what it does, not what it schedules. "Schedule"
+                    // would promise a publish the product cannot perform.
+                    ? 'Remind me to post this'
+                    : 'Reminder set for ${_when(at!)}',
+                style: ZaveType.caption.copyWith(
+                  color: at == null ? ZaveColors.ink62 : ZaveColors.ink85,
+                ),
+              ),
+            ),
+            Icon(AppIcons.chevronRight, size: 12, color: ZaveColors.ink45),
+          ],
+        ),
+      ),
+    ),
+  );
+
+  /// "Thu 09:00", or "12 Nov 09:00" once it is more than a week out — a
+  /// weekday alone stops being unambiguous past seven days.
+  static String _when(DateTime at) {
+    const List<String> days = <String>[
+      'Mon',
+      'Tue',
+      'Wed',
+      'Thu',
+      'Fri',
+      'Sat',
+      'Sun',
+    ];
+    const List<String> months = <String>[
+      'Jan',
+      'Feb',
+      'Mar',
+      'Apr',
+      'May',
+      'Jun',
+      'Jul',
+      'Aug',
+      'Sep',
+      'Oct',
+      'Nov',
+      'Dec',
+    ];
+    final String time =
+        '${at.hour.toString().padLeft(2, '0')}:'
+        '${at.minute.toString().padLeft(2, '0')}';
+    return at.difference(DateTime.now()).inDays < 7
+        ? '${days[at.weekday - 1]} $time'
+        : '${at.day} ${months[at.month - 1]} $time';
   }
 }

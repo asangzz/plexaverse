@@ -347,6 +347,40 @@ class ArticleController extends _$ArticleController {
         .fetchArticle(week: target.week, season: target.season);
   }
 
+  /// Sets — or clears — the reminder for the week's article.
+  ///
+  /// Returns an error sentence, or null on success. The server's own words are
+  /// passed through on a refusal: "pick a time that has not already passed"
+  /// tells the user what to do and a generic failure does not.
+  ///
+  /// Not optimistic. This is a deliberate choice with a time attached, and a
+  /// reminder that appeared to save and then reverted would be worse than one
+  /// that took a moment — the user cannot tell whether to expect the nudge.
+  Future<String?> setArticleReminder(DateTime? when) async {
+    final ArticleState? current = state.value;
+    if (current?.article == null) {
+      return 'There is no article to remind you about.';
+    }
+
+    try {
+      await ref
+          .read(plannerRepositoryProvider)
+          .setArticleSchedule(
+            weekNumber: current!.weekNumber,
+            season: current.season,
+            when: when,
+          );
+      ref.invalidateSelf();
+      return null;
+    } on PlannerScheduleRefused catch (e) {
+      return e.message;
+    } on Failure catch (f) {
+      return f.message;
+    } on Object {
+      return 'That reminder did not save. Try again.';
+    }
+  }
+
   /// Records the name of the newsletter the user created on LinkedIn.
   ///
   /// Returns an error sentence, or null on success.

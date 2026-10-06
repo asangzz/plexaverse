@@ -54,6 +54,20 @@ abstract class WeeklyArticle with _$WeeklyArticle {
     String? publishedAt,
     String? publishedUrl,
 
+    /// When the user means to publish it — ISO 8601, or null for no reminder.
+    ///
+    /// **Not a publish time.** There is no articles or newsletter endpoint on
+    /// the scopes this product holds, so the only thing a time buys is a Cloud
+    /// Task that nudges the user at it; they still paste the article across
+    /// themselves. Any UI that implies otherwise is lying about what the
+    /// product can do.
+    ///
+    /// It has been on the wire since the column existed — the mobile route
+    /// spreads the service's row — and had no field to land in, so a reminder
+    /// set on the web was sent to the phone and dropped. The nudge arrived for
+    /// a time the app had never shown and could not change.
+    String? scheduledFor,
+
     /// Five candidate names for the newsletter, written with the FIRST
     /// article and empty on every one after it.
     ///
@@ -69,6 +83,22 @@ abstract class WeeklyArticle with _$WeeklyArticle {
       _$WeeklyArticleFromJson(json);
 
   bool get isPublished => publishedAt != null;
+
+  /// A reminder is set and still ahead of us.
+  ///
+  /// A time in the past is not a reminder — the task has already fired, or the
+  /// week has moved on — and showing one would promise a nudge that is not
+  /// coming.
+  /// [now] is injectable for the same reason `FollowerReading.isStale`'s is:
+  /// something that reads the clock inline cannot be tested at the boundary,
+  /// and the boundary is the whole behaviour here.
+  DateTime? reminderAt({DateTime? now}) {
+    final DateTime? at = DateTime.tryParse(scheduledFor ?? '');
+    if (at == null) return null;
+    return at.isAfter(now ?? DateTime.now()) ? at.toLocal() : null;
+  }
+
+  bool hasReminder({DateTime? now}) => reminderAt(now: now) != null;
 
   /// Rough reading time, for the card's meta line.
   int get readMinutes => readingMinutes;

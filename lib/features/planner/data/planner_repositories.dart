@@ -322,6 +322,39 @@ class ApiPlannerRepository implements PlannerRepository {
   }
 
   @override
+  Future<WeeklyArticle?> setArticleSchedule({
+    required int weekNumber,
+    required int season,
+    required DateTime? when,
+  }) async {
+    try {
+      final response = await _client.post<Map<String, dynamic>>(
+        ApiPaths.plannerArticle,
+        data: <String, dynamic>{
+          'weekNumber': weekNumber,
+          'season': season,
+          'action': 'schedule',
+          // Explicitly null to CLEAR. Omitting the key would read as "leave it
+          // alone", and there would be no way to cancel a reminder.
+          'scheduledFor': when?.toUtc().toIso8601String(),
+        },
+      );
+      final Object? article = response.data?['article'];
+      return article is Map<String, dynamic>
+          ? WeeklyArticle.fromJson(article)
+          : null;
+    } on DioException catch (e) {
+      final int? status = e.response?.statusCode;
+      if (status == 400 || status == 404) {
+        throw PlannerScheduleRefused(
+          _serverMessage(e) ?? 'That reminder could not be set.',
+        );
+      }
+      rethrow;
+    }
+  }
+
+  @override
   Future<WeeklyArticle?> markArticlePublished({
     required int weekNumber,
     required int season,
@@ -662,33 +695,45 @@ class FakePlannerRepository implements PlannerRepository {
       newsletterName: _newsletterName,
       // Exactly how the server computes it.
       isFirstArticle: _newsletterName == null,
-      article: const WeeklyArticle(
-        id: 'mock-article-1',
-        weekNumber: 3,
-        season: 1,
-        newsletterNameSuggestions: <String>[
-          'The Onboarding Letter',
-          'First Week',
-          'Day One',
-          'The Joining Note',
-          'Week One Review',
-        ],
-        title: 'Onboarding is a design problem, not a documentation problem',
-        thesis:
-            'Teams keep fixing onboarding by writing more documentation, when '
-            'the failure is almost always a design failure in the first week.',
-        body:
-            'Most teams treat onboarding as a documentation exercise. Write '
-            'enough down, the thinking goes, and a new joiner will find their '
-            'way.\n\nIt does not work, and the reason is not effort.\n\n'
-            '(…full article body…)',
-        sections: <String>[
-          'The first week decides the year',
-          'Three metrics nobody tracks',
-          'The handover problem',
-          'A checklist you can steal',
-        ],
-      ),
+      article:
+          const WeeklyArticle(
+            id: 'mock-article-1',
+            weekNumber: 3,
+            season: 1,
+            newsletterNameSuggestions: <String>[
+              'The Onboarding Letter',
+              'First Week',
+              'Day One',
+              'The Joining Note',
+              'Week One Review',
+            ],
+            // The SERVER counts this, from a body this fixture only stubs.
+            // Left unset it rendered "0 min read" on the one build the app is
+            // manually tested on — a number that is never zero in production,
+            // for an article the spec puts at 1200–1800 words.
+            readingMinutes: 7,
+            title:
+                'Onboarding is a design problem, not a documentation problem',
+            thesis:
+                'Teams keep fixing onboarding by writing more documentation, when '
+                'the failure is almost always a design failure in the first week.',
+            body:
+                'Most teams treat onboarding as a documentation exercise. Write '
+                'enough down, the thinking goes, and a new joiner will find their '
+                'way.\n\nIt does not work, and the reason is not effort.\n\n'
+                '(…full article body…)',
+            sections: <String>[
+              'The first week decides the year',
+              'Three metrics nobody tracks',
+              'The handover problem',
+              'A checklist you can steal',
+            ],
+          ).copyWith(
+            // Read back from what setArticleSchedule and markArticlePublished
+            // stored, so both flows are walkable end to end against the fake.
+            scheduledFor: _articleScheduledFor,
+            publishedAt: _articlePublishedAt,
+          ),
     );
   }
 
@@ -711,6 +756,36 @@ class FakePlannerRepository implements PlannerRepository {
     return _newsletterName = name.trim();
   }
 
+  /// Held so fetchArticle can read them back. Both start null, which is the
+  /// state the reminder prompt and the "I published it" button exist for — a
+  /// fixture that returned either would hide the flow it stands in for.
+  String? _articleScheduledFor;
+  String? _articlePublishedAt;
+
+  @override
+  Future<WeeklyArticle?> setArticleSchedule({
+    required int weekNumber,
+    required int season,
+    required DateTime? when,
+  }) async {
+    await Future<void>.delayed(const Duration(milliseconds: 250));
+    // Refuses for the same two reasons the server does, so both failure
+    // messages are walkable without a backend.
+    if (_articlePublishedAt != null) {
+      throw const PlannerScheduleRefused(
+        'You have already published this one — there is nothing left to '
+        'remind you about.',
+      );
+    }
+    if (when != null && !when.isAfter(DateTime.now())) {
+      throw const PlannerScheduleRefused(
+        'Pick a time that has not already passed.',
+      );
+    }
+    _articleScheduledFor = when?.toUtc().toIso8601String();
+    return null;
+  }
+
   @override
   Future<WeeklyArticle?> markArticlePublished({
     required int weekNumber,
@@ -718,6 +793,7 @@ class FakePlannerRepository implements PlannerRepository {
     String? publishedUrl,
   }) async {
     await Future<void>.delayed(const Duration(milliseconds: 250));
+    _articlePublishedAt = DateTime.now().toUtc().toIso8601String();
     return null;
   }
 }

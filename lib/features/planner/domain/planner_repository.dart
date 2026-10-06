@@ -133,12 +133,45 @@ abstract class PlannerRepository {
   /// Returns the stored name, which is [name] trimmed.
   Future<String> setNewsletterName(String name);
 
+  /// Sets — or clears — the reminder for the week's article.
+  ///
+  /// **This does not publish anything**, and no caller should suggest it
+  /// does. There is no articles endpoint on the scopes this product holds, so
+  /// the only thing a time buys is a notification at it; the user still pastes
+  /// the article across by hand.
+  ///
+  /// Null clears both the stored time and the booked task.
+  ///
+  /// Throws [PlannerScheduleRefused] when the article is already published or
+  /// the time has passed — both of which carry the server's own sentence,
+  /// because it says what to do next.
+  Future<WeeklyArticle?> setArticleSchedule({
+    required int weekNumber,
+    required int season,
+    required DateTime? when,
+  });
+
   /// Records that the user pasted the article into LinkedIn themselves.
   Future<WeeklyArticle?> markArticlePublished({
     required int weekNumber,
     required int season,
     String? publishedUrl,
   });
+}
+
+/// The server refused a reminder, and said why.
+///
+/// A typed failure rather than a bool because the two reasons need different
+/// words — "you already published this one" and "pick a time that has not
+/// passed" are different instructions — and the server's own sentence is
+/// better than anything the client could compose from a code.
+class PlannerScheduleRefused implements Exception {
+  const PlannerScheduleRefused(this.message);
+
+  final String message;
+
+  @override
+  String toString() => message;
 }
 
 /// What approving a slot actually did.

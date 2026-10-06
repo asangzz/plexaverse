@@ -135,6 +135,7 @@ class _PlannerBody extends StatelessWidget {
             onMarkPublished: () =>
                 ref.read(articleControllerProvider.notifier).markPublished(),
             onNameNewsletter: () => _nameNewsletter(context, ref, a),
+            onSetReminder: () => _setReminder(context, ref, a),
           ),
         ),
 
@@ -352,6 +353,112 @@ class _PlannerBody extends StatelessWidget {
         SnackBar(
           content: Text(
             failure ?? 'Saved. Captions will name it from now on.',
+            style: ZaveType.body,
+          ),
+        ),
+      );
+  }
+
+  /// Picks when to be reminded to paste the article in — or clears it.
+  ///
+  /// A date then a time, which is two taps more than a single sheet would be,
+  /// but both are the platform's own pickers: they handle the locale, the
+  /// 12/24-hour setting and the calendar, and a hand-rolled one would get at
+  /// least one of those wrong for somebody.
+  ///
+  /// The clear path lives here rather than on the card because it only exists
+  /// once a reminder does, and a second control on the row for a state most
+  /// users are never in would cost everyone the space.
+  Future<void> _setReminder(
+    BuildContext context,
+    WidgetRef ref,
+    ArticleState state,
+  ) async {
+    final DateTime? existing = state.article?.reminderAt();
+
+    if (existing != null) {
+      final bool? clear = await showModalBottomSheet<bool>(
+        context: context,
+        useRootNavigator: true,
+        backgroundColor: Colors.transparent,
+        builder: (BuildContext ctx) => _Sheet(
+          children: <Widget>[
+            Text('Reminder', style: ZaveType.h3),
+            SizedBox(height: ZaveSpace.sm),
+            Text(
+              'We will nudge you at this time. We cannot post the article for '
+              'you — LinkedIn has no API for articles — so this is a reminder '
+              'to paste it in yourself.',
+              style: ZaveType.bodyMuted,
+            ),
+            SizedBox(height: ZaveSpace.xl),
+            ZaveButton.primary(
+              label: 'Pick a different time',
+              expand: true,
+              onPressed: () => Navigator.of(ctx).pop(false),
+            ),
+            SizedBox(height: ZaveSpace.md),
+            ZaveButton(
+              label: 'Clear the reminder',
+              expand: true,
+              onPressed: () => Navigator.of(ctx).pop(true),
+            ),
+          ],
+        ),
+      );
+      if (clear == null || !context.mounted) return;
+      if (clear) {
+        await _saveReminder(context, ref, null);
+        return;
+      }
+    }
+
+    final DateTime now = DateTime.now();
+    if (!context.mounted) return;
+    final DateTime? day = await showDatePicker(
+      context: context,
+      initialDate: existing ?? now.add(const Duration(days: 1)),
+      // Today at the earliest — the server refuses a time that has passed, and
+      // offering yesterday would be offering a guaranteed rejection.
+      firstDate: now,
+      lastDate: now.add(const Duration(days: 365)),
+    );
+    if (day == null || !context.mounted) return;
+
+    final TimeOfDay? time = await showTimePicker(
+      context: context,
+      initialTime: existing == null
+          ? const TimeOfDay(hour: 9, minute: 0)
+          : TimeOfDay.fromDateTime(existing),
+    );
+    if (time == null || !context.mounted) return;
+
+    await _saveReminder(
+      context,
+      ref,
+      DateTime(day.year, day.month, day.day, time.hour, time.minute),
+    );
+  }
+
+  Future<void> _saveReminder(
+    BuildContext context,
+    WidgetRef ref,
+    DateTime? when,
+  ) async {
+    final String? failure = await ref
+        .read(articleControllerProvider.notifier)
+        .setArticleReminder(when);
+
+    if (!context.mounted) return;
+    ScaffoldMessenger.of(context)
+      ..hideCurrentSnackBar()
+      ..showSnackBar(
+        SnackBar(
+          content: Text(
+            failure ??
+                (when == null
+                    ? 'Reminder cleared.'
+                    : 'We will nudge you then.'),
             style: ZaveType.body,
           ),
         ),
