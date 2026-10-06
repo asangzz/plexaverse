@@ -77,8 +77,15 @@ const Color _mercuryLight = Color(0xFFA8ABB3);
 const Color _mercuryDark = Color(0xFF44484F);
 
 /// `PLANET_SIZES` + `PLANET_GRADIENT` + `PLANET_SHADOWS`, keyed as the web
-/// keys them. The three unused keys (nebula, quasar, nova) are not ported —
-/// nothing in the 66-day timeline reaches them.
+/// keys them.
+///
+/// **Every key in `roadmapPlanets` must appear here.** It did not always: when
+/// the arc was 66 days the timeline stopped at Neptune, so nebula, quasar and
+/// nova were knowingly left out. The 1000-day rebuild made all twelve
+/// reachable and nothing failed loudly, because both lookup sites fall back to
+/// `planetVisuals['uranus']!` — so days 601-1000 drew Uranus's cyan sphere
+/// under three different names. A missing key here is invisible by
+/// construction; `planet_visuals_test.dart` is what makes it visible.
 final Map<String, PlanetVisual> planetVisuals = <String, PlanetVisual>{
   'mercury': PlanetVisual(
     ring: 88,
@@ -198,6 +205,59 @@ final Map<String, PlanetVisual> planetVisuals = <String, PlanetVisual>{
     halo: const Color(0x4D0074D9), // rgba(0,116,217,0.3)
     haloBlur: 15,
   ),
+  // The deep-space three. `PLANET_SHADOWS` gives these no `inset` component at
+  // all — they are emissive objects, not lit spheres — so insetAlpha is 0 and
+  // the terminator overlay is skipped. Their gradients are `circle` with no
+  // `at`, i.e. centred: the default centre plus a farthest-corner radius, the
+  // same shape as Saturn.
+  'nebula': PlanetVisual(
+    ring: 110,
+    sphere: 80,
+    gradient: RadialGradient(
+      radius: _farthestCorner(0.5, 0.5),
+      colors: const <Color>[
+        Color(0xFFFF00FF),
+        Color(0xFF4B0082),
+        Color(0xFF000000),
+      ],
+      stops: const <double>[0, 0.5, 1],
+    ),
+    insetAlpha: 0,
+    halo: const Color(0x66FF00FF), // rgba(255,0,255,0.4)
+    haloBlur: 20,
+  ),
+  'quasar': PlanetVisual(
+    ring: 120,
+    sphere: 85,
+    gradient: RadialGradient(
+      radius: _farthestCorner(0.5, 0.5),
+      colors: const <Color>[
+        Color(0xFFFFFFFF),
+        Color(0xFF00FFFF),
+        Color(0xFF00008B),
+      ],
+      stops: const <double>[0, 0.3, 1],
+    ),
+    insetAlpha: 0,
+    halo: const Color(0x8000FFFF), // rgba(0,255,255,0.5)
+    haloBlur: 25,
+  ),
+  'nova': PlanetVisual(
+    ring: 130,
+    sphere: 90,
+    gradient: RadialGradient(
+      radius: _farthestCorner(0.5, 0.5),
+      colors: const <Color>[
+        Color(0xFFFF4500),
+        Color(0xFFFFFF00),
+        Color(0xFF000000),
+      ],
+      stops: const <double>[0, 0.4, 1],
+    ),
+    insetAlpha: 0,
+    halo: const Color(0x99FF4500), // rgba(255,69,0,0.6)
+    haloBlur: 30,
+  ),
   'milkyway': const PlanetVisual(
     ring: 150,
     sphere: 110,
@@ -207,6 +267,23 @@ final Map<String, PlanetVisual> planetVisuals = <String, PlanetVisual>{
     haloBlur: 60,
   ),
 };
+
+/// The drawing spec for a planet key.
+///
+/// Use this, never a raw `planetVisuals[key] ?? …` at the call site. The
+/// release fallback has to exist — a missing texture must not take the roadmap
+/// down — but on its own it is the bug: it draws a real planet's sphere under
+/// another planet's name and looks deliberate. The assert makes a porting gap
+/// fail in debug and in tests, where it is cheap to fix.
+PlanetVisual planetVisual(String key) {
+  final PlanetVisual? v = planetVisuals[key];
+  assert(
+    v != null,
+    'No PlanetVisual for planet key "$key". Every key in roadmapPlanets needs '
+    'an entry in planetVisuals, or it silently renders as Uranus.',
+  );
+  return v ?? planetVisuals['uranus']!;
+}
 
 /// `filter: grayscale(0.6) brightness(0.7) contrast(0.9)` on a locked planet.
 ///
@@ -266,7 +343,7 @@ class PlanetSphere extends StatelessWidget {
   final String planetKey;
   final bool isLocked;
 
-  PlanetVisual get _v => planetVisuals[planetKey] ?? planetVisuals['uranus']!;
+  PlanetVisual get _v => planetVisual(planetKey);
 
   @override
   Widget build(BuildContext context) {
@@ -644,8 +721,7 @@ class _PlanetNodeState extends State<PlanetNode>
 
   @override
   Widget build(BuildContext context) {
-    final PlanetVisual v =
-        planetVisuals[widget.planetKey] ?? planetVisuals['uranus']!;
+    final PlanetVisual v = planetVisual(widget.planetKey);
     final Color signal = roadmapStatusColor(widget.status);
     final double ring = v.ring.r;
 

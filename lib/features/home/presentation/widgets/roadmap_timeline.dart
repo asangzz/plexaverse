@@ -315,8 +315,11 @@ class _PlanetOverlay extends StatelessWidget {
     return Stack(clipBehavior: Clip.none, children: planets);
   }
 
-  double _planetRowHeight(String key) =>
-      ((planetVisuals[key]?.ring ?? 100) + 40).r;
+  // Must agree with PlanetNode's own box (`ring + 40`), which is why it reads
+  // the same table. The old `?? 100` default silently shrank the box for the
+  // three planets that had no entry, mis-centring their rows on top of drawing
+  // the wrong sphere.
+  double _planetRowHeight(String key) => (planetVisual(key).ring + 40).r;
 
   /// One status for the whole leg.
   ///
