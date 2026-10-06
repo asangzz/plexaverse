@@ -150,7 +150,53 @@ abstract class PersonaSnapshot with _$PersonaSnapshot {
     /// How many writing samples the style memory holds. Drives the Voice row's
     /// "Learned from N samples".
     @Default(0) int voiceSampleCount,
+
+    /// The latest follower count the user has told us, and when it was true.
+    ///
+    /// Null means nothing has ever been recorded — by the `.xlsx` import or by
+    /// hand — which is the state the roadmap's checkpoint prompt exists for.
+    /// It was on the wire all along (`reach.followers`) and dropped on the
+    /// floor by the mapper below.
+    FollowerReading? followers,
   }) = _PersonaSnapshot;
+}
+
+/// A follower count, and the moment it was TRUE.
+///
+/// The two are inseparable and the second is the one people get wrong: a count
+/// checked last night and typed this morning belongs to last night, and a
+/// reading filed under the wrong day bends the growth curve it feeds. It is
+/// also what decides when to ask again — see [isStale].
+///
+/// LinkedIn gives no app the follower count of a personal profile
+/// (`r_member_social_actions` is Partner-Program-only), so every one of these
+/// came from a person reading it off their own screen.
+@freezed
+abstract class FollowerReading with _$FollowerReading {
+  const FollowerReading._();
+
+  const factory FollowerReading({
+    @Default(0) int count,
+
+    /// ISO 8601, as the server stored it.
+    @Default('') String measuredAt,
+  }) = _FollowerReading;
+
+  factory FollowerReading.fromJson(Map<String, dynamic> json) =>
+      _$FollowerReadingFromJson(json);
+
+  /// A month old, unparseable, or absent — all of which mean "ask again".
+  ///
+  /// Thirty days is the web's `FOLLOWER_STALE_DAYS`: about how long a figure
+  /// stays useful against a checkpoint a quarter away, and long enough that
+  /// answering never feels like a chore.
+  static const int staleDays = 30;
+
+  bool isStale({DateTime? now}) {
+    final DateTime? at = DateTime.tryParse(measuredAt);
+    if (at == null) return true;
+    return (now ?? DateTime.now()).difference(at).inDays > staleDays;
+  }
 }
 
 /// One turn of the Plexa conversation.

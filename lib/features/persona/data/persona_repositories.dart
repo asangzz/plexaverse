@@ -47,6 +47,24 @@ class ApiPersonaRepository implements PersonaRepository {
   });
 
   @override
+  Future<FollowerReading?> recordFollowers({
+    required int count,
+    DateTime? measuredAt,
+  }) async {
+    final response = await _client.post<Map<String, dynamic>>(
+      ApiPaths.personaReach,
+      data: <String, dynamic>{
+        'followers': count,
+        if (measuredAt != null)
+          'measuredAt': measuredAt.toUtc().toIso8601String(),
+      },
+    );
+    return _followers(<String, dynamic>{
+      'followers': response.data?['followers'],
+    });
+  }
+
+  @override
   Future<String> importReachExport(PickedFile file) async {
     try {
       final FormData form = FormData.fromMap(<String, dynamic>{
@@ -113,24 +131,23 @@ class ApiPersonaRepository implements PersonaRepository {
   });
 
   @override
-  Future<PersonaSnapshot> applyProposals(
-    List<PersonaProposal> proposals,
-  ) => _guard(() async {
-    await _client.post<Map<String, dynamic>>(
-      ApiPaths.personaApply,
-      data: <String, dynamic>{
-        'proposals': proposals
-            .map(
-              (PersonaProposal p) => <String, dynamic>{
-                'field': p.field,
-                'to': p.to,
-              },
-            )
-            .toList(growable: false),
-      },
-    );
-    return _get();
-  });
+  Future<PersonaSnapshot> applyProposals(List<PersonaProposal> proposals) =>
+      _guard(() async {
+        await _client.post<Map<String, dynamic>>(
+          ApiPaths.personaApply,
+          data: <String, dynamic>{
+            'proposals': proposals
+                .map(
+                  (PersonaProposal p) => <String, dynamic>{
+                    'field': p.field,
+                    'to': p.to,
+                  },
+                )
+                .toList(growable: false),
+          },
+        );
+        return _get();
+      });
 
   Future<PersonaSnapshot> _get() async {
     final response = await _client.get<Map<String, dynamic>>(ApiPaths.persona);
@@ -147,7 +164,8 @@ class ApiPersonaRepository implements PersonaRepository {
   /// explicit mapping rather than a generated `fromJson`.
   static PersonaSnapshot _compose(Map<String, dynamic> json) {
     final Map<String, dynamic> identity =
-        (json['identity'] as Map<String, dynamic>?) ?? const <String, dynamic>{};
+        (json['identity'] as Map<String, dynamic>?) ??
+        const <String, dynamic>{};
     final Map<String, dynamic> audience =
         (identity['audience'] as Map<String, dynamic>?) ??
         const <String, dynamic>{};
@@ -184,6 +202,30 @@ class ApiPersonaRepository implements PersonaRepository {
           ? const SubstanceBank(unavailable: true)
           : SubstanceBank.fromJson(bank),
       voiceSampleCount: (identity['voiceSampleCount'] as num?)?.toInt() ?? 0,
+      // `reach.followers` has been in this payload since the route existed and
+      // was read by nothing — the doc comment above even names `reach` as part
+      // of the shape. A field produced and never consumed is indistinguishable
+      // from a field that does not exist, which is how the roadmap ended up
+      // with checkpoints it could not measure.
+      followers: _followers(json['reach']),
+    );
+  }
+
+  /// `{ reach: { followers: { count, measuredAt } | null } }`, defensively.
+  ///
+  /// Null at every level is a real state: a user who has never recorded one,
+  /// and also a reach read the server could not complete — `getReachSummary`
+  /// reports `unavailable` rather than throwing. Both mean "no number", which
+  /// is what the checkpoint prompt is for.
+  static FollowerReading? _followers(Object? reach) {
+    if (reach is! Map<String, dynamic>) return null;
+    final Object? followers = reach['followers'];
+    if (followers is! Map<String, dynamic>) return null;
+    final int? count = (followers['count'] as num?)?.toInt();
+    if (count == null) return null;
+    return FollowerReading(
+      count: count,
+      measuredAt: (followers['measuredAt'] as String?) ?? '',
     );
   }
 
@@ -256,7 +298,11 @@ class FakePersonaRepository implements PersonaRepository {
   @override
   Future<PersonaSnapshot> fetchPersona() async {
     await Future<void>.delayed(_latency);
-    return _snapshot;
+    // Reads back what recordFollowers stored. Starting null is deliberate:
+    // the mock opens in the state the checkpoint prompt exists for, and a
+    // fixture that returned a count would have hidden the prompt entirely on
+    // the build this app is manually tested on.
+    return _snapshot.copyWith(followers: _recorded);
   }
 
   @override
@@ -274,6 +320,21 @@ class FakePersonaRepository implements PersonaRepository {
       ),
     );
     return _snapshot;
+  }
+
+  /// Null to begin with — see fetchPersona.
+  FollowerReading? _recorded;
+
+  @override
+  Future<FollowerReading?> recordFollowers({
+    required int count,
+    DateTime? measuredAt,
+  }) async {
+    await Future<void>.delayed(const Duration(milliseconds: 250));
+    return _recorded = FollowerReading(
+      count: count,
+      measuredAt: (measuredAt ?? DateTime.now()).toUtc().toIso8601String(),
+    );
   }
 
   @override

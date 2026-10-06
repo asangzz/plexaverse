@@ -347,7 +347,7 @@ final class CommentsControllerProvider
 }
 
 String _$commentsControllerHash() =>
-    r'dd33d000e7b116995e1c1a09b663210d27980422';
+    r'5168b6b6e594b1ac34b8fed1de8962275922ed31';
 
 /// The day's comment batch.
 ///
@@ -457,7 +457,7 @@ final class ConnectionsControllerProvider
 }
 
 String _$connectionsControllerHash() =>
-    r'62f7721648c351ae6c729487c44a986ca7ebfc08';
+    r'7d2e2400654f6de9479e625845497b23a1dcc273';
 
 /// The day's connection targets.
 

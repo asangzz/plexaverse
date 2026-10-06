@@ -62,15 +62,6 @@ earlier notes still resolve — 6 and 12 are closed and listed at the bottom.
 
 ### High — missing
 
-**7. Follower capture — narrower than recorded.** The `.xlsx` import is fully
-on-device now (`persona_page.dart:492-520` → `/persona/reach/import`), and the
-GET half effectively exists: `persona.service.ts:68,102` already folds
-`{count, measuredAt}` into the mobile payload. What is open: there is **no POST
-route** so a count cannot be typed; Flutter **throws away the number it is
-handed** (`persona_repositories.dart:148-188` reads `identity`/`bank`/
-`voiceSampleCount`, never `json['reach']`); and `followerTarget` in
-`roadmap_planets.dart` is assigned and read nowhere, so no checkpoint UI exists.
-
 ### Medium
 
 **8. `scheduledFor` is on the wire and dropped.** The Flutter `WeeklyArticle`
@@ -98,6 +89,7 @@ identical to each other and to a planet passed on day 366.
 fallbacks at `:269` and `:648` assert in debug.
 
 **10. No follower-history endpoint, and no growth chart on mobile to want one.**
+*(Partly unblocked: `POST /persona/reach` now exists, so readings accumulate. What is missing is `GET /persona/reach/history` and the chart itself, which is the larger half.)*
 `getFollowerHistory` is web-only. More to the point, there is no chart in the
 Flutter repo at all — no charting package, no `*chart*` file — so the
 "where 100,000 comes from" argument that justifies posting daily is web-only.
@@ -118,6 +110,7 @@ swapping it, so the next shape change cannot re-break it.
 |---|---|---|
 | 2 | Generate button on hand-off days always failed | `49ca63d` — the `NOT_A_POST_DAY` branch (`planner_repositories.dart:104-106`), its copy (`planner_page.dart:723`), and the `slot.isPublishable` gate that removes the button entirely (`:654-664`) |
 | 3 | The video script had no mobile surface at all — `7ff913e` added the route and nothing called it, so Wednesday and Friday opened a sheet whose only action was rewriting the title of a script the app could not show. Both hand-off rows were also pinned at "to write" for ever, reading a `status` column that a hand-off day never reaches | A `VideoScript` model, three repository methods, `VideoScriptsController`, and the shot list in the slot sheet. `slotSignal` now takes a `HandoffState` resolved from the script row (or the article row for Thursday) instead of `slot.status`. The mock plan carries the real `weekShape` too — it built all seven days as posts, so the flavor this app is manually tested on showed a week the product stopped producing |
+| 7 | Follower capture. The `.xlsx` import was already on-device and the count was already on the wire as `reach.followers` — but there was no POST route, so a phone-only user could not TYPE the number; the Flutter mapper dropped the one it was handed; and `followerTarget` was declared and read by nobody, so the roadmap named checkpoints it could not measure anyone against | `POST`/`GET /api/mobile/v1/persona/reach`, `FollowerReading` on the snapshot, and the checkpoint strip above the day's missions — ask, then the bar showing what the number bought, re-asking after 30 days. **The Flutter phase targets were 1,000/10,000 against the web's 3,000/15,000** — harmless while nothing read them, four wrong numbers on screen the moment something did |
 | 4 | Engagement progress was in-memory and the controllers are auto-dispose, so it died on screen POP, not app kill — tapping to the dashboard and back showed `0 of 10` over work that was done, while Open Plexa, reading the shared row, showed the real count | Both controllers now seed from the shared `plexa_day` row and write to it; `plexaItemId` holds the `nw:`/`cn:` scheme in one documented place. The two fakes held a session EACH, so the mock could never show the two surfaces agreeing — they share one row now, which is what made the cross-surface check possible at all |
 | 1 | `completeRoadmapStep` upserted the completion row BEFORE resolving the step, so a miss wrote a phantom completed row — and the already-completed guard then made it permanent. Six resolvers called `getBaseRoadmap()` bare or half-bare, describing a different roadmap from the one the award path rebuilt | The step is resolved first and a miss throws NOT_FOUND writing nothing; all six resolvers now pass `brandType` AND `roadmapStartedAt` (the chat, the auto-credit, and the four dashboard pages that POST a step id); the web route maps NOT_FOUND to 404 instead of 500. **Correction to the original note:** for the company/`connect` case no XP was ever *owed* — step 3 is not on a company roadmap — so the damage was a phantom row, not a refundable 50 XP. The Flutter port was already correct |
 | B | Inline base64 in `posts.image_url` was an ONGOING leak, not a historical 78 MB — measured at **154 posts / 78.6 MB**, up from the 152 first recorded. `/api/ai/poster` returns a `data:` URL; the auto-post chain converted it, five client call sites did not, and none of them wrote a thumb, so every such post is also a permanent placeholder in the mobile feed | The guard went into `createUserPost`/`updateUserPost` rather than the five call sites — they are the only two paths that write the column, so nothing can reintroduce it. It REPAIRS rather than rejects: the auto-post chain deliberately falls back to an inline URL when Storage is down, and a hard rejection would turn a Storage blip into a missing image on an unattended publish. Plus `scripts/backfill-inline-post-images.ts` for what is already there |

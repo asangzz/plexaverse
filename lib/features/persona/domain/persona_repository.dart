@@ -43,6 +43,24 @@ abstract class PersonaRepository {
   /// who picked the wrong file than a generic failure.
   Future<String> importReachExport(PickedFile file);
 
+  /// `POST /persona/reach` — records a follower count the user typed.
+  ///
+  /// The other half of [importReachExport], and the one a phone can actually
+  /// reach: the export has to be fetched from LinkedIn first, which is a
+  /// desktop errand, while this is a number someone can read off their own
+  /// profile in five seconds.
+  ///
+  /// [measuredAt] is when the count was TRUE, not when it was typed. People
+  /// check in the evening and enter it the next morning, and a reading filed
+  /// under the wrong day bends the growth curve it feeds. Null means now.
+  ///
+  /// Returns the stored reading — including the server's own `measuredAt`,
+  /// which is what the staleness rule reads a month from now.
+  Future<FollowerReading?> recordFollowers({
+    required int count,
+    DateTime? measuredAt,
+  });
+
   /// `POST /persona/audience` — asks the model who this user should write for.
   /// Returns candidates; choosing one is a separate [saveAudience].
   Future<List<PersonaAudience>> suggestAudiences();

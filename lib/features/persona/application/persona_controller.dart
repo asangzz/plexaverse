@@ -25,12 +25,56 @@ class PersonaController extends _$PersonaController {
   /// LinkedIn export" tells the user what to do next and a generic failure
   /// does not.
   Future<String> importReach(PickedFile file) async {
-    final String message =
-        await ref.read(personaRepositoryProvider).importReachExport(file);
+    final String message = await ref
+        .read(personaRepositoryProvider)
+        .importReachExport(file);
     // Refresh either way: a partial import still moved the numbers, and a
     // stale screen after a successful one reads as nothing having happened.
     ref.invalidateSelf();
     return message;
+  }
+
+  /// Records a follower count the user typed.
+  ///
+  /// Optimistic. The user read the number off their own profile seconds ago
+  /// and the server stores it verbatim; a progress bar that waits on a round
+  /// trip before moving reads as a form that did not take.
+  ///
+  /// Returns an error sentence, or null on success.
+  Future<String?> recordFollowers(int count, {DateTime? measuredAt}) async {
+    if (count < 0) return 'That is not a follower count.';
+
+    final PersonaSnapshot? current = state.value;
+    if (current != null) {
+      state = AsyncData<PersonaSnapshot>(
+        current.copyWith(
+          followers: FollowerReading(
+            count: count,
+            measuredAt: (measuredAt ?? DateTime.now())
+                .toUtc()
+                .toIso8601String(),
+          ),
+        ),
+      );
+    }
+
+    try {
+      final FollowerReading? saved = await ref
+          .read(personaRepositoryProvider)
+          .recordFollowers(count: count, measuredAt: measuredAt);
+      // The server's own measuredAt, not the optimistic one — it is the field
+      // the staleness rule reads a month from now, and a client clock that is
+      // wrong would otherwise decide when the user is asked again.
+      if (saved != null && state.value != null) {
+        state = AsyncData<PersonaSnapshot>(
+          state.value!.copyWith(followers: saved),
+        );
+      }
+      return null;
+    } on Object {
+      if (current != null) state = AsyncData<PersonaSnapshot>(current);
+      return 'That did not save. Try again.';
+    }
   }
 
   /// Saves who the user writes for.
@@ -105,10 +149,7 @@ class PersonaChat extends _$PersonaChat {
     if (text.isEmpty || _sending) return;
 
     _sending = true;
-    state = <PersonaTurn>[
-      ...state,
-      PersonaTurn(text: text, fromUser: true),
-    ];
+    state = <PersonaTurn>[...state, PersonaTurn(text: text, fromUser: true)];
 
     try {
       final PersonaReply reply = await ref

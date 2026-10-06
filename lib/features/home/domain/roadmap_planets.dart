@@ -62,20 +62,25 @@ class RoadmapPhase {
 }
 
 /// Mirrors `ROADMAP_PHASES`.
+///
+/// The first two targets were 1,000 and 10,000 here against the web's 3,000
+/// and 15,000 — a divergence that cost nothing while `followerTarget` was
+/// declared and read by nobody, and would have become four wrong numbers on
+/// screen the moment a checkpoint surface existed. It does now.
 const List<RoadmapPhase> roadmapPhases = <RoadmapPhase>[
   RoadmapPhase(
     key: 'getting_seen',
     name: 'Getting Seen',
     startDay: 1,
     endDay: 90,
-    followerTarget: 1000,
+    followerTarget: 3000,
   ),
   RoadmapPhase(
     key: 'being_trusted',
     name: 'Being Trusted',
     startDay: 91,
     endDay: 365,
-    followerTarget: 10000,
+    followerTarget: 15000,
   ),
   RoadmapPhase(
     key: 'compounding',

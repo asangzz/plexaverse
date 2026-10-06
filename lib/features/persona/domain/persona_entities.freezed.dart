@@ -1195,7 +1195,13 @@ mixin _$PersonaSnapshot {
 
  PersonaIdentity get identity; PersonaAudience get audience; SubstanceBank get bank;/// How many writing samples the style memory holds. Drives the Voice row's
 /// "Learned from N samples".
- int get voiceSampleCount;
+ int get voiceSampleCount;/// The latest follower count the user has told us, and when it was true.
+///
+/// Null means nothing has ever been recorded — by the `.xlsx` import or by
+/// hand — which is the state the roadmap's checkpoint prompt exists for.
+/// It was on the wire all along (`reach.followers`) and dropped on the
+/// floor by the mapper below.
+ FollowerReading? get followers;
 /// Create a copy of PersonaSnapshot
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
@@ -1206,16 +1212,16 @@ $PersonaSnapshotCopyWith<PersonaSnapshot> get copyWith => _$PersonaSnapshotCopyW
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is PersonaSnapshot&&(identical(other.identity, identity) || other.identity == identity)&&(identical(other.audience, audience) || other.audience == audience)&&(identical(other.bank, bank) || other.bank == bank)&&(identical(other.voiceSampleCount, voiceSampleCount) || other.voiceSampleCount == voiceSampleCount));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is PersonaSnapshot&&(identical(other.identity, identity) || other.identity == identity)&&(identical(other.audience, audience) || other.audience == audience)&&(identical(other.bank, bank) || other.bank == bank)&&(identical(other.voiceSampleCount, voiceSampleCount) || other.voiceSampleCount == voiceSampleCount)&&(identical(other.followers, followers) || other.followers == followers));
 }
 
 
 @override
-int get hashCode => Object.hash(runtimeType,identity,audience,bank,voiceSampleCount);
+int get hashCode => Object.hash(runtimeType,identity,audience,bank,voiceSampleCount,followers);
 
 @override
 String toString() {
-  return 'PersonaSnapshot(identity: $identity, audience: $audience, bank: $bank, voiceSampleCount: $voiceSampleCount)';
+  return 'PersonaSnapshot(identity: $identity, audience: $audience, bank: $bank, voiceSampleCount: $voiceSampleCount, followers: $followers)';
 }
 
 
@@ -1226,11 +1232,11 @@ abstract mixin class $PersonaSnapshotCopyWith<$Res>  {
   factory $PersonaSnapshotCopyWith(PersonaSnapshot value, $Res Function(PersonaSnapshot) _then) = _$PersonaSnapshotCopyWithImpl;
 @useResult
 $Res call({
- PersonaIdentity identity, PersonaAudience audience, SubstanceBank bank, int voiceSampleCount
+ PersonaIdentity identity, PersonaAudience audience, SubstanceBank bank, int voiceSampleCount, FollowerReading? followers
 });
 
 
-$PersonaIdentityCopyWith<$Res> get identity;$PersonaAudienceCopyWith<$Res> get audience;$SubstanceBankCopyWith<$Res> get bank;
+$PersonaIdentityCopyWith<$Res> get identity;$PersonaAudienceCopyWith<$Res> get audience;$SubstanceBankCopyWith<$Res> get bank;$FollowerReadingCopyWith<$Res>? get followers;
 
 }
 /// @nodoc
@@ -1243,13 +1249,14 @@ class _$PersonaSnapshotCopyWithImpl<$Res>
 
 /// Create a copy of PersonaSnapshot
 /// with the given fields replaced by the non-null parameter values.
-@pragma('vm:prefer-inline') @override $Res call({Object? identity = null,Object? audience = null,Object? bank = null,Object? voiceSampleCount = null,}) {
+@pragma('vm:prefer-inline') @override $Res call({Object? identity = null,Object? audience = null,Object? bank = null,Object? voiceSampleCount = null,Object? followers = freezed,}) {
   return _then(_self.copyWith(
 identity: null == identity ? _self.identity : identity // ignore: cast_nullable_to_non_nullable
 as PersonaIdentity,audience: null == audience ? _self.audience : audience // ignore: cast_nullable_to_non_nullable
 as PersonaAudience,bank: null == bank ? _self.bank : bank // ignore: cast_nullable_to_non_nullable
 as SubstanceBank,voiceSampleCount: null == voiceSampleCount ? _self.voiceSampleCount : voiceSampleCount // ignore: cast_nullable_to_non_nullable
-as int,
+as int,followers: freezed == followers ? _self.followers : followers // ignore: cast_nullable_to_non_nullable
+as FollowerReading?,
   ));
 }
 /// Create a copy of PersonaSnapshot
@@ -1278,6 +1285,18 @@ $SubstanceBankCopyWith<$Res> get bank {
   
   return $SubstanceBankCopyWith<$Res>(_self.bank, (value) {
     return _then(_self.copyWith(bank: value));
+  });
+}/// Create a copy of PersonaSnapshot
+/// with the given fields replaced by the non-null parameter values.
+@override
+@pragma('vm:prefer-inline')
+$FollowerReadingCopyWith<$Res>? get followers {
+    if (_self.followers == null) {
+    return null;
+  }
+
+  return $FollowerReadingCopyWith<$Res>(_self.followers!, (value) {
+    return _then(_self.copyWith(followers: value));
   });
 }
 }
@@ -1361,10 +1380,10 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( PersonaIdentity identity,  PersonaAudience audience,  SubstanceBank bank,  int voiceSampleCount)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( PersonaIdentity identity,  PersonaAudience audience,  SubstanceBank bank,  int voiceSampleCount,  FollowerReading? followers)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _PersonaSnapshot() when $default != null:
-return $default(_that.identity,_that.audience,_that.bank,_that.voiceSampleCount);case _:
+return $default(_that.identity,_that.audience,_that.bank,_that.voiceSampleCount,_that.followers);case _:
   return orElse();
 
 }
@@ -1382,10 +1401,10 @@ return $default(_that.identity,_that.audience,_that.bank,_that.voiceSampleCount)
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( PersonaIdentity identity,  PersonaAudience audience,  SubstanceBank bank,  int voiceSampleCount)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( PersonaIdentity identity,  PersonaAudience audience,  SubstanceBank bank,  int voiceSampleCount,  FollowerReading? followers)  $default,) {final _that = this;
 switch (_that) {
 case _PersonaSnapshot():
-return $default(_that.identity,_that.audience,_that.bank,_that.voiceSampleCount);case _:
+return $default(_that.identity,_that.audience,_that.bank,_that.voiceSampleCount,_that.followers);case _:
   throw StateError('Unexpected subclass');
 
 }
@@ -1402,10 +1421,10 @@ return $default(_that.identity,_that.audience,_that.bank,_that.voiceSampleCount)
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( PersonaIdentity identity,  PersonaAudience audience,  SubstanceBank bank,  int voiceSampleCount)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( PersonaIdentity identity,  PersonaAudience audience,  SubstanceBank bank,  int voiceSampleCount,  FollowerReading? followers)?  $default,) {final _that = this;
 switch (_that) {
 case _PersonaSnapshot() when $default != null:
-return $default(_that.identity,_that.audience,_that.bank,_that.voiceSampleCount);case _:
+return $default(_that.identity,_that.audience,_that.bank,_that.voiceSampleCount,_that.followers);case _:
   return null;
 
 }
@@ -1417,7 +1436,7 @@ return $default(_that.identity,_that.audience,_that.bank,_that.voiceSampleCount)
 
 
 class _PersonaSnapshot extends PersonaSnapshot {
-  const _PersonaSnapshot({required this.identity, this.audience = const PersonaAudience(), this.bank = const SubstanceBank(), this.voiceSampleCount = 0}): super._();
+  const _PersonaSnapshot({required this.identity, this.audience = const PersonaAudience(), this.bank = const SubstanceBank(), this.voiceSampleCount = 0, this.followers}): super._();
   
 
 @override final  PersonaIdentity identity;
@@ -1426,6 +1445,13 @@ class _PersonaSnapshot extends PersonaSnapshot {
 /// How many writing samples the style memory holds. Drives the Voice row's
 /// "Learned from N samples".
 @override@JsonKey() final  int voiceSampleCount;
+/// The latest follower count the user has told us, and when it was true.
+///
+/// Null means nothing has ever been recorded — by the `.xlsx` import or by
+/// hand — which is the state the roadmap's checkpoint prompt exists for.
+/// It was on the wire all along (`reach.followers`) and dropped on the
+/// floor by the mapper below.
+@override final  FollowerReading? followers;
 
 /// Create a copy of PersonaSnapshot
 /// with the given fields replaced by the non-null parameter values.
@@ -1437,16 +1463,16 @@ _$PersonaSnapshotCopyWith<_PersonaSnapshot> get copyWith => __$PersonaSnapshotCo
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is _PersonaSnapshot&&(identical(other.identity, identity) || other.identity == identity)&&(identical(other.audience, audience) || other.audience == audience)&&(identical(other.bank, bank) || other.bank == bank)&&(identical(other.voiceSampleCount, voiceSampleCount) || other.voiceSampleCount == voiceSampleCount));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is _PersonaSnapshot&&(identical(other.identity, identity) || other.identity == identity)&&(identical(other.audience, audience) || other.audience == audience)&&(identical(other.bank, bank) || other.bank == bank)&&(identical(other.voiceSampleCount, voiceSampleCount) || other.voiceSampleCount == voiceSampleCount)&&(identical(other.followers, followers) || other.followers == followers));
 }
 
 
 @override
-int get hashCode => Object.hash(runtimeType,identity,audience,bank,voiceSampleCount);
+int get hashCode => Object.hash(runtimeType,identity,audience,bank,voiceSampleCount,followers);
 
 @override
 String toString() {
-  return 'PersonaSnapshot(identity: $identity, audience: $audience, bank: $bank, voiceSampleCount: $voiceSampleCount)';
+  return 'PersonaSnapshot(identity: $identity, audience: $audience, bank: $bank, voiceSampleCount: $voiceSampleCount, followers: $followers)';
 }
 
 
@@ -1457,11 +1483,11 @@ abstract mixin class _$PersonaSnapshotCopyWith<$Res> implements $PersonaSnapshot
   factory _$PersonaSnapshotCopyWith(_PersonaSnapshot value, $Res Function(_PersonaSnapshot) _then) = __$PersonaSnapshotCopyWithImpl;
 @override @useResult
 $Res call({
- PersonaIdentity identity, PersonaAudience audience, SubstanceBank bank, int voiceSampleCount
+ PersonaIdentity identity, PersonaAudience audience, SubstanceBank bank, int voiceSampleCount, FollowerReading? followers
 });
 
 
-@override $PersonaIdentityCopyWith<$Res> get identity;@override $PersonaAudienceCopyWith<$Res> get audience;@override $SubstanceBankCopyWith<$Res> get bank;
+@override $PersonaIdentityCopyWith<$Res> get identity;@override $PersonaAudienceCopyWith<$Res> get audience;@override $SubstanceBankCopyWith<$Res> get bank;@override $FollowerReadingCopyWith<$Res>? get followers;
 
 }
 /// @nodoc
@@ -1474,13 +1500,14 @@ class __$PersonaSnapshotCopyWithImpl<$Res>
 
 /// Create a copy of PersonaSnapshot
 /// with the given fields replaced by the non-null parameter values.
-@override @pragma('vm:prefer-inline') $Res call({Object? identity = null,Object? audience = null,Object? bank = null,Object? voiceSampleCount = null,}) {
+@override @pragma('vm:prefer-inline') $Res call({Object? identity = null,Object? audience = null,Object? bank = null,Object? voiceSampleCount = null,Object? followers = freezed,}) {
   return _then(_PersonaSnapshot(
 identity: null == identity ? _self.identity : identity // ignore: cast_nullable_to_non_nullable
 as PersonaIdentity,audience: null == audience ? _self.audience : audience // ignore: cast_nullable_to_non_nullable
 as PersonaAudience,bank: null == bank ? _self.bank : bank // ignore: cast_nullable_to_non_nullable
 as SubstanceBank,voiceSampleCount: null == voiceSampleCount ? _self.voiceSampleCount : voiceSampleCount // ignore: cast_nullable_to_non_nullable
-as int,
+as int,followers: freezed == followers ? _self.followers : followers // ignore: cast_nullable_to_non_nullable
+as FollowerReading?,
   ));
 }
 
@@ -1511,7 +1538,287 @@ $SubstanceBankCopyWith<$Res> get bank {
   return $SubstanceBankCopyWith<$Res>(_self.bank, (value) {
     return _then(_self.copyWith(bank: value));
   });
+}/// Create a copy of PersonaSnapshot
+/// with the given fields replaced by the non-null parameter values.
+@override
+@pragma('vm:prefer-inline')
+$FollowerReadingCopyWith<$Res>? get followers {
+    if (_self.followers == null) {
+    return null;
+  }
+
+  return $FollowerReadingCopyWith<$Res>(_self.followers!, (value) {
+    return _then(_self.copyWith(followers: value));
+  });
 }
+}
+
+
+/// @nodoc
+mixin _$FollowerReading {
+
+ int get count;/// ISO 8601, as the server stored it.
+ String get measuredAt;
+/// Create a copy of FollowerReading
+/// with the given fields replaced by the non-null parameter values.
+@JsonKey(includeFromJson: false, includeToJson: false)
+@pragma('vm:prefer-inline')
+$FollowerReadingCopyWith<FollowerReading> get copyWith => _$FollowerReadingCopyWithImpl<FollowerReading>(this as FollowerReading, _$identity);
+
+  /// Serializes this FollowerReading to a JSON map.
+  Map<String, dynamic> toJson();
+
+
+@override
+bool operator ==(Object other) {
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is FollowerReading&&(identical(other.count, count) || other.count == count)&&(identical(other.measuredAt, measuredAt) || other.measuredAt == measuredAt));
+}
+
+@JsonKey(includeFromJson: false, includeToJson: false)
+@override
+int get hashCode => Object.hash(runtimeType,count,measuredAt);
+
+@override
+String toString() {
+  return 'FollowerReading(count: $count, measuredAt: $measuredAt)';
+}
+
+
+}
+
+/// @nodoc
+abstract mixin class $FollowerReadingCopyWith<$Res>  {
+  factory $FollowerReadingCopyWith(FollowerReading value, $Res Function(FollowerReading) _then) = _$FollowerReadingCopyWithImpl;
+@useResult
+$Res call({
+ int count, String measuredAt
+});
+
+
+
+
+}
+/// @nodoc
+class _$FollowerReadingCopyWithImpl<$Res>
+    implements $FollowerReadingCopyWith<$Res> {
+  _$FollowerReadingCopyWithImpl(this._self, this._then);
+
+  final FollowerReading _self;
+  final $Res Function(FollowerReading) _then;
+
+/// Create a copy of FollowerReading
+/// with the given fields replaced by the non-null parameter values.
+@pragma('vm:prefer-inline') @override $Res call({Object? count = null,Object? measuredAt = null,}) {
+  return _then(_self.copyWith(
+count: null == count ? _self.count : count // ignore: cast_nullable_to_non_nullable
+as int,measuredAt: null == measuredAt ? _self.measuredAt : measuredAt // ignore: cast_nullable_to_non_nullable
+as String,
+  ));
+}
+
+}
+
+
+/// Adds pattern-matching-related methods to [FollowerReading].
+extension FollowerReadingPatterns on FollowerReading {
+/// A variant of `map` that fallback to returning `orElse`.
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case final Subclass value:
+///     return ...;
+///   case _:
+///     return orElse();
+/// }
+/// ```
+
+@optionalTypeArgs TResult maybeMap<TResult extends Object?>(TResult Function( _FollowerReading value)?  $default,{required TResult orElse(),}){
+final _that = this;
+switch (_that) {
+case _FollowerReading() when $default != null:
+return $default(_that);case _:
+  return orElse();
+
+}
+}
+/// A `switch`-like method, using callbacks.
+///
+/// Callbacks receives the raw object, upcasted.
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case final Subclass value:
+///     return ...;
+///   case final Subclass2 value:
+///     return ...;
+/// }
+/// ```
+
+@optionalTypeArgs TResult map<TResult extends Object?>(TResult Function( _FollowerReading value)  $default,){
+final _that = this;
+switch (_that) {
+case _FollowerReading():
+return $default(_that);case _:
+  throw StateError('Unexpected subclass');
+
+}
+}
+/// A variant of `map` that fallback to returning `null`.
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case final Subclass value:
+///     return ...;
+///   case _:
+///     return null;
+/// }
+/// ```
+
+@optionalTypeArgs TResult? mapOrNull<TResult extends Object?>(TResult? Function( _FollowerReading value)?  $default,){
+final _that = this;
+switch (_that) {
+case _FollowerReading() when $default != null:
+return $default(_that);case _:
+  return null;
+
+}
+}
+/// A variant of `when` that fallback to an `orElse` callback.
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case Subclass(:final field):
+///     return ...;
+///   case _:
+///     return orElse();
+/// }
+/// ```
+
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( int count,  String measuredAt)?  $default,{required TResult orElse(),}) {final _that = this;
+switch (_that) {
+case _FollowerReading() when $default != null:
+return $default(_that.count,_that.measuredAt);case _:
+  return orElse();
+
+}
+}
+/// A `switch`-like method, using callbacks.
+///
+/// As opposed to `map`, this offers destructuring.
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case Subclass(:final field):
+///     return ...;
+///   case Subclass2(:final field2):
+///     return ...;
+/// }
+/// ```
+
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( int count,  String measuredAt)  $default,) {final _that = this;
+switch (_that) {
+case _FollowerReading():
+return $default(_that.count,_that.measuredAt);case _:
+  throw StateError('Unexpected subclass');
+
+}
+}
+/// A variant of `when` that fallback to returning `null`
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case Subclass(:final field):
+///     return ...;
+///   case _:
+///     return null;
+/// }
+/// ```
+
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( int count,  String measuredAt)?  $default,) {final _that = this;
+switch (_that) {
+case _FollowerReading() when $default != null:
+return $default(_that.count,_that.measuredAt);case _:
+  return null;
+
+}
+}
+
+}
+
+/// @nodoc
+@JsonSerializable()
+
+class _FollowerReading extends FollowerReading {
+  const _FollowerReading({this.count = 0, this.measuredAt = ''}): super._();
+  factory _FollowerReading.fromJson(Map<String, dynamic> json) => _$FollowerReadingFromJson(json);
+
+@override@JsonKey() final  int count;
+/// ISO 8601, as the server stored it.
+@override@JsonKey() final  String measuredAt;
+
+/// Create a copy of FollowerReading
+/// with the given fields replaced by the non-null parameter values.
+@override @JsonKey(includeFromJson: false, includeToJson: false)
+@pragma('vm:prefer-inline')
+_$FollowerReadingCopyWith<_FollowerReading> get copyWith => __$FollowerReadingCopyWithImpl<_FollowerReading>(this, _$identity);
+
+@override
+Map<String, dynamic> toJson() {
+  return _$FollowerReadingToJson(this, );
+}
+
+@override
+bool operator ==(Object other) {
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is _FollowerReading&&(identical(other.count, count) || other.count == count)&&(identical(other.measuredAt, measuredAt) || other.measuredAt == measuredAt));
+}
+
+@JsonKey(includeFromJson: false, includeToJson: false)
+@override
+int get hashCode => Object.hash(runtimeType,count,measuredAt);
+
+@override
+String toString() {
+  return 'FollowerReading(count: $count, measuredAt: $measuredAt)';
+}
+
+
+}
+
+/// @nodoc
+abstract mixin class _$FollowerReadingCopyWith<$Res> implements $FollowerReadingCopyWith<$Res> {
+  factory _$FollowerReadingCopyWith(_FollowerReading value, $Res Function(_FollowerReading) _then) = __$FollowerReadingCopyWithImpl;
+@override @useResult
+$Res call({
+ int count, String measuredAt
+});
+
+
+
+
+}
+/// @nodoc
+class __$FollowerReadingCopyWithImpl<$Res>
+    implements _$FollowerReadingCopyWith<$Res> {
+  __$FollowerReadingCopyWithImpl(this._self, this._then);
+
+  final _FollowerReading _self;
+  final $Res Function(_FollowerReading) _then;
+
+/// Create a copy of FollowerReading
+/// with the given fields replaced by the non-null parameter values.
+@override @pragma('vm:prefer-inline') $Res call({Object? count = null,Object? measuredAt = null,}) {
+  return _then(_FollowerReading(
+count: null == count ? _self.count : count // ignore: cast_nullable_to_non_nullable
+as int,measuredAt: null == measuredAt ? _self.measuredAt : measuredAt // ignore: cast_nullable_to_non_nullable
+as String,
+  ));
+}
+
+
 }
 
 

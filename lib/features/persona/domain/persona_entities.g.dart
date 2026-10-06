@@ -66,6 +66,18 @@ Map<String, dynamic> _$SubstanceBankToJson(_SubstanceBank instance) =>
       'unavailable': instance.unavailable,
     };
 
+_FollowerReading _$FollowerReadingFromJson(Map<String, dynamic> json) =>
+    _FollowerReading(
+      count: (json['count'] as num?)?.toInt() ?? 0,
+      measuredAt: json['measuredAt'] as String? ?? '',
+    );
+
+Map<String, dynamic> _$FollowerReadingToJson(_FollowerReading instance) =>
+    <String, dynamic>{
+      'count': instance.count,
+      'measuredAt': instance.measuredAt,
+    };
+
 _PersonaReply _$PersonaReplyFromJson(Map<String, dynamic> json) =>
     _PersonaReply(
       reply: json['reply'] as String? ?? '',

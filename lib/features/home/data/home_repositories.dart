@@ -48,7 +48,6 @@ class ApiHomeRepository implements HomeRepository {
       throw const HomeUnavailable();
     }
   }
-
 }
 
 /// In-memory [HomeRepository] for the `mock` flavor.
@@ -93,7 +92,6 @@ class FakeHomeRepository implements HomeRepository {
     await Future<void>.delayed(const Duration(milliseconds: 200));
     return const XpBalance(balance: 4350);
   }
-
 }
 
 /// Mock ↔ real switch on `useFakeBackend`. A release build can never resolve

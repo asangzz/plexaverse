@@ -7,6 +7,7 @@ import '../../../preferences/domain/user_preferences.dart';
 import '../../application/home_controllers.dart';
 import '../../domain/home_repository.dart';
 import '../../domain/roadmap_level.dart';
+import '../widgets/follower_checkpoint.dart';
 import '../widgets/home_states.dart';
 import '../widgets/levels_panel.dart';
 import '../widgets/roadmap_timeline.dart';
@@ -355,6 +356,12 @@ class _MissionSheet extends StatelessWidget {
                   onPressed: () => _start(context, '/planner'),
                 ),
               ),
+              SizedBox(height: ZaveSpace.xl),
+              // Above the day's missions, where the number means something.
+              // The phase checkpoints ARE follower counts, and this is the
+              // only way one can reach us — so without it the roadmap names a
+              // target it cannot measure the user against.
+              FollowerCheckpoint(currentDay: level.id),
               SizedBox(height: ZaveSpace.xl),
               LevelsPanel(
                 level: level,

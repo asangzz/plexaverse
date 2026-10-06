@@ -77,6 +77,14 @@ class ApiPaths {
   /// The only route to personal-profile analytics: LinkedIn shares none of
   /// it with any app, so without the export the reach screen has nothing to
   /// show.
+  /// Records a follower count the user typed, and reads the latest one back.
+  ///
+  /// The only path for this number that does not require fetching LinkedIn's
+  /// .xlsx export first — a desktop errand. Without a reading the roadmap's
+  /// phase checkpoints are decoration: it can name the target and cannot say
+  /// how far away the user is.
+  static const String personaReach = '/persona/reach';
+
   static const String personaReachImport = '/persona/reach/import';
 
   /// POST — starts Season 2. `{choice, targetRole?}`. Idempotent.
