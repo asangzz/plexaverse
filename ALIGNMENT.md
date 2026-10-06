@@ -60,42 +60,39 @@ earlier notes still resolve — 6 and 12 are closed and listed at the bottom.
 
 ### High — broken
 
+*(none)*
+
 ### High — missing
+
+*(none)*
 
 ### Medium
 
-**A. `PostMetric` has no writer anywhere.** Confirmed — but the read sites
-recorded were wrong: the ~10 relation reads via `include: { metrics }` in
-`post.service.ts`/`linkedin-publish.service.ts` are what the post UIs consume,
-not the three aggregates. The dashboard is not a rendering surface at all
-(web removed `useDashboardData`; Flutter declares `ApiPaths.dashboard` and
-never calls it), and Flutter's `post_card._Metrics` is doubly dead — the feed
-mapper never sets `metrics`. The seam for a fix:
-`post-analytics.service.ts:117` already fetches `p.stats.impressionCount` live
-and throws it away.
+**Mock-flavour fixtures still disagree with the server — 11 left.** An audit of
+all 19 fakes found 14 divergences; the three cheapest are fixed (one shared XP
+balance instead of three different ones, a composed draft no longer collides
+with a published post in the library, and an upload URL on `.invalid` that
+could never resolve, so every "successful" upload rendered the error state).
+The rest are listed in the session notes and want their own pass — the ones
+that matter most: `fetchWeek` ignores its week/season arguments so the
+ungenerated-week state is unreachable; the batch fakes hardcode `cached: true`
+so the XP-charging first-call-of-the-day branch never runs; `generateSlotPost`
+cannot fail, so none of its four documented failures can be walked; and the
+season recap is still a 66-day, seven-posts-a-week season.
 
-### Low
+**Two settings controls do nothing — a product decision, not a bug fix.**
+`POSTS PER WEEK` and `PUBLISHING DAYS` in the mobile cadence section write
+`postsPerWeek` and `preferredDays`. Server-side, `preferredDays` is validated,
+stored and **read by nothing**; `postsPerWeek <= 3` is maintenance mode, which
+`postingDays().slice(0, 3)` now makes a **no-op** — a week that publishes two
+posts already satisfies "at most three". The web has no cadence UI at all, so
+mobile is offering choices the product cannot honour and the web never
+promised. The stale copy is corrected; whether to remove the controls is
+yours to call.
 
-**13. Nebula, Quasar and Nova all render as Uranus.** 3 of the 12 ported planets
-have no art, so past day 601 the three legs of the endgame are visually
-identical to each other and to a planet passed on day 366.
-→ three `PlanetVisual` entries in `planet_node.dart`, ported from
-`GamifiedRoadmap.tsx:82-84, 98-100, 113-115`; make the `?? planetVisuals['uranus']!`
-fallbacks at `:269` and `:648` assert in debug.
-
-**10. No follower-history endpoint, and no growth chart on mobile to want one.**
-*(Partly unblocked: `POST /persona/reach` now exists, so readings accumulate. What is missing is `GET /persona/reach/history` and the chart itself, which is the larger half.)*
-`getFollowerHistory` is web-only. More to the point, there is no chart in the
-Flutter repo at all — no charting package, no `*chart*` file — so the
-"where 100,000 comes from" argument that justifies posting daily is web-only.
-The chart is the larger half of this work.
-
-**11. One string, in Flutter.** The claim had this backwards: the web
-notification was already fixed (`notification-templates.ts:252` names the thing,
-not the day) and so was the planner card. Exactly one user-facing string in
-either repo still names the wrong day —
-`cadence_section.dart:123`, "Sunday article". Drop the day word rather than
-swapping it, so the next shape change cannot re-break it.
+**The 78.6 MB inline-image backfill has still not been run.**
+`scripts/backfill-inline-post-images.ts` is committed and dry-run by default.
+It rewrites 154 rows of live user data, so it stays your call.
 
 ---
 
@@ -110,6 +107,10 @@ swapping it, so the next shape change cannot re-break it.
 | 1 | `completeRoadmapStep` upserted the completion row BEFORE resolving the step, so a miss wrote a phantom completed row — and the already-completed guard then made it permanent. Six resolvers called `getBaseRoadmap()` bare or half-bare, describing a different roadmap from the one the award path rebuilt | The step is resolved first and a miss throws NOT_FOUND writing nothing; all six resolvers now pass `brandType` AND `roadmapStartedAt` (the chat, the auto-credit, and the four dashboard pages that POST a step id); the web route maps NOT_FOUND to 404 instead of 500. **Correction to the original note:** for the company/`connect` case no XP was ever *owed* — step 3 is not on a company roadmap — so the damage was a phantom row, not a refundable 50 XP. The Flutter port was already correct |
 | B | Inline base64 in `posts.image_url` was an ONGOING leak, not a historical 78 MB — measured at **154 posts / 78.6 MB**, up from the 152 first recorded. `/api/ai/poster` returns a `data:` URL; the auto-post chain converted it, five client call sites did not, and none of them wrote a thumb, so every such post is also a permanent placeholder in the mobile feed | The guard went into `createUserPost`/`updateUserPost` rather than the five call sites — they are the only two paths that write the column, so nothing can reintroduce it. It REPAIRS rather than rejects: the auto-post chain deliberately falls back to an inline URL when Storage is down, and a hard rejection would turn a Storage blip into a missing image on an unattended publish. Plus `scripts/backfill-inline-post-images.ts` for what is already there |
 | 8 | `scheduledFor` was on the wire and dropped. The field has been on the mobile article GET since the column existed — the route spreads the service's row — but `WeeklyArticle` had no field for it and the route had no `schedule` action. So a reminder set on the WEB was sent to the phone and discarded: the nudge arrived for a time the app had never shown, and could not be moved or cleared from it | The `schedule` action on `POST /api/mobile/v1/planner/article` (null `scheduledFor` CLEARS; `ArticleScheduleError` → 400 carrying the service's own sentence, 404 for NOT_FOUND), `reminderAt({now})` on the model, and the reminder row on the article card — date then time, both platform pickers, with the clear path on a sheet that states plainly that **nothing is being scheduled to publish**. There is no articles endpoint on LinkedIn's API; a time only books a nudge. Two things found on the way: both POST actions returned the service row **including the 6.4 KB body** the GET goes to lengths to strip, for a client model that has no body field — one `summarize()` now covers all three responses; and the route was absent from `lib/mobile/registry.ts` entirely, which is the contract file the Flutter team reads |
+| A | `PostMetric` had no writer — not one, in either repo — while ten read sites in `post.service` and three aggregates in `dashboard.service` read it. Every one returned null for every user since the table existed, so the post library and the dashboard reported no reach at all | **The premise was inverted.** The obvious fix was to persist the LinkedIn stats `getWeekPerformance` already fetches and throws away — but that function returns before any LinkedIn call for a personal user (`r_member_social_actions` is Partner-Program-only), so a writer there serves COMPANY users only. `ReachSnapshot` is the shipped successor: a strict superset of the columns, with two live writers that both serve personal profiles. So the readers moved instead — `reachMetricsFor()` in post.service, one query per page rather than one per post, and the three aggregates repointed. `PostMetric` is now dead with nothing reading it; **dropping the table is a migration and deliberately left for a separate decision** |
+| 10 | No growth chart on mobile. The phone could WRITE follower counts and never read back more than the latest one, so `GET /persona/reach` could say where the user is and nothing could say whether they are moving — which is the question a checkpoint raises | `GET /api/mobile/v1/persona/reach/history` + `FollowerSeriesChart` on the checkpoint strip. Two bugs found in the existing service on the way: `getFollowerHistory` applied its 400-row cap at the **wrong end** (`asc` + `take` keeps the OLDEST 400, so anyone past the cap had a chart frozen on their first 400 readings), and it read only `ReachSnapshot` while the headline figure merges in `AudienceSnapshot` — so a user who only uploads the .xlsx export saw a follower count with an empty chart beneath it. The chart spaces points by TIME, not index, and never resamples or splines: this is the one number that can only come from the person looking at the screen |
+| 11 | "One stale Sunday-article string." It was **41**, across both repos — and five of them were PROMPT text reaching the model: "anchors all 7 posts", "produce 7 unique angles", "at most 1–2 of the 7 posts", and a bullet instructing a Sunday "light" company reflection for a day that now rests | All 41 applied. Also rewrote CLAUDE.md §6b, which still described the pre-pivot week in full (Sunday article, a Sunday teaser that auto-publishes, `ACTIVE_MAINTENANCE_SLOTS = {0,2,4}`) — it is the file that tells the next person how the week works. Added `week-shape.ts` to the critical-files table and `VideoScript` to §3, which had never documented a model central to the current week. The `cloudTasks` scheduling comments justified Saturday by "the Sunday post is generated on Saturday"; **Saturday is still right, the reason changed** |
+| 13 | Nebula, Quasar and Nova rendered as Uranus past day 601 | **Already fixed during this pass, by a subagent that committed and pushed on its own** (`7c831b6`) — flagged, not sanctioned. The work itself checks out: `planetVisuals` was ported when the arc ended at Neptune, both lookups fell through `?? planetVisuals['uranus']!`, and the timeline's separate `?? 100` ring default mis-centred those rows on top of it. Twelve entries, an assert, and a test that pins every roadmap key to a drawing spec |
 | 9 | Newsletter naming dead-ended. The web route is session-authenticated so a bearer could not reach it, and the preferences PATCH could not carry the name either — that schema is `.strict()` with no `newsletterName` field, so a client that tried had the WHOLE patch rejected. `isFirstArticle` is `!newsletterName`, so it stayed true for ever: the planner asked the user to create a newsletter they already had, every week, and captions kept naming the article generically | `POST /api/mobile/v1/planner/newsletter`, plus the naming sheet on the article card. The model's five candidate names were already on the wire and dropped on the floor. The fake held the name as a literal, so `isFirstArticle` was false for ever under the mock and this whole flow was unreachable on the build the app is tested on |
 | 5 | Top Voices: a phone-only user got **zero** curated posts anywhere (the generator's only caller was a web-session route), and the Comments step asked for ten against a screen that could supply five, so Finish could never enable | `GET`/`PATCH /api/mobile/v1/top-voices`, the `TopVoicesSection` card, `reachableCommentTarget`, a Dart port of the forty category ids and a picker in Settings. The two fakes that seeded category LABELS are fixed too — they would have had every preferences PATCH rejected by the server's refine |
 | 6 | *(folded into 4 during the first pass)* | — |

@@ -1,3 +1,4 @@
+import '../../../core/mock/mock_constants.dart';
 import 'package:flutter/foundation.dart' show kReleaseMode;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -90,7 +91,7 @@ class FakeHomeRepository implements HomeRepository {
   @override
   Future<XpBalance> fetchXpBalance() async {
     await Future<void>.delayed(const Duration(milliseconds: 200));
-    return const XpBalance(balance: 4350);
+    return const XpBalance(balance: kMockXpBalance);
   }
 }
 

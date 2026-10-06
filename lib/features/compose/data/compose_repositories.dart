@@ -211,6 +211,9 @@ class ApiComposeRepository implements ComposeRepository {
 /// amber and the preview's line breaks are all things you can only see is
 /// wrong with plausible text in them.
 class FakeComposeRepository implements ComposeRepository {
+  /// Drafts created this session, so each gets its own id.
+  int _composed = 0;
+
   FakeComposeRepository();
 
   /// A 1×1 transparent PNG. Enough for the attached-image panel and the
@@ -268,9 +271,13 @@ class FakeComposeRepository implements ComposeRepository {
   @override
   Future<UploadedImage> uploadBase64Image(String dataUri) async {
     await Future<void>.delayed(const Duration(milliseconds: 400));
+    // A URL that RESOLVES. `.invalid` is reserved and can never load, so every
+    // "successful" upload rendered the image-error state — inverting the one
+    // branch this fixture exists to exercise, on the build the app is manually
+    // tested on.
     return const UploadedImage(
-      url: 'https://example.invalid/mock-image.jpg',
-      thumbUrl: 'https://example.invalid/mock-image-thumb.jpg',
+      url: 'https://picsum.photos/seed/plexa-upload/1200/1200',
+      thumbUrl: 'https://picsum.photos/seed/plexa-upload/240/240',
     );
   }
 
@@ -285,8 +292,13 @@ class FakeComposeRepository implements ComposeRepository {
     DateTime? scheduledFor,
   }) async {
     await Future<void>.delayed(const Duration(milliseconds: 500));
+    // A fresh id per draft. This used to be the constant 'mock-post-1', which
+    // is also the id of a PUBLISHED post in the library fixture — with 4,821
+    // impressions and a LinkedIn URL on it. Composing a draft and opening it
+    // showed someone else's published post, and two drafts were the same row.
+    _composed += 1;
     return CreatedPost(
-      id: 'mock-post-1',
+      id: 'mock-composed-$_composed',
       status: status,
       scheduledFor: scheduledFor?.toUtc().toIso8601String(),
       imageUrl: imageUrl,

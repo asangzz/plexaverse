@@ -40,9 +40,10 @@ class _CadenceSectionState extends ConsumerState<CadenceSection> {
   ];
 
   /// The cadences the product actually supports. 3 is "maintenance mode" —
-  /// the weekday slots shrink to `{Sun, Tue, Thu}` while the Sunday article
-  /// still generates, because the article is the week's spine and not one of
-  /// its posts (CLAUDE.md §6b).
+  /// the server caps posting days while the Thursday newsletter still
+  /// generates, because the article is the week's spine and not one of its
+  /// posts (CLAUDE.md §6b). With two post days a week the cap is already met,
+  /// so today it blanks nothing.
   static const List<int> _cadences = <int>[3, 5, 7];
 
   late final Set<int> _days = <int>{...widget.preferences.preferredDays};
@@ -120,8 +121,8 @@ class _CadenceSectionState extends ConsumerState<CadenceSection> {
           if (_postsPerWeek <= 3) ...<Widget>[
             SizedBox(height: ZaveSpace.sm),
             Text(
-              'Maintenance mode. Your Sunday article still gets written — it '
-              'is the week’s spine, not one of its posts.',
+              'Maintenance mode. Your Thursday newsletter still gets written — '
+              'it is the week’s spine, not one of its posts.',
               style: ZaveType.caption,
             ),
           ],
@@ -236,10 +237,11 @@ class AutoPostSection extends ConsumerWidget {
             children: <Widget>[
               Expanded(
                 child: Text(
-                  'Plexaverse can prepare a fresh LinkedIn post for your '
-                  'approval every day. Disable to stop generation and stop '
-                  'incurring AI costs. You can re-enable anytime — your post '
-                  'for tomorrow will be ready by morning.',
+                  'Plexaverse writes your week’s posts for approval on the days '
+                  'your plan posts — not every day. The video scripts and the '
+                  'newsletter are prepared for you to post yourself, and the '
+                  'weekend rests. Disable to stop generation and stop incurring '
+                  'AI costs; you can re-enable anytime.',
                   style: ZaveType.caption,
                 ),
               ),

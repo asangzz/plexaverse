@@ -1823,6 +1823,574 @@ as String,
 
 
 /// @nodoc
+mixin _$FollowerGrowth {
+
+ String get kind; int get days; int get gained; int get latest; double get perDay; int get perMonth;
+/// Create a copy of FollowerGrowth
+/// with the given fields replaced by the non-null parameter values.
+@JsonKey(includeFromJson: false, includeToJson: false)
+@pragma('vm:prefer-inline')
+$FollowerGrowthCopyWith<FollowerGrowth> get copyWith => _$FollowerGrowthCopyWithImpl<FollowerGrowth>(this as FollowerGrowth, _$identity);
+
+  /// Serializes this FollowerGrowth to a JSON map.
+  Map<String, dynamic> toJson();
+
+
+@override
+bool operator ==(Object other) {
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is FollowerGrowth&&(identical(other.kind, kind) || other.kind == kind)&&(identical(other.days, days) || other.days == days)&&(identical(other.gained, gained) || other.gained == gained)&&(identical(other.latest, latest) || other.latest == latest)&&(identical(other.perDay, perDay) || other.perDay == perDay)&&(identical(other.perMonth, perMonth) || other.perMonth == perMonth));
+}
+
+@JsonKey(includeFromJson: false, includeToJson: false)
+@override
+int get hashCode => Object.hash(runtimeType,kind,days,gained,latest,perDay,perMonth);
+
+@override
+String toString() {
+  return 'FollowerGrowth(kind: $kind, days: $days, gained: $gained, latest: $latest, perDay: $perDay, perMonth: $perMonth)';
+}
+
+
+}
+
+/// @nodoc
+abstract mixin class $FollowerGrowthCopyWith<$Res>  {
+  factory $FollowerGrowthCopyWith(FollowerGrowth value, $Res Function(FollowerGrowth) _then) = _$FollowerGrowthCopyWithImpl;
+@useResult
+$Res call({
+ String kind, int days, int gained, int latest, double perDay, int perMonth
+});
+
+
+
+
+}
+/// @nodoc
+class _$FollowerGrowthCopyWithImpl<$Res>
+    implements $FollowerGrowthCopyWith<$Res> {
+  _$FollowerGrowthCopyWithImpl(this._self, this._then);
+
+  final FollowerGrowth _self;
+  final $Res Function(FollowerGrowth) _then;
+
+/// Create a copy of FollowerGrowth
+/// with the given fields replaced by the non-null parameter values.
+@pragma('vm:prefer-inline') @override $Res call({Object? kind = null,Object? days = null,Object? gained = null,Object? latest = null,Object? perDay = null,Object? perMonth = null,}) {
+  return _then(_self.copyWith(
+kind: null == kind ? _self.kind : kind // ignore: cast_nullable_to_non_nullable
+as String,days: null == days ? _self.days : days // ignore: cast_nullable_to_non_nullable
+as int,gained: null == gained ? _self.gained : gained // ignore: cast_nullable_to_non_nullable
+as int,latest: null == latest ? _self.latest : latest // ignore: cast_nullable_to_non_nullable
+as int,perDay: null == perDay ? _self.perDay : perDay // ignore: cast_nullable_to_non_nullable
+as double,perMonth: null == perMonth ? _self.perMonth : perMonth // ignore: cast_nullable_to_non_nullable
+as int,
+  ));
+}
+
+}
+
+
+/// Adds pattern-matching-related methods to [FollowerGrowth].
+extension FollowerGrowthPatterns on FollowerGrowth {
+/// A variant of `map` that fallback to returning `orElse`.
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case final Subclass value:
+///     return ...;
+///   case _:
+///     return orElse();
+/// }
+/// ```
+
+@optionalTypeArgs TResult maybeMap<TResult extends Object?>(TResult Function( _FollowerGrowth value)?  $default,{required TResult orElse(),}){
+final _that = this;
+switch (_that) {
+case _FollowerGrowth() when $default != null:
+return $default(_that);case _:
+  return orElse();
+
+}
+}
+/// A `switch`-like method, using callbacks.
+///
+/// Callbacks receives the raw object, upcasted.
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case final Subclass value:
+///     return ...;
+///   case final Subclass2 value:
+///     return ...;
+/// }
+/// ```
+
+@optionalTypeArgs TResult map<TResult extends Object?>(TResult Function( _FollowerGrowth value)  $default,){
+final _that = this;
+switch (_that) {
+case _FollowerGrowth():
+return $default(_that);case _:
+  throw StateError('Unexpected subclass');
+
+}
+}
+/// A variant of `map` that fallback to returning `null`.
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case final Subclass value:
+///     return ...;
+///   case _:
+///     return null;
+/// }
+/// ```
+
+@optionalTypeArgs TResult? mapOrNull<TResult extends Object?>(TResult? Function( _FollowerGrowth value)?  $default,){
+final _that = this;
+switch (_that) {
+case _FollowerGrowth() when $default != null:
+return $default(_that);case _:
+  return null;
+
+}
+}
+/// A variant of `when` that fallback to an `orElse` callback.
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case Subclass(:final field):
+///     return ...;
+///   case _:
+///     return orElse();
+/// }
+/// ```
+
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String kind,  int days,  int gained,  int latest,  double perDay,  int perMonth)?  $default,{required TResult orElse(),}) {final _that = this;
+switch (_that) {
+case _FollowerGrowth() when $default != null:
+return $default(_that.kind,_that.days,_that.gained,_that.latest,_that.perDay,_that.perMonth);case _:
+  return orElse();
+
+}
+}
+/// A `switch`-like method, using callbacks.
+///
+/// As opposed to `map`, this offers destructuring.
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case Subclass(:final field):
+///     return ...;
+///   case Subclass2(:final field2):
+///     return ...;
+/// }
+/// ```
+
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String kind,  int days,  int gained,  int latest,  double perDay,  int perMonth)  $default,) {final _that = this;
+switch (_that) {
+case _FollowerGrowth():
+return $default(_that.kind,_that.days,_that.gained,_that.latest,_that.perDay,_that.perMonth);case _:
+  throw StateError('Unexpected subclass');
+
+}
+}
+/// A variant of `when` that fallback to returning `null`
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case Subclass(:final field):
+///     return ...;
+///   case _:
+///     return null;
+/// }
+/// ```
+
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String kind,  int days,  int gained,  int latest,  double perDay,  int perMonth)?  $default,) {final _that = this;
+switch (_that) {
+case _FollowerGrowth() when $default != null:
+return $default(_that.kind,_that.days,_that.gained,_that.latest,_that.perDay,_that.perMonth);case _:
+  return null;
+
+}
+}
+
+}
+
+/// @nodoc
+@JsonSerializable()
+
+class _FollowerGrowth extends FollowerGrowth {
+  const _FollowerGrowth({this.kind = 'none', this.days = 0, this.gained = 0, this.latest = 0, this.perDay = 0, this.perMonth = 0}): super._();
+  factory _FollowerGrowth.fromJson(Map<String, dynamic> json) => _$FollowerGrowthFromJson(json);
+
+@override@JsonKey() final  String kind;
+@override@JsonKey() final  int days;
+@override@JsonKey() final  int gained;
+@override@JsonKey() final  int latest;
+@override@JsonKey() final  double perDay;
+@override@JsonKey() final  int perMonth;
+
+/// Create a copy of FollowerGrowth
+/// with the given fields replaced by the non-null parameter values.
+@override @JsonKey(includeFromJson: false, includeToJson: false)
+@pragma('vm:prefer-inline')
+_$FollowerGrowthCopyWith<_FollowerGrowth> get copyWith => __$FollowerGrowthCopyWithImpl<_FollowerGrowth>(this, _$identity);
+
+@override
+Map<String, dynamic> toJson() {
+  return _$FollowerGrowthToJson(this, );
+}
+
+@override
+bool operator ==(Object other) {
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is _FollowerGrowth&&(identical(other.kind, kind) || other.kind == kind)&&(identical(other.days, days) || other.days == days)&&(identical(other.gained, gained) || other.gained == gained)&&(identical(other.latest, latest) || other.latest == latest)&&(identical(other.perDay, perDay) || other.perDay == perDay)&&(identical(other.perMonth, perMonth) || other.perMonth == perMonth));
+}
+
+@JsonKey(includeFromJson: false, includeToJson: false)
+@override
+int get hashCode => Object.hash(runtimeType,kind,days,gained,latest,perDay,perMonth);
+
+@override
+String toString() {
+  return 'FollowerGrowth(kind: $kind, days: $days, gained: $gained, latest: $latest, perDay: $perDay, perMonth: $perMonth)';
+}
+
+
+}
+
+/// @nodoc
+abstract mixin class _$FollowerGrowthCopyWith<$Res> implements $FollowerGrowthCopyWith<$Res> {
+  factory _$FollowerGrowthCopyWith(_FollowerGrowth value, $Res Function(_FollowerGrowth) _then) = __$FollowerGrowthCopyWithImpl;
+@override @useResult
+$Res call({
+ String kind, int days, int gained, int latest, double perDay, int perMonth
+});
+
+
+
+
+}
+/// @nodoc
+class __$FollowerGrowthCopyWithImpl<$Res>
+    implements _$FollowerGrowthCopyWith<$Res> {
+  __$FollowerGrowthCopyWithImpl(this._self, this._then);
+
+  final _FollowerGrowth _self;
+  final $Res Function(_FollowerGrowth) _then;
+
+/// Create a copy of FollowerGrowth
+/// with the given fields replaced by the non-null parameter values.
+@override @pragma('vm:prefer-inline') $Res call({Object? kind = null,Object? days = null,Object? gained = null,Object? latest = null,Object? perDay = null,Object? perMonth = null,}) {
+  return _then(_FollowerGrowth(
+kind: null == kind ? _self.kind : kind // ignore: cast_nullable_to_non_nullable
+as String,days: null == days ? _self.days : days // ignore: cast_nullable_to_non_nullable
+as int,gained: null == gained ? _self.gained : gained // ignore: cast_nullable_to_non_nullable
+as int,latest: null == latest ? _self.latest : latest // ignore: cast_nullable_to_non_nullable
+as int,perDay: null == perDay ? _self.perDay : perDay // ignore: cast_nullable_to_non_nullable
+as double,perMonth: null == perMonth ? _self.perMonth : perMonth // ignore: cast_nullable_to_non_nullable
+as int,
+  ));
+}
+
+
+}
+
+
+/// @nodoc
+mixin _$FollowerHistory {
+
+ List<FollowerReading> get readings; FollowerGrowth get growth;
+/// Create a copy of FollowerHistory
+/// with the given fields replaced by the non-null parameter values.
+@JsonKey(includeFromJson: false, includeToJson: false)
+@pragma('vm:prefer-inline')
+$FollowerHistoryCopyWith<FollowerHistory> get copyWith => _$FollowerHistoryCopyWithImpl<FollowerHistory>(this as FollowerHistory, _$identity);
+
+  /// Serializes this FollowerHistory to a JSON map.
+  Map<String, dynamic> toJson();
+
+
+@override
+bool operator ==(Object other) {
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is FollowerHistory&&const DeepCollectionEquality().equals(other.readings, readings)&&(identical(other.growth, growth) || other.growth == growth));
+}
+
+@JsonKey(includeFromJson: false, includeToJson: false)
+@override
+int get hashCode => Object.hash(runtimeType,const DeepCollectionEquality().hash(readings),growth);
+
+@override
+String toString() {
+  return 'FollowerHistory(readings: $readings, growth: $growth)';
+}
+
+
+}
+
+/// @nodoc
+abstract mixin class $FollowerHistoryCopyWith<$Res>  {
+  factory $FollowerHistoryCopyWith(FollowerHistory value, $Res Function(FollowerHistory) _then) = _$FollowerHistoryCopyWithImpl;
+@useResult
+$Res call({
+ List<FollowerReading> readings, FollowerGrowth growth
+});
+
+
+$FollowerGrowthCopyWith<$Res> get growth;
+
+}
+/// @nodoc
+class _$FollowerHistoryCopyWithImpl<$Res>
+    implements $FollowerHistoryCopyWith<$Res> {
+  _$FollowerHistoryCopyWithImpl(this._self, this._then);
+
+  final FollowerHistory _self;
+  final $Res Function(FollowerHistory) _then;
+
+/// Create a copy of FollowerHistory
+/// with the given fields replaced by the non-null parameter values.
+@pragma('vm:prefer-inline') @override $Res call({Object? readings = null,Object? growth = null,}) {
+  return _then(_self.copyWith(
+readings: null == readings ? _self.readings : readings // ignore: cast_nullable_to_non_nullable
+as List<FollowerReading>,growth: null == growth ? _self.growth : growth // ignore: cast_nullable_to_non_nullable
+as FollowerGrowth,
+  ));
+}
+/// Create a copy of FollowerHistory
+/// with the given fields replaced by the non-null parameter values.
+@override
+@pragma('vm:prefer-inline')
+$FollowerGrowthCopyWith<$Res> get growth {
+  
+  return $FollowerGrowthCopyWith<$Res>(_self.growth, (value) {
+    return _then(_self.copyWith(growth: value));
+  });
+}
+}
+
+
+/// Adds pattern-matching-related methods to [FollowerHistory].
+extension FollowerHistoryPatterns on FollowerHistory {
+/// A variant of `map` that fallback to returning `orElse`.
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case final Subclass value:
+///     return ...;
+///   case _:
+///     return orElse();
+/// }
+/// ```
+
+@optionalTypeArgs TResult maybeMap<TResult extends Object?>(TResult Function( _FollowerHistory value)?  $default,{required TResult orElse(),}){
+final _that = this;
+switch (_that) {
+case _FollowerHistory() when $default != null:
+return $default(_that);case _:
+  return orElse();
+
+}
+}
+/// A `switch`-like method, using callbacks.
+///
+/// Callbacks receives the raw object, upcasted.
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case final Subclass value:
+///     return ...;
+///   case final Subclass2 value:
+///     return ...;
+/// }
+/// ```
+
+@optionalTypeArgs TResult map<TResult extends Object?>(TResult Function( _FollowerHistory value)  $default,){
+final _that = this;
+switch (_that) {
+case _FollowerHistory():
+return $default(_that);case _:
+  throw StateError('Unexpected subclass');
+
+}
+}
+/// A variant of `map` that fallback to returning `null`.
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case final Subclass value:
+///     return ...;
+///   case _:
+///     return null;
+/// }
+/// ```
+
+@optionalTypeArgs TResult? mapOrNull<TResult extends Object?>(TResult? Function( _FollowerHistory value)?  $default,){
+final _that = this;
+switch (_that) {
+case _FollowerHistory() when $default != null:
+return $default(_that);case _:
+  return null;
+
+}
+}
+/// A variant of `when` that fallback to an `orElse` callback.
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case Subclass(:final field):
+///     return ...;
+///   case _:
+///     return orElse();
+/// }
+/// ```
+
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( List<FollowerReading> readings,  FollowerGrowth growth)?  $default,{required TResult orElse(),}) {final _that = this;
+switch (_that) {
+case _FollowerHistory() when $default != null:
+return $default(_that.readings,_that.growth);case _:
+  return orElse();
+
+}
+}
+/// A `switch`-like method, using callbacks.
+///
+/// As opposed to `map`, this offers destructuring.
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case Subclass(:final field):
+///     return ...;
+///   case Subclass2(:final field2):
+///     return ...;
+/// }
+/// ```
+
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( List<FollowerReading> readings,  FollowerGrowth growth)  $default,) {final _that = this;
+switch (_that) {
+case _FollowerHistory():
+return $default(_that.readings,_that.growth);case _:
+  throw StateError('Unexpected subclass');
+
+}
+}
+/// A variant of `when` that fallback to returning `null`
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case Subclass(:final field):
+///     return ...;
+///   case _:
+///     return null;
+/// }
+/// ```
+
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( List<FollowerReading> readings,  FollowerGrowth growth)?  $default,) {final _that = this;
+switch (_that) {
+case _FollowerHistory() when $default != null:
+return $default(_that.readings,_that.growth);case _:
+  return null;
+
+}
+}
+
+}
+
+/// @nodoc
+@JsonSerializable()
+
+class _FollowerHistory extends FollowerHistory {
+  const _FollowerHistory({final  List<FollowerReading> readings = const <FollowerReading>[], this.growth = const FollowerGrowth()}): _readings = readings,super._();
+  factory _FollowerHistory.fromJson(Map<String, dynamic> json) => _$FollowerHistoryFromJson(json);
+
+ final  List<FollowerReading> _readings;
+@override@JsonKey() List<FollowerReading> get readings {
+  if (_readings is EqualUnmodifiableListView) return _readings;
+  // ignore: implicit_dynamic_type
+  return EqualUnmodifiableListView(_readings);
+}
+
+@override@JsonKey() final  FollowerGrowth growth;
+
+/// Create a copy of FollowerHistory
+/// with the given fields replaced by the non-null parameter values.
+@override @JsonKey(includeFromJson: false, includeToJson: false)
+@pragma('vm:prefer-inline')
+_$FollowerHistoryCopyWith<_FollowerHistory> get copyWith => __$FollowerHistoryCopyWithImpl<_FollowerHistory>(this, _$identity);
+
+@override
+Map<String, dynamic> toJson() {
+  return _$FollowerHistoryToJson(this, );
+}
+
+@override
+bool operator ==(Object other) {
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is _FollowerHistory&&const DeepCollectionEquality().equals(other._readings, _readings)&&(identical(other.growth, growth) || other.growth == growth));
+}
+
+@JsonKey(includeFromJson: false, includeToJson: false)
+@override
+int get hashCode => Object.hash(runtimeType,const DeepCollectionEquality().hash(_readings),growth);
+
+@override
+String toString() {
+  return 'FollowerHistory(readings: $readings, growth: $growth)';
+}
+
+
+}
+
+/// @nodoc
+abstract mixin class _$FollowerHistoryCopyWith<$Res> implements $FollowerHistoryCopyWith<$Res> {
+  factory _$FollowerHistoryCopyWith(_FollowerHistory value, $Res Function(_FollowerHistory) _then) = __$FollowerHistoryCopyWithImpl;
+@override @useResult
+$Res call({
+ List<FollowerReading> readings, FollowerGrowth growth
+});
+
+
+@override $FollowerGrowthCopyWith<$Res> get growth;
+
+}
+/// @nodoc
+class __$FollowerHistoryCopyWithImpl<$Res>
+    implements _$FollowerHistoryCopyWith<$Res> {
+  __$FollowerHistoryCopyWithImpl(this._self, this._then);
+
+  final _FollowerHistory _self;
+  final $Res Function(_FollowerHistory) _then;
+
+/// Create a copy of FollowerHistory
+/// with the given fields replaced by the non-null parameter values.
+@override @pragma('vm:prefer-inline') $Res call({Object? readings = null,Object? growth = null,}) {
+  return _then(_FollowerHistory(
+readings: null == readings ? _self._readings : readings // ignore: cast_nullable_to_non_nullable
+as List<FollowerReading>,growth: null == growth ? _self.growth : growth // ignore: cast_nullable_to_non_nullable
+as FollowerGrowth,
+  ));
+}
+
+/// Create a copy of FollowerHistory
+/// with the given fields replaced by the non-null parameter values.
+@override
+@pragma('vm:prefer-inline')
+$FollowerGrowthCopyWith<$Res> get growth {
+  
+  return $FollowerGrowthCopyWith<$Res>(_self.growth, (value) {
+    return _then(_self.copyWith(growth: value));
+  });
+}
+}
+
+
+/// @nodoc
 mixin _$PersonaReply {
 
  String get reply;/// Suggested edits to the persona. **Never applied by the chat turn** —

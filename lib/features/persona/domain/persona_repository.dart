@@ -56,6 +56,13 @@ abstract class PersonaRepository {
   ///
   /// Returns the stored reading — including the server's own `measuredAt`,
   /// which is what the staleness rule reads a month from now.
+  /// `GET /persona/reach/history` — the series behind the checkpoint.
+  ///
+  /// [days] trims the window; null is everything. Never throws for an empty
+  /// history: a user who has recorded nothing is the normal case, and the
+  /// server answers 200 with no readings rather than a 404.
+  Future<FollowerHistory> fetchFollowerHistory({int? days});
+
   Future<FollowerReading?> recordFollowers({
     required int count,
     DateTime? measuredAt,

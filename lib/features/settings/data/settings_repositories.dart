@@ -1,3 +1,4 @@
+import '../../../core/mock/mock_constants.dart';
 import 'package:flutter/foundation.dart' show kReleaseMode;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -29,8 +30,6 @@ class ApiSettingsRepository implements SettingsRepository {
   /// OS hands control back to the app even when LinkedIn's 2FA has bounced the
   /// user into the LinkedIn app mid-flow.
   static const String _callbackScheme = 'plexaverse';
-
-
 
   @override
   Future<bool> setAutoPostEnabled(bool enabled) async {
@@ -130,9 +129,9 @@ class ApiSettingsRepository implements SettingsRepository {
 
   @override
   Future<ConnectOutcome> connectCalendar() => _browserConnect(
-        ApiPaths.googleCalendarAuthUrl,
-        ApiPaths.googleCalendarExchange,
-      );
+    ApiPaths.googleCalendarAuthUrl,
+    ApiPaths.googleCalendarExchange,
+  );
 
   /// The browser hand-off, shared by Slack and Calendar.
   ///
@@ -161,8 +160,9 @@ class ApiSettingsRepository implements SettingsRepository {
         case WebAuthFailure():
           return const ConnectFailed();
         case WebAuthSuccess(:final String callbackUrl):
-          final Map<String, String> params =
-              Uri.parse(callbackUrl).queryParameters;
+          final Map<String, String> params = Uri.parse(
+            callbackUrl,
+          ).queryParameters;
           if (params['error'] != null) {
             // Slack sends `error=access_denied` when the user declines,
             // which is a decision rather than a fault.
@@ -369,20 +369,19 @@ class ApiSettingsRepository implements SettingsRepository {
 
   @override
   Future<ConsentLedger> fetchConsents() => _readLedger(
-        () => _client.get<Map<String, dynamic>>(ApiPaths.userConsent),
-      );
+    () => _client.get<Map<String, dynamic>>(ApiPaths.userConsent),
+  );
 
   @override
   Future<ConsentLedger> setConsent({
     required String purpose,
     required bool granted,
-  }) =>
-      _readLedger(
-        () => _client.patch<Map<String, dynamic>>(
-          ApiPaths.userConsent,
-          data: <String, dynamic>{'purpose': purpose, 'granted': granted},
-        ),
-      );
+  }) => _readLedger(
+    () => _client.patch<Map<String, dynamic>>(
+      ApiPaths.userConsent,
+      data: <String, dynamic>{'purpose': purpose, 'granted': granted},
+    ),
+  );
 
   /// Both verbs answer with the whole ledger, so both parse the same way —
   /// and a PATCH therefore returns the server's view rather than the app's
@@ -507,8 +506,6 @@ class FakeSettingsRepository implements SettingsRepository {
 
   static const Duration _latency = Duration(milliseconds: 220);
 
-
-
   @override
   Future<bool> setAutoPostEnabled(bool enabled) async {
     await Future<void>.delayed(const Duration(milliseconds: 200));
@@ -524,7 +521,7 @@ class FakeSettingsRepository implements SettingsRepository {
         id: 'user_fake',
         name: 'Asang Borkar',
         email: 'asang@example.com',
-        xpBalance: 8450,
+        xpBalance: kMockXpBalance,
       ),
       subscription: SubscriptionState(
         status: 'active',
@@ -537,7 +534,7 @@ class FakeSettingsRepository implements SettingsRepository {
   @override
   Future<XpSummary> fetchXp() async {
     await Future<void>.delayed(_latency);
-    return const XpSummary(balance: 8450);
+    return const XpSummary(balance: kMockXpBalance);
   }
 
   @override
@@ -620,7 +617,9 @@ class FakeSettingsRepository implements SettingsRepository {
         );
       }
       return CompanyPageOptions(
-        pages: <CompanyPage>[CompanyPage(id: slug, name: 'Company Page ($slug)')],
+        pages: <CompanyPage>[
+          CompanyPage(id: slug, name: 'Company Page ($slug)'),
+        ],
       );
     }
     return const CompanyPageOptions(
@@ -688,7 +687,8 @@ class FakeSettingsRepository implements SettingsRepository {
         ),
         ConsentPurposeState(
           purpose: 'style_learning',
-          label: 'Read your existing LinkedIn posts to learn your writing voice',
+          label:
+              'Read your existing LinkedIn posts to learn your writing voice',
           granted: true,
           required_: false,
           stale: false,

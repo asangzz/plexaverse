@@ -332,7 +332,7 @@ class VideoScriptsController extends _$VideoScriptsController {
   }
 }
 
-/// The week's Sunday article.
+/// The week's long-form article — Thursday's newsletter.
 ///
 /// Separate from [PlannerController] because the article is not one of the
 /// week's posts — it is the week's spine, it generates even in maintenance

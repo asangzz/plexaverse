@@ -51,7 +51,7 @@ final class PersonaControllerProvider
   PersonaController create() => PersonaController();
 }
 
-String _$personaControllerHash() => r'b2758c978496bbc6f06025d0f80fe8a9aaa54500';
+String _$personaControllerHash() => r'3e2d0233354fdf523e2c96e74e568baee5a9e95a';
 
 /// The persona screen's state.
 ///
@@ -77,6 +77,80 @@ abstract class _$PersonaController extends $AsyncNotifier<PersonaSnapshot> {
     element.handleCreate(ref, build);
   }
 }
+
+/// The follower series behind the checkpoint.
+///
+/// Separate from [PersonaController] rather than folded into the snapshot:
+/// `GET /persona` does not carry it, it is only ever needed by the one strip
+/// that draws it, and keeping it apart means the roadmap does not pay for a
+/// second query on every load of a screen that may not show a chart at all.
+///
+/// Returns an empty history rather than throwing when the read fails. This is
+/// an instrument on somebody else's screen — the roadmap renders perfectly
+/// without it, and an error card above the day's missions would cost more
+/// attention than the line is worth.
+
+@ProviderFor(followerHistory)
+final followerHistoryProvider = FollowerHistoryProvider._();
+
+/// The follower series behind the checkpoint.
+///
+/// Separate from [PersonaController] rather than folded into the snapshot:
+/// `GET /persona` does not carry it, it is only ever needed by the one strip
+/// that draws it, and keeping it apart means the roadmap does not pay for a
+/// second query on every load of a screen that may not show a chart at all.
+///
+/// Returns an empty history rather than throwing when the read fails. This is
+/// an instrument on somebody else's screen — the roadmap renders perfectly
+/// without it, and an error card above the day's missions would cost more
+/// attention than the line is worth.
+
+final class FollowerHistoryProvider
+    extends
+        $FunctionalProvider<
+          AsyncValue<FollowerHistory>,
+          FollowerHistory,
+          FutureOr<FollowerHistory>
+        >
+    with $FutureModifier<FollowerHistory>, $FutureProvider<FollowerHistory> {
+  /// The follower series behind the checkpoint.
+  ///
+  /// Separate from [PersonaController] rather than folded into the snapshot:
+  /// `GET /persona` does not carry it, it is only ever needed by the one strip
+  /// that draws it, and keeping it apart means the roadmap does not pay for a
+  /// second query on every load of a screen that may not show a chart at all.
+  ///
+  /// Returns an empty history rather than throwing when the read fails. This is
+  /// an instrument on somebody else's screen — the roadmap renders perfectly
+  /// without it, and an error card above the day's missions would cost more
+  /// attention than the line is worth.
+  FollowerHistoryProvider._()
+    : super(
+        from: null,
+        argument: null,
+        retry: null,
+        name: r'followerHistoryProvider',
+        isAutoDispose: true,
+        dependencies: null,
+        $allTransitiveDependencies: null,
+      );
+
+  @override
+  String debugGetCreateSourceHash() => _$followerHistoryHash();
+
+  @$internal
+  @override
+  $FutureProviderElement<FollowerHistory> $createElement(
+    $ProviderPointer pointer,
+  ) => $FutureProviderElement(pointer);
+
+  @override
+  FutureOr<FollowerHistory> create(Ref ref) {
+    return followerHistory(ref);
+  }
+}
+
+String _$followerHistoryHash() => r'bb0ee9fed2d7b6c755034c93d4e729e17376055c';
 
 /// The Plexa conversation.
 ///

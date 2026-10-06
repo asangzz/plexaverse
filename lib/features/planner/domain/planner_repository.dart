@@ -113,7 +113,7 @@ abstract class PlannerRepository {
     bool force,
   });
 
-  /// The week's Sunday article.
+  /// The week's long-form article — Thursday's newsletter.
   Future<ArticleState> fetchArticle({int? week, int? season});
 
   /// The article's BODY, fetched when it is actually read.

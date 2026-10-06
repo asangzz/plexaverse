@@ -126,7 +126,7 @@ abstract class UserPreferences with _$UserPreferences {
     return day > roadmapTotalDays;
   }
 
-  /// Maintenance mode — the reduced cadence. The Sunday article still
-  /// generates; only the weekday post slots shrink.
+  /// Maintenance mode — the reduced cadence. The Thursday newsletter still
+  /// generates; only the post slots shrink.
   bool get isMaintenance => postsPerWeek <= 3;
 }

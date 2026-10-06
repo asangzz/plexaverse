@@ -199,6 +199,86 @@ abstract class FollowerReading with _$FollowerReading {
   }
 }
 
+/// How the follower count is moving, as the SERVER computed it.
+///
+/// Derived server-side on purpose. "Is a fortnight long enough to quote a
+/// rate over" is a product decision, and two clients deriving it
+/// independently is how they come to disagree about the same series.
+enum FollowerGrowthKind {
+  /// Nothing recorded yet. Not zero growth — zero growth is a claim.
+  none,
+
+  /// One reading. There is nothing to compare it to.
+  single,
+
+  /// Two or more, but spanning under a fortnight. Shape without a slope:
+  /// four followers a day apart implies 120 a month, which is noise wearing
+  /// a trend's clothes.
+  tooSoon,
+
+  /// A window long enough to mean something.
+  rate,
+}
+
+@freezed
+abstract class FollowerGrowth with _$FollowerGrowth {
+  const FollowerGrowth._();
+
+  const factory FollowerGrowth({
+    @Default('none') String kind,
+    @Default(0) int days,
+    @Default(0) int gained,
+    @Default(0) int latest,
+    @Default(0) double perDay,
+    @Default(0) int perMonth,
+  }) = _FollowerGrowth;
+
+  factory FollowerGrowth.fromJson(Map<String, dynamic> json) =>
+      _$FollowerGrowthFromJson(json);
+
+  FollowerGrowthKind get asKind => switch (kind) {
+    'single' => FollowerGrowthKind.single,
+    'tooSoon' => FollowerGrowthKind.tooSoon,
+    'rate' => FollowerGrowthKind.rate,
+    _ => FollowerGrowthKind.none,
+  };
+}
+
+/// The follower series, oldest first, exactly as measured.
+///
+/// **Never resampled onto an even daily grid.** A user records a count when
+/// they think of it, and filling the gaps would be inventing follower numbers
+/// for days nobody measured — the one figure this product is careful never to
+/// fabricate. The chart spaces its points by TIME for the same reason: an
+/// index-spaced line would silently claim the readings were evenly taken.
+@freezed
+abstract class FollowerHistory with _$FollowerHistory {
+  const FollowerHistory._();
+
+  const factory FollowerHistory({
+    @Default(<FollowerReading>[]) List<FollowerReading> readings,
+    @Default(FollowerGrowth()) FollowerGrowth growth,
+  }) = _FollowerHistory;
+
+  factory FollowerHistory.fromJson(Map<String, dynamic> json) =>
+      _$FollowerHistoryFromJson(json);
+
+  /// Below two points there is no line to draw.
+  bool get isPlottable => readings.length >= 2;
+
+  /// Parsed and time-ordered, dropping anything with an unreadable stamp.
+  List<({DateTime at, double value})> get points {
+    final List<({DateTime at, double value})> out =
+        <({DateTime at, double value})>[];
+    for (final FollowerReading r in readings) {
+      final DateTime? at = DateTime.tryParse(r.measuredAt);
+      if (at != null) out.add((at: at, value: r.count.toDouble()));
+    }
+    out.sort((a, b) => a.at.compareTo(b.at));
+    return out;
+  }
+}
+
 /// One turn of the Plexa conversation.
 @freezed
 abstract class PersonaReply with _$PersonaReply {

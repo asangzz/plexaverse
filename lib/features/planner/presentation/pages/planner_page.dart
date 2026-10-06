@@ -16,10 +16,11 @@ import '../../domain/planner_repository.dart';
 
 /// **Plan** — the content planner. The web's `/planner`.
 ///
-/// A week is not seven posts that share a topic. It is **one long-form article
-/// plus six posts that argue facets of it** (CLAUDE.md §6b), and the screen is
-/// laid out to say so: the article sits at the top as the week's spine, and the
-/// seven day slots hang off it.
+/// A week is not seven posts that share a topic. It is **one long-form
+/// newsletter on Thursday plus two posts and two video scripts that argue
+/// facets of it** (CLAUDE.md §6b), and the screen is laid out to say so: the
+/// article sits at the top as the week's spine, and the seven day slots —
+/// including the two weekend rest days — hang off it.
 ///
 /// The web renders the days as a seven-column grid on a wide screen and stacks
 /// them below its `lg` breakpoint. A phone always gets the stacked form, which

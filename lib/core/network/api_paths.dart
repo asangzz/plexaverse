@@ -87,6 +87,13 @@ class ApiPaths {
 
   static const String personaReachImport = '/persona/reach/import';
 
+  /// GET the follower series plus a server-computed growth rate.
+  ///
+  /// `personaReach` answers "where am I now"; a checkpoint raises a different
+  /// question — "am I moving" — and this is the only route that answers it.
+  /// Optional `?days=N` trims the window.
+  static const String personaReachHistory = '/persona/reach/history';
+
   /// POST — starts Season 2. `{choice, targetRole?}`. Idempotent.
   static const String seasonAdvance = '/season/advance';
 
@@ -154,7 +161,7 @@ class ApiPaths {
   /// GET the week plan (?week=&season=); PATCH one slot.
   static const String planner = '/planner';
 
-  /// GET the Sunday article; POST to record that the user published it
+  /// GET the week's article (Thursday's); POST to record that the user published it
   /// themselves. LinkedIn's API cannot publish an article, so the app never
   /// pushes one — it prepares a body and the user pastes it.
   /// Records the newsletter's name, which only the user can tell us.

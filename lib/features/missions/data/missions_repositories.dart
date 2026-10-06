@@ -1,3 +1,4 @@
+import '../../../core/mock/mock_constants.dart';
 import 'package:flutter/foundation.dart' show kReleaseMode;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -388,7 +389,7 @@ class FakeMissionsRepository implements MissionsRepository {
     return const SeasonRecap(
       roadmapDay: 66,
       postsPublished: 54,
-      xpBalance: 4820,
+      xpBalance: kMockXpBalance,
     );
   }
 }

@@ -78,6 +78,44 @@ Map<String, dynamic> _$FollowerReadingToJson(_FollowerReading instance) =>
       'measuredAt': instance.measuredAt,
     };
 
+_FollowerGrowth _$FollowerGrowthFromJson(Map<String, dynamic> json) =>
+    _FollowerGrowth(
+      kind: json['kind'] as String? ?? 'none',
+      days: (json['days'] as num?)?.toInt() ?? 0,
+      gained: (json['gained'] as num?)?.toInt() ?? 0,
+      latest: (json['latest'] as num?)?.toInt() ?? 0,
+      perDay: (json['perDay'] as num?)?.toDouble() ?? 0,
+      perMonth: (json['perMonth'] as num?)?.toInt() ?? 0,
+    );
+
+Map<String, dynamic> _$FollowerGrowthToJson(_FollowerGrowth instance) =>
+    <String, dynamic>{
+      'kind': instance.kind,
+      'days': instance.days,
+      'gained': instance.gained,
+      'latest': instance.latest,
+      'perDay': instance.perDay,
+      'perMonth': instance.perMonth,
+    };
+
+_FollowerHistory _$FollowerHistoryFromJson(Map<String, dynamic> json) =>
+    _FollowerHistory(
+      readings:
+          (json['readings'] as List<dynamic>?)
+              ?.map((e) => FollowerReading.fromJson(e as Map<String, dynamic>))
+              .toList() ??
+          const <FollowerReading>[],
+      growth: json['growth'] == null
+          ? const FollowerGrowth()
+          : FollowerGrowth.fromJson(json['growth'] as Map<String, dynamic>),
+    );
+
+Map<String, dynamic> _$FollowerHistoryToJson(_FollowerHistory instance) =>
+    <String, dynamic>{
+      'readings': instance.readings.map((e) => e.toJson()).toList(),
+      'growth': instance.growth.toJson(),
+    };
+
 _PersonaReply _$PersonaReplyFromJson(Map<String, dynamic> json) =>
     _PersonaReply(
       reply: json['reply'] as String? ?? '',

@@ -7,6 +7,7 @@ import '../../../../core/ui/zave/zave_kit.dart';
 import '../../../persona/application/persona_controller.dart';
 import '../../../persona/domain/persona_entities.dart';
 import '../../domain/roadmap_planets.dart';
+import 'follower_series_chart.dart';
 
 /// "How many followers do you have?" — asked on the roadmap, where it matters.
 ///
@@ -121,6 +122,10 @@ class _FollowerCheckpointState extends ConsumerState<FollowerCheckpoint> {
           : _Progress(
               phase: phase,
               reading: reading,
+              // Nothing until the series arrives, and nothing if it fails —
+              // the strip's job is the number and the bar; the line is a
+              // bonus that must never cost either of them.
+              history: ref.watch(followerHistoryProvider).value,
               onEdit: () {
                 _controller.text = reading.count.toString();
                 setState(() => _editing = true);
@@ -203,11 +208,16 @@ class _Progress extends StatelessWidget {
   const _Progress({
     required this.phase,
     required this.reading,
+    required this.history,
     required this.onEdit,
   });
 
   final RoadmapPhase phase;
   final FollowerReading reading;
+
+  /// Null while loading, and null on failure. Both mean "draw no line".
+  final FollowerHistory? history;
+
   final VoidCallback onEdit;
 
   @override
@@ -260,14 +270,41 @@ class _Progress extends StatelessWidget {
           ),
         ),
         SizedBox(height: ZaveSpace.sm),
-        Text(
-          remaining <= 0
-              ? 'Checkpoint passed.'
-              : '${_formatted(remaining)} to go.',
-          style: ZaveType.caption,
+        Row(
+          children: <Widget>[
+            Expanded(
+              child: Text(
+                remaining <= 0
+                    ? 'Checkpoint passed.'
+                    : '${_formatted(remaining)} to go.',
+                style: ZaveType.caption,
+              ),
+            ),
+            if (_rate case final String rate)
+              Text(rate, style: ZaveType.caption),
+          ],
         ),
+        if (history?.isPlottable ?? false) ...<Widget>[
+          SizedBox(height: ZaveSpace.md),
+          FollowerSeriesChart(points: history!.points, target: target),
+        ],
       ],
     );
+  }
+
+  /// The rate, in the user's terms, or nothing.
+  ///
+  /// Said as a month because that is the unit people think about growth in,
+  /// and because a per-day figure for most users here is a decimal that reads
+  /// as precision nobody has. Silent below a fortnight: the server answers
+  /// `tooSoon` rather than quoting a slope two readings a day apart would put
+  /// in the thousands.
+  String? get _rate {
+    final FollowerGrowth? g = history?.growth;
+    if (g == null || g.asKind != FollowerGrowthKind.rate) return null;
+    if (g.perMonth == 0) return 'Holding steady';
+    final String n = _formatted(g.perMonth.abs());
+    return g.perMonth > 0 ? '+$n a month' : '-$n a month';
   }
 }
 

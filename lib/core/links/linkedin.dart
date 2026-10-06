@@ -24,7 +24,7 @@ library;
 
 /// LinkedIn's own article editor.
 ///
-/// The Sunday article cannot be published through the API — there is no
+/// The weekly article cannot be published through the API — there is no
 /// article endpoint and no newsletter endpoint, and the personal scope set
 /// covers UGC shares only. So the app prepares the article and hands it over:
 /// copy the body, open this, paste.

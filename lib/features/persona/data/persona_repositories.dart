@@ -47,6 +47,18 @@ class ApiPersonaRepository implements PersonaRepository {
   });
 
   @override
+  Future<FollowerHistory> fetchFollowerHistory({int? days}) async {
+    final response = await _client.get<Map<String, dynamic>>(
+      ApiPaths.personaReachHistory,
+      queryParameters: days == null ? null : <String, dynamic>{'days': days},
+    );
+    final Map<String, dynamic>? data = response.data;
+    return data == null
+        ? const FollowerHistory()
+        : FollowerHistory.fromJson(data);
+  }
+
+  @override
   Future<FollowerReading?> recordFollowers({
     required int count,
     DateTime? measuredAt,
@@ -324,6 +336,77 @@ class FakePersonaRepository implements PersonaRepository {
 
   /// Null to begin with — see fetchPersona.
   FollowerReading? _recorded;
+
+  /// A real, IRREGULARLY spaced series.
+  ///
+  /// Evenly spaced fixtures are how a time-axis bug survives manual testing:
+  /// an index-spaced chart and a date-spaced one draw the identical line when
+  /// every gap is the same, so the fixture would have hidden exactly the
+  /// mistake the chart is built to avoid. The gaps here are 34, 21, 9, 14 and
+  /// 6 days, and the last stretch is deliberately flat — a plateau is a real
+  /// thing for a follower count to do, and the chart has to survive one.
+  late final List<FollowerReading> _series = <FollowerReading>[
+    _reading(94, 820),
+    _reading(60, 905),
+    _reading(39, 986),
+    _reading(30, 1042),
+    _reading(16, 1180),
+    _reading(10, 1240),
+    _reading(2, 1240),
+  ];
+
+  static FollowerReading _reading(int daysAgo, int count) => FollowerReading(
+    count: count,
+    measuredAt: DateTime.now()
+        .toUtc()
+        .subtract(Duration(days: daysAgo))
+        .toIso8601String(),
+  );
+
+  @override
+  Future<FollowerHistory> fetchFollowerHistory({int? days}) async {
+    await Future<void>.delayed(_latency);
+
+    // Until the user records one, there is no history — the same state the
+    // server reports, and the one the checkpoint prompt exists for.
+    if (_recorded == null) return const FollowerHistory();
+
+    final List<FollowerReading> all = <FollowerReading>[..._series, _recorded!];
+    final List<FollowerReading> windowed = days == null
+        ? all
+        : all.where((FollowerReading r) {
+            final DateTime? at = DateTime.tryParse(r.measuredAt);
+            return at != null && DateTime.now().difference(at).inDays <= days;
+          }).toList();
+
+    return FollowerHistory(readings: windowed, growth: _growthOf(windowed));
+  }
+
+  /// Mirrors the server's rule, including the fortnight floor — a fake that
+  /// always quoted a rate would make the `tooSoon` branch unreachable.
+  static FollowerGrowth _growthOf(List<FollowerReading> rs) {
+    if (rs.isEmpty) return const FollowerGrowth();
+    if (rs.length == 1) {
+      return FollowerGrowth(kind: 'single', latest: rs.first.count);
+    }
+    final DateTime? a = DateTime.tryParse(rs.first.measuredAt);
+    final DateTime? b = DateTime.tryParse(rs.last.measuredAt);
+    if (a == null || b == null) return const FollowerGrowth();
+
+    final int days = b.difference(a).inDays.abs().clamp(1, 1 << 30);
+    final int gained = rs.last.count - rs.first.count;
+    if (days < 14) {
+      return FollowerGrowth(kind: 'tooSoon', days: days, gained: gained);
+    }
+    final double perDay = gained / days;
+    return FollowerGrowth(
+      kind: 'rate',
+      days: days,
+      gained: gained,
+      perDay: perDay,
+      perMonth: (perDay * 30).round(),
+    );
+  }
 
   @override
   Future<FollowerReading?> recordFollowers({

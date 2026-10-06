@@ -70,6 +70,10 @@ class PersonaController extends _$PersonaController {
           state.value!.copyWith(followers: saved),
         );
       }
+      // The series just gained a point. Without this the chart keeps drawing
+      // the old one until something else happens to rebuild it, so the number
+      // above it and the line below it disagree.
+      ref.invalidate(followerHistoryProvider);
       return null;
     } on Object {
       if (current != null) state = AsyncData<PersonaSnapshot>(current);
@@ -128,6 +132,26 @@ class PersonaTurn {
   /// Suggested persona edits attached to a Plexa reply. Rendered as an
   /// explicit accept — a chat turn never writes on its own.
   final List<PersonaProposal> proposals;
+}
+
+/// The follower series behind the checkpoint.
+///
+/// Separate from [PersonaController] rather than folded into the snapshot:
+/// `GET /persona` does not carry it, it is only ever needed by the one strip
+/// that draws it, and keeping it apart means the roadmap does not pay for a
+/// second query on every load of a screen that may not show a chart at all.
+///
+/// Returns an empty history rather than throwing when the read fails. This is
+/// an instrument on somebody else's screen — the roadmap renders perfectly
+/// without it, and an error card above the day's missions would cost more
+/// attention than the line is worth.
+@riverpod
+Future<FollowerHistory> followerHistory(Ref ref) async {
+  try {
+    return await ref.read(personaRepositoryProvider).fetchFollowerHistory();
+  } on Object {
+    return const FollowerHistory();
+  }
 }
 
 /// The Plexa conversation.

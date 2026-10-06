@@ -42,7 +42,7 @@ class ZaveRoutes {
 
   // ── Creation ──────────────────────────────────────────────────────────────
 
-  /// The content planner — the week grid built around Sunday's article.
+  /// The content planner — the week grid built around Thursday's newsletter.
   static const String planner = '/planner';
 
   /// Compose, personal brand. Nav visibility: personal.

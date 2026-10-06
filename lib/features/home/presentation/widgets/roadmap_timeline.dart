@@ -583,7 +583,8 @@ class _ThematicHeader extends StatelessWidget {
                 ),
                 SizedBox(height: ZaveSpace.xs),
                 Text(
-                  'Post a little every day for 66 days to grow on LinkedIn.',
+                  'Show up a little every day — comment, connect, and post on the\n'
+                  'days your week posts — to grow on LinkedIn.',
                   // The web sets this in Manrope; Zave's rule is that Urbanist
                   // reads and Manrope names, and this is a sentence you read —
                   // so it takes the reading face.
