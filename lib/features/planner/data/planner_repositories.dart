@@ -3,9 +3,11 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/config/env.dart';
 import '../../../core/network/api_paths.dart';
+import '../../../core/week/week_shape.dart';
 import '../../../core/network/dio_client.dart';
 import '../domain/plan_slot.dart';
 import '../domain/planner_repository.dart';
+import '../domain/video_script.dart';
 import '../domain/weekly_article.dart';
 import 'package:dio/dio.dart';
 import '../../../core/network/failure.dart';
@@ -217,6 +219,76 @@ class ApiPlannerRepository implements PlannerRepository {
   }
 
   @override
+  Future<List<VideoScript>> fetchWeekScripts({
+    required int week,
+    required int season,
+  }) async {
+    final response = await _client.get<Map<String, dynamic>>(
+      ApiPaths.plannerVideoScript,
+      queryParameters: <String, dynamic>{'week': week, 'season': season},
+    );
+    final Object? raw = response.data?['scripts'];
+    if (raw is! List) return const <VideoScript>[];
+    return raw
+        .whereType<Map<String, dynamic>>()
+        .map(VideoScript.fromJson)
+        .toList(growable: false);
+  }
+
+  @override
+  Future<VideoScript?> markScriptPosted({
+    required int weekNumber,
+    required int season,
+    required int dayIndex,
+  }) async {
+    try {
+      final response = await _client.post<Map<String, dynamic>>(
+        ApiPaths.plannerVideoScript,
+        data: <String, dynamic>{
+          'weekNumber': weekNumber,
+          'season': season,
+          'dayIndex': dayIndex,
+          'action': 'posted',
+        },
+      );
+      final Object? script = response.data?['script'];
+      return script is Map<String, dynamic>
+          ? VideoScript.fromJson(script)
+          : null;
+    } on DioException catch (e) {
+      // 404 is "no script for that slot", which is a state rather than a
+      // fault — the user tapped on a day Sunday never wrote. Null says so;
+      // anything else is a real failure the screen should surface.
+      if (e.response?.statusCode == 404) return null;
+      rethrow;
+    }
+  }
+
+  @override
+  Future<VideoScript> generateScript({
+    required int weekNumber,
+    required int season,
+    required int dayIndex,
+    bool force = false,
+  }) async {
+    final response = await _client.post<Map<String, dynamic>>(
+      ApiPaths.plannerVideoScript,
+      data: <String, dynamic>{
+        'weekNumber': weekNumber,
+        'season': season,
+        'dayIndex': dayIndex,
+        'action': 'generate',
+        if (force) 'force': true,
+      },
+    );
+    final Object? script = response.data?['script'];
+    if (script is! Map<String, dynamic>) {
+      throw StateError('The script could not be written.');
+    }
+    return VideoScript.fromJson(script);
+  }
+
+  @override
   Future<ArticleState> fetchArticle({int? week, int? season}) async {
     final response = await _client.get<Map<String, dynamic>>(
       ApiPaths.plannerArticle,
@@ -293,11 +365,20 @@ class FakePlannerRepository implements PlannerRepository {
     topic: 'Why most onboarding fails in week one',
     generatedAt: '2026-09-14T04:00:00.000Z',
     posts: <PlanSlot>[
+      // Carries the REAL week shape. It used to omit `kind` entirely, so every
+      // one of the seven days resolved to DayKind.post — which meant the mock
+      // flavor, the thing this app is manually tested on, showed a week the
+      // product stopped producing: seven publishable posts, a Generate button
+      // on all of them, and no video or newsletter day at all. A fixture that
+      // disagrees with the server about the shape of the week hides exactly
+      // the bugs it exists to surface.
       for (int i = 0; i < 7; i++)
         PlanSlot(
           day: _days[i],
           format: _formats[i],
           type: i == 4 ? 'poll' : (i.isEven ? 'niche' : 'productive'),
+          rawKind: dayKindAt(i).wire,
+          restDay: dayKindAt(i) == DayKind.rest,
           title: <String>[
             'The first week decides the year',
             'Three onboarding metrics nobody tracks',
@@ -307,13 +388,14 @@ class FakePlannerRepository implements PlannerRepository {
             'A checklist you can steal',
             'Why onboarding is a design problem',
           ][i],
+          // Only a post day has a publish ladder to climb. The two video days
+          // and Thursday stay `planned` for ever on the server too — their
+          // real state lives in the script and article rows.
           status: switch (i) {
             0 || 1 => SlotStatus.published,
-            2 => SlotStatus.generated,
-            3 => SlotStatus.approved,
             _ => SlotStatus.planned,
           },
-          postId: i <= 3 ? 'mock-post-$i' : null,
+          postId: i <= 1 ? 'mock-post-$i' : null,
         ),
     ],
   );
@@ -424,6 +506,134 @@ class FakePlannerRepository implements PlannerRepository {
     );
     _plan = _plan.copyWith(posts: posts);
     return _plan;
+  }
+
+  /// Seeded so both video states are walkable without a server: Wednesday is
+  /// written and waiting, Friday has nothing — which is the state the
+  /// Generate button exists for and the one Sunday's batch failing leaves
+  /// behind.
+  List<VideoScript> _scripts = <VideoScript>[
+    const VideoScript(
+      id: 'mock-script-wed',
+      weekNumber: 3,
+      season: 1,
+      dayIndex: 2,
+      title: 'The onboarding deck nobody reads',
+      hook: 'Your onboarding deck is written for the person who wrote it.',
+      caption:
+          'We rebuilt ours around the first question a new joiner actually '
+          'asks. Week-one attrition halved.\n\nThe deck was never the '
+          'problem. The order was.',
+      beats: <VideoBeat>[
+        VideoBeat(
+          seconds: 0,
+          say: 'Your onboarding deck is written for the person who wrote it.',
+          show: 'Talking to camera, no titles yet.',
+        ),
+        VideoBeat(
+          seconds: 4,
+          say:
+              'Ours opened with the org chart. Nobody asked for the org '
+              'chart.',
+          show: 'Cut to a slide of an org chart, then cut away fast.',
+        ),
+        VideoBeat(
+          seconds: 11,
+          say:
+              'The first question is always the same — what am I supposed to '
+              'do today.',
+          show: 'Text on screen: "what do I do today?"',
+        ),
+        VideoBeat(
+          seconds: 18,
+          say:
+              'So we put that on slide one, and moved everything else behind '
+              'it.',
+          show: 'New deck, slide one, held for a beat.',
+        ),
+        VideoBeat(
+          seconds: 26,
+          say: 'Week-one attrition halved. Same content. Different order.',
+          show: 'Back to camera.',
+        ),
+      ],
+    ),
+  ];
+
+  @override
+  Future<List<VideoScript>> fetchWeekScripts({
+    required int week,
+    required int season,
+  }) async {
+    await Future<void>.delayed(const Duration(milliseconds: 300));
+    return _scripts;
+  }
+
+  @override
+  Future<VideoScript?> markScriptPosted({
+    required int weekNumber,
+    required int season,
+    required int dayIndex,
+  }) async {
+    await Future<void>.delayed(const Duration(milliseconds: 200));
+    final int i = _scripts.indexWhere(
+      (VideoScript v) => v.dayIndex == dayIndex,
+    );
+    if (i == -1) return null;
+    final VideoScript posted = _scripts[i].copyWith(
+      status: 'published',
+      publishedAt: DateTime.now().toUtc().toIso8601String(),
+    );
+    _scripts = List<VideoScript>.of(_scripts)..[i] = posted;
+    return posted;
+  }
+
+  @override
+  Future<VideoScript> generateScript({
+    required int weekNumber,
+    required int season,
+    required int dayIndex,
+    bool force = false,
+  }) async {
+    await Future<void>.delayed(const Duration(milliseconds: 900));
+    final VideoScript written = VideoScript(
+      id: 'mock-script-$dayIndex',
+      weekNumber: weekNumber,
+      season: season,
+      dayIndex: dayIndex,
+      title: 'Written on demand',
+      hook: 'Nobody gets promoted for the work nobody can see.',
+      caption:
+          'Write the summary. Send it upward. It is not bragging, it is '
+          'reporting.',
+      beats: const <VideoBeat>[
+        VideoBeat(
+          seconds: 0,
+          say: 'Nobody gets promoted for the work nobody can see.',
+          show: 'Camera, close.',
+        ),
+        VideoBeat(
+          seconds: 6,
+          say: 'Not because it did not happen — because nobody was told.',
+          show: 'Text on screen: "nobody was told".',
+        ),
+        VideoBeat(
+          seconds: 14,
+          say: 'Five lines on a Friday. What shipped, what it changed.',
+          show: 'A short written list, held.',
+        ),
+      ],
+    );
+    final int i = _scripts.indexWhere(
+      (VideoScript v) => v.dayIndex == dayIndex,
+    );
+    _scripts = List<VideoScript>.of(_scripts);
+    if (i == -1) {
+      _scripts.add(written);
+    } else {
+      _scripts[i] = written;
+    }
+    return written;
   }
 
   @override

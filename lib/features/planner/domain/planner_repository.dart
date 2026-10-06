@@ -1,4 +1,5 @@
 import 'plan_slot.dart';
+import 'video_script.dart';
 import 'weekly_article.dart';
 
 /// Reads and writes the week plan.
@@ -70,6 +71,46 @@ abstract class PlannerRepository {
   Future<String> regenerateTitle({
     required String planId,
     required int slotIndex,
+  });
+
+  /// The week's video scripts, in day order.
+  ///
+  /// Never throws for a read failure — the service swallows its own and
+  /// returns an empty list, and this mirrors that: a database hiccup costs the
+  /// planner its scripts, not its week.
+  ///
+  /// [week] and [season] are REQUIRED, unlike the article's. The route has no
+  /// "current week" default, and the caller has better numbers anyway: the
+  /// loaded plan's own, which guarantees the scripts belong to the week on
+  /// screen rather than to whatever the server thinks today is.
+  Future<List<VideoScript>> fetchWeekScripts({
+    required int week,
+    required int season,
+  });
+
+  /// Records that the user filmed and posted one.
+  ///
+  /// The ONLY way a script is ever closed out. LinkedIn's video upload is a
+  /// different API from a text share and this product does not speak it, so no
+  /// share URN ever comes back to match — exactly the newsletter's situation.
+  ///
+  /// Returns null when the slot has no script to close.
+  Future<VideoScript?> markScriptPosted({
+    required int weekNumber,
+    required int season,
+    required int dayIndex,
+  });
+
+  /// Writes the script for one slot on demand.
+  ///
+  /// Scripts are written on Sunday with the rest of the week; this is the
+  /// path for when that did not happen, or when the user wants it early.
+  /// Costs a model call, so the server rate-limits it as AI_EXPENSIVE.
+  Future<VideoScript> generateScript({
+    required int weekNumber,
+    required int season,
+    required int dayIndex,
+    bool force,
   });
 
   /// The week's Sunday article.

@@ -1,9 +1,11 @@
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
+import '../../../core/network/failure.dart';
 import '../data/planner_repositories.dart';
 import '../domain/plan_slot.dart';
-import '../domain/weekly_article.dart';
 import '../domain/planner_repository.dart';
+import '../domain/video_script.dart';
+import '../domain/weekly_article.dart';
 
 part 'planner_controller.g.dart';
 
@@ -205,6 +207,127 @@ class PlannerController extends _$PlannerController {
       // Put the server's truth back. A failed approve that still looks approved
       // is worse than one that visibly did not take.
       ref.invalidateSelf();
+    }
+  }
+}
+
+/// The week's video scripts, keyed to the week on screen.
+///
+/// Its own controller for the same reason the article has one: a script is not
+/// one of the week's posts. It is prepared and handed over, it never reaches
+/// the publish ladder, and a failed read of it must not cost the user their
+/// plan — the planner renders fine with no scripts, it just cannot say which
+/// hand-off days are done.
+///
+/// Watches the PLAN rather than [plannerWeekProvider]. That provider holds
+/// `(null, null)` for "whatever the server thinks is current", and the scripts
+/// route has no such default — it requires real numbers. Taking them off the
+/// loaded plan also guarantees the scripts belong to the week being drawn
+/// rather than to today, which matters the moment the user pages backwards.
+@riverpod
+class VideoScriptsController extends _$VideoScriptsController {
+  @override
+  Future<List<VideoScript>> build() async {
+    final PlannerState planner = await ref.watch(
+      plannerControllerProvider.future,
+    );
+    final WeekPlan? plan = planner.plan;
+    if (plan == null) return const <VideoScript>[];
+
+    try {
+      return await ref
+          .read(plannerRepositoryProvider)
+          .fetchWeekScripts(week: plan.weekNumber, season: plan.season);
+    } on Object {
+      // Swallowed, like the service's own read. The planner is still correct
+      // without this; it just falls back to "not written yet" on the two
+      // video days, which is the honest answer when we cannot tell.
+      return const <VideoScript>[];
+    }
+  }
+
+  /// The script for one slot, or null.
+  VideoScript? forDay(int dayIndex) {
+    for (final VideoScript v in state.value ?? const <VideoScript>[]) {
+      if (v.dayIndex == dayIndex) return v;
+    }
+    return null;
+  }
+
+  /// Records that the user filmed and posted one.
+  ///
+  /// The only way a script is ever closed out — see [VideoScript]. Optimistic,
+  /// because the user is telling US what they did and the server stores
+  /// exactly that; the only failure is a tick that comes back.
+  Future<bool> markPosted(int dayIndex) async {
+    final List<VideoScript>? current = state.value;
+    if (current == null) return false;
+    final int i = current.indexWhere((VideoScript v) => v.dayIndex == dayIndex);
+    if (i == -1 || current[i].isPosted) return false;
+
+    state = AsyncData<List<VideoScript>>(
+      List<VideoScript>.of(current)
+        ..[i] = current[i].copyWith(status: 'published'),
+    );
+
+    try {
+      final VideoScript? saved = await ref
+          .read(plannerRepositoryProvider)
+          .markScriptPosted(
+            weekNumber: current[i].weekNumber,
+            season: current[i].season,
+            dayIndex: dayIndex,
+          );
+      if (saved == null) {
+        // 404 — the row went away under us. Put the tick back rather than
+        // leaving a day marked done that the server has no record of.
+        state = AsyncData<List<VideoScript>>(current);
+        return false;
+      }
+      state = AsyncData<List<VideoScript>>(
+        List<VideoScript>.of(state.value ?? current)..[i] = saved,
+      );
+      return true;
+    } on Object {
+      state = AsyncData<List<VideoScript>>(current);
+      return false;
+    }
+  }
+
+  /// Writes the script for a day Sunday did not.
+  ///
+  /// Returns an error sentence, or null on success. Not optimistic — there is
+  /// nothing to show until the model answers, and a spinner that resolves into
+  /// real content is the honest shape for a call that takes seconds.
+  Future<String?> generate(int dayIndex, {bool force = false}) async {
+    final PlannerState? planner = ref.read(plannerControllerProvider).value;
+    final WeekPlan? plan = planner?.plan;
+    if (plan == null) return 'The week has not loaded yet.';
+
+    try {
+      final VideoScript written = await ref
+          .read(plannerRepositoryProvider)
+          .generateScript(
+            weekNumber: plan.weekNumber,
+            season: plan.season,
+            dayIndex: dayIndex,
+            force: force,
+          );
+      final List<VideoScript> next = List<VideoScript>.of(
+        state.value ?? const <VideoScript>[],
+      );
+      final int i = next.indexWhere((VideoScript v) => v.dayIndex == dayIndex);
+      if (i == -1) {
+        next.add(written);
+      } else {
+        next[i] = written;
+      }
+      state = AsyncData<List<VideoScript>>(next);
+      return null;
+    } on Failure catch (f) {
+      return f.message;
+    } on Object {
+      return 'The script could not be written. Try again.';
     }
   }
 }

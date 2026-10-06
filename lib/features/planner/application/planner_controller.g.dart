@@ -141,6 +141,107 @@ abstract class _$PlannerController extends $AsyncNotifier<PlannerState> {
   }
 }
 
+/// The week's video scripts, keyed to the week on screen.
+///
+/// Its own controller for the same reason the article has one: a script is not
+/// one of the week's posts. It is prepared and handed over, it never reaches
+/// the publish ladder, and a failed read of it must not cost the user their
+/// plan — the planner renders fine with no scripts, it just cannot say which
+/// hand-off days are done.
+///
+/// Watches the PLAN rather than [plannerWeekProvider]. That provider holds
+/// `(null, null)` for "whatever the server thinks is current", and the scripts
+/// route has no such default — it requires real numbers. Taking them off the
+/// loaded plan also guarantees the scripts belong to the week being drawn
+/// rather than to today, which matters the moment the user pages backwards.
+
+@ProviderFor(VideoScriptsController)
+final videoScriptsControllerProvider = VideoScriptsControllerProvider._();
+
+/// The week's video scripts, keyed to the week on screen.
+///
+/// Its own controller for the same reason the article has one: a script is not
+/// one of the week's posts. It is prepared and handed over, it never reaches
+/// the publish ladder, and a failed read of it must not cost the user their
+/// plan — the planner renders fine with no scripts, it just cannot say which
+/// hand-off days are done.
+///
+/// Watches the PLAN rather than [plannerWeekProvider]. That provider holds
+/// `(null, null)` for "whatever the server thinks is current", and the scripts
+/// route has no such default — it requires real numbers. Taking them off the
+/// loaded plan also guarantees the scripts belong to the week being drawn
+/// rather than to today, which matters the moment the user pages backwards.
+final class VideoScriptsControllerProvider
+    extends $AsyncNotifierProvider<VideoScriptsController, List<VideoScript>> {
+  /// The week's video scripts, keyed to the week on screen.
+  ///
+  /// Its own controller for the same reason the article has one: a script is not
+  /// one of the week's posts. It is prepared and handed over, it never reaches
+  /// the publish ladder, and a failed read of it must not cost the user their
+  /// plan — the planner renders fine with no scripts, it just cannot say which
+  /// hand-off days are done.
+  ///
+  /// Watches the PLAN rather than [plannerWeekProvider]. That provider holds
+  /// `(null, null)` for "whatever the server thinks is current", and the scripts
+  /// route has no such default — it requires real numbers. Taking them off the
+  /// loaded plan also guarantees the scripts belong to the week being drawn
+  /// rather than to today, which matters the moment the user pages backwards.
+  VideoScriptsControllerProvider._()
+    : super(
+        from: null,
+        argument: null,
+        retry: null,
+        name: r'videoScriptsControllerProvider',
+        isAutoDispose: true,
+        dependencies: null,
+        $allTransitiveDependencies: null,
+      );
+
+  @override
+  String debugGetCreateSourceHash() => _$videoScriptsControllerHash();
+
+  @$internal
+  @override
+  VideoScriptsController create() => VideoScriptsController();
+}
+
+String _$videoScriptsControllerHash() =>
+    r'bdf4bec643ba0f834bafad45fe22bb4d76f2a93b';
+
+/// The week's video scripts, keyed to the week on screen.
+///
+/// Its own controller for the same reason the article has one: a script is not
+/// one of the week's posts. It is prepared and handed over, it never reaches
+/// the publish ladder, and a failed read of it must not cost the user their
+/// plan — the planner renders fine with no scripts, it just cannot say which
+/// hand-off days are done.
+///
+/// Watches the PLAN rather than [plannerWeekProvider]. That provider holds
+/// `(null, null)` for "whatever the server thinks is current", and the scripts
+/// route has no such default — it requires real numbers. Taking them off the
+/// loaded plan also guarantees the scripts belong to the week being drawn
+/// rather than to today, which matters the moment the user pages backwards.
+
+abstract class _$VideoScriptsController
+    extends $AsyncNotifier<List<VideoScript>> {
+  FutureOr<List<VideoScript>> build();
+  @$mustCallSuper
+  @override
+  void runBuild() {
+    final ref =
+        this.ref as $Ref<AsyncValue<List<VideoScript>>, List<VideoScript>>;
+    final element =
+        ref.element
+            as $ClassProviderElement<
+              AnyNotifier<AsyncValue<List<VideoScript>>, List<VideoScript>>,
+              AsyncValue<List<VideoScript>>,
+              Object?,
+              Object?
+            >;
+    element.handleCreate(ref, build);
+  }
+}
+
 /// The week's Sunday article.
 ///
 /// Separate from [PlannerController] because the article is not one of the

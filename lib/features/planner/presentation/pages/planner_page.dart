@@ -8,6 +8,7 @@ import '../../../../core/ui/zave/zave_kit.dart';
 import '../../application/planner_controller.dart';
 import '../../data/planner_repositories.dart';
 import '../../domain/plan_slot.dart';
+import '../../domain/video_script.dart';
 import '../../domain/weekly_article.dart';
 import '../widgets/article_card.dart';
 import '../widgets/slot_card.dart';
@@ -34,6 +35,9 @@ class PlannerPage extends ConsumerWidget {
     final AsyncValue<ArticleState> article = ref.watch(
       articleControllerProvider,
     );
+    final AsyncValue<List<VideoScript>> scripts = ref.watch(
+      videoScriptsControllerProvider,
+    );
 
     return ZaveScaffold(
       // No header. The body opens with its own `Week N` / `planner` lockup,
@@ -44,6 +48,7 @@ class PlannerPage extends ConsumerWidget {
         onRefresh: () async {
           ref.invalidate(plannerControllerProvider);
           ref.invalidate(articleControllerProvider);
+          ref.invalidate(videoScriptsControllerProvider);
           await ref.read(plannerControllerProvider.future);
         },
         child: planner.when(
@@ -51,8 +56,12 @@ class PlannerPage extends ConsumerWidget {
           error: (Object e, StackTrace _) => _PlannerError(
             onRetry: () => ref.invalidate(plannerControllerProvider),
           ),
-          data: (PlannerState state) =>
-              _PlannerBody(state: state, article: article, ref: ref),
+          data: (PlannerState state) => _PlannerBody(
+            state: state,
+            article: article,
+            scripts: scripts,
+            ref: ref,
+          ),
         ),
       ),
     );
@@ -68,11 +77,13 @@ class _PlannerBody extends StatelessWidget {
   const _PlannerBody({
     required this.state,
     required this.article,
+    required this.scripts,
     required this.ref,
   });
 
   final PlannerState state;
   final AsyncValue<ArticleState> article;
+  final AsyncValue<List<VideoScript>> scripts;
   final WidgetRef ref;
 
   /// Today's weekday name, matched against the slot's `day`.
@@ -178,6 +189,7 @@ class _PlannerBody extends StatelessWidget {
           SlotCard(
             slot: plan.posts[i],
             isToday: plan.posts[i].day == today,
+            handoff: _handoffFor(plan.posts[i], i, scripts, article),
             onTap: () => _openSlot(context, plan.posts[i], i),
             // Approve is a publish action: it moves a slot to `approved` and
             // the chain ships it. A video script and the newsletter are never
@@ -264,6 +276,43 @@ class _PlannerBody extends StatelessWidget {
     }
     if (ahead.inDays < 7) return '${days[when.weekday - 1]} at $time';
     return '${when.day} ${months[when.month - 1]} at $time';
+  }
+
+  /// Where a hand-off day has actually got to.
+  ///
+  /// The slot cannot answer this — `status` is written only by the
+  /// post-generation path, which a video or newsletter day never reaches — so
+  /// it comes from the thing that really holds the state: the script row for a
+  /// video day, the article row for Thursday.
+  ///
+  /// Null while either is still loading, which the card renders as a quiet
+  /// label rather than guessing "to write" and correcting itself a beat later.
+  static HandoffState? _handoffFor(
+    PlanSlot slot,
+    int slotIndex,
+    AsyncValue<List<VideoScript>> scripts,
+    AsyncValue<ArticleState> article,
+  ) {
+    switch (slot.kind) {
+      case DayKind.videoScript:
+        final List<VideoScript>? all = scripts.value;
+        if (all == null) return null;
+        for (final VideoScript v in all) {
+          if (v.dayIndex == slotIndex) {
+            return v.isPosted ? HandoffState.posted : HandoffState.ready;
+          }
+        }
+        return HandoffState.notWritten;
+      case DayKind.article:
+        final ArticleState? a = article.value;
+        if (a == null) return null;
+        final WeeklyArticle? written = a.article;
+        if (written == null) return HandoffState.notWritten;
+        return written.isPublished ? HandoffState.posted : HandoffState.ready;
+      case DayKind.post:
+      case DayKind.rest:
+        return null;
+    }
   }
 
   void _openSlot(BuildContext context, PlanSlot slot, int slotIndex) {
@@ -619,6 +668,48 @@ class _SlotSheet extends ConsumerStatefulWidget {
 class _SlotSheetState extends ConsumerState<_SlotSheet> {
   bool _busy = false;
   bool _titleBusy = false;
+  bool _scriptBusy = false;
+
+  Future<void> _generateScript() async {
+    setState(() => _scriptBusy = true);
+    String? failure;
+    try {
+      failure = await ref
+          .read(videoScriptsControllerProvider.notifier)
+          .generate(widget.slotIndex);
+    } finally {
+      if (mounted) setState(() => _scriptBusy = false);
+    }
+    if (!mounted || failure == null) return;
+    _say(failure);
+  }
+
+  Future<void> _markScriptPosted() async {
+    setState(() => _scriptBusy = true);
+    bool saved = false;
+    try {
+      saved = await ref
+          .read(videoScriptsControllerProvider.notifier)
+          .markPosted(widget.slotIndex);
+    } finally {
+      if (mounted) setState(() => _scriptBusy = false);
+    }
+    if (!mounted) return;
+    // Said out loud only on failure. On success the row behind the sheet turns
+    // green and the button becomes a tick, which is the louder signal.
+    if (!saved) _say('That did not save. Try again.');
+  }
+
+  Future<void> _copyCaption(VideoScript script) async {
+    await Clipboard.setData(ClipboardData(text: script.caption));
+    if (mounted) _say('Caption copied.');
+  }
+
+  void _say(String message) {
+    ScaffoldMessenger.of(context)
+      ..hideCurrentSnackBar()
+      ..showSnackBar(SnackBar(content: Text(message, style: ZaveType.body)));
+  }
 
   Future<void> _rewriteTitle() async {
     setState(() => _titleBusy = true);
@@ -737,7 +828,27 @@ class _SlotSheetState extends ConsumerState<_SlotSheet> {
 
   @override
   Widget build(BuildContext context) {
-    final ({Color color, String label}) signal = slotSignal(slot);
+    final AsyncValue<List<VideoScript>> scripts = ref.watch(
+      videoScriptsControllerProvider,
+    );
+    final VideoScript? script = slot.kind == DayKind.videoScript
+        ? <VideoScript?>[...?scripts.value]
+              .where((VideoScript? v) => v?.dayIndex == widget.slotIndex)
+              .firstOrNull
+        : null;
+
+    final ({Color color, String label}) signal = slotSignal(
+      slot,
+      handoff: slot.kind != DayKind.videoScript
+          ? null
+          : scripts.value == null
+          ? null
+          : script == null
+          ? HandoffState.notWritten
+          : script.isPosted
+          ? HandoffState.posted
+          : HandoffState.ready,
+    );
 
     return _Sheet(
       children: <Widget>[
@@ -785,6 +896,23 @@ class _SlotSheetState extends ConsumerState<_SlotSheet> {
                 ZavePill(label: '#$tag', color: ZaveColors.peri),
             ],
           ),
+        ],
+        // A video day. Without this the sheet offered one action — rewriting
+        // the title of a script it could not show — on a day whose entire
+        // output is that script.
+        if (slot.kind == DayKind.videoScript) ...<Widget>[
+          SizedBox(height: ZaveSpace.xl),
+          if (scripts.isLoading && scripts.value == null)
+            Text('Loading the script…', style: ZaveType.bodyMuted)
+          else if (script == null)
+            _ScriptMissing(busy: _scriptBusy, onGenerate: _generateScript)
+          else
+            _ScriptBody(
+              script: script,
+              busy: _scriptBusy,
+              onCopyCaption: () => _copyCaption(script),
+              onPosted: script.isPosted ? null : _markScriptPosted,
+            ),
         ],
         // The planner's primary action. Without it this sheet was a read-only
         // description of a day the user could do nothing about.
@@ -947,4 +1075,174 @@ class _PlannerError extends StatelessWidget {
       ),
     ],
   );
+}
+
+/// Sunday's batch has not written this day's script, or it failed.
+///
+/// The web shows the same control for the same reason: before it existed the
+/// panel read "it will appear here" with nothing behind it, so a failed Sunday
+/// left the user waiting on something that was never coming.
+class _ScriptMissing extends StatelessWidget {
+  const _ScriptMissing({required this.busy, required this.onGenerate});
+
+  final bool busy;
+  final VoidCallback onGenerate;
+
+  @override
+  Widget build(BuildContext context) => Column(
+    crossAxisAlignment: CrossAxisAlignment.start,
+    children: <Widget>[
+      Text('SCRIPT', style: ZaveType.kicker),
+      SizedBox(height: ZaveSpace.sm),
+      Text(
+        'Scripts are written on Sunday with the rest of the week. You can '
+        'have this one now.',
+        style: ZaveType.bodyMuted,
+      ),
+      SizedBox(height: ZaveSpace.lg),
+      ZaveButton.primary(
+        label: busy ? 'Writing the script…' : 'Write this script',
+        expand: true,
+        busy: busy,
+        onPressed: busy ? null : onGenerate,
+      ),
+    ],
+  );
+}
+
+/// The script itself: the hook, the shot list, the caption, and the one
+/// control that can ever close it out.
+///
+/// ## Why a shot list and not a page of prose
+///
+/// Someone is going to hold a phone and film this. They need to know what to
+/// say, roughly when, and what is on screen while they say it. A wall of text
+/// also invites reading it aloud, which is the most recognisable way a
+/// LinkedIn video looks scripted.
+class _ScriptBody extends StatelessWidget {
+  const _ScriptBody({
+    required this.script,
+    required this.busy,
+    required this.onCopyCaption,
+    required this.onPosted,
+  });
+
+  final VideoScript script;
+  final bool busy;
+  final VoidCallback onCopyCaption;
+
+  /// Null once it is posted — there is nothing left to say.
+  final VoidCallback? onPosted;
+
+  @override
+  Widget build(BuildContext context) {
+    final int runtime = script.runtimeSeconds;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: <Widget>[
+        Text('FIRST LINE', style: ZaveType.kicker),
+        SizedBox(height: ZaveSpace.sm),
+        Container(
+          width: double.infinity,
+          padding: ZaveSpace.rowPad,
+          decoration: BoxDecoration(
+            gradient: ZaveFill.rest,
+            border: ZaveEdgeBorder(
+              gradient: ZaveEdge.rest,
+              highlight: ZaveEdge.bevel,
+            ),
+            borderRadius: ZaveRadius.cardSmBr,
+          ),
+          // The single most load-bearing sentence in a short video — it is
+          // what decides whether the next four seconds happen — so it gets
+          // its own box rather than becoming beat zero of the list.
+          child: Text(script.hook, style: ZaveType.lead),
+        ),
+
+        if (script.hasBeats) ...<Widget>[
+          SizedBox(height: ZaveSpace.xl),
+          Row(
+            children: <Widget>[
+              Expanded(child: Text('SHOT LIST', style: ZaveType.kicker)),
+              if (runtime > 0)
+                Text('about ${runtime}s', style: ZaveType.caption),
+            ],
+          ),
+          SizedBox(height: ZaveSpace.md),
+          for (final VideoBeat beat in script.beats) ...<Widget>[
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: <Widget>[
+                SizedBox(
+                  width: 42,
+                  child: Text(
+                    beat.timecode,
+                    style: ZaveType.mono.copyWith(
+                      color: ZaveColors.lavenderLo,
+                      height: 1.45,
+                    ),
+                  ),
+                ),
+                SizedBox(width: ZaveSpace.sm),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: <Widget>[
+                      Text(beat.say, style: ZaveType.body),
+                      if (beat.show.trim().isNotEmpty) ...<Widget>[
+                        SizedBox(height: 2),
+                        Text(beat.show, style: ZaveType.caption),
+                      ],
+                    ],
+                  ),
+                ),
+              ],
+            ),
+            SizedBox(height: ZaveSpace.lg),
+          ],
+        ],
+
+        if (script.caption.trim().isNotEmpty) ...<Widget>[
+          SizedBox(height: ZaveSpace.sm),
+          Row(
+            children: <Widget>[
+              Expanded(child: Text('CAPTION', style: ZaveType.kicker)),
+              ZaveButton(label: 'Copy', onPressed: onCopyCaption),
+            ],
+          ),
+          SizedBox(height: ZaveSpace.sm),
+          Text(script.caption, style: ZaveType.bodyMuted),
+        ],
+
+        SizedBox(height: ZaveSpace.xl),
+        Text(
+          // Said plainly, and only here. The user is about to look for a
+          // publish button; this is why there isn't one.
+          'LinkedIn’s video upload is a different API from a text post and we '
+          'cannot put this up for you. Film it, post it, then mark it here.',
+          style: ZaveType.caption,
+        ),
+        SizedBox(height: ZaveSpace.md),
+        if (onPosted == null)
+          Row(
+            children: <Widget>[
+              const ZaveDot(ZaveColors.green),
+              SizedBox(width: ZaveSpace.sm),
+              Text(
+                'Posted',
+                style: ZaveType.label.copyWith(color: ZaveColors.green),
+              ),
+            ],
+          )
+        else
+          ZaveButton.primary(
+            label: 'I posted this',
+            expand: true,
+            busy: busy,
+            onPressed: busy ? null : onPosted,
+          ),
+      ],
+    );
+  }
 }

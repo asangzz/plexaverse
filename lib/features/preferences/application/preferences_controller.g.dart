@@ -76,7 +76,7 @@ final class PreferencesControllerProvider
 }
 
 String _$preferencesControllerHash() =>
-    r'c7ab6df58c683b2f303e266ac2c4b46580161ccb';
+    r'5bddccd22114664c83f42ead7fa4c67f012abec3';
 
 /// The preferences row — the app's ONE reader of the keystone state.
 ///

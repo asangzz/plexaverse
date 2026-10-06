@@ -60,18 +60,6 @@ earlier notes still resolve — 6 and 12 are closed and listed at the bottom.
 
 ### High — broken
 
-**3. The video script has no mobile surface at all, and both hand-off rows are
-pinned at "to write" forever.** The article half is closed — `article_card.dart`
-paints a green Published from `/planner/article`. The script half is not:
-`7ff913e` added `app/api/mobile/v1/planner/video-script/route.ts` and **nothing
-in Flutter calls it** — no path in `api_paths.dart`, no model, no repository
-method. So Wednesday and Friday say "We write the script — you record and post
-it", open a sheet whose only action is *rewrite the title*, and offer no way to
-read the script or mark it posted. Separately `slot_card.dart:28-36` labels both
-hand-off kinds off `slot.status`, whose only writers
-(`planner-generate.service.ts:390,521`) are unreachable on a hand-off day
-because of the `NOT_A_POST_DAY` throw at `:142`.
-
 **B. The base64 in `posts.image_url` is an ONGOING LEAK, not a backfill.**
 Recorded as a historical 78 MB; it is not. Three web planner paths still PATCH
 a fresh multi-megabyte `data:` URL today. Mobile is the client that gets this
@@ -170,6 +158,7 @@ swapping it, so the next shape change cannot re-break it.
 | # | Was | Settled by |
 |---|---|---|
 | 2 | Generate button on hand-off days always failed | `49ca63d` — the `NOT_A_POST_DAY` branch (`planner_repositories.dart:104-106`), its copy (`planner_page.dart:723`), and the `slot.isPublishable` gate that removes the button entirely (`:654-664`) |
+| 3 | The video script had no mobile surface at all — `7ff913e` added the route and nothing called it, so Wednesday and Friday opened a sheet whose only action was rewriting the title of a script the app could not show. Both hand-off rows were also pinned at "to write" for ever, reading a `status` column that a hand-off day never reaches | A `VideoScript` model, three repository methods, `VideoScriptsController`, and the shot list in the slot sheet. `slotSignal` now takes a `HandoffState` resolved from the script row (or the article row for Thursday) instead of `slot.status`. The mock plan carries the real `weekShape` too — it built all seven days as posts, so the flavor this app is manually tested on showed a week the product stopped producing |
 | 5 | Top Voices: a phone-only user got **zero** curated posts anywhere (the generator's only caller was a web-session route), and the Comments step asked for ten against a screen that could supply five, so Finish could never enable | `GET`/`PATCH /api/mobile/v1/top-voices`, the `TopVoicesSection` card, `reachableCommentTarget`, a Dart port of the forty category ids and a picker in Settings. The two fakes that seeded category LABELS are fixed too — they would have had every preferences PATCH rejected by the server's refine |
 | 6 | *(folded into 4 during the first pass)* | — |
 | 12 | Chart kit | Rendering-layer only, no wire impact; mobile has `ZaveSparkline` / `ZaveAreaWedge` / `ZaveMeter`. Superseded by 10, which is the real gap |

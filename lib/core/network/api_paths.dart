@@ -149,6 +149,15 @@ class ApiPaths {
   /// GET the Sunday article; POST to record that the user published it
   /// themselves. LinkedIn's API cannot publish an article, so the app never
   /// pushes one — it prepares a body and the user pastes it.
+  /// The week's two video scripts.
+  ///
+  /// GET returns the week's; POST writes one on demand or marks one posted.
+  /// Added server-side with the planner pivot and then reachable from nothing
+  /// — the Flutter planner was served Wednesday and Friday with no way to read
+  /// what had been written for them, so both days opened a sheet whose only
+  /// action was rewriting the title of a script the app could not show.
+  static const String plannerVideoScript = '/planner/video-script';
+
   static const String plannerArticle = '/planner/article';
 
   /// The article's body on its own.

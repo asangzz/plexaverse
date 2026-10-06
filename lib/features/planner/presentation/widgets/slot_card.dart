@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../../../core/ui/zave/zave_kit.dart';
 import '../../domain/plan_slot.dart';
+import '../../domain/video_script.dart';
 
 /// Maps a slot's status onto a Zave signal colour.
 ///
@@ -16,7 +17,18 @@ import '../../domain/plan_slot.dart';
 ///
 /// Note there is deliberately no red anywhere: Zave has none, and none of these
 /// states is an error.
-({Color color, String label}) slotSignal(PlanSlot slot) {
+/// [handoff] is where a video script or the newsletter has actually got to,
+/// and it has to be passed in because the slot cannot answer it. `slot.status`
+/// is written only by the post-generation path, which a hand-off day never
+/// reaches — `planner-generate.service` throws NOT_A_POST_DAY before it gets
+/// there. So both rows read `planned` for ever, and Wednesday said "Script to
+/// write" over a script that was written, filmed and posted. Null means the
+/// answer has not arrived yet, and the row stays deliberately quiet rather
+/// than guessing and then correcting itself a moment later.
+({Color color, String label}) slotSignal(
+  PlanSlot slot, {
+  HandoffState? handoff,
+}) {
   // Kind first, because three of the four kinds are not about a post's
   // progress at all. A video script and the newsletter are work WE prepare and
   // the USER posts, so the publish ladder below — scheduled, published —
@@ -27,13 +39,28 @@ import '../../domain/plan_slot.dart';
     case DayKind.rest:
       return (color: ZaveColors.ink35, label: 'Rest day');
     case DayKind.videoScript:
-      return slot.status == SlotStatus.planned
-          ? (color: ZaveColors.ink35, label: 'Script to write')
-          : (color: ZaveColors.peri, label: 'Script ready');
+      return switch (handoff) {
+        null => (color: ZaveColors.ink35, label: 'Video'),
+        HandoffState.notWritten => (
+          color: ZaveColors.ink35,
+          label: 'Script to write',
+        ),
+        HandoffState.ready => (color: ZaveColors.amber, label: 'Ready to film'),
+        HandoffState.posted => (color: ZaveColors.green, label: 'Posted'),
+      };
     case DayKind.article:
-      return slot.status == SlotStatus.planned
-          ? (color: ZaveColors.ink35, label: 'Newsletter to write')
-          : (color: ZaveColors.peri, label: 'Newsletter ready');
+      return switch (handoff) {
+        null => (color: ZaveColors.ink35, label: 'Newsletter'),
+        HandoffState.notWritten => (
+          color: ZaveColors.ink35,
+          label: 'Newsletter to write',
+        ),
+        // Amber, not periwinkle. Zave reserves amber for "waiting on YOU",
+        // and that is exactly what a written hand-off is — the only state on
+        // this screen that needs the user to go and do something.
+        HandoffState.ready => (color: ZaveColors.amber, label: 'Ready to post'),
+        HandoffState.posted => (color: ZaveColors.green, label: 'Posted'),
+      };
     case DayKind.post:
       break;
   }
@@ -54,12 +81,17 @@ class SlotCard extends StatelessWidget {
   const SlotCard({
     required this.slot,
     required this.isToday,
+    this.handoff,
     this.onTap,
     this.onApprove,
     super.key,
   });
 
   final PlanSlot slot;
+
+  /// Where this day's hand-off has got to, on a video or newsletter day. Null
+  /// on a post day, and while the answer is still loading.
+  final HandoffState? handoff;
 
   /// Raises the card to the `now` fill step. Exactly one card per week may set
   /// this — if several do, none of them reads as current.
@@ -72,7 +104,10 @@ class SlotCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final ({Color color, String label}) signal = slotSignal(slot);
+    final ({Color color, String label}) signal = slotSignal(
+      slot,
+      handoff: handoff,
+    );
 
     return ZaveCard(
       size: ZaveCardSize.medium,
@@ -90,7 +125,9 @@ class SlotCard extends StatelessWidget {
             children: <Widget>[
               _DayCircle(
                 day: slot.day,
-                tone: slot.status == SlotStatus.published
+                tone:
+                    slot.status == SlotStatus.published ||
+                        handoff == HandoffState.posted
                     ? ZaveRowTone.done
                     : isToday
                     ? ZaveRowTone.now
