@@ -17,6 +17,51 @@ part 'engagement_controllers.g.dart';
 Future<RoadmapProgress> engagementProgress(Ref ref) =>
     ref.watch(engagementRepositoryProvider).fetchRoadmapProgress();
 
+/// Today's five curated posts, and the stamp when the user opens one.
+///
+/// Its own controller rather than a field on [CommentsController], because the
+/// two halves of the comments screen have genuinely different lifetimes: the
+/// niche batch is replayed free all day from a server-side cache, while this
+/// one is generated once, charged once, and carries a DURABLE per-item done
+/// state that Open Plexa also writes. Folding them together would mean a
+/// failure in either half taking the other down, on a screen whose whole point
+/// is that there are two ways to make the day's ten.
+///
+/// Not `keepAlive`: the stamp lives on the server, so there is nothing here
+/// worth surviving a pop that a re-read would not recover.
+@riverpod
+class TopVoicesController extends _$TopVoicesController {
+  @override
+  Future<TopVoiceDay> build() =>
+      ref.watch(engagementRepositoryProvider).fetchTopVoices();
+
+  /// The user opened this post to comment on it.
+  ///
+  /// Optimistic, and the opposite of the rule the publish path follows.
+  /// Publishing must never claim something reached LinkedIn; here the user is
+  /// telling US they acted and the server stores exactly that, so the only
+  /// failure mode is a tick that comes back — which it does, because a count
+  /// that stayed up after a failed write would tell them the day is recorded
+  /// when it is not.
+  Future<void> markActed(String shownId) async {
+    final TopVoiceDay? day = state.value;
+    if (day == null) return;
+    if (day.posts.every((TopVoice p) => p.shownId != shownId)) return;
+
+    final TopVoiceDay before = day;
+    state = AsyncData<TopVoiceDay>(day.withActed(shownId));
+
+    try {
+      await ref.read(engagementRepositoryProvider).markTopVoiceActed(shownId);
+    } on Object {
+      // Roll back to exactly what was there, not to "not acted": Plexa may
+      // have stamped this row minutes ago, and a blanket clear would erase a
+      // tick the server is right about.
+      state = AsyncData<TopVoiceDay>(before);
+    }
+  }
+}
+
 /// Today's roadmap step for one of the two habit screens.
 ///
 /// Null is a real answer, not an error — see [EngagementMission.locate]. The

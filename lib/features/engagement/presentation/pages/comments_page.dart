@@ -13,6 +13,7 @@ import '../../domain/engagement_repository.dart';
 import '../widgets/comment_card.dart';
 import '../widgets/engagement_states.dart';
 import '../widgets/mission_header.dart';
+import '../widgets/top_voices_section.dart';
 
 /// **Comment on posts** — the web's `/comments`, the first of the two daily
 /// habits the Season 1 roadmap links to.
@@ -75,6 +76,9 @@ class CommentsPage extends ConsumerWidget {
       engagementMissionProvider(ZaveRoutes.comments),
     );
     final AsyncValue<bool> completion = ref.watch(stepCompletionProvider);
+    final AsyncValue<TopVoiceDay> topVoices = ref.watch(
+      topVoicesControllerProvider,
+    );
 
     // A failed claim is the one thing on this screen the user must be told
     // about: their work is done and the XP did not land.
@@ -89,8 +93,32 @@ class CommentsPage extends ConsumerWidget {
 
     final CommentBatch? data = batch.value;
     final EngagementMission? m = mission.value;
-    final int sent = data?.sentCount ?? 0;
-    final int target = m?.targetCount ?? _defaultTarget;
+    final TopVoiceDay? curated = topVoices.value;
+
+    // The day is BOTH halves of this screen. Counting only the niche drafts
+    // below left the step unfinishable the moment the target became ten: five
+    // cards against a bar reading 10, and a Finish that could never enable.
+    final int networkSent = data?.sentCount ?? 0;
+    final int curatedDone = curated?.actedCount ?? 0;
+    final int sent = networkSent + curatedDone;
+
+    final int roadmapTarget = m?.targetCount ?? _defaultTarget;
+
+    // What today can actually produce, which is not always what the roadmap
+    // asks for. A user whose subjects are thinly stocked gets fewer than five
+    // curated posts, and a target they cannot reach is a step they can never
+    // finish — the same failure the old hardcoded 3 was hiding, one layer up.
+    //
+    // Narrowed only once the picks have landed, so the bar does not flash the
+    // wrong number on the way in. Ported from the web's
+    // `Math.min(roadmapTarget, topVoicesTotal + NETWORK_COMMENT_BATCH_SIZE)`.
+    final int target = curated == null
+        ? roadmapTarget
+        : reachableCommentTarget(
+            roadmapTarget: roadmapTarget,
+            curatedTotal: curated.posts.length,
+          );
+
     final bool claimable =
         m != null && !m.isCompleted && data != null && sent >= target;
 
@@ -116,6 +144,7 @@ class CommentsPage extends ConsumerWidget {
         onRefresh: () async {
           ref
             ..invalidate(engagementProgressProvider)
+            ..invalidate(topVoicesControllerProvider)
             ..invalidate(commentsControllerProvider(topic));
           await ref.read(commentsControllerProvider(topic).future);
         },
@@ -144,7 +173,7 @@ class CommentsPage extends ConsumerWidget {
             ],
           ),
           data: (CommentBatch value) =>
-              _body(context, ref, value, m, sent, target),
+              _body(context, ref, value, m, sent, target, topVoices),
         ),
       ),
     );
@@ -165,6 +194,7 @@ class CommentsPage extends ConsumerWidget {
     EngagementMission? mission,
     int sent,
     int target,
+    AsyncValue<TopVoiceDay> topVoices,
   ) {
     final CommentsController controller = ref.read(
       commentsControllerProvider(topic).notifier,
@@ -192,6 +222,17 @@ class CommentsPage extends ConsumerWidget {
           'relevant content.',
           style: ZaveType.bodyMuted,
         ),
+
+        SizedBox(height: ZaveSpace.xl),
+        // The curated half, ABOVE the generated one, because it is the better
+        // work: a real post by a real person, with a comment written against
+        // what they actually said. The drafts below are written against a KIND
+        // of post, so the user has to go and find one that fits.
+        const TopVoicesSection(),
+        SizedBox(height: ZaveSpace.xl),
+        // A rule, not a heading: the two halves are one habit and one count,
+        // and a second heading would read as a second task.
+        Container(height: 1, color: ZaveColors.rule),
         if (batch.cached) ...<Widget>[
           SizedBox(height: ZaveSpace.sm),
           const CachedBatchNote(),

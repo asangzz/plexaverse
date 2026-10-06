@@ -109,9 +109,19 @@ class ZavePill extends StatelessWidget {
             leading!,
             SizedBox(width: ZaveSpace.sm),
           ],
-          Text(
-            label,
-            style: ZaveType.label.copyWith(color: color ?? ZaveColors.ink85),
+          // Flexible + ellipsis, though the Row is min-sized. The pill is
+          // normally a count or a status word and never needs it — but it is
+          // handed free text by callers (a category name, a plan name), and an
+          // unbounded Text inside a min-sized Row does not shrink: it paints
+          // past the parent and renders the overflow bars. Degrading to an
+          // ellipsis costs short labels nothing.
+          Flexible(
+            child: Text(
+              label,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: ZaveType.label.copyWith(color: color ?? ZaveColors.ink85),
+            ),
           ),
         ],
       ),

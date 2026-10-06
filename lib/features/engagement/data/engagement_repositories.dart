@@ -92,6 +92,38 @@ class ApiEngagementRepository implements EngagementRepository {
   }
 
   @override
+  Future<TopVoiceDay> fetchTopVoices() async {
+    try {
+      final response = await _client.get<Map<String, dynamic>>(
+        ApiPaths.topVoices,
+      );
+      final Map<String, dynamic>? data = response.data;
+      // An absent body is not an empty day. Answering TopVoiceDay() here would
+      // render "nothing new in your subjects today" over a request that never
+      // arrived, and the user would stop looking.
+      if (data == null) {
+        throw const EngagementFailure(EngagementBlock.unavailable);
+      }
+      return TopVoiceDay.fromJson(data);
+    } on DioException catch (e) {
+      throw _translate(e);
+    }
+  }
+
+  @override
+  Future<bool> markTopVoiceActed(String shownId) async {
+    try {
+      final response = await _client.patch<Map<String, dynamic>>(
+        ApiPaths.topVoices,
+        data: <String, dynamic>{'shownId': shownId},
+      );
+      return response.data?['stamped'] as bool? ?? false;
+    } on DioException catch (e) {
+      throw _translate(e);
+    }
+  }
+
+  @override
   Future<void> teachStyle({required String text, String? topic}) async {
     if (text.trim().isEmpty) return;
     try {
@@ -318,6 +350,132 @@ class FakeEngagementRepository implements EngagementRepository {
         ),
       ],
     );
+  }
+
+  /// Seeded so every state the screen can reach is walkable: one post already
+  /// acted (so the resume-at-the-first-outstanding seek is exercised rather
+  /// than assumed), one with no drafted comment (the batch wrote the row and
+  /// the model gave nothing back for it), and three outstanding.
+  TopVoiceDay _topVoices = TopVoiceDay(
+    posts: <TopVoice>[
+      TopVoice(
+        shownId: 'shown-1',
+        postId: 'tv-1',
+        postUrl: 'https://www.linkedin.com/feed/update/urn:li:share:tv1',
+        authorName: 'Priya Raman',
+        authorHandle: 'priyaraman',
+        category: 'leadership',
+        postContent:
+            'Most onboarding decks are written for the person who wrote them. '
+            'We rebuilt ours around the first question a new joiner actually '
+            'asks, and week-one attrition halved.',
+        firstLine:
+            'Most onboarding decks are written for the person who wrote them.',
+        postedAt: DateTime.now()
+            .subtract(const Duration(hours: 3))
+            .toUtc()
+            .toIso8601String(),
+        comment:
+            'The decks that worked for us were the ones a new joiner could '
+            'skip entirely and still land.',
+        actedAt: DateTime.now()
+            .subtract(const Duration(minutes: 40))
+            .toUtc()
+            .toIso8601String(),
+      ),
+      TopVoice(
+        shownId: 'shown-2',
+        postId: 'tv-2',
+        postUrl: 'https://www.linkedin.com/feed/update/urn:li:share:tv2',
+        authorName: 'Dev Kulkarni',
+        authorHandle: 'devk',
+        category: 'workplace_trends',
+        postContent:
+            'We stopped doing week-one demos. Retention went up. The demo was '
+            'never the problem — the rehearsal around it was.',
+        firstLine: 'We stopped doing week-one demos. Retention went up.',
+        postedAt: DateTime.now()
+            .subtract(const Duration(hours: 9))
+            .toUtc()
+            .toIso8601String(),
+        comment:
+            'Curious whether the demo was the cost, or the rehearsal around '
+            'it.',
+      ),
+      TopVoice(
+        shownId: 'shown-3',
+        postId: 'tv-3',
+        postUrl: 'https://www.linkedin.com/feed/update/urn:li:share:tv3',
+        authorName: 'Anita Deshpande',
+        authorHandle: 'anitad',
+        category: 'artificial_intelligence',
+        postContent:
+            'Every team I speak to has shipped an AI feature. Almost none can '
+            'say what it costs them per user per month.',
+        firstLine: 'Every team I speak to has shipped an AI feature.',
+        postedAt: DateTime.now()
+            .subtract(const Duration(days: 1))
+            .toUtc()
+            .toIso8601String(),
+        // No comment came back for this one. The row is still the user's for
+        // today — the card has to render without a draft.
+        comment: null,
+      ),
+      TopVoice(
+        shownId: 'shown-4',
+        postId: 'tv-4',
+        postUrl: 'https://www.linkedin.com/feed/update/urn:li:share:tv4',
+        authorName: 'Marcus Hale',
+        authorHandle: 'marcush',
+        category: 'engineering',
+        postContent:
+            'The migration took four months longer than planned. Three of '
+            'those were spent discovering what the old system actually did.',
+        firstLine: 'The migration took four months longer than planned.',
+        postedAt: DateTime.now()
+            .subtract(const Duration(days: 2))
+            .toUtc()
+            .toIso8601String(),
+        comment:
+            'The discovery phase is the migration. Everything after it is '
+            'typing.',
+      ),
+      TopVoice(
+        shownId: 'shown-5',
+        postId: 'tv-5',
+        postUrl: 'https://www.linkedin.com/feed/update/urn:li:share:tv5',
+        authorName: 'Leena Fernandes',
+        authorHandle: 'leenaf',
+        category: 'career',
+        postContent:
+            'Nobody gets promoted for the work nobody can see. Write the '
+            'summary. Send it upward. It is not bragging, it is reporting.',
+        firstLine: 'Nobody gets promoted for the work nobody can see.',
+        postedAt: DateTime.now()
+            .subtract(const Duration(days: 3))
+            .toUtc()
+            .toIso8601String(),
+        comment:
+            'The summary is half the job. The other half is sending it before '
+            'someone asks.',
+      ),
+    ],
+  );
+
+  @override
+  Future<TopVoiceDay> fetchTopVoices() async {
+    await Future<void>.delayed(const Duration(milliseconds: 350));
+    return _topVoices;
+  }
+
+  @override
+  Future<bool> markTopVoiceActed(String shownId) async {
+    await Future<void>.delayed(const Duration(milliseconds: 150));
+    final bool wasOutstanding = _topVoices.posts.any(
+      (TopVoice p) => p.shownId == shownId && !p.isActed,
+    );
+    _topVoices = _topVoices.withActed(shownId);
+    return wasOutstanding;
   }
 
   @override

@@ -12,6 +12,7 @@ import '../widgets/company_brand_section.dart';
 import '../widgets/connections_section.dart';
 import '../widgets/profile_section.dart';
 import '../widgets/settings_section.dart';
+import '../widgets/subjects_section.dart';
 import '../../../preferences/application/preferences_controller.dart';
 
 /// **Settings** — the web's `/settings`.
@@ -128,6 +129,12 @@ class _SettingsBody extends StatelessWidget {
         AutoPostSection(preferences: preferences),
         SizedBox(height: gap),
         CadenceSection(preferences: preferences),
+        SizedBox(height: gap),
+        // Next to the cadence, because both answer "what does my day look
+        // like" rather than "who am I" — and because a user who has just set
+        // their posting days is one tap from the only other thing that shapes
+        // the daily work.
+        SubjectsSection(preferences: preferences),
         SizedBox(height: gap),
         const NotificationsSection(),
         SizedBox(height: gap),

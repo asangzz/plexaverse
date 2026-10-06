@@ -60,6 +60,10 @@ dependencies:
   path_provider: ^2.1.5
   path: ^1.9.1
   crypto: ^3.0.7
+  # Grapheme-cluster iteration. Already present transitively via flutter, but
+  # the domain layer imports it directly and must not reach through
+  # flutter/material.dart for a string helper.
+  characters: ^1.4.0
   # AES-GCM key class shared with the DB key (generated on first launch,
   # stored in `flutter_secure_storage`, see core/storage/db_key_manager.dart).
   cryptography: ^2.9.0

@@ -488,7 +488,12 @@ class FakeSettingsRepository implements SettingsRepository {
     industry: 'Software',
     approvalChannel: 'slack',
     skills: <String>['Flutter', 'Dart', 'Design systems'],
-    postCategories: <String>['Engineering', 'Career'],
+    // IDs, not labels. The server refines postCategories against the
+    // closed list and fails the WHOLE PATCH on an unknown value, so a
+    // fake seeded with 'Engineering' would have had every preferences
+    // write rejected the moment it met a real backend — and the failure
+    // would have looked like a save bug, not a fixture bug.
+    postCategories: <String>['engineering', 'career'],
   );
 
   SlackConnection _slack = SlackConnection(

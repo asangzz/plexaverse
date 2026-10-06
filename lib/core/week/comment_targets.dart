@@ -33,6 +33,30 @@ const int dailyCommentTarget = 10;
 /// Mirrors `NETWORK_COMMENT_BATCH_SIZE`.
 const int networkCommentBatchSize = 5;
 
+/// What today can actually produce, which is not always what the roadmap asks.
+///
+/// The comments screen has two halves — the day's curated Top Voices posts and
+/// the generated niche drafts — and the roadmap's step counts both. A user
+/// whose subjects are thinly stocked gets fewer than five curated posts, and a
+/// target they cannot reach is a step they can never finish.
+///
+/// This is the same failure the scraped target used to cause one layer down,
+/// and it bit hardest on mobile: with no way to generate curated posts at all,
+/// [curatedTotal] was permanently zero, so the screen showed five cards against
+/// a bar reading ten and a Finish button that could not enable, every day.
+///
+/// Mirrors the web's
+/// `Math.min(roadmapTarget, topVoicesTotal + NETWORK_COMMENT_BATCH_SIZE)`.
+/// Never WIDENS: a company-brand day that asks for three stays three, because
+/// raising it would be inventing work the roadmap did not ask for.
+int reachableCommentTarget({
+  required int roadmapTarget,
+  required int curatedTotal,
+}) {
+  final int reachable = curatedTotal + networkCommentBatchSize;
+  return roadmapTarget < reachable ? roadmapTarget : reachable;
+}
+
 /// Connection requests asked for on a day the week posts on.
 ///
 /// Ported from the web's `lib/invite-targets.ts`, which is a leaf module there

@@ -242,6 +242,15 @@ class ApiPaths {
   static const String aiCarousel = '/ai/carousel';
   static const String aiHeadshot = '/ai/headshot';
   static const String aiComments = '/ai/comments';
+
+  /// Today's five curated posts, with a drafted comment on each.
+  ///
+  /// GET generates on the first ask of the day and charges once for the batch;
+  /// PATCH stamps one as acted. The ONLY route that can create the day —
+  /// [plexaDay] deliberately reads with the service's peek half and never
+  /// generates, so before this existed a phone-only user had no way to get a
+  /// single curated post, on any screen.
+  static const String topVoices = '/top-voices';
   static const String aiGenerateComment = '/ai/generate-comment';
   static const String aiGeneratePoll = '/ai/generate-poll';
   static const String aiGenerateAbout = '/ai/generate-about';
@@ -292,6 +301,7 @@ class ApiPaths {
 
   // ── Money ───────────────────────────────────────────────────────────────
   static const String geoPricing = '/geo/pricing';
+
   /// GET — the per-region autopay flags, which decide whether a plan is sold
   /// as a subscription mandate or a one-time order. The Razorpay key is NOT
   /// here: create-order and subscription/create each return it alongside the

@@ -1,5 +1,7 @@
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
+import '../../../core/engagement/top_voice_categories.dart';
+
 // The auto-post toggle is not a preferences write — it has side effects and
 // its own endpoint — so it stays on the settings repository.
 import '../../settings/data/settings_repositories.dart'
@@ -66,10 +68,26 @@ class PreferencesController extends _$PreferencesController {
   Future<void> saveProfile({
     required String profession,
     required String headline,
-  }) => _patch(<String, dynamic>{
-    'profession': profession,
-    'headline': headline,
-  });
+  }) =>
+      _patch(<String, dynamic>{'profession': profession, 'headline': headline});
+
+  /// The subjects curated Top Voices posts are drawn from.
+  ///
+  /// IDS, never labels. The server refines these against the closed list in
+  /// `lib/top-voice-categories.ts` and fails the WHOLE PATCH on an unknown
+  /// value, so a label here does not degrade to a narrower feed — it silently
+  /// loses every other field in the same write.
+  ///
+  /// An empty list is allowed and means "none chosen": `getDailyTopVoices`
+  /// returns an empty day for it rather than charging, which is what the
+  /// picker's own empty state is for.
+  Future<void> setPostCategories(List<String> categoryIds) {
+    assert(
+      categoryIds.every(isTopVoiceCategoryId),
+      'postCategories must be ids from topVoiceCategories, not labels.',
+    );
+    return _patch(<String, dynamic>{'postCategories': categoryIds});
+  }
 
   /// The auto-post kill switch.
   ///

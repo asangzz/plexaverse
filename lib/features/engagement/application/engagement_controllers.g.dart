@@ -68,6 +68,101 @@ final class EngagementProgressProvider
 String _$engagementProgressHash() =>
     r'f871949ec6cbed625ea9afdd32edecde52ab697f';
 
+/// Today's five curated posts, and the stamp when the user opens one.
+///
+/// Its own controller rather than a field on [CommentsController], because the
+/// two halves of the comments screen have genuinely different lifetimes: the
+/// niche batch is replayed free all day from a server-side cache, while this
+/// one is generated once, charged once, and carries a DURABLE per-item done
+/// state that Open Plexa also writes. Folding them together would mean a
+/// failure in either half taking the other down, on a screen whose whole point
+/// is that there are two ways to make the day's ten.
+///
+/// Not `keepAlive`: the stamp lives on the server, so there is nothing here
+/// worth surviving a pop that a re-read would not recover.
+
+@ProviderFor(TopVoicesController)
+final topVoicesControllerProvider = TopVoicesControllerProvider._();
+
+/// Today's five curated posts, and the stamp when the user opens one.
+///
+/// Its own controller rather than a field on [CommentsController], because the
+/// two halves of the comments screen have genuinely different lifetimes: the
+/// niche batch is replayed free all day from a server-side cache, while this
+/// one is generated once, charged once, and carries a DURABLE per-item done
+/// state that Open Plexa also writes. Folding them together would mean a
+/// failure in either half taking the other down, on a screen whose whole point
+/// is that there are two ways to make the day's ten.
+///
+/// Not `keepAlive`: the stamp lives on the server, so there is nothing here
+/// worth surviving a pop that a re-read would not recover.
+final class TopVoicesControllerProvider
+    extends $AsyncNotifierProvider<TopVoicesController, TopVoiceDay> {
+  /// Today's five curated posts, and the stamp when the user opens one.
+  ///
+  /// Its own controller rather than a field on [CommentsController], because the
+  /// two halves of the comments screen have genuinely different lifetimes: the
+  /// niche batch is replayed free all day from a server-side cache, while this
+  /// one is generated once, charged once, and carries a DURABLE per-item done
+  /// state that Open Plexa also writes. Folding them together would mean a
+  /// failure in either half taking the other down, on a screen whose whole point
+  /// is that there are two ways to make the day's ten.
+  ///
+  /// Not `keepAlive`: the stamp lives on the server, so there is nothing here
+  /// worth surviving a pop that a re-read would not recover.
+  TopVoicesControllerProvider._()
+    : super(
+        from: null,
+        argument: null,
+        retry: null,
+        name: r'topVoicesControllerProvider',
+        isAutoDispose: true,
+        dependencies: null,
+        $allTransitiveDependencies: null,
+      );
+
+  @override
+  String debugGetCreateSourceHash() => _$topVoicesControllerHash();
+
+  @$internal
+  @override
+  TopVoicesController create() => TopVoicesController();
+}
+
+String _$topVoicesControllerHash() =>
+    r'aa9ce5d6a0531d594a62432739f325ca8d1b0b4e';
+
+/// Today's five curated posts, and the stamp when the user opens one.
+///
+/// Its own controller rather than a field on [CommentsController], because the
+/// two halves of the comments screen have genuinely different lifetimes: the
+/// niche batch is replayed free all day from a server-side cache, while this
+/// one is generated once, charged once, and carries a DURABLE per-item done
+/// state that Open Plexa also writes. Folding them together would mean a
+/// failure in either half taking the other down, on a screen whose whole point
+/// is that there are two ways to make the day's ten.
+///
+/// Not `keepAlive`: the stamp lives on the server, so there is nothing here
+/// worth surviving a pop that a re-read would not recover.
+
+abstract class _$TopVoicesController extends $AsyncNotifier<TopVoiceDay> {
+  FutureOr<TopVoiceDay> build();
+  @$mustCallSuper
+  @override
+  void runBuild() {
+    final ref = this.ref as $Ref<AsyncValue<TopVoiceDay>, TopVoiceDay>;
+    final element =
+        ref.element
+            as $ClassProviderElement<
+              AnyNotifier<AsyncValue<TopVoiceDay>, TopVoiceDay>,
+              AsyncValue<TopVoiceDay>,
+              Object?,
+              Object?
+            >;
+    element.handleCreate(ref, build);
+  }
+}
+
 /// Today's roadmap step for one of the two habit screens.
 ///
 /// Null is a real answer, not an error — see [EngagementMission.locate]. The

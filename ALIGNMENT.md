@@ -60,24 +60,6 @@ earlier notes still resolve — 6 and 12 are closed and listed at the bottom.
 
 ### High — broken
 
-**5. A phone-only user gets ZERO Top Voices, anywhere — and their Comments step
-can never finish.** This is worse than first recorded, and the second half is
-new. `getDailyTopVoices` is the only function that picks and generates the
-day's five, and its one caller is `app/api/top-voices/route.ts:35`, a
-web-session route behind `auth()`. Mobile deliberately calls the read-only
-`peekDailyTopVoices` — correct, because the aggregate must never charge — so it
-replays rows that only a browser can create. On a phone `ready.topVoices` is
-permanently false. Then: Flutter asks for ten
-(`comment_targets.dart:25`) but counts only the five-draft niche batch
-(`comments_page.dart:92`), because the web's clamp
-`Math.min(roadmapTarget, topVoicesTotal + NETWORK_COMMENT_BATCH_SIZE)`
-(`app/(dashboard)/comments/page.tsx:190-192`) was never ported. **Finish can
-never enable on mobile.**
-→ needs `app/api/mobile/v1/top-voices/route.ts`, the clamp, a Dart model
-carrying `postContent`/`category`/`postedAt`/`actedAt`, and a category picker
-over the forty ids in `lib/top-voice-categories.ts`.
-*(The `actedAt` stamp half IS closed — `plexa/day/route.ts:242-244` writes it.)*
-
 **3. The video script has no mobile surface at all, and both hand-off rows are
 pinned at "to write" forever.** The article half is closed — `article_card.dart`
 paints a green Published from `/planner/article`. The script half is not:
@@ -188,6 +170,7 @@ swapping it, so the next shape change cannot re-break it.
 | # | Was | Settled by |
 |---|---|---|
 | 2 | Generate button on hand-off days always failed | `49ca63d` — the `NOT_A_POST_DAY` branch (`planner_repositories.dart:104-106`), its copy (`planner_page.dart:723`), and the `slot.isPublishable` gate that removes the button entirely (`:654-664`) |
+| 5 | Top Voices: a phone-only user got **zero** curated posts anywhere (the generator's only caller was a web-session route), and the Comments step asked for ten against a screen that could supply five, so Finish could never enable | `GET`/`PATCH /api/mobile/v1/top-voices`, the `TopVoicesSection` card, `reachableCommentTarget`, a Dart port of the forty category ids and a picker in Settings. The two fakes that seeded category LABELS are fixed too — they would have had every preferences PATCH rejected by the server's refine |
 | 6 | *(folded into 4 during the first pass)* | — |
 | 12 | Chart kit | Rendering-layer only, no wire impact; mobile has `ZaveSparkline` / `ZaveAreaWedge` / `ZaveMeter`. Superseded by 10, which is the real gap |
 

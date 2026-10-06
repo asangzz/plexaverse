@@ -1,10 +1,12 @@
 import '../../home/domain/roadmap_progress.dart';
 import 'comment_draft.dart';
 import 'connection_target.dart';
+import 'top_voice.dart';
 
 export '../../home/domain/roadmap_progress.dart';
 export 'comment_draft.dart';
 export 'connection_target.dart';
+export 'top_voice.dart';
 export 'engagement_mission.dart';
 
 /// Why a generation could not happen.
@@ -81,6 +83,27 @@ abstract class EngagementRepository {
   /// me" claim, and it must never surface an error: the user did not ask for
   /// this call and cannot act on its failure.
   Future<void> teachStyle({required String text, String? topic});
+
+  /// `GET /top-voices` — today's curated five, generating on the first ask.
+  ///
+  /// The upper half of the comments screen. Unlike [generateComments] this one
+  /// has no cheap replay to hide behind: the service stores its picks before it
+  /// returns, so the first call of the day costs XP and every later one is
+  /// free, including the one Open Plexa makes through its own aggregate.
+  ///
+  /// Throws an [EngagementFailure] with [EngagementBlock.insufficientXp] when
+  /// the balance is short.
+  Future<TopVoiceDay> fetchTopVoices();
+
+  /// `PATCH /top-voices` — stamp that the user opened one to comment.
+  ///
+  /// The durable half of this screen's progress. The niche drafts below are
+  /// marked sent in memory only; this one is a column, so it survives the app
+  /// and is what Open Plexa reads and writes too.
+  ///
+  /// Returns false when the row was already stamped — by Plexa, or by a second
+  /// tap. Not an error: the button has done its job either way.
+  Future<bool> markTopVoiceActed(String shownId);
 
   /// `GET /roadmap/progress` — which day it is and what is already done.
   Future<RoadmapProgress> fetchRoadmapProgress();
