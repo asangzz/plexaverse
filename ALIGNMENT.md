@@ -53,86 +53,141 @@ with the old UI**, which is why most of the high-severity rows below say
 
 ## Still open
 
-Ordered by damage. Each row is a real finding, verified against both repos.
+Ordered by damage. Re-verified against both repos after the Open Plexa rebuild;
+eight of the thirteen original rows were wrong in their details, so each now
+carries the file:line that settles it. Numbering is kept from the first pass so
+earlier notes still resolve — 6 and 12 are closed and listed at the bottom.
 
 ### High — broken
 
-**1. `completeRoadmapStep` credits XP for a step that no longer exists.**
-It writes the `RoadmapProgress` row unconditionally, *then* looks the step up in
-`getBaseRoadmap` to decide XP. On a Wed/Thu/Fri/Sat/Sun the `publish-post` step
-is now filtered out, so the lookup misses after the write has landed.
-→ `lib/services/roadmap.service.ts`
+**5. A phone-only user gets ZERO Top Voices, anywhere — and their Comments step
+can never finish.** This is worse than first recorded, and the second half is
+new. `getDailyTopVoices` is the only function that picks and generates the
+day's five, and its one caller is `app/api/top-voices/route.ts:35`, a
+web-session route behind `auth()`. Mobile deliberately calls the read-only
+`peekDailyTopVoices` — correct, because the aggregate must never charge — so it
+replays rows that only a browser can create. On a phone `ready.topVoices` is
+permanently false. Then: Flutter asks for ten
+(`comment_targets.dart:25`) but counts only the five-draft niche batch
+(`comments_page.dart:92`), because the web's clamp
+`Math.min(roadmapTarget, topVoicesTotal + NETWORK_COMMENT_BATCH_SIZE)`
+(`app/(dashboard)/comments/page.tsx:190-192`) was never ported. **Finish can
+never enable on mobile.**
+→ needs `app/api/mobile/v1/top-voices/route.ts`, the clamp, a Dart model
+carrying `postContent`/`category`/`postedAt`/`actedAt`, and a category picker
+over the forty ids in `lib/top-voice-categories.ts`.
+*(The `actedAt` stamp half IS closed — `plexa/day/route.ts:242-244` writes it.)*
 
-**2. Hand-off days offer a Generate button that always fails.**
-`planner-generate.service.ts:141` now throws `NOT_A_POST_DAY`, and
-`POST /api/mobile/v1/planner/generate-post` returns 400 with that code. Flutter's
-`_generateKind` has no branch for it, so the user gets a generic failure. No XP
-is burned — the server guard is correct — so this is a dead end, not data loss.
+**3. The video script has no mobile surface at all, and both hand-off rows are
+pinned at "to write" forever.** The article half is closed — `article_card.dart`
+paints a green Published from `/planner/article`. The script half is not:
+`7ff913e` added `app/api/mobile/v1/planner/video-script/route.ts` and **nothing
+in Flutter calls it** — no path in `api_paths.dart`, no model, no repository
+method. So Wednesday and Friday say "We write the script — you record and post
+it", open a sheet whose only action is *rewrite the title*, and offer no way to
+read the script or mark it posted. Separately `slot_card.dart:28-36` labels both
+hand-off kinds off `slot.status`, whose only writers
+(`planner-generate.service.ts:390,521`) are unreachable on a hand-off day
+because of the `NOT_A_POST_DAY` throw at `:142`.
 
-**3. Hand-off completion is invisible.**
-`markVideoScriptPublished` / `markArticlePublished` write their own tables; the
-plan slot is untouched. `GET /planner` returns the plan only, so a filmed video
-looks identical to an untouched one. The web overlays script and article status
-onto the week. Mobile now has the script endpoint (`7ff913e`) and needs the
-overlay.
-
-**4. Per-item progress is server-side in Plexa, still local on the engagement
-screens.** Open Plexa now reads and writes the shared session row, so the day
-survives a kill there. `CommentsController.markSent` and its connections twin
-are still in memory, so the same day counted on `/comments` still resets. They
-should read the same row.
+**B. The base64 in `posts.image_url` is an ONGOING LEAK, not a backfill.**
+Recorded as a historical 78 MB; it is not. Three web planner paths still PATCH
+a fresh multi-megabyte `data:` URL today. Mobile is the client that gets this
+right (`compose_controller.dart:407-421` uploads first and hard-fails rather
+than falling back) and inherits the cost through the shared `/posts/[id]`
+payload. Because those paths never write `imageThumbUrl`, every web-generated
+post also shows a permanent placeholder in the mobile feed.
+→ make the three call sites do what `tasks/execute/route.ts:1133-1139` already
+does, then reject `data:` in `createUserPost`/`updateUserPost`, then backfill.
 
 ### High — missing
 
-**5. Top Voices.** `top-voices.service.ts` (415 lines), the admin library, five
-curated posts a day, topics from the profession, settings picker. Mobile renders
-only the generated half of the comments page. Needs: a mobile route, a
-`DailyTopVoice` model, the `actedAt` stamp, and a settings surface for
-`postCategories` using the forty-id vocabulary.
+**9. Newsletter naming dead-ends.** No mobile route for
+`POST /api/planner/newsletter`, and the preferences schema is `.strict()`, so
+`newsletterName` cannot be written either. `isFirstArticle` stays true forever,
+the warning never clears, and captions keep referring to the article generically
+instead of by name (`lib/auto-post-prompts.ts:470`).
 
-**7. Follower capture.** `FollowerCheckpoint.tsx` asks for the count on the
-roadmap. Mobile's only route to a follower number is downloading LinkedIn's
-.xlsx on a desktop, so the phase checkpoints can never fill in. Needs
-`POST/GET /api/mobile/v1/persona/reach`.
+**7. Follower capture — narrower than recorded.** The `.xlsx` import is fully
+on-device now (`persona_page.dart:492-520` → `/persona/reach/import`), and the
+GET half effectively exists: `persona.service.ts:68,102` already folds
+`{count, measuredAt}` into the mobile payload. What is open: there is **no POST
+route** so a count cannot be typed; Flutter **throws away the number it is
+handed** (`persona_repositories.dart:148-188` reads `identity`/`bank`/
+`voiceSampleCount`, never `json['reach']`); and `followerTarget` in
+`roadmap_planets.dart` is assigned and read nowhere, so no checkpoint UI exists.
 
 ### Medium
 
-**8. Newsletter scheduling.** `weekly_articles.scheduled_for` is a schema change
-that *already* alters the mobile response — the summary route spreads the row,
-so `scheduledFor` is being sent and silently dropped by the Flutter model.
+**1. `completeRoadmapStep` writes the completion row before it knows the step
+exists, then silently awards 0 XP.** The trigger recorded was wrong — both UIs
+already filter `publish-post`, so no user can tap it; the path that fires it is
+`getRoadmapProgress`'s auto-credit calling `getBaseRoadmap(brandType)` **bare**
+at `roadmap.service.ts:188` and then `completeRoadmapStep` at `:228`, which
+rebuilds the roadmap *with* `roadmapStartedAt` at `:301`. A self-inconsistency
+between two call sites 113 lines apart.
+**Open Plexa does NOT make it more frequent** — it credits only `comment` and
+`connect`, from `buildRoadmap`, which already drops what the server drops.
+**But it exposed the same root bug on a step that costs real XP:** the WEB chat
+resolves its lane steps from a bare `getBaseRoadmap()`
+(`PlexaDayChat.tsx:117`), which keeps `connect` for everyone, while
+`roadmap-data.ts:255` drops step 3 for company brand. A company-brand user
+clearing the connections lane is told "Requests done. Logged." and loses the
+50 XP permanently — the row is marked complete, so the idempotency guard at
+`:275` means nothing can award it later. The Flutter port is correct here.
 
-**9. Newsletter naming dead-ends.** `POST /api/planner/newsletter` has no mobile
-route, and `newsletterName` is not whitelisted in user preferences, so the
-first-article flow cannot complete on a phone.
+**4. Engagement progress dies on screen pop, not app kill.** Both controllers
+are auto-dispose (`engagement_controllers.g.dart:224,351`, no `keepAlive`), so
+tapping to the dashboard and back already shows 0 of 3. The two surfaces openly
+disagree about work the user did. The fix is small and needs **no new id
+scheme** — `tv:` never reaches these screens, so comments need `nw:<i>` and
+connections `cn:<i>` only; seed `isSent` from `session.doneIn(lane)` and have
+`markSent` fire the POST.
 
-**10. Follower readings carry an as-of stamp** now; mobile has no history
-endpoint, which the growth chart's user line needs.
+**8. `scheduledFor` is on the wire and dropped.** The Flutter `WeeklyArticle`
+factory has no field for it, and the mobile article route has no `schedule`
+action, so a reminder set on the web is invisible on the phone and cannot be
+set, changed or cleared there.
+
+**A. `PostMetric` has no writer anywhere.** Confirmed — but the read sites
+recorded were wrong: the ~10 relation reads via `include: { metrics }` in
+`post.service.ts`/`linkedin-publish.service.ts` are what the post UIs consume,
+not the three aggregates. The dashboard is not a rendering surface at all
+(web removed `useDashboardData`; Flutter declares `ApiPaths.dashboard` and
+never calls it), and Flutter's `post_card._Metrics` is doubly dead — the feed
+mapper never sets `metrics`. The seam for a fix:
+`post-analytics.service.ts:117` already fetches `p.stats.impressionCount` live
+and throws it away.
 
 ### Low
 
-**11. Notification copy** still says the article is Sunday's. It is Thursday's.
-Nothing is broken on the wire — the push lands and the app's own settings copy
-contradicts it.
+**13. Nebula, Quasar and Nova all render as Uranus.** 3 of the 12 ported planets
+have no art, so past day 601 the three legs of the endgame are visually
+identical to each other and to a planet passed on day 366.
+→ three `PlanetVisual` entries in `planet_node.dart`, ported from
+`GamifiedRoadmap.tsx:82-84, 98-100, 113-115`; make the `?? planetVisuals['uranus']!`
+fallbacks at `:269` and `:648` assert in debug.
 
-**12. Chart kit.** Rendering-layer only; no wire impact. Mobile has its own
-(`ZaveSparkline`, `ZaveAreaWedge`, `ZaveMeter`).
+**10. No follower-history endpoint, and no growth chart on mobile to want one.**
+`getFollowerHistory` is web-only. More to the point, there is no chart in the
+Flutter repo at all — no charting package, no `*chart*` file — so the
+"where 100,000 comes from" argument that justifies posting daily is web-only.
+The chart is the larger half of this work.
 
-**13. Roadmap planets/phases are ported but not drawn.** `3bc02be` brought the
-12-planet, 4-phase table across; `planet_node.dart` still draws the nine-planet
-visual vocabulary and has no art for `nebula`, `quasar` or `nova`.
+**11. One string, in Flutter.** The claim had this backwards: the web
+notification was already fixed (`notification-templates.ts:252` names the thing,
+not the day) and so was the planner card. Exactly one user-facing string in
+either repo still names the wrong day —
+`cadence_section.dart:123`, "Sunday article". Drop the day word rather than
+swapping it, so the next shape change cannot re-break it.
 
 ---
 
-## Two things worth knowing
+## Closed since the first pass
 
-**`PostMetric` is empty in production.** 167 published posts, 0 metric rows,
-and nothing in the codebase writes the table — only three read-aggregates in
-`dashboard.service.ts`. So the post detail's performance section, the posts
-list's metrics row, and the dashboard's impressions all render nothing on real
-data. This is not an alignment gap; it is a feature that was never finished.
+| # | Was | Settled by |
+|---|---|---|
+| 2 | Generate button on hand-off days always failed | `49ca63d` — the `NOT_A_POST_DAY` branch (`planner_repositories.dart:104-106`), its copy (`planner_page.dart:723`), and the `slot.isPublishable` gate that removes the button entirely (`:654-664`) |
+| 6 | *(folded into 4 during the first pass)* | — |
+| 12 | Chart kit | Rendering-layer only, no wire impact; mobile has `ZaveSparkline` / `ZaveAreaWedge` / `ZaveMeter`. Superseded by 10, which is the real gap |
 
-**78 MB of base64 sits in `posts.image_url`.** 152 of 246 image posts hold an
-inline `data:` URL rather than a storage link. The mobile feed excludes the
-column by construction, so the list is fast — but opening a post detail can pull
-1.6 MB for one image. A thumbnail backfill would fix the list, the calendar and
-the detail at once.
