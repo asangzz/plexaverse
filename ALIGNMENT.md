@@ -39,6 +39,8 @@ with the old UI**, which is why most of the high-severity rows below say
 | Video scripts | the week has two; mobile had no endpoint | `7ff913e` |
 | Rate limiting | mobile has no cookie, so **all ~110 mobile routes bucketed by IP** — carrier NAT shares one AI budget | `c05737a` |
 | Session loss | 3h idle timer wiped a 30-day refresh token (a health-app policy; the web has none) | `85807b9` |
+| Planner dead ends | Generate offered on days the server refuses; "tomorrow's post" deep-linked to a non-post day | `49ca63d` |
+| **Open Plexa** | absent on mobile — now one aggregate call, three lanes, server-side progress | `95f01f9` `3474e1a` |
 | Android Google OAuth | Custom Tab survived the redirect and re-showed the account picker | `85807b9` |
 
 ---
@@ -68,11 +70,11 @@ looks identical to an untouched one. The web overlays script and article status
 onto the week. Mobile now has the script endpoint (`7ff913e`) and needs the
 overlay.
 
-**4. Per-item daily progress is local-only on mobile.**
-`plexa-day.service.ts` stores cleared item ids server-side as a third
-`DailyAiBatch` kind. Flutter keeps `markSent` in memory, so killing the app
-resets the day's count to zero — exactly the bug the web just removed, and the
-two clients disagree about the same day.
+**4. Per-item progress is server-side in Plexa, still local on the engagement
+screens.** Open Plexa now reads and writes the shared session row, so the day
+survives a kill there. `CommentsController.markSent` and its connections twin
+are still in memory, so the same day counted on `/comments` still resets. They
+should read the same row.
 
 ### High — missing
 
@@ -81,11 +83,6 @@ curated posts a day, topics from the profession, settings picker. Mobile renders
 only the generated half of the comments page. Needs: a mobile route, a
 `DailyTopVoice` model, the `actedAt` stamp, and a settings surface for
 `postCategories` using the forty-id vocabulary.
-
-**6. Open Plexa.** The day's missions as one conversation —
-`PlexaDayChat.tsx` (491 lines) over `plexa-day.service.ts`. No mobile
-counterpart and no `app/api/mobile/v1/plexa/`. This is almost certainly what
-"integrate plexa ai" meant.
 
 **7. Follower capture.** `FollowerCheckpoint.tsx` asks for the count on the
 roadmap. Mobile's only route to a follower number is downloading LinkedIn's
