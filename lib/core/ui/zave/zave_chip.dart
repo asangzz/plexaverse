@@ -9,6 +9,26 @@ import 'zave_press.dart';
 /// never outlined in a brand colour, and tabs are never underlined — that
 /// inversion is the whole selection language of this system, and it is the
 /// thing most likely to be "improved" by accident.
+///
+/// ## Why the two states CROSS-FADE instead of being one AnimatedContainer
+///
+/// Because an AnimatedContainer here threw, on every single tap, for the whole
+/// length of the transition — and what the user saw was a red error box where
+/// the chip should be, for about a sixth of a second, every time they switched
+/// a tab.
+///
+/// `ZaveSurface.chip` carries a [ZaveEdgeBorder]; `ZaveSurface.chipSelected`
+/// has no border at all. AnimatedContainer lerps the decorations, which calls
+/// `BoxBorder.lerp(ZaveEdgeBorder(), null)` — and that is a STATIC with
+/// hardcoded `is Border?` / `is BorderDirectional?` checks, so it cannot
+/// interpolate a custom BoxBorder subclass and throws instead. No amount of
+/// implementing lerp on `ZaveEdgeBorder` fixes it; the static never asks.
+///
+/// So nothing interpolates a decoration any more. The two surfaces are drawn
+/// as separate static layers and their OPACITY is animated, which is a real
+/// transition that cannot crash. Anything else in this kit that swaps an
+/// AnimatedContainer between a bordered and an unbordered Zave surface has the
+/// same bug — `zave_chip_lerp_test.dart` is the one that pins it.
 class ZaveChip extends StatelessWidget {
   const ZaveChip({
     required this.label,
@@ -40,34 +60,58 @@ class ZaveChip extends StatelessWidget {
         child: GestureDetector(
           onTap: onTap,
           behavior: HitTestBehavior.opaque,
-          child: AnimatedContainer(
-            duration: ZaveMotion.fast,
-            curve: ZaveMotion.curve,
-            padding: ZaveSpace.chipPad,
+          child: ConstrainedBox(
             constraints: BoxConstraints(minHeight: ZaveSpace.minTapTarget),
-            decoration: selected
-                ? ZaveSurface.chipSelected
-                : ZaveSurface.chip,
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
+            child: Stack(
               children: <Widget>[
-                if (icon != null) ...<Widget>[
-                  IconTheme.merge(
-                    data: IconThemeData(color: fg, size: 16),
-                    child: icon!,
-                  ),
-                  SizedBox(width: ZaveSpace.sm),
-                ],
-                Text(label, style: ZaveType.label.copyWith(color: fg)),
-                if (badge != null) ...<Widget>[
-                  SizedBox(width: ZaveSpace.sm),
-                  Text(
-                    badge!,
-                    style: ZaveType.label.copyWith(
-                      color: fg.withValues(alpha: 0.6),
+                // Both surfaces, always present, never interpolated. The
+                // unselected one carries the edge border; the selected one is
+                // the lavender ramp. Opacity is the only thing that moves.
+                Positioned.fill(
+                  child: IgnorePointer(
+                    child: AnimatedOpacity(
+                      duration: ZaveMotion.fast,
+                      curve: ZaveMotion.curve,
+                      opacity: selected ? 0 : 1,
+                      child: DecoratedBox(decoration: ZaveSurface.chip),
                     ),
                   ),
-                ],
+                ),
+                Positioned.fill(
+                  child: IgnorePointer(
+                    child: AnimatedOpacity(
+                      duration: ZaveMotion.fast,
+                      curve: ZaveMotion.curve,
+                      opacity: selected ? 1 : 0,
+                      child: DecoratedBox(decoration: ZaveSurface.chipSelected),
+                    ),
+                  ),
+                ),
+                Padding(
+                  padding: ZaveSpace.chipPad,
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: <Widget>[
+                      if (icon != null) ...<Widget>[
+                        IconTheme.merge(
+                          data: IconThemeData(color: fg, size: 16),
+                          child: icon!,
+                        ),
+                        SizedBox(width: ZaveSpace.sm),
+                      ],
+                      Text(label, style: ZaveType.label.copyWith(color: fg)),
+                      if (badge != null) ...<Widget>[
+                        SizedBox(width: ZaveSpace.sm),
+                        Text(
+                          badge!,
+                          style: ZaveType.label.copyWith(
+                            color: fg.withValues(alpha: 0.6),
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
               ],
             ),
           ),
@@ -82,12 +126,7 @@ class ZaveChip extends StatelessWidget {
 /// Use [ZaveChip] if it can be tapped; a pill that responds to touch reads as a
 /// chip whose selected state is broken.
 class ZavePill extends StatelessWidget {
-  const ZavePill({
-    required this.label,
-    this.color,
-    this.leading,
-    super.key,
-  });
+  const ZavePill({required this.label, this.color, this.leading, super.key});
 
   final String label;
 
