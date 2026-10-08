@@ -55,9 +55,18 @@ class _ReplyChipState extends State<ReplyChip> {
           onTapCancel: () => _setPressed(false),
           onTap: widget.onTap,
           behavior: HitTestBehavior.opaque,
-          child: AnimatedContainer(
-            duration: ZaveMotion.fast,
-            curve: ZaveMotion.curve,
+          // A plain Container: `ZaveSurface.chip` carries a ZaveEdgeBorder and
+          // `chipSelected` carries none, and an AnimatedContainer lerping
+          // between them calls `BoxBorder.lerp` — a static that rejects any
+          // BoxBorder which is not a `Border`. It threw on every press, and
+          // what the user saw was a red box where the reply chip should be.
+          //
+          // Nothing is lost by dropping the implicit animation: ZavePress
+          // above already animates the press, and this decoration swap is the
+          // instant half of that gesture. ZaveChip had the identical fault and
+          // took a cross-fade because selection there is a state you sit in;
+          // a press is not.
+          child: Container(
             padding: ZaveSpace.chipPad,
             constraints: BoxConstraints(
               minHeight: ZaveSpace.minTapTarget,

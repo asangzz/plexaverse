@@ -72,29 +72,63 @@ class _ZaveCardState extends State<ZaveCard> {
     // shadow feels wrong for a reason people cannot usually name.
     final bool pressed = _pressed && widget.onTap != null;
 
-    final BoxDecoration deco = BoxDecoration(
-      gradient: widget.isNow
-          ? ZaveFill.now
-          : (lifted ? ZaveFill.hover : ZaveFill.rest),
-      border: ZaveEdgeBorder(
-        gradient: widget.isNow
-            ? ZaveEdge.now
-            : (lifted ? ZaveEdge.hover : ZaveEdge.rest),
-        highlight: widget.isNow ? ZaveEdge.bevelNow : ZaveEdge.bevel,
-        underside: ZaveEdge.underside,
-      ),
-      boxShadow: widget.isNow
-          ? ZaveShadow.lifted
-          : (pressed ? ZaveShadow.pressed : ZaveShadow.resting),
-      borderRadius: BorderRadius.circular(_radius),
-    );
-
-    final Widget body = AnimatedContainer(
+    // ── The decoration is REBUILT each frame, never interpolated ────────────
+    //
+    // This was an AnimatedContainer handed two BoxDecorations, and it threw on
+    // every press:
+    //
+    //   BoxBorder.lerp can only interpolate Border and BorderDirectional
+    //
+    // `BoxDecoration.lerp` calls `BoxBorder.lerp`, which is a static with
+    // hardcoded `is Border?` / `is BorderDirectional?` checks. [ZaveEdgeBorder]
+    // is neither, so it cannot be interpolated TO, FROM, or between two of
+    // itself — and the card's border is a ZaveEdgeBorder in every state. The
+    // card drew Flutter's red error box for the length of the press, and every
+    // tappable card in the app has one.
+    //
+    // So nothing lerps a decoration. A single 0..1 drives the press, and the
+    // INPUTS are interpolated — gradients with `Gradient.lerp`, shadows with
+    // `BoxShadow.lerpList` — then a fresh ZaveEdgeBorder is built from the
+    // result. Same ladder, same timing, no BoxDecoration.lerp anywhere near it.
+    //
+    // `isNow` is not on this axis: it is a state the card is in, not one it
+    // animates through, so it short-circuits to its own tokens.
+    final Widget body = TweenAnimationBuilder<double>(
+      tween: Tween<double>(end: lifted ? 1 : 0),
       duration: ZaveMotion.fast,
       curve: ZaveMotion.curve,
-      decoration: deco,
-      padding: widget.padding ?? ZaveSpace.cardPad,
       child: widget.child,
+      builder: (BuildContext context, double t, Widget? child) {
+        final BoxDecoration deco = BoxDecoration(
+          gradient: widget.isNow
+              ? ZaveFill.now
+              : Gradient.lerp(ZaveFill.rest, ZaveFill.hover, t),
+          border: ZaveEdgeBorder(
+            gradient: widget.isNow
+                ? ZaveEdge.now
+                : Gradient.lerp(ZaveEdge.rest, ZaveEdge.hover, t)!,
+            highlight: widget.isNow ? ZaveEdge.bevelNow : ZaveEdge.bevel,
+            underside: ZaveEdge.underside,
+          ),
+          // Pressed moves DOWN: the shadow tightens toward the ground while
+          // the face brightens. Driven by the same t, so the two halves of
+          // that gesture cannot fall out of step.
+          boxShadow: widget.isNow
+              ? ZaveShadow.lifted
+              : BoxShadow.lerpList(
+                  ZaveShadow.resting,
+                  pressed ? ZaveShadow.pressed : ZaveShadow.resting,
+                  t,
+                ),
+          borderRadius: BorderRadius.circular(_radius),
+        );
+
+        return Container(
+          decoration: deco,
+          padding: widget.padding ?? ZaveSpace.cardPad,
+          child: child,
+        );
+      },
     );
 
     if (widget.onTap == null) return body;

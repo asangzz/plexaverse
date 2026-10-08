@@ -113,4 +113,77 @@ void main() {
       expect(tester.takeException(), isNull);
     }
   });
+
+  group('ZaveCard survives a press', () {
+    // The chip was not the only one. `ZaveCard` built `border:
+    // ZaveEdgeBorder(...)` straight into an AnimatedContainer, so pressing any
+    // tappable card lerped a ZaveEdgeBorder into another ZaveEdgeBorder — and
+    // `BoxBorder.lerp` rejects that exactly as hard as it rejects null, since
+    // neither operand is a `Border`. Measured: it threw 15ms into the press,
+    // on every tappable card in the app.
+    testWidgets('pressing does not throw', (WidgetTester tester) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: Center(
+              child: ZaveCard(onTap: () {}, child: const Text('tap me')),
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      final TestGesture press = await tester.startGesture(
+        tester.getCenter(find.text('tap me')),
+      );
+      for (int i = 0; i < 12; i++) {
+        await tester.pump(const Duration(milliseconds: 15));
+        expect(
+          tester.takeException(),
+          isNull,
+          reason: 'threw ${i * 15}ms into the press',
+        );
+      }
+
+      await press.up();
+      for (int i = 0; i < 12; i++) {
+        await tester.pump(const Duration(milliseconds: 15));
+        expect(
+          tester.takeException(),
+          isNull,
+          reason: 'threw ${i * 15}ms into the release',
+        );
+      }
+    });
+
+    testWidgets('a `now` card renders and does not throw', (
+      WidgetTester tester,
+    ) async {
+      // `isNow` short-circuits the lerp to its own tokens. Guards that the
+      // branch still builds rather than being quietly unreachable.
+      await tester.pumpWidget(
+        const MaterialApp(
+          home: Scaffold(body: ZaveCard(isNow: true, child: Text('today'))),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text('today'), findsOneWidget);
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets('a card with no onTap still renders', (
+      WidgetTester tester,
+    ) async {
+      await tester.pumpWidget(
+        const MaterialApp(
+          home: Scaffold(body: ZaveCard(child: Text('static'))),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text('static'), findsOneWidget);
+      expect(tester.takeException(), isNull);
+    });
+  });
 }
