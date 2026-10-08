@@ -1,3 +1,4 @@
+import 'package:flutter/cupertino.dart' show CupertinoPage;
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
@@ -241,16 +242,18 @@ GoRouter appRouter(Ref ref) {
       // ── Reached from the roadmap's step rows, not from the nav ──────────
       // /comments carries query params: the golden-hour deep link passes the
       // topic straight to the generator, so it cannot use the plain helper.
+      // It is still a CupertinoPage: `_fullScreen` is a convenience, not the
+      // thing that makes a pushed route escapable, and this route was left on
+      // CustomTransitionPage when the others moved — with no edge-swipe.
       GoRoute(
         path: ZaveRoutes.comments,
         parentNavigatorKey: _rootNavigatorKey,
-        pageBuilder: (context, state) => CustomTransitionPage<void>(
+        pageBuilder: (context, state) => CupertinoPage<void>(
           key: state.pageKey,
           child: CommentsPage(
             goldenHour: state.uri.queryParameters['context'] == 'golden_hour',
             topic: state.uri.queryParameters['topic'],
           ),
-          transitionsBuilder: _slideTransition,
         ),
       ),
       _fullScreen(ZaveRoutes.connections, const ConnectionsPage()),
@@ -289,10 +292,9 @@ GoRouter appRouter(Ref ref) {
       GoRoute(
         path: ZaveRoutes.studio,
         parentNavigatorKey: _rootNavigatorKey,
-        pageBuilder: (context, state) => CustomTransitionPage<void>(
+        pageBuilder: (context, state) => CupertinoPage<void>(
           key: state.pageKey,
           child: StudioPage(designId: state.uri.queryParameters['project']),
-          transitionsBuilder: _slideTransition,
         ),
       ),
 
@@ -300,10 +302,9 @@ GoRouter appRouter(Ref ref) {
       GoRoute(
         path: '${ZaveRoutes.posts}/:id',
         parentNavigatorKey: _rootNavigatorKey,
-        pageBuilder: (context, state) => CustomTransitionPage<void>(
+        pageBuilder: (context, state) => CupertinoPage<void>(
           key: state.pageKey,
           child: PostDetailPage(postId: state.pathParameters['id']!),
-          transitionsBuilder: _slideTransition,
         ),
       ),
 
@@ -437,29 +438,29 @@ Widget _fadeTransition(
   Widget child,
 ) => FadeTransition(opacity: animation, child: child);
 
-Widget _slideTransition(
-  BuildContext context,
-  Animation<double> animation,
-  Animation<double> secondaryAnimation,
-  Widget child,
-) => SlideTransition(
-  position: animation.drive(
-    Tween<Offset>(
-      begin: const Offset(1, 0),
-      end: Offset.zero,
-    ).chain(CurveTween(curve: Curves.easeInOut)),
-  ),
-  child: child,
-);
-
-/// A full-screen route: parented to the root navigator so it covers the bottom
-/// bar, with the horizontal-slide entrance the app uses for pushed screens.
+/// A full-screen route: parented to the root navigator so it covers the two
+/// floating actions, with the horizontal-slide entrance the app uses for
+/// pushed screens.
+///
+/// ## CupertinoPage, not CustomTransitionPage
+///
+/// These 22 screens used `CustomTransitionPage` with a hand-rolled
+/// right-to-left `_slideTransition`. It looks the same as the Cupertino one
+/// and is missing the thing that matters: `CustomTransitionPage` carries no
+/// back gesture, so on iOS — which has no system back button — swiping from
+/// the left edge did nothing. The only way out of a pushed screen was an
+/// in-app control, and nine of these screens did not have one.
+///
+/// `CupertinoPage` gives the same horizontal slide AND the interactive
+/// edge-swipe, which is the gesture an iOS user will try first. It is used on
+/// both platforms rather than branching: the transition is already what this
+/// app drew by hand, and Android keeps its own system back regardless.
+///
+/// The visible back button is in [ZaveScaffold], not here — a gesture nobody
+/// is told about is not an affordance, and it is the belt to this brace.
 GoRoute _fullScreen(String path, Widget child) => GoRoute(
   path: path,
   parentNavigatorKey: _rootNavigatorKey,
-  pageBuilder: (context, state) => CustomTransitionPage<void>(
-    key: state.pageKey,
-    child: child,
-    transitionsBuilder: _slideTransition,
-  ),
+  pageBuilder: (context, state) =>
+      CupertinoPage<void>(key: state.pageKey, child: child),
 );

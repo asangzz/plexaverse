@@ -3,6 +3,7 @@ import 'dart:ui' show ImageFilter;
 import 'package:flutter/material.dart';
 
 import '../../theme/zave/zave.dart';
+import 'zave_button.dart';
 
 /// The app ground — the gradient every signed-in Zave screen sits on.
 ///
@@ -115,8 +116,42 @@ class ZaveScaffold extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // A back control, on every screen that has somewhere to go back to.
+    //
+    // ## Why this is here and not on each page
+    //
+    // iOS has no system back button, and these routes have no edge-swipe
+    // either: `_fullScreen` builds a `CupertinoPage` now precisely so that
+    // gesture exists, but a gesture is not a visible affordance and plenty of
+    // people never learn it. Of the 22 pushed screens, NINE had no way back at
+    // all — Settings, Accounts, Schedules, Studio, Festive and the four
+    // company screens. You could reach them and then you were stuck.
+    //
+    // Doing it per page is what produced that: a page only got a back button
+    // if its author remembered, and `hasHeader` is false unless a page passes
+    // a title, a leading or actions — so a screen that draws its own big h2
+    // inside the scroll view got no header, and therefore nowhere to put one.
+    //
+    // `canPop` is the whole condition, and it is the right one: the four shell
+    // branches sit at the root of their navigator and answer false, so Home,
+    // Plan, Calendar and Posts do not sprout a back arrow. Anything pushed
+    // over them answers true. A page that wants something else in that slot
+    // still passes its own `leading` and keeps it.
+    final bool canPop = Navigator.of(context).canPop();
+    final Widget? effectiveLeading =
+        leading ??
+        (canPop
+            ? ZaveIconButton(
+                icon: const Icon(Icons.arrow_back),
+                tooltip: 'Back',
+                onPressed: () => Navigator.of(context).maybePop(),
+              )
+            : null);
+
     final bool hasHeader =
-        title != null || leading != null || (actions?.isNotEmpty ?? false);
+        title != null ||
+        effectiveLeading != null ||
+        (actions?.isNotEmpty ?? false);
     final double topInset = MediaQuery.paddingOf(context).top;
 
     return ZaveGroundBox(
@@ -127,7 +162,7 @@ class ZaveScaffold extends StatelessWidget {
         appBar: hasHeader
             ? _ZaveHeader(
                 title: title,
-                leading: leading,
+                leading: effectiveLeading,
                 actions: actions,
                 // The header draws its own status-bar padding, so its
                 // preferredSize must include that inset — otherwise Scaffold
