@@ -159,10 +159,18 @@ class _LinkedInPreviewCardState extends State<LinkedInPreviewCard> {
                     style: ZaveType.caption.copyWith(color: _inkSecondary),
                   ),
                   const Spacer(),
-                  Text(
-                    '${post.metrics?.comments ?? 0} comments  ·  '
-                    '${post.metrics?.shares ?? 0} reposts',
-                    style: ZaveType.caption.copyWith(color: _inkSecondary),
+                  // Flexible: four- and five-figure counts push
+                  // "N comments · N reposts" past the card, and the Spacer is
+                  // already at zero by then.
+                  Flexible(
+                    child: Text(
+                      '${post.metrics?.comments ?? 0} comments  ·  '
+                      '${post.metrics?.shares ?? 0} reposts',
+                      style: ZaveType.caption.copyWith(color: _inkSecondary),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      textAlign: TextAlign.end,
+                    ),
                   ),
                 ],
               ),
@@ -179,28 +187,41 @@ class _LinkedInPreviewCardState extends State<LinkedInPreviewCard> {
               // when tapped is worse on a phone than a label that never invited
               // the tap. They are here because the row is part of what a
               // LinkedIn post looks like, which is the whole job of this card.
+              // Each label takes an equal quarter and they shrink together.
+              // These are LinkedIn's own four and none can be dropped — the
+              // row is part of what a post looks like, which is this card's
+              // whole job — so on a narrow phone they give way by ellipsis
+              // rather than by bursting the card. `spaceAround` could not: it
+              // distributes leftover space and has none to distribute.
               child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceAround,
                 children: <Widget>[
-                  _ActionLabel(
-                    icon: Icons.thumb_up_alt_outlined,
-                    label: 'Like',
-                    color: _inkSecondary,
+                  Expanded(
+                    child: _ActionLabel(
+                      icon: Icons.thumb_up_alt_outlined,
+                      label: 'Like',
+                      color: _inkSecondary,
+                    ),
                   ),
-                  _ActionLabel(
-                    icon: Icons.mode_comment_outlined,
-                    label: 'Comment',
-                    color: _inkSecondary,
+                  Expanded(
+                    child: _ActionLabel(
+                      icon: Icons.mode_comment_outlined,
+                      label: 'Comment',
+                      color: _inkSecondary,
+                    ),
                   ),
-                  _ActionLabel(
-                    icon: Icons.repeat,
-                    label: 'Repost',
-                    color: _inkSecondary,
+                  Expanded(
+                    child: _ActionLabel(
+                      icon: Icons.repeat,
+                      label: 'Repost',
+                      color: _inkSecondary,
+                    ),
                   ),
-                  _ActionLabel(
-                    icon: Icons.send_outlined,
-                    label: 'Send',
-                    color: _inkSecondary,
+                  Expanded(
+                    child: _ActionLabel(
+                      icon: Icons.send_outlined,
+                      label: 'Send',
+                      color: _inkSecondary,
+                    ),
                   ),
                 ],
               ),
@@ -322,7 +343,16 @@ class _ActionLabel extends StatelessWidget {
       children: <Widget>[
         Icon(icon, size: 16, color: color),
         SizedBox(width: ZaveSpace.xs),
-        Text(label, style: ZaveType.caption.copyWith(color: color)),
+        // Flexible inside the min-size Row: its parent is Expanded now, so
+        // the label has a quarter of the card and has to live within it.
+        Flexible(
+          child: Text(
+            label,
+            style: ZaveType.caption.copyWith(color: color),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+          ),
+        ),
       ],
     );
   }

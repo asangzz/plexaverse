@@ -96,39 +96,51 @@ class _Body extends StatelessWidget {
         // ── Stats ──
         // The web keeps three across even on a phone. So does this, with the
         // labels wrapping rather than the columns stacking.
-        Row(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: <Widget>[
-            Expanded(
-              child: _StatCard(
-                value: '${recap.roadmapDay}',
-                label: 'Day reached',
-                color: ZaveColors.peri,
+        //
+        // IntrinsicHeight, because `CrossAxisAlignment.stretch` needs a
+        // BOUNDED cross axis and this Row sits in a ListView, where its height
+        // is unbounded. Without it `RenderFlex._computeSizes` asserts and the
+        // whole screen fails to lay out — not an overflow, a blank page. It
+        // was the one page in the app that did not render at all.
+        //
+        // The cost is a second layout pass over three small cards, which is
+        // what buys three equal-height columns whose labels wrap instead of
+        // three cards of three different heights.
+        IntrinsicHeight(
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: <Widget>[
+              Expanded(
+                child: _StatCard(
+                  value: '${recap.roadmapDay}',
+                  label: 'Day reached',
+                  color: ZaveColors.peri,
+                ),
               ),
-            ),
-            SizedBox(width: ZaveSpace.sm),
-            Expanded(
-              child: _StatCard(
-                // `100+` when the count hit its page limit — an honest
-                // ceiling beats a number the app cannot stand behind.
-                value: recap.postsAtLeast
-                    ? '${recap.postsPublished}+'
-                    : '${recap.postsPublished}',
-                label: 'Posts published',
-                // Green: these are done and on LinkedIn.
-                color: ZaveColors.green,
+              SizedBox(width: ZaveSpace.sm),
+              Expanded(
+                child: _StatCard(
+                  // `100+` when the count hit its page limit — an honest
+                  // ceiling beats a number the app cannot stand behind.
+                  value: recap.postsAtLeast
+                      ? '${recap.postsPublished}+'
+                      : '${recap.postsPublished}',
+                  label: 'Posts published',
+                  // Green: these are done and on LinkedIn.
+                  color: ZaveColors.green,
+                ),
               ),
-            ),
-            SizedBox(width: ZaveSpace.sm),
-            Expanded(
-              child: _StatCard(
-                value: '${recap.xpBalance}',
-                label: 'XP balance',
-                // Amber: XP is points.
-                color: ZaveColors.amber,
+              SizedBox(width: ZaveSpace.sm),
+              Expanded(
+                child: _StatCard(
+                  value: '${recap.xpBalance}',
+                  label: 'XP balance',
+                  // Amber: XP is points.
+                  color: ZaveColors.amber,
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
 
         SizedBox(height: ZaveSpace.lg),
@@ -199,7 +211,6 @@ class _Body extends StatelessWidget {
               'Life is busy. Stay visible with 3 posts a week (Mon / Wed / '
               'Fri) while Plexaverse handles the planning.',
         ),
-
       ],
     );
   }
@@ -299,13 +310,13 @@ class _PathCardState extends ConsumerState<_PathCard> {
             Text(
               widget.choice == 'transformation'
                   ? 'This starts a fresh 66-day arc from today. Your Season 1 '
-                      'posts and history stay exactly as they are.'
+                        'posts and history stay exactly as they are.'
                   : widget.choice == 'maintenance'
-                      ? 'Your plan drops to 3 posts a week — Monday, Wednesday '
-                          'and Friday. You can change the pace later in '
-                          'Settings.'
-                      : 'Season 2 phases are bolder, and your plan refreshes '
-                          'this Sunday. Your audience and clock carry over.',
+                  ? 'Your plan drops to 3 posts a week — Monday, Wednesday '
+                        'and Friday. You can change the pace later in '
+                        'Settings.'
+                  : 'Season 2 phases are bolder, and your plan refreshes '
+                        'this Sunday. Your audience and clock carry over.',
             ),
             // The card promises a new direction, so this is where it is
             // given. Optional on the route and optional here: a blank field

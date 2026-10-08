@@ -589,17 +589,26 @@ class _WeekHeader extends ConsumerWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: <Widget>[
-        Row(
-          crossAxisAlignment: CrossAxisAlignment.baseline,
-          textBaseline: TextBaseline.alphabetic,
-          children: <Widget>[
-            Text('Week $week', style: ZaveType.h2),
-            SizedBox(width: ZaveSpace.sm),
-            Text(
-              'planner',
-              style: plannerSerif(size: 26, color: ZaveColors.peri),
-            ),
-          ],
+        // Scaled down to fit rather than ellipsised or wrapped. "Week 12
+        // planner" at h2 plus a 26pt serif is 54px wider than a 375pt screen
+        // leaves, and the two halves are one phrase: truncating gives
+        // "Week 12 planne…", and wrapping puts the serif word alone on a
+        // second line. Shrinking the pair keeps it reading as a title.
+        FittedBox(
+          fit: BoxFit.scaleDown,
+          alignment: Alignment.centerLeft,
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.baseline,
+            textBaseline: TextBaseline.alphabetic,
+            children: <Widget>[
+              Text('Week $week', style: ZaveType.h2),
+              SizedBox(width: ZaveSpace.sm),
+              Text(
+                'planner',
+                style: plannerSerif(size: 26, color: ZaveColors.peri),
+              ),
+            ],
+          ),
         ),
         if (phase != null) ...<Widget>[
           SizedBox(height: ZaveSpace.sm),

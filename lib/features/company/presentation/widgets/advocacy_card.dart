@@ -63,20 +63,30 @@ class AdvocacyCard extends StatelessWidget {
           SizedBox(height: ZaveSpace.lg),
           Container(height: 1, color: ZaveColors.rule),
           SizedBox(height: ZaveSpace.lg),
-          Row(
+          // Wrap, not Row with a Spacer. Two stats and the badge are wider
+          // than a narrow phone leaves, and a Spacer shrinks to nothing long
+          // before the things either side of it do. Wrapping drops the badge
+          // to its own line instead of overflowing by 87px.
+          Wrap(
+            spacing: ZaveSpace.xl,
+            runSpacing: ZaveSpace.sm,
+            crossAxisAlignment: WrapCrossAlignment.center,
             children: <Widget>[
               _Stat(label: 'Reach', value: post.reach),
-              SizedBox(width: ZaveSpace.xl),
               _Stat(label: 'Inquiries', value: post.inquiries),
-              const Spacer(),
               // Green is "done / live" in this palette, and a featured post IS
               // live on the page. The web's pulsing dot is dropped — nothing
               // in Zave loops.
-              const ZaveDot(ZaveColors.green),
-              SizedBox(width: ZaveSpace.sm),
-              Text(
-                'Hot Topic',
-                style: ZaveType.caption.copyWith(color: ZaveColors.green),
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: <Widget>[
+                  const ZaveDot(ZaveColors.green),
+                  SizedBox(width: ZaveSpace.sm),
+                  Text(
+                    'Hot Topic',
+                    style: ZaveType.caption.copyWith(color: ZaveColors.green),
+                  ),
+                ],
               ),
             ],
           ),

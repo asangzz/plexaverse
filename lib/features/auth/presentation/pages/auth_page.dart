@@ -98,10 +98,18 @@ class _AuthPageState extends ConsumerState<AuthPage>
     consents: <String, bool>{},
   );
 
-  late final AnimationController _shakeCtrl = AnimationController(
-    vsync: this,
-    duration: const Duration(milliseconds: 400),
-  );
+  /// Built in [initState], NOT lazily.
+  ///
+  /// It was `late final … = AnimationController(vsync: this)`, which defers
+  /// construction to first use — and the first use on a screen nobody shook
+  /// was `dispose()`. Constructing a controller there calls `createTicker`,
+  /// which looks up `TickerMode` on an element that is already deactivated:
+  /// "Looking up a deactivated widget's ancestor is unsafe."
+  ///
+  /// So opening the sign-in screen and leaving WITHOUT a failed submit threw
+  /// on the way out — the common path, and the one nothing exercised, since
+  /// every test that touched this screen submitted something.
+  late final AnimationController _shakeCtrl;
 
   /// The rejected-form shake.
   ///
@@ -142,6 +150,15 @@ class _AuthPageState extends ConsumerState<AuthPage>
     ..onTap = () => openLinkAndReport(context, ref, plexaverseTermsUrl);
   late final TapGestureRecognizer _privacyTap = TapGestureRecognizer()
     ..onTap = () => openLinkAndReport(context, ref, plexaversePrivacyUrl);
+
+  @override
+  void initState() {
+    super.initState();
+    _shakeCtrl = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 400),
+    );
+  }
 
   @override
   void dispose() {

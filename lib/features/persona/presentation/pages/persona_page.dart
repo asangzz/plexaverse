@@ -205,14 +205,18 @@ class _MaterialSection extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: <Widget>[
-        Row(
+        // Wrap: two pills whose labels carry counts are wider than a narrow
+        // phone leaves once the numbers reach three digits, and a Row gives
+        // neither of them anywhere to go.
+        Wrap(
+          spacing: ZaveSpace.sm,
+          runSpacing: ZaveSpace.sm,
           children: <Widget>[
             ZavePill(
               label: '${bank.availableCount} ready',
               color: ZaveColors.green,
               leading: const ZaveDot(ZaveColors.green),
             ),
-            SizedBox(width: ZaveSpace.sm),
             ZavePill(
               label: '${bank.usedCount} used',
               color: ZaveColors.ink50,
@@ -257,7 +261,18 @@ class _MaterialRow extends StatelessWidget {
             children: <Widget>[
               ZaveDot(item.isUsed ? ZaveColors.ink35 : ZaveColors.green),
               SizedBox(width: ZaveSpace.sm),
-              Text(item.kind.toUpperCase(), style: ZaveType.kicker),
+              // The kind is server-supplied text of no fixed length, and
+              // "HAS A NUMBER" beside it leaves little room. It gives way
+              // first: the badge is the shorter and the more load-bearing.
+              Flexible(
+                child: Text(
+                  item.kind.toUpperCase(),
+                  style: ZaveType.kicker,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+              SizedBox(width: ZaveSpace.sm),
               const Spacer(),
               // A figure in the material is worth flagging: it is what makes a
               // grounded post concrete rather than merely true.

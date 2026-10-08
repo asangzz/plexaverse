@@ -194,7 +194,17 @@ class _AuthChoice extends StatelessWidget {
                             : ZaveGlass.controlBorder,
                       ),
                       SizedBox(width: ZaveSpace.lg),
-                      Text(label, style: ZaveType.button.copyWith(color: fg)),
+                      // Flexible: "Continue with Google" past the icon and the
+                      // divider is wider than a 375pt screen leaves, and a
+                      // bare Text in a Row cannot give any of it back.
+                      Flexible(
+                        child: Text(
+                          label,
+                          style: ZaveType.button.copyWith(color: fg),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
                     ],
                   ),
           ),
