@@ -5,6 +5,8 @@
 /// sit beside Write without competing with it.
 library;
 
+import 'dart:ui' show ImageFilter;
+
 import 'package:flutter/material.dart';
 
 import '../../theme/zave/zave.dart';
@@ -49,18 +51,45 @@ class ZaveMoreButton extends StatelessWidget {
           clipBehavior: Clip.antiAlias,
           child: InkWell(
             onTap: onPressed,
-            child: Container(
-              height: size,
-              width: size,
-              decoration: BoxDecoration(
-                color: ZaveGlass.ghostFill,
-                shape: BoxShape.circle,
-                border: Border.all(color: ZaveGlass.nowBorder, width: 1),
-              ),
-              child: const Icon(
-                Icons.more_horiz,
-                color: ZaveColors.white,
-                size: 24,
+            // ClipOval + BackdropFilter, the same treatment the bottom bar
+            // used before it went (`headerBlurSigma`, there in a ClipRect).
+            // A low-alpha fill alone still let a line of body text read
+            // straight through the disc, which is what made it look like a
+            // hole rather than a control; blurring what is behind it settles
+            // the icon on something instead of over something.
+            child: ClipOval(
+              child: BackdropFilter(
+                filter: ImageFilter.blur(
+                  sigmaX: ZaveSurface.headerBlurSigma,
+                  sigmaY: ZaveSurface.headerBlurSigma,
+                ),
+                child: Container(
+                  height: size,
+                  width: size,
+                  decoration: BoxDecoration(
+                    color: ZaveGlass.ghostFill,
+                    shape: BoxShape.circle,
+                    border: Border.all(color: ZaveGlass.nowBorder, width: 1),
+                    // The inner white glow. Inset rather than cast, so it
+                    // lifts the inside of the disc off whatever is behind it
+                    // without putting a halo on the ground around it — that
+                    // halo is the compose button's bloom, and it is the one
+                    // thing separating the two.
+                    boxShadow: const <BoxShadow>[
+                      BoxShadow(
+                        color: Color(0x1FFFFFFF),
+                        blurRadius: 12,
+                        spreadRadius: -2,
+                        blurStyle: BlurStyle.inner,
+                      ),
+                    ],
+                  ),
+                  child: const Icon(
+                    Icons.more_horiz,
+                    color: ZaveColors.white,
+                    size: 24,
+                  ),
+                ),
               ),
             ),
           ),
