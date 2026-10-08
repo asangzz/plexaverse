@@ -45,6 +45,8 @@ class PersonaPage extends ConsumerWidget {
     final PersonaTab tab = ref.watch(personaTabControllerProvider);
 
     return ZaveScaffold(
+      largeTitle: 'Your Persona',
+      subtitle: 'Everything Plexa knows about you',
       body: RefreshIndicator(
         color: ZaveColors.white,
         backgroundColor: ZaveColors.deep,
@@ -54,15 +56,6 @@ class PersonaPage extends ConsumerWidget {
         },
         child: ZaveScrollView(
           children: <Widget>[
-            Text('Your Persona', style: ZaveType.h2),
-            SizedBox(height: ZaveSpace.sm),
-            Text(
-              'Everything Plexa knows about you, and what it has to write '
-              'from.',
-              style: ZaveType.lead,
-            ),
-            SizedBox(height: ZaveSpace.xl),
-
             // The web's two-segment control. In Zave a selected tab INVERTS to
             // solid white with ink letters — it is never underlined and never
             // merely tinted, which is what the web's indigo fill does.

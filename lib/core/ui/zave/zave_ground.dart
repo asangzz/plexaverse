@@ -64,6 +64,8 @@ class ZaveScaffold extends StatelessWidget {
   const ZaveScaffold({
     required this.body,
     this.title,
+    this.largeTitle,
+    this.subtitle,
     this.leading,
     this.actions,
     this.bottomBar,
@@ -79,6 +81,22 @@ class ZaveScaffold extends StatelessWidget {
   /// its own large [ZaveType.h2] title inside the scroll view — a screen should
   /// not carry both.
   final String? title;
+
+  /// The EXPANDED header: a large `.h2` title, and an optional `.lead` under
+  /// it, both living in the bar rather than at the top of the body.
+  ///
+  /// Use this instead of starting the scroll view with an h2. A screen that
+  /// did that and passed no [title] produced a header holding nothing but a
+  /// back arrow, with its real title floating underneath — an empty strip
+  /// above the thing the strip was supposed to name.
+  ///
+  /// Mutually exclusive with [title], which is the compact variant: one line
+  /// of `.h3` beside the back button. Most screens want that one. Reach for
+  /// this where the title IS the top of the page.
+  final String? largeTitle;
+
+  /// Sits under [largeTitle]. Ignored without one.
+  final String? subtitle;
 
   final Widget? leading;
   final List<Widget>? actions;
@@ -148,8 +166,15 @@ class ZaveScaffold extends StatelessWidget {
               )
             : null);
 
+    assert(
+      title == null || largeTitle == null,
+      'Pass title OR largeTitle, not both — they are two renderings of the '
+      'same thing and a screen never wears two titles.',
+    );
+
     final bool hasHeader =
         title != null ||
+        largeTitle != null ||
         effectiveLeading != null ||
         (actions?.isNotEmpty ?? false);
     final double topInset = MediaQuery.paddingOf(context).top;
@@ -162,6 +187,8 @@ class ZaveScaffold extends StatelessWidget {
         appBar: hasHeader
             ? _ZaveHeader(
                 title: title,
+                largeTitle: largeTitle,
+                subtitle: subtitle,
                 leading: effectiveLeading,
                 actions: actions,
                 // The header draws its own status-bar padding, so its
@@ -199,21 +226,45 @@ class _ZaveHeader extends StatelessWidget implements PreferredSizeWidget {
   const _ZaveHeader({
     required this.topInset,
     this.title,
+    this.largeTitle,
+    this.subtitle,
     this.leading,
     this.actions,
   });
 
   final String? title;
+  final String? largeTitle;
+  final String? subtitle;
   final Widget? leading;
   final List<Widget>? actions;
 
   /// The status-bar inset this header paints over and must account for.
   final double topInset;
 
+  /// The control row — back button, actions, and the compact title.
   static const double _height = 56;
 
+  /// The expanded block under that row: the `.h2`, and the `.lead` if there is
+  /// one.
+  ///
+  /// Computed from the type scale rather than eyeballed, and capped at one
+  /// line each, because `preferredSize` has to be known before anything is
+  /// laid out: a title that wrapped past this would be clipped by the
+  /// Scaffold rather than growing the bar. Short titles are the rule here —
+  /// "Settings", "Accounts", "Your Persona" — and a screen whose title cannot
+  /// fit one line wants the compact [title] instead.
+  double get _expandedBlock {
+    if (largeTitle == null) return 0;
+    final double titleLine = ZaveType.h2.fontSize! * 1.05;
+    final double subLine = subtitle == null
+        ? 0
+        : ZaveType.lead.fontSize! * 1.6 + ZaveSpace.xs;
+    return ZaveSpace.sm + titleLine + subLine + ZaveSpace.lg;
+  }
+
   @override
-  Size get preferredSize => Size.fromHeight(_height + topInset);
+  Size get preferredSize =>
+      Size.fromHeight(_height + _expandedBlock + topInset);
 
   @override
   Widget build(BuildContext context) {
@@ -226,25 +277,62 @@ class _ZaveHeader extends StatelessWidget implements PreferredSizeWidget {
         child: Container(
           decoration: ZaveSurface.header,
           padding: EdgeInsets.only(top: topInset),
-          height: _height + topInset,
-          child: Row(
+          height: _height + _expandedBlock + topInset,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: <Widget>[
-              SizedBox(width: ZaveSpace.gutter),
-              if (leading != null) ...<Widget>[
-                leading!,
-                SizedBox(width: ZaveSpace.md),
-              ],
+              // Expanded, not a fixed 56: the Scaffold can hand this box a
+              // pixel less than `preferredSize` asked for (rounding, or a
+              // test harness with no status-bar inset), and a rigid row then
+              // overflows the Column by that pixel. Letting the row take
+              // whatever is left after the title block absorbs the difference
+              // and keeps the measured constant honest.
               Expanded(
-                child: title == null
-                    ? const SizedBox.shrink()
-                    : Text(
-                        title!,
-                        style: ZaveType.h3,
-                        overflow: TextOverflow.ellipsis,
-                      ),
+                child: Row(
+                  children: <Widget>[
+                    SizedBox(width: ZaveSpace.gutter),
+                    if (leading != null) ...<Widget>[
+                      leading!,
+                      SizedBox(width: ZaveSpace.md),
+                    ],
+                    Expanded(
+                      child: title == null
+                          ? const SizedBox.shrink()
+                          : Text(
+                              title!,
+                              style: ZaveType.h3,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                    ),
+                    ...?actions,
+                    SizedBox(width: ZaveSpace.gutter),
+                  ],
+                ),
               ),
-              ...?actions,
-              SizedBox(width: ZaveSpace.gutter),
+              if (largeTitle != null) ...<Widget>[
+                SizedBox(height: ZaveSpace.sm),
+                Padding(
+                  padding: EdgeInsets.symmetric(horizontal: ZaveSpace.gutter),
+                  child: Text(
+                    largeTitle!,
+                    style: ZaveType.h2,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+                if (subtitle != null) ...<Widget>[
+                  SizedBox(height: ZaveSpace.xs),
+                  Padding(
+                    padding: EdgeInsets.symmetric(horizontal: ZaveSpace.gutter),
+                    child: Text(
+                      subtitle!,
+                      style: ZaveType.lead,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                ],
+              ],
             ],
           ),
         ),

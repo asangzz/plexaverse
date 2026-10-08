@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../../core/router/zave_destinations.dart';
+
 import '../../../../core/ui/zave/zave_kit.dart';
 import '../../../preferences/domain/user_preferences.dart';
 import '../../application/home_controllers.dart';
@@ -153,7 +155,24 @@ class _HomeBody extends ConsumerWidget {
 /// works on the web works here.
 void _start(BuildContext context, String link) {
   if (link.isEmpty) return;
-  context.push(link);
+
+  // A tab route SWITCHES; everything else pushes.
+  //
+  // This pushed unconditionally, so "Open planner" put a second PlannerPage on
+  // the Plan branch's own stack — back went from the planner to an identical
+  // planner. It was invisible while nothing drew a back button; the moment
+  // ZaveScaffold started showing one, the duplicate had an arrow pointing at
+  // its own twin.
+  //
+  // Compared on the PATH, because roadmap links carry query strings
+  // (`/planner?slot=3`) and those are still that tab, not a new screen. `go`
+  // keeps the query and switches the branch rather than stacking.
+  final String path = Uri.parse(link).path;
+  if (tabRoutes.contains(path)) {
+    context.go(link);
+  } else {
+    context.push(link);
+  }
 }
 
 /// Season 1 — the 66-day timeline over a draggable mission sheet.

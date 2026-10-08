@@ -39,6 +39,8 @@ class AccountsPage extends ConsumerWidget {
     );
 
     return ZaveScaffold(
+      largeTitle: 'Accounts',
+      subtitle: 'Manage your connected accounts',
       body: RefreshIndicator(
         color: ZaveColors.white,
         backgroundColor: ZaveColors.deep,
@@ -51,17 +53,10 @@ class AccountsPage extends ConsumerWidget {
         },
         child: ZaveScrollView(
           children: <Widget>[
-            Text('Accounts', style: ZaveType.h2),
-            SizedBox(height: ZaveSpace.sm),
-            Text('Manage your connected accounts', style: ZaveType.lead),
-            SizedBox(height: ZaveSpace.xl),
-
             // The brand type only decides which LinkedIn rows show. While it is
             // still loading it is passed as null, which is the web's own "show
             // both, badged" state — not a guess.
-            ConnectionsSection(
-              brandType: preferences.value?.brandType,
-            ),
+            ConnectionsSection(brandType: preferences.value?.brandType),
 
             SizedBox(height: SettingsSection.gap),
             ZaveCard(

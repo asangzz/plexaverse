@@ -48,6 +48,10 @@ class SettingsPage extends ConsumerWidget {
     );
 
     return ZaveScaffold(
+      // The large title lives in the bar now. It used to open the scroll view,
+      // which left the header holding nothing but a back arrow.
+      largeTitle: 'Settings',
+      subtitle: 'Manage integrations and preferences',
       body: RefreshIndicator(
         color: ZaveColors.white,
         backgroundColor: ZaveColors.deep,
@@ -89,13 +93,7 @@ class _SettingsHeader extends StatelessWidget {
   Widget build(BuildContext context) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
-      children: <Widget>[
-        // The screen's own large title, which is why [ZaveScaffold] is given no
-        // header title — a screen carries one or the other, never both.
-        Text('Settings', style: ZaveType.h2),
-        SizedBox(height: ZaveSpace.sm),
-        Text('Manage integrations and preferences', style: ZaveType.lead),
-      ],
+      children: <Widget>[],
     );
   }
 }

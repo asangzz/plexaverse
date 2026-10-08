@@ -97,6 +97,90 @@ void main() {
     });
   });
 
+  group('the expanded header', () {
+    testWidgets('carries the large title and subtitle', (
+      WidgetTester tester,
+    ) async {
+      await tester.pumpWidget(
+        const MaterialApp(
+          home: ZaveScaffold(
+            largeTitle: 'Settings',
+            subtitle: 'Manage integrations and preferences',
+            body: SizedBox(),
+          ),
+        ),
+      );
+
+      expect(find.text('Settings'), findsOneWidget);
+      expect(find.text('Manage integrations and preferences'), findsOneWidget);
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets('does not overflow at a range of heights', (
+      WidgetTester tester,
+    ) async {
+      // The Scaffold can hand the header a pixel less than `preferredSize`
+      // asked for — rounding, or a harness with no status-bar inset — and a
+      // rigid control row then overflowed the Column by exactly that pixel.
+      // It surfaced as three red RenderFlex failures in this file rather than
+      // anywhere near the header, so the sizes are swept here directly.
+      for (final double h in <double>[600, 700, 812, 900]) {
+        tester.view.physicalSize = Size(390 * 3, h * 3);
+        tester.view.devicePixelRatio = 3;
+        addTearDown(tester.view.reset);
+
+        await tester.pumpWidget(
+          const MaterialApp(
+            home: ZaveScaffold(
+              largeTitle: 'Your Persona',
+              subtitle: 'Everything Plexa knows about you',
+              body: SizedBox(),
+            ),
+          ),
+        );
+        expect(tester.takeException(), isNull, reason: 'overflowed at ${h}px');
+      }
+    });
+
+    testWidgets('a long title truncates rather than growing the bar', (
+      WidgetTester tester,
+    ) async {
+      // `preferredSize` has to be known before layout, so a title that wrapped
+      // would be clipped by the Scaffold rather than making room for itself.
+      await tester.pumpWidget(
+        const MaterialApp(
+          home: ZaveScaffold(
+            largeTitle: 'A title far longer than any screen in this app uses',
+            body: SizedBox(),
+          ),
+        ),
+      );
+
+      final Text title = tester.widget<Text>(
+        find.text('A title far longer than any screen in this app uses'),
+      );
+      expect(title.maxLines, 1);
+      expect(title.overflow, TextOverflow.ellipsis);
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets('title and largeTitle together is a programming error', (
+      WidgetTester tester,
+    ) async {
+      // Two renderings of the same thing. A screen never wears both.
+      await tester.pumpWidget(
+        const MaterialApp(
+          home: ZaveScaffold(
+            title: 'Settings',
+            largeTitle: 'Settings',
+            body: SizedBox(),
+          ),
+        ),
+      );
+      expect(tester.takeException(), isA<AssertionError>());
+    });
+  });
+
   group('pushed routes carry the back gesture', () {
     testWidgets('every full-screen route builds a page that supports it', (
       WidgetTester tester,
