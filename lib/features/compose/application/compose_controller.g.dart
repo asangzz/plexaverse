@@ -82,6 +82,67 @@ abstract class _$ComposeContextController
   }
 }
 
+/// The poster styles the "Write with AI" picker offers, from `GET /poster-tags`.
+///
+/// Its own provider rather than another field on [ComposeContextState]. The AI
+/// sheet is the only thing that reads it, and folding it into the context would
+/// make a failed tag fetch take the connection panel — the part that decides
+/// whether the user can publish at all — down with a cosmetic choice.
+
+@ProviderFor(posterTagOptions)
+final posterTagOptionsProvider = PosterTagOptionsProvider._();
+
+/// The poster styles the "Write with AI" picker offers, from `GET /poster-tags`.
+///
+/// Its own provider rather than another field on [ComposeContextState]. The AI
+/// sheet is the only thing that reads it, and folding it into the context would
+/// make a failed tag fetch take the connection panel — the part that decides
+/// whether the user can publish at all — down with a cosmetic choice.
+
+final class PosterTagOptionsProvider
+    extends
+        $FunctionalProvider<
+          AsyncValue<List<PosterTagOption>>,
+          List<PosterTagOption>,
+          FutureOr<List<PosterTagOption>>
+        >
+    with
+        $FutureModifier<List<PosterTagOption>>,
+        $FutureProvider<List<PosterTagOption>> {
+  /// The poster styles the "Write with AI" picker offers, from `GET /poster-tags`.
+  ///
+  /// Its own provider rather than another field on [ComposeContextState]. The AI
+  /// sheet is the only thing that reads it, and folding it into the context would
+  /// make a failed tag fetch take the connection panel — the part that decides
+  /// whether the user can publish at all — down with a cosmetic choice.
+  PosterTagOptionsProvider._()
+    : super(
+        from: null,
+        argument: null,
+        retry: null,
+        name: r'posterTagOptionsProvider',
+        isAutoDispose: true,
+        dependencies: null,
+        $allTransitiveDependencies: null,
+      );
+
+  @override
+  String debugGetCreateSourceHash() => _$posterTagOptionsHash();
+
+  @$internal
+  @override
+  $FutureProviderElement<List<PosterTagOption>> $createElement(
+    $ProviderPointer pointer,
+  ) => $FutureProviderElement(pointer);
+
+  @override
+  FutureOr<List<PosterTagOption>> create(Ref ref) {
+    return posterTagOptions(ref);
+  }
+}
+
+String _$posterTagOptionsHash() => r'54c25a7fa6154112b962f4da85914e460f8f4501';
+
 /// The post being written.
 ///
 /// A plain synchronous notifier — nothing here touches the network. Keeping it
@@ -211,7 +272,7 @@ final class ComposeActionsProvider
   }
 }
 
-String _$composeActionsHash() => r'3fbe9b6ced26ccffc5e6e6506f558168d94b9cc5';
+String _$composeActionsHash() => r'fb01f5b973a11403f7eab07b334d7bef118f7821';
 
 /// Everything the composer does that can fail or take time.
 ///

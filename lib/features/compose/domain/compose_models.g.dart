@@ -24,6 +24,15 @@ Map<String, dynamic> _$GeneratedPostToJson(_GeneratedPost instance) =>
       'provider': instance.provider,
     };
 
+_PosterTagOption _$PosterTagOptionFromJson(Map<String, dynamic> json) =>
+    _PosterTagOption(
+      tag: json['tag'] as String? ?? '',
+      live: (json['live'] as num?)?.toInt() ?? 0,
+    );
+
+Map<String, dynamic> _$PosterTagOptionToJson(_PosterTagOption instance) =>
+    <String, dynamic>{'tag': instance.tag, 'live': instance.live};
+
 _GeneratedPoster _$GeneratedPosterFromJson(Map<String, dynamic> json) =>
     _GeneratedPoster(
       imageUrl: json['imageUrl'] as String? ?? '',

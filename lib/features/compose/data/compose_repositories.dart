@@ -61,6 +61,11 @@ class ApiComposeRepository implements ComposeRepository {
   /// The copy shown when the server sent no message of its own.
   static String _defaultMessage(Failure failure) => switch (failure) {
     NetworkFailure() => 'No connection. Check your network and try again.',
+    // Reached the server, which is still working on it. Never tell
+    // someone to check a connection that demonstrably worked.
+    TimeoutFailure() =>
+      'That took longer than expected. It may still have gone through — '
+          'check before trying again.',
     AuthFailure() => 'Your session expired. Sign in again.',
     NotFoundFailure() => 'That is no longer available.',
     ValidationFailure() => 'Some details were rejected. Check and try again.',
@@ -84,11 +89,27 @@ class ApiComposeRepository implements ComposeRepository {
   });
 
   @override
+  Future<List<PosterTagOption>> fetchPosterTags() => _guard(() async {
+    final Response<Map<String, dynamic>> response = await _client
+        .get<Map<String, dynamic>>(ApiPaths.posterTags);
+
+    final List<dynamic> rows =
+        (response.data?['options'] as List<dynamic>?) ?? const <dynamic>[];
+
+    return rows
+        .whereType<Map<String, dynamic>>()
+        .map(PosterTagOption.fromJson)
+        .toList(growable: false);
+  });
+
+  @override
   Future<GeneratedPost> generatePost({
     required String topic,
     required ComposeTone tone,
     required ComposeLength length,
+    String? reference,
   }) => _guard(() async {
+    final String? borrowed = reference?.trim();
     final Response<Map<String, dynamic>> response = await _client
         .post<Map<String, dynamic>>(
           ApiPaths.aiGenerate,
@@ -96,6 +117,10 @@ class ApiComposeRepository implements ComposeRepository {
             'topic': topic,
             'tone': tone.wire,
             'length': length.wire,
+            // Omitted rather than sent empty. The route takes any string it is
+            // handed, so '' would be a reference post made of nothing — and the
+            // prompt would spend its instructions on it.
+            if (borrowed != null && borrowed.isNotEmpty) 'reference': borrowed,
           },
         );
     final Map<String, dynamic>? data = response.data;
@@ -118,6 +143,7 @@ class ApiComposeRepository implements ComposeRepository {
         body['profileImageUrl'] = prompt.profileImageUrl;
       }
       if (prompt.category != null) body['category'] = prompt.category;
+      if (prompt.posterTag != null) body['posterTag'] = prompt.posterTag;
 
       final Response<Map<String, dynamic>> response = await _client
           .post<Map<String, dynamic>>(ApiPaths.aiPoster, data: body);
@@ -237,10 +263,25 @@ class FakeComposeRepository implements ComposeRepository {
   }
 
   @override
+  Future<List<PosterTagOption>> fetchPosterTags() async {
+    await Future<void>.delayed(const Duration(milliseconds: 250));
+    // Deliberately mixed. One tag with no live references is the only way the
+    // picker's "hide what cannot work" branch is reachable on the mock build,
+    // and that branch is the whole reason the counts are on the wire.
+    return const <PosterTagOption>[
+      PosterTagOption(tag: 'comparison', live: 4),
+      PosterTagOption(tag: 'data-story', live: 2),
+      PosterTagOption(tag: 'how-to', live: 1),
+      PosterTagOption(tag: 'festival', live: 0),
+    ];
+  }
+
+  @override
   Future<GeneratedPost> generatePost({
     required String topic,
     required ComposeTone tone,
     required ComposeLength length,
+    String? reference,
   }) async {
     await Future<void>.delayed(const Duration(milliseconds: 900));
     return GeneratedPost(

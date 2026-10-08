@@ -58,6 +58,48 @@ abstract class PlannerRepository {
     bool force = false,
   });
 
+  /// Draws the poster for a slot that has just been written.
+  ///
+  /// A SECOND call on purpose. `generatePlannerPost` returns a body and no
+  /// image — the poster is a separate, separately-priced model call, and the
+  /// server has never drawn one as part of generating — so a client that stops
+  /// at the first call leaves the day imageless. The web's planner makes
+  /// exactly this pair, in this order; mobile made only the first half, which
+  /// is why every planner post on the phone arrived as bare text.
+  ///
+  /// Costs XP (one image generation), so it is only ever worth calling for a
+  /// slot this request actually wrote.
+  ///
+  /// Returns the poster as a base64 `data:` URI, or null when none came back.
+  Future<String?> generateSlotPoster({
+    required String topic,
+    required String content,
+    required String posterTitle,
+
+    /// The slot's post type — 'niche', 'general', 'productive', 'light'. Picks
+    /// the poster's visual category AND keeps this path on the same provider
+    /// the unattended chain would have used for the same day.
+    required String slotType,
+    required String userName,
+    String? profileImageUrl,
+
+    /// The style the WEEK chose. Null is a quiet downgrade to an unstyled
+    /// poster — which is what every poster was before the reference library
+    /// existed — not a failure.
+    String? posterTag,
+  });
+
+  /// Hangs an image on a post that already exists.
+  ///
+  /// [imageUrl] is the raw `data:` URI [generateSlotPoster] returned, and that
+  /// is deliberate: the server's own guard in `updateUserPost` turns it into a
+  /// Storage upload. Uploading it from the phone first would be a second code
+  /// path for the same bytes, and the one that pays mobile data for it.
+  Future<void> attachPostImage({
+    required String postId,
+    required String imageUrl,
+  });
+
   /// Replaces the week's topic and rewrites the unwritten days.
   ///
   /// Free, and non-destructive by design: days already generated, approved or
@@ -197,7 +239,12 @@ class ApproveResult {
 
 /// The post a slot generation produced.
 class GeneratedSlot {
-  const GeneratedSlot({required this.postId, this.alreadyGenerated = false});
+  const GeneratedSlot({
+    required this.postId,
+    this.alreadyGenerated = false,
+    this.content,
+    this.posterTitle,
+  });
 
   final String? postId;
 
@@ -205,6 +252,16 @@ class GeneratedSlot {
   /// or a retry that raced the first attempt. Success, not an error, and no
   /// XP was spent the second time.
   final bool alreadyGenerated;
+
+  /// The body the model wrote.
+  ///
+  /// Carried back rather than re-read off the post, because the poster is
+  /// drawn FROM this text and re-fetching what the server just handed us is a
+  /// round-trip the user waits through for nothing.
+  final String? content;
+
+  /// The headline the server put on the slot, for the poster's title overlay.
+  final String? posterTitle;
 }
 
 /// Why a slot generation did not produce a post.

@@ -36,8 +36,8 @@ class ComposeFailure implements Exception {
 ///
 /// Every method maps to exactly one route in
 /// `lib/core/network/api_paths.dart`. There are no invented paths here: where
-/// the web composer calls something mobile does not expose (`/api/poster-tags`,
-/// `/api/studio/templates`, `/api/studio/customize`, a voice-sample count),
+/// the web composer calls something mobile does not expose
+/// (`/api/studio/templates`, `/api/studio/customize`, a voice-sample count),
 /// there is deliberately no method and the UI says so out loud instead of
 /// silently rendering a dead control.
 abstract class ComposeRepository {
@@ -52,12 +52,26 @@ abstract class ComposeRepository {
   /// about which product the user is using.
   Future<List<LinkedinAccount>> fetchAccounts();
 
+  /// `GET /poster-tags` — the poster styles on offer, each with the number of
+  /// live reference images standing behind it.
+  ///
+  /// The counts are what the picker filters on, not trivia: a tag with none
+  /// produces the same poster as no tag at all, so offering it would let
+  /// someone choose a style, get the default, and have no way to tell why.
+  Future<List<PosterTagOption>> fetchPosterTags();
+
   /// `POST /ai/generate` — the post body, its visual category, and a poster
   /// headline, in one round-trip.
+  ///
+  /// [reference] is a post whose shape this one should borrow. It is passed per
+  /// request and never stored: it is a one-off instruction about this post, not
+  /// a standing fact about how the user writes, and persisting it would quietly
+  /// re-apply a stranger's structure to every post after it.
   Future<GeneratedPost> generatePost({
     required String topic,
     required ComposeTone tone,
     required ComposeLength length,
+    String? reference,
   });
 
   /// `POST /ai/poster` — the composited hero image, returned inline as a data

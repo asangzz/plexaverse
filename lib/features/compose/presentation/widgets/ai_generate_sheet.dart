@@ -7,6 +7,7 @@ import '../../../../core/router/zave_routes.dart';
 import '../../../../core/ui/zave/zave_kit.dart';
 import '../../application/compose_controller.dart';
 import '../../domain/compose_draft.dart';
+import '../../domain/compose_models.dart';
 import '../../domain/compose_status.dart';
 
 /// "Write with AI" — the brief the generator works from.
@@ -16,18 +17,26 @@ import '../../domain/compose_status.dart';
 /// that is all this is; the two-form responsive behaviour would be dead code
 /// on every device this app runs on.
 ///
-/// **Three controls the web has and this does not, and why.**
+/// **Poster style and reference post are real controls now.** Mobile has a
+/// `GET /poster-tags` route, and `POST /ai/generate` reads `reference`, so both
+/// chips and textarea carry their value to the server rather than decorating a
+/// request that drops it.
 ///
-/// • *Poster style* chips come from `GET /api/poster-tags`, which the mobile
-///   API does not expose. Rendering a chip row that silently sends nothing
-///   would be worse than not having one.
-/// • *Reference post* — `POST /ai/generate` on mobile reads only
-///   `{topic, tone, length}`; it drops `reference` on the floor. A textarea
-///   whose content is discarded server-side is a lie told in UI.
-/// • The *voice-sample count* subtitle needs a summary endpoint mobile has no
-///   route for, so the subtitle states the plain fact instead.
+/// The style row follows the web's rule rather than listing the vocabulary: a
+/// tag the reference library has no live images for produces exactly the poster
+/// that no tag produces, so those are left out, and the row disappears entirely
+/// when none of them are backed. A picker whose every option does the same
+/// thing is worse than no picker — it invites a choice and then ignores it.
 ///
-/// All three are reported as missing endpoints rather than faked.
+/// The reference field is collapsed behind a link and cleared when removed.
+/// It is sent per request and never written to the draft: it describes this
+/// post, not the user, and a stored one would keep re-applying a stranger's
+/// structure long after they had forgotten pasting it.
+///
+/// **One control the web has is still missing, and still said out loud.** Its
+/// subtitle reads "matched against N samples of your writing", which needs a
+/// voice-summary endpoint mobile has no route for. Rather than invent a count,
+/// the subtitle here states the plain fact.
 class AiGenerateSheet extends ConsumerStatefulWidget {
   const AiGenerateSheet({super.key});
 
@@ -52,13 +61,23 @@ class AiGenerateSheet extends ConsumerStatefulWidget {
 
 class _AiGenerateSheetState extends ConsumerState<AiGenerateSheet> {
   final TextEditingController _topic = TextEditingController();
+  final TextEditingController _reference = TextEditingController();
 
   ComposeTone _tone = ComposeTone.professional;
   ComposeLength _length = ComposeLength.medium;
 
+  /// Null is "no style", and the default — the poster every generation produced
+  /// before the reference library existed.
+  String? _posterTag;
+
+  /// Most posts do not want a reference, and an empty textarea sitting on the
+  /// sheet reads as a field somebody forgot to fill in.
+  bool _showReference = false;
+
   @override
   void dispose() {
     _topic.dispose();
+    _reference.dispose();
     super.dispose();
   }
 
@@ -68,7 +87,13 @@ class _AiGenerateSheetState extends ConsumerState<AiGenerateSheet> {
 
     await ref
         .read(composeActionsProvider.notifier)
-        .generate(topic: topic, tone: _tone, length: _length);
+        .generate(
+          topic: topic,
+          tone: _tone,
+          length: _length,
+          posterTag: _posterTag,
+          reference: _reference.text.trim(),
+        );
 
     if (!mounted) return;
     // Close only once a body exists. The web does the same: a failed text call
@@ -87,6 +112,15 @@ class _AiGenerateSheetState extends ConsumerState<AiGenerateSheet> {
   Widget build(BuildContext context) {
     final ComposeStatus status = ref.watch(composeActionsProvider);
     final bool busy = status.isGenerating;
+
+    // Only the tags the library can actually honour, and nothing at all until
+    // they land. A failed fetch therefore costs the user the style choice and
+    // nothing else: the brief, the tone and the length are untouched, and the
+    // poster generates exactly as it did before this control existed.
+    final List<PosterTagOption> styles =
+        (ref.watch(posterTagOptionsProvider).value ?? const <PosterTagOption>[])
+            .where((PosterTagOption option) => option.usable)
+            .toList(growable: false);
 
     return Padding(
       // Lift the sheet clear of the keyboard — the topic field is the first
@@ -153,6 +187,36 @@ class _AiGenerateSheetState extends ConsumerState<AiGenerateSheet> {
                   autofocus: true,
                 ),
 
+                if (styles.isNotEmpty) ...<Widget>[
+                  SizedBox(height: ZaveSpace.xl),
+                  Text('POSTER STYLE', style: ZaveType.kicker),
+                  SizedBox(height: ZaveSpace.md),
+                  Wrap(
+                    spacing: ZaveSpace.sm,
+                    runSpacing: ZaveSpace.sm,
+                    children: <Widget>[
+                      // Explicit, and first. "No style" is the default and has
+                      // to be reachable again after a tap, or the first chip
+                      // the user tries becomes permanent.
+                      ZaveChip(
+                        label: 'None',
+                        selected: _posterTag == null,
+                        onTap: busy
+                            ? null
+                            : () => setState(() => _posterTag = null),
+                      ),
+                      for (final PosterTagOption option in styles)
+                        ZaveChip(
+                          label: option.label,
+                          selected: option.tag == _posterTag,
+                          onTap: busy
+                              ? null
+                              : () => setState(() => _posterTag = option.tag),
+                        ),
+                    ],
+                  ),
+                ],
+
                 SizedBox(height: ZaveSpace.xl),
                 Text('TONE', style: ZaveType.kicker),
                 SizedBox(height: ZaveSpace.md),
@@ -185,6 +249,21 @@ class _AiGenerateSheetState extends ConsumerState<AiGenerateSheet> {
                             : () => setState(() => _length = length),
                       ),
                   ],
+                ),
+
+                SizedBox(height: ZaveSpace.xl),
+                _ReferenceField(
+                  controller: _reference,
+                  open: _showReference,
+                  enabled: !busy,
+                  onOpen: () => setState(() => _showReference = true),
+                  // Removing clears the text as well as the box. Leaving it
+                  // behind would send a reference the user had just taken off
+                  // the screen.
+                  onRemove: () => setState(() {
+                    _showReference = false;
+                    _reference.clear();
+                  }),
                 ),
 
                 if (busy) ...<Widget>[
@@ -226,6 +305,118 @@ class _AiGenerateSheetState extends ConsumerState<AiGenerateSheet> {
                   ],
                 ),
               ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// "Use a post as a reference" — a link until asked for, a textarea after.
+///
+/// Stateless, with the open flag owned by the sheet, because the sheet is what
+/// has to clear the controller on remove; splitting that across two widgets is
+/// how a cleared field and a visible one get out of step.
+class _ReferenceField extends StatelessWidget {
+  const _ReferenceField({
+    required this.controller,
+    required this.open,
+    required this.enabled,
+    required this.onOpen,
+    required this.onRemove,
+  });
+
+  final TextEditingController controller;
+  final bool open;
+  final bool enabled;
+  final VoidCallback onOpen;
+  final VoidCallback onRemove;
+
+  @override
+  Widget build(BuildContext context) {
+    if (!open) {
+      return Align(
+        alignment: Alignment.centerLeft,
+        child: _TextAction(
+          label: '+ Use a post as a reference',
+          color: ZaveColors.peri,
+          onTap: enabled ? onOpen : null,
+        ),
+      );
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: <Widget>[
+        Row(
+          children: <Widget>[
+            Expanded(child: Text('REFERENCE POST', style: ZaveType.kicker)),
+            _TextAction(
+              label: 'Remove',
+              color: ZaveColors.ink45,
+              onTap: enabled ? onRemove : null,
+            ),
+          ],
+        ),
+        SizedBox(height: ZaveSpace.sm),
+        ZaveField(
+          controller: controller,
+          hint: 'Paste a post whose structure you want to borrow…',
+          // Says what is and is not borrowed. Someone pasting a competitor's
+          // post needs to know this is not a rewrite, and someone who has
+          // taught us their voice needs to know this does not replace it.
+          helper:
+              "I'll borrow its shape and pacing for this post only — not its "
+              'words, and not your saved voice.',
+          minLines: 3,
+          maxLines: 6,
+          enabled: enabled,
+          textInputAction: TextInputAction.newline,
+          keyboardType: TextInputType.multiline,
+        ),
+      ],
+    );
+  }
+}
+
+/// A tappable line of text. Zave's button set is all filled surfaces, and a
+/// filled button would make an optional extra look like a second primary
+/// action beside "Write it".
+class _TextAction extends StatelessWidget {
+  const _TextAction({
+    required this.label,
+    required this.color,
+    required this.onTap,
+  });
+
+  final String label;
+  final Color color;
+  final VoidCallback? onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Semantics(
+      button: true,
+      label: label,
+      child: GestureDetector(
+        onTap: onTap,
+        behavior: HitTestBehavior.opaque,
+        child: ConstrainedBox(
+          // Text this short is well under a finger otherwise; the padding is
+          // the tap target, not spacing.
+          constraints: BoxConstraints(minHeight: ZaveSpace.minTapTarget),
+          child: Padding(
+            padding: EdgeInsets.symmetric(horizontal: ZaveSpace.sm),
+            child: Align(
+              widthFactor: 1,
+              child: Opacity(
+                opacity: onTap == null ? 0.5 : 1,
+                child: Text(
+                  label,
+                  style: ZaveType.caption.copyWith(color: color),
+                ),
+              ),
             ),
           ),
         ),

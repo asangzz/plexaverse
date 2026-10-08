@@ -27,6 +27,21 @@ final class NetworkFailure extends Failure {
   const NetworkFailure({super.message, super.errorCode});
 }
 
+/// The request reached the server, and the server took too long to answer.
+///
+/// Split out of [NetworkFailure] because the two call for opposite advice and
+/// conflating them hid a real bug for a long time: every AI generation that
+/// ran past the client's 30-second budget was reported as "No connection.
+/// Check your network and try again." — on a working connection, for work the
+/// server went on to finish and charge XP for. Checking your network is the
+/// one thing that cannot help.
+///
+/// A [NetworkFailure] means we never got an answer and retrying may work. This
+/// means the answer is probably still coming, just not within the budget.
+final class TimeoutFailure extends Failure {
+  const TimeoutFailure({super.message, super.errorCode});
+}
+
 final class ServerFailure extends Failure {
   const ServerFailure({super.message, super.errorCode, this.statusCode});
   final int? statusCode;

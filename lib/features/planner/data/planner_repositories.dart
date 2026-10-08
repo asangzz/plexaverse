@@ -78,6 +78,10 @@ class ApiPlannerRepository implements PlannerRepository {
       return GeneratedSlot(
         postId: data?['postId'] as String?,
         alreadyGenerated: data?['alreadyGenerated'] == true,
+        // The route has always sent these two back; nothing read them until
+        // the poster call needed a brief to draw from.
+        content: data?['content'] as String?,
+        posterTitle: data?['posterTitle'] as String?,
       );
     } on DioException catch (e) {
       throw PlannerGenerateFailure(
@@ -149,6 +153,64 @@ class ApiPlannerRepository implements PlannerRepository {
         kind: PlannerGenerateFailureKind.failed,
       );
     }
+  }
+
+  /// Slot post type → the poster's visual category. A faithful copy of the
+  /// web's `SLOT_TYPE_TO_POSTER_CATEGORY`, which both the planner's preview
+  /// panel and its generating modal keep their own copy of. Living here rather
+  /// than in the controller keeps a wire value out of the feature's logic —
+  /// these are the route's `PosterCategory` strings, not ours.
+  static const Map<String, String> _posterCategoryForSlotType =
+      <String, String>{
+        'niche': 'technical',
+        'general': 'thought_leadership',
+        'productive': 'thought_leadership',
+        'light': 'social_media',
+      };
+
+  @override
+  Future<String?> generateSlotPoster({
+    required String topic,
+    required String content,
+    required String posterTitle,
+    required String slotType,
+    required String userName,
+    String? profileImageUrl,
+    String? posterTag,
+  }) async {
+    final Map<String, dynamic> body = <String, dynamic>{
+      'topic': topic,
+      'content': content,
+      'posterTitle': posterTitle,
+      'userName': userName,
+      'category': _posterCategoryForSlotType[slotType] ?? 'thought_leadership',
+      // Routes the image to the provider this day's type is configured for —
+      // without it the planner's own button draws the slot on a different
+      // model from the one the Cloud Task would have picked for it.
+      'postType': slotType,
+      // Sent even when null, which is what the server reads to mean "no style
+      // reference". Omitting the key and sending null are the same thing here,
+      // but the explicit null matches what the web and the chain send.
+      'posterTag': posterTag,
+    };
+    if (profileImageUrl != null && profileImageUrl.isNotEmpty) {
+      body['profileImageUrl'] = profileImageUrl;
+    }
+
+    final Response<Map<String, dynamic>> response = await _client
+        .post<Map<String, dynamic>>(ApiPaths.aiPoster, data: body);
+    return response.data?['imageUrl'] as String?;
+  }
+
+  @override
+  Future<void> attachPostImage({
+    required String postId,
+    required String imageUrl,
+  }) async {
+    await _client.patch<Map<String, dynamic>>(
+      ApiPaths.post(postId),
+      data: <String, dynamic>{'imageUrl': imageUrl},
+    );
   }
 
   @override
@@ -592,6 +654,41 @@ class FakePlannerRepository implements PlannerRepository {
     required int slotIndex,
     bool force = false,
   }) => generateSlotPost(planId: planId, slotIndex: slotIndex, force: force);
+
+  /// A 1×1 transparent PNG — the same stand-in the fake compose repository
+  /// uses. It lays the image panel out correctly without shipping a fixture,
+  /// and it keeps the mock flavor walking the poster branch: returning null
+  /// here would mean mock quietly reproduces the very bug this pair of calls
+  /// exists to fix.
+  static const String _pixel =
+      'data:image/png;base64,'
+      'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk'
+      'YPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==';
+
+  @override
+  Future<String?> generateSlotPoster({
+    required String topic,
+    required String content,
+    required String posterTitle,
+    required String slotType,
+    required String userName,
+    String? profileImageUrl,
+    String? posterTag,
+  }) async {
+    await Future<void>.delayed(const Duration(milliseconds: 700));
+    return _pixel;
+  }
+
+  @override
+  Future<void> attachPostImage({
+    required String postId,
+    required String imageUrl,
+  }) async {
+    // The fake's plan holds no bodies, so there is nothing to hang this on.
+    // Still an await, because the controller's timing — the row sits in
+    // `generating` until both calls return — is the thing mock is for.
+    await Future<void>.delayed(const Duration(milliseconds: 200));
+  }
 
   @override
   Future<WeekPlan> changeTopic({

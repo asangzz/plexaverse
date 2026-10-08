@@ -5,6 +5,7 @@ import '../config/api_environment.dart';
 import 'failure.dart';
 import 'interceptors/auth_interceptor.dart';
 import 'interceptors/error_interceptor.dart';
+import 'interceptors/generation_timeout_interceptor.dart';
 import 'interceptors/logging_interceptor.dart';
 import 'interceptors/offline_gate_interceptor.dart';
 import 'network_config.dart';
@@ -297,6 +298,9 @@ DioClient dioClient(Ref ref) {
   )..interceptors.addAll([
       // First: online-first fast-fail while offline (no 15s timeout burn).
       ref.read(offlineGateInterceptorProvider),
+      // Before auth, because it only rewrites a timeout on the outgoing
+      // options and must apply to the retried request too.
+      ref.read(generationTimeoutInterceptorProvider),
       ref.read(authInterceptorProvider),
       ref.read(loggingInterceptorProvider),
       ref.read(errorInterceptorProvider),

@@ -242,7 +242,7 @@ abstract class _$VideoScriptsController
   }
 }
 
-/// The week's Sunday article.
+/// The week's long-form article — Thursday's newsletter.
 ///
 /// Separate from [PlannerController] because the article is not one of the
 /// week's posts — it is the week's spine, it generates even in maintenance
@@ -251,14 +251,14 @@ abstract class _$VideoScriptsController
 @ProviderFor(ArticleController)
 final articleControllerProvider = ArticleControllerProvider._();
 
-/// The week's Sunday article.
+/// The week's long-form article — Thursday's newsletter.
 ///
 /// Separate from [PlannerController] because the article is not one of the
 /// week's posts — it is the week's spine, it generates even in maintenance
 /// mode, and a failed article must never cost the user their plan.
 final class ArticleControllerProvider
     extends $AsyncNotifierProvider<ArticleController, ArticleState> {
-  /// The week's Sunday article.
+  /// The week's long-form article — Thursday's newsletter.
   ///
   /// Separate from [PlannerController] because the article is not one of the
   /// week's posts — it is the week's spine, it generates even in maintenance
@@ -282,9 +282,9 @@ final class ArticleControllerProvider
   ArticleController create() => ArticleController();
 }
 
-String _$articleControllerHash() => r'dd0c8d76004b319d5d92cdf88ec341bf1bc1a4b6';
+String _$articleControllerHash() => r'68f47e9ca43042a6825bde5502cde5a465ad2b60';
 
-/// The week's Sunday article.
+/// The week's long-form article — Thursday's newsletter.
 ///
 /// Separate from [PlannerController] because the article is not one of the
 /// week's posts — it is the week's spine, it generates even in maintenance

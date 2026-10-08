@@ -1,4 +1,3 @@
-
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 import '../data/compose_repositories.dart';
@@ -37,6 +36,16 @@ class ComposeContextController extends _$ComposeContextController {
     return ComposeContextState(preferences: preferences, accounts: accounts);
   }
 }
+
+/// The poster styles the "Write with AI" picker offers, from `GET /poster-tags`.
+///
+/// Its own provider rather than another field on [ComposeContextState]. The AI
+/// sheet is the only thing that reads it, and folding it into the context would
+/// make a failed tag fetch take the connection panel — the part that decides
+/// whether the user can publish at all — down with a cosmetic choice.
+@riverpod
+Future<List<PosterTagOption>> posterTagOptions(Ref ref) =>
+    ref.watch(composeRepositoryProvider).fetchPosterTags();
 
 /// The post being written.
 ///
@@ -175,10 +184,17 @@ class ComposeActions extends _$ComposeActions {
   /// failure but don't abort the rest of the flow"), and it is the right trade:
   /// losing a finished post because its illustration failed would be a far
   /// worse outcome than a post with no image.
+  ///
+  /// [posterTag] rides on the [PosterPrompt] rather than being a second
+  /// argument to the poster call, so Regenerate reapplies the chosen style for
+  /// free. [reference] goes to the text step only and is never written to the
+  /// draft — see `ComposeRepository.generatePost` for why it stays per-request.
   Future<void> generate({
     required String topic,
     required ComposeTone tone,
     required ComposeLength length,
+    String? posterTag,
+    String? reference,
   }) async {
     if (state.isBusy) return;
     final String trimmed = topic.trim();
@@ -195,6 +211,7 @@ class ComposeActions extends _$ComposeActions {
         topic: trimmed,
         tone: tone,
         length: length,
+        reference: reference,
       );
     } on ComposeFailure catch (e) {
       state = ComposeStatus(
@@ -225,6 +242,7 @@ class ComposeActions extends _$ComposeActions {
           : account?.profileName,
       profileImageUrl: account?.profileImage,
       category: written.category.isEmpty ? null : written.category,
+      posterTag: posterTag,
     );
 
     state = const ComposeStatus(

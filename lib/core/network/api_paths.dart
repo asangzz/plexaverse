@@ -271,6 +271,12 @@ class ApiPaths {
   static const String aiGenerate = '/ai/generate';
   static const String aiImage = '/ai/image';
   static const String aiPoster = '/ai/poster';
+
+  /// GET — the poster styles a user can pick, with how many live references
+  /// each has. A tag with no references behaves exactly like no tag, so the
+  /// count is what stops the picker offering a style that would do nothing.
+  static const String posterTags = '/poster-tags';
+
   static const String aiCarousel = '/ai/carousel';
   static const String aiHeadshot = '/ai/headshot';
   static const String aiComments = '/ai/comments';

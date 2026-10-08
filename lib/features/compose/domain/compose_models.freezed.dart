@@ -288,6 +288,272 @@ as String,
 
 
 /// @nodoc
+mixin _$PosterTagOption {
+
+ String get tag; int get live;
+/// Create a copy of PosterTagOption
+/// with the given fields replaced by the non-null parameter values.
+@JsonKey(includeFromJson: false, includeToJson: false)
+@pragma('vm:prefer-inline')
+$PosterTagOptionCopyWith<PosterTagOption> get copyWith => _$PosterTagOptionCopyWithImpl<PosterTagOption>(this as PosterTagOption, _$identity);
+
+  /// Serializes this PosterTagOption to a JSON map.
+  Map<String, dynamic> toJson();
+
+
+@override
+bool operator ==(Object other) {
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is PosterTagOption&&(identical(other.tag, tag) || other.tag == tag)&&(identical(other.live, live) || other.live == live));
+}
+
+@JsonKey(includeFromJson: false, includeToJson: false)
+@override
+int get hashCode => Object.hash(runtimeType,tag,live);
+
+@override
+String toString() {
+  return 'PosterTagOption(tag: $tag, live: $live)';
+}
+
+
+}
+
+/// @nodoc
+abstract mixin class $PosterTagOptionCopyWith<$Res>  {
+  factory $PosterTagOptionCopyWith(PosterTagOption value, $Res Function(PosterTagOption) _then) = _$PosterTagOptionCopyWithImpl;
+@useResult
+$Res call({
+ String tag, int live
+});
+
+
+
+
+}
+/// @nodoc
+class _$PosterTagOptionCopyWithImpl<$Res>
+    implements $PosterTagOptionCopyWith<$Res> {
+  _$PosterTagOptionCopyWithImpl(this._self, this._then);
+
+  final PosterTagOption _self;
+  final $Res Function(PosterTagOption) _then;
+
+/// Create a copy of PosterTagOption
+/// with the given fields replaced by the non-null parameter values.
+@pragma('vm:prefer-inline') @override $Res call({Object? tag = null,Object? live = null,}) {
+  return _then(_self.copyWith(
+tag: null == tag ? _self.tag : tag // ignore: cast_nullable_to_non_nullable
+as String,live: null == live ? _self.live : live // ignore: cast_nullable_to_non_nullable
+as int,
+  ));
+}
+
+}
+
+
+/// Adds pattern-matching-related methods to [PosterTagOption].
+extension PosterTagOptionPatterns on PosterTagOption {
+/// A variant of `map` that fallback to returning `orElse`.
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case final Subclass value:
+///     return ...;
+///   case _:
+///     return orElse();
+/// }
+/// ```
+
+@optionalTypeArgs TResult maybeMap<TResult extends Object?>(TResult Function( _PosterTagOption value)?  $default,{required TResult orElse(),}){
+final _that = this;
+switch (_that) {
+case _PosterTagOption() when $default != null:
+return $default(_that);case _:
+  return orElse();
+
+}
+}
+/// A `switch`-like method, using callbacks.
+///
+/// Callbacks receives the raw object, upcasted.
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case final Subclass value:
+///     return ...;
+///   case final Subclass2 value:
+///     return ...;
+/// }
+/// ```
+
+@optionalTypeArgs TResult map<TResult extends Object?>(TResult Function( _PosterTagOption value)  $default,){
+final _that = this;
+switch (_that) {
+case _PosterTagOption():
+return $default(_that);case _:
+  throw StateError('Unexpected subclass');
+
+}
+}
+/// A variant of `map` that fallback to returning `null`.
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case final Subclass value:
+///     return ...;
+///   case _:
+///     return null;
+/// }
+/// ```
+
+@optionalTypeArgs TResult? mapOrNull<TResult extends Object?>(TResult? Function( _PosterTagOption value)?  $default,){
+final _that = this;
+switch (_that) {
+case _PosterTagOption() when $default != null:
+return $default(_that);case _:
+  return null;
+
+}
+}
+/// A variant of `when` that fallback to an `orElse` callback.
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case Subclass(:final field):
+///     return ...;
+///   case _:
+///     return orElse();
+/// }
+/// ```
+
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String tag,  int live)?  $default,{required TResult orElse(),}) {final _that = this;
+switch (_that) {
+case _PosterTagOption() when $default != null:
+return $default(_that.tag,_that.live);case _:
+  return orElse();
+
+}
+}
+/// A `switch`-like method, using callbacks.
+///
+/// As opposed to `map`, this offers destructuring.
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case Subclass(:final field):
+///     return ...;
+///   case Subclass2(:final field2):
+///     return ...;
+/// }
+/// ```
+
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String tag,  int live)  $default,) {final _that = this;
+switch (_that) {
+case _PosterTagOption():
+return $default(_that.tag,_that.live);case _:
+  throw StateError('Unexpected subclass');
+
+}
+}
+/// A variant of `when` that fallback to returning `null`
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case Subclass(:final field):
+///     return ...;
+///   case _:
+///     return null;
+/// }
+/// ```
+
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String tag,  int live)?  $default,) {final _that = this;
+switch (_that) {
+case _PosterTagOption() when $default != null:
+return $default(_that.tag,_that.live);case _:
+  return null;
+
+}
+}
+
+}
+
+/// @nodoc
+@JsonSerializable()
+
+class _PosterTagOption extends PosterTagOption {
+  const _PosterTagOption({this.tag = '', this.live = 0}): super._();
+  factory _PosterTagOption.fromJson(Map<String, dynamic> json) => _$PosterTagOptionFromJson(json);
+
+@override@JsonKey() final  String tag;
+@override@JsonKey() final  int live;
+
+/// Create a copy of PosterTagOption
+/// with the given fields replaced by the non-null parameter values.
+@override @JsonKey(includeFromJson: false, includeToJson: false)
+@pragma('vm:prefer-inline')
+_$PosterTagOptionCopyWith<_PosterTagOption> get copyWith => __$PosterTagOptionCopyWithImpl<_PosterTagOption>(this, _$identity);
+
+@override
+Map<String, dynamic> toJson() {
+  return _$PosterTagOptionToJson(this, );
+}
+
+@override
+bool operator ==(Object other) {
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is _PosterTagOption&&(identical(other.tag, tag) || other.tag == tag)&&(identical(other.live, live) || other.live == live));
+}
+
+@JsonKey(includeFromJson: false, includeToJson: false)
+@override
+int get hashCode => Object.hash(runtimeType,tag,live);
+
+@override
+String toString() {
+  return 'PosterTagOption(tag: $tag, live: $live)';
+}
+
+
+}
+
+/// @nodoc
+abstract mixin class _$PosterTagOptionCopyWith<$Res> implements $PosterTagOptionCopyWith<$Res> {
+  factory _$PosterTagOptionCopyWith(_PosterTagOption value, $Res Function(_PosterTagOption) _then) = __$PosterTagOptionCopyWithImpl;
+@override @useResult
+$Res call({
+ String tag, int live
+});
+
+
+
+
+}
+/// @nodoc
+class __$PosterTagOptionCopyWithImpl<$Res>
+    implements _$PosterTagOptionCopyWith<$Res> {
+  __$PosterTagOptionCopyWithImpl(this._self, this._then);
+
+  final _PosterTagOption _self;
+  final $Res Function(_PosterTagOption) _then;
+
+/// Create a copy of PosterTagOption
+/// with the given fields replaced by the non-null parameter values.
+@override @pragma('vm:prefer-inline') $Res call({Object? tag = null,Object? live = null,}) {
+  return _then(_PosterTagOption(
+tag: null == tag ? _self.tag : tag // ignore: cast_nullable_to_non_nullable
+as String,live: null == live ? _self.live : live // ignore: cast_nullable_to_non_nullable
+as int,
+  ));
+}
+
+
+}
+
+
+/// @nodoc
 mixin _$GeneratedPoster {
 
  String get imageUrl; String get posterTitle; String get model; String get provider;

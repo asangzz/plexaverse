@@ -76,6 +76,15 @@ abstract class PosterPrompt with _$PosterPrompt {
     String? userName,
     String? profileImageUrl,
     String? category,
+
+    /// The poster style the user picked, or null for "no style" — the default,
+    /// and what every poster looked like before the reference library existed.
+    ///
+    /// It belongs on the prompt rather than beside it so Regenerate reapplies
+    /// it without any extra plumbing. The point of storing the brief verbatim
+    /// is that the second poster belongs to the same family as the first, and a
+    /// style that survived only the first call would break exactly that.
+    String? posterTag,
   }) = _PosterPrompt;
 }
 

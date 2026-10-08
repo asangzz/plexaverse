@@ -61,6 +61,11 @@ class ApiAiToolsRepository implements AiToolsRepository {
   /// The copy shown when the server sent no message of its own.
   static String _defaultMessage(Failure failure) => switch (failure) {
     NetworkFailure() => 'No connection. Check your network and try again.',
+    // Reached the server, which is still working on it. Never tell
+    // someone to check a connection that demonstrably worked.
+    TimeoutFailure() =>
+      'That took longer than expected. It may still have gone through — '
+      'check before trying again.',
     AuthFailure() => 'Your session expired. Sign in again.',
     NotFoundFailure() => 'That is no longer available.',
     ValidationFailure() => 'Some details were rejected. Check and try again.',

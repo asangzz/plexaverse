@@ -279,7 +279,14 @@ as bool,
 /// @nodoc
 mixin _$PosterPrompt {
 
- String get topic; String get content; String? get posterTitle; String? get userName; String? get profileImageUrl; String? get category;
+ String get topic; String get content; String? get posterTitle; String? get userName; String? get profileImageUrl; String? get category;/// The poster style the user picked, or null for "no style" — the default,
+/// and what every poster looked like before the reference library existed.
+///
+/// It belongs on the prompt rather than beside it so Regenerate reapplies
+/// it without any extra plumbing. The point of storing the brief verbatim
+/// is that the second poster belongs to the same family as the first, and a
+/// style that survived only the first call would break exactly that.
+ String? get posterTag;
 /// Create a copy of PosterPrompt
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
@@ -290,16 +297,16 @@ $PosterPromptCopyWith<PosterPrompt> get copyWith => _$PosterPromptCopyWithImpl<P
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is PosterPrompt&&(identical(other.topic, topic) || other.topic == topic)&&(identical(other.content, content) || other.content == content)&&(identical(other.posterTitle, posterTitle) || other.posterTitle == posterTitle)&&(identical(other.userName, userName) || other.userName == userName)&&(identical(other.profileImageUrl, profileImageUrl) || other.profileImageUrl == profileImageUrl)&&(identical(other.category, category) || other.category == category));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is PosterPrompt&&(identical(other.topic, topic) || other.topic == topic)&&(identical(other.content, content) || other.content == content)&&(identical(other.posterTitle, posterTitle) || other.posterTitle == posterTitle)&&(identical(other.userName, userName) || other.userName == userName)&&(identical(other.profileImageUrl, profileImageUrl) || other.profileImageUrl == profileImageUrl)&&(identical(other.category, category) || other.category == category)&&(identical(other.posterTag, posterTag) || other.posterTag == posterTag));
 }
 
 
 @override
-int get hashCode => Object.hash(runtimeType,topic,content,posterTitle,userName,profileImageUrl,category);
+int get hashCode => Object.hash(runtimeType,topic,content,posterTitle,userName,profileImageUrl,category,posterTag);
 
 @override
 String toString() {
-  return 'PosterPrompt(topic: $topic, content: $content, posterTitle: $posterTitle, userName: $userName, profileImageUrl: $profileImageUrl, category: $category)';
+  return 'PosterPrompt(topic: $topic, content: $content, posterTitle: $posterTitle, userName: $userName, profileImageUrl: $profileImageUrl, category: $category, posterTag: $posterTag)';
 }
 
 
@@ -310,7 +317,7 @@ abstract mixin class $PosterPromptCopyWith<$Res>  {
   factory $PosterPromptCopyWith(PosterPrompt value, $Res Function(PosterPrompt) _then) = _$PosterPromptCopyWithImpl;
 @useResult
 $Res call({
- String topic, String content, String? posterTitle, String? userName, String? profileImageUrl, String? category
+ String topic, String content, String? posterTitle, String? userName, String? profileImageUrl, String? category, String? posterTag
 });
 
 
@@ -327,7 +334,7 @@ class _$PosterPromptCopyWithImpl<$Res>
 
 /// Create a copy of PosterPrompt
 /// with the given fields replaced by the non-null parameter values.
-@pragma('vm:prefer-inline') @override $Res call({Object? topic = null,Object? content = null,Object? posterTitle = freezed,Object? userName = freezed,Object? profileImageUrl = freezed,Object? category = freezed,}) {
+@pragma('vm:prefer-inline') @override $Res call({Object? topic = null,Object? content = null,Object? posterTitle = freezed,Object? userName = freezed,Object? profileImageUrl = freezed,Object? category = freezed,Object? posterTag = freezed,}) {
   return _then(_self.copyWith(
 topic: null == topic ? _self.topic : topic // ignore: cast_nullable_to_non_nullable
 as String,content: null == content ? _self.content : content // ignore: cast_nullable_to_non_nullable
@@ -335,6 +342,7 @@ as String,posterTitle: freezed == posterTitle ? _self.posterTitle : posterTitle 
 as String?,userName: freezed == userName ? _self.userName : userName // ignore: cast_nullable_to_non_nullable
 as String?,profileImageUrl: freezed == profileImageUrl ? _self.profileImageUrl : profileImageUrl // ignore: cast_nullable_to_non_nullable
 as String?,category: freezed == category ? _self.category : category // ignore: cast_nullable_to_non_nullable
+as String?,posterTag: freezed == posterTag ? _self.posterTag : posterTag // ignore: cast_nullable_to_non_nullable
 as String?,
   ));
 }
@@ -420,10 +428,10 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String topic,  String content,  String? posterTitle,  String? userName,  String? profileImageUrl,  String? category)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String topic,  String content,  String? posterTitle,  String? userName,  String? profileImageUrl,  String? category,  String? posterTag)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _PosterPrompt() when $default != null:
-return $default(_that.topic,_that.content,_that.posterTitle,_that.userName,_that.profileImageUrl,_that.category);case _:
+return $default(_that.topic,_that.content,_that.posterTitle,_that.userName,_that.profileImageUrl,_that.category,_that.posterTag);case _:
   return orElse();
 
 }
@@ -441,10 +449,10 @@ return $default(_that.topic,_that.content,_that.posterTitle,_that.userName,_that
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String topic,  String content,  String? posterTitle,  String? userName,  String? profileImageUrl,  String? category)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String topic,  String content,  String? posterTitle,  String? userName,  String? profileImageUrl,  String? category,  String? posterTag)  $default,) {final _that = this;
 switch (_that) {
 case _PosterPrompt():
-return $default(_that.topic,_that.content,_that.posterTitle,_that.userName,_that.profileImageUrl,_that.category);case _:
+return $default(_that.topic,_that.content,_that.posterTitle,_that.userName,_that.profileImageUrl,_that.category,_that.posterTag);case _:
   throw StateError('Unexpected subclass');
 
 }
@@ -461,10 +469,10 @@ return $default(_that.topic,_that.content,_that.posterTitle,_that.userName,_that
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String topic,  String content,  String? posterTitle,  String? userName,  String? profileImageUrl,  String? category)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String topic,  String content,  String? posterTitle,  String? userName,  String? profileImageUrl,  String? category,  String? posterTag)?  $default,) {final _that = this;
 switch (_that) {
 case _PosterPrompt() when $default != null:
-return $default(_that.topic,_that.content,_that.posterTitle,_that.userName,_that.profileImageUrl,_that.category);case _:
+return $default(_that.topic,_that.content,_that.posterTitle,_that.userName,_that.profileImageUrl,_that.category,_that.posterTag);case _:
   return null;
 
 }
@@ -476,7 +484,7 @@ return $default(_that.topic,_that.content,_that.posterTitle,_that.userName,_that
 
 
 class _PosterPrompt implements PosterPrompt {
-  const _PosterPrompt({this.topic = '', this.content = '', this.posterTitle, this.userName, this.profileImageUrl, this.category});
+  const _PosterPrompt({this.topic = '', this.content = '', this.posterTitle, this.userName, this.profileImageUrl, this.category, this.posterTag});
   
 
 @override@JsonKey() final  String topic;
@@ -485,6 +493,14 @@ class _PosterPrompt implements PosterPrompt {
 @override final  String? userName;
 @override final  String? profileImageUrl;
 @override final  String? category;
+/// The poster style the user picked, or null for "no style" — the default,
+/// and what every poster looked like before the reference library existed.
+///
+/// It belongs on the prompt rather than beside it so Regenerate reapplies
+/// it without any extra plumbing. The point of storing the brief verbatim
+/// is that the second poster belongs to the same family as the first, and a
+/// style that survived only the first call would break exactly that.
+@override final  String? posterTag;
 
 /// Create a copy of PosterPrompt
 /// with the given fields replaced by the non-null parameter values.
@@ -496,16 +512,16 @@ _$PosterPromptCopyWith<_PosterPrompt> get copyWith => __$PosterPromptCopyWithImp
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is _PosterPrompt&&(identical(other.topic, topic) || other.topic == topic)&&(identical(other.content, content) || other.content == content)&&(identical(other.posterTitle, posterTitle) || other.posterTitle == posterTitle)&&(identical(other.userName, userName) || other.userName == userName)&&(identical(other.profileImageUrl, profileImageUrl) || other.profileImageUrl == profileImageUrl)&&(identical(other.category, category) || other.category == category));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is _PosterPrompt&&(identical(other.topic, topic) || other.topic == topic)&&(identical(other.content, content) || other.content == content)&&(identical(other.posterTitle, posterTitle) || other.posterTitle == posterTitle)&&(identical(other.userName, userName) || other.userName == userName)&&(identical(other.profileImageUrl, profileImageUrl) || other.profileImageUrl == profileImageUrl)&&(identical(other.category, category) || other.category == category)&&(identical(other.posterTag, posterTag) || other.posterTag == posterTag));
 }
 
 
 @override
-int get hashCode => Object.hash(runtimeType,topic,content,posterTitle,userName,profileImageUrl,category);
+int get hashCode => Object.hash(runtimeType,topic,content,posterTitle,userName,profileImageUrl,category,posterTag);
 
 @override
 String toString() {
-  return 'PosterPrompt(topic: $topic, content: $content, posterTitle: $posterTitle, userName: $userName, profileImageUrl: $profileImageUrl, category: $category)';
+  return 'PosterPrompt(topic: $topic, content: $content, posterTitle: $posterTitle, userName: $userName, profileImageUrl: $profileImageUrl, category: $category, posterTag: $posterTag)';
 }
 
 
@@ -516,7 +532,7 @@ abstract mixin class _$PosterPromptCopyWith<$Res> implements $PosterPromptCopyWi
   factory _$PosterPromptCopyWith(_PosterPrompt value, $Res Function(_PosterPrompt) _then) = __$PosterPromptCopyWithImpl;
 @override @useResult
 $Res call({
- String topic, String content, String? posterTitle, String? userName, String? profileImageUrl, String? category
+ String topic, String content, String? posterTitle, String? userName, String? profileImageUrl, String? category, String? posterTag
 });
 
 
@@ -533,7 +549,7 @@ class __$PosterPromptCopyWithImpl<$Res>
 
 /// Create a copy of PosterPrompt
 /// with the given fields replaced by the non-null parameter values.
-@override @pragma('vm:prefer-inline') $Res call({Object? topic = null,Object? content = null,Object? posterTitle = freezed,Object? userName = freezed,Object? profileImageUrl = freezed,Object? category = freezed,}) {
+@override @pragma('vm:prefer-inline') $Res call({Object? topic = null,Object? content = null,Object? posterTitle = freezed,Object? userName = freezed,Object? profileImageUrl = freezed,Object? category = freezed,Object? posterTag = freezed,}) {
   return _then(_PosterPrompt(
 topic: null == topic ? _self.topic : topic // ignore: cast_nullable_to_non_nullable
 as String,content: null == content ? _self.content : content // ignore: cast_nullable_to_non_nullable
@@ -541,6 +557,7 @@ as String,posterTitle: freezed == posterTitle ? _self.posterTitle : posterTitle 
 as String?,userName: freezed == userName ? _self.userName : userName // ignore: cast_nullable_to_non_nullable
 as String?,profileImageUrl: freezed == profileImageUrl ? _self.profileImageUrl : profileImageUrl // ignore: cast_nullable_to_non_nullable
 as String?,category: freezed == category ? _self.category : category // ignore: cast_nullable_to_non_nullable
+as String?,posterTag: freezed == posterTag ? _self.posterTag : posterTag // ignore: cast_nullable_to_non_nullable
 as String?,
   ));
 }

@@ -1,6 +1,8 @@
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 import '../../../core/network/failure.dart';
+import '../../settings/application/settings_controllers.dart';
+import '../../settings/domain/settings_entities.dart';
 import '../data/planner_repositories.dart';
 import '../domain/plan_slot.dart';
 import '../domain/planner_repository.dart';
@@ -82,6 +84,10 @@ class PlannerController extends _$PlannerController {
               slotIndex: slotIndex,
               force: force,
             );
+      // The carousel route draws its own slides; only the text path leaves a
+      // day needing artwork. Before the refetch, so the invalidation that
+      // reloads the row happens once, with the image already attached.
+      if (!isCarousel) await _attachPoster(repo, plan, slotIndex, result);
       ref.invalidateSelf();
       return result;
     } on PlannerGenerateFailure {
@@ -91,6 +97,90 @@ class PlannerController extends _$PlannerController {
       ref.invalidateSelf();
       return null;
     }
+  }
+
+  /// Draws the day's poster and hangs it on the post that was just written.
+  ///
+  /// ## Why this is a second call
+  ///
+  /// `generatePlannerPost` returns a body and nothing else — by design. The
+  /// poster is a separate model call with its own price, and the server has
+  /// never drawn one as part of generating a slot; the web's planner makes
+  /// this same pair of calls, in this same order. A client that stops at the
+  /// first one therefore produces a post with no image, which is exactly what
+  /// the phone did: both of the week's posted days are `text_image`, so every
+  /// planner post generated on mobile arrived as bare text while the identical
+  /// slot generated on web arrived with a poster.
+  ///
+  /// ## Why nothing in here is fatal
+  ///
+  /// The post already exists and the XP for it is already spent. A poster that
+  /// fails costs the user an image they can redo; letting that failure escape
+  /// would cost them the post, and the planner row would roll back to
+  /// `planned` over artwork. So every step swallows: no poster, no `imageUrl`
+  /// in the answer, or a PATCH that does not land all leave the day exactly as
+  /// a successful text-only generation would have.
+  Future<void> _attachPoster(
+    PlannerRepository repo,
+    WeekPlan plan,
+    int slotIndex,
+    GeneratedSlot result,
+  ) async {
+    final PlanSlot slot = plan.posts[slotIndex];
+    // `alreadyGenerated` means another request wrote this slot — its poster
+    // went with it, and drawing a second one would charge for an image that
+    // replaces one already on the post.
+    if (slot.format != 'text_image' || result.alreadyGenerated) return;
+    final String? postId = result.postId;
+    if (postId == null || postId.isEmpty) return;
+
+    // The badge is decoration. The web sends an empty name and no avatar when
+    // the session has not loaded and gets a poster back regardless, so a
+    // profile read that fails must not stop the image.
+    String userName = '';
+    String? profileImageUrl;
+    try {
+      final AccountSnapshot account = await ref.read(
+        accountSnapshotProvider.future,
+      );
+      userName = account.user.name;
+      profileImageUrl = account.user.avatarUrl;
+    } on Object {
+      userName = '';
+      profileImageUrl = null;
+    }
+
+    try {
+      final String? imageUrl = await repo.generateSlotPoster(
+        topic: plan.topic ?? '',
+        content: _posterBrief(result.content, slot.title, plan.topic),
+        // The slot's title, not the server's echo of it: the user may have
+        // renamed the day, and the overlay should carry what they see.
+        posterTitle: slot.title,
+        slotType: slot.type,
+        userName: userName,
+        profileImageUrl: profileImageUrl,
+        posterTag: slot.posterTag,
+      );
+      if (imageUrl == null || imageUrl.isEmpty) return;
+      // The raw `data:` URI goes up as-is — the server turns it into a Storage
+      // upload on the way in. See [PlannerRepository.attachPostImage].
+      await repo.attachPostImage(postId: postId, imageUrl: imageUrl);
+    } on Object {
+      // Deliberately swallowed — see the doc comment.
+    }
+  }
+
+  /// What the poster is drawn FROM: the body just written, then the day's
+  /// title, then the week's topic. The web's `postContent || title || topic`,
+  /// and the order matters — an empty brief still returns a poster, just a
+  /// generic one that illustrates nothing the post says.
+  static String _posterBrief(String? content, String title, String? topic) {
+    for (final String? candidate in <String?>[content, title, topic]) {
+      final String value = candidate?.trim() ?? '';
+      if (value.isNotEmpty) return value;
+    }
+    return '';
   }
 
   /// Replaces the week's topic and re-plans the unwritten days.

@@ -39,12 +39,18 @@ class ErrorInterceptor extends Interceptor {
 
   Failure? _mapTransport(DioException error, _FailureCtx ctx) {
     switch (error.type) {
+      // We never reached the server, or could not trust it. Retrying, or
+      // checking the connection, is the right advice.
       case DioExceptionType.connectionTimeout:
-      case DioExceptionType.sendTimeout:
-      case DioExceptionType.receiveTimeout:
       case DioExceptionType.connectionError:
       case DioExceptionType.badCertificate:
         return NetworkFailure(message: ctx.message, errorCode: ctx.errorCode);
+      // We DID reach the server and it is still working. Telling someone to
+      // check their network here sends them to fix the one thing that is not
+      // broken — see [TimeoutFailure].
+      case DioExceptionType.sendTimeout:
+      case DioExceptionType.receiveTimeout:
+        return TimeoutFailure(message: ctx.message, errorCode: ctx.errorCode);
       case DioExceptionType.cancel:
         return UnknownFailure(message: ctx.message, errorCode: ctx.errorCode);
       case DioExceptionType.badResponse:

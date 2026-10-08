@@ -32,6 +32,40 @@ abstract class GeneratedPost with _$GeneratedPost {
       _$GeneratedPostFromJson(json);
 }
 
+/// One row of `GET /poster-tags` — a poster style, and how many live reference
+/// images the admin library holds for it.
+///
+/// [live] is the whole reason this model carries two fields instead of being a
+/// list of strings. The server composites a poster against the reference images
+/// filed under the chosen tag; a tag with none behaves exactly like no tag, so
+/// the count is the only thing that separates a style that works from one that
+/// silently does nothing.
+@freezed
+abstract class PosterTagOption with _$PosterTagOption {
+  const PosterTagOption._();
+
+  const factory PosterTagOption({
+    @Default('') String tag,
+    @Default(0) int live,
+  }) = _PosterTagOption;
+
+  factory PosterTagOption.fromJson(Map<String, dynamic> json) =>
+      _$PosterTagOptionFromJson(json);
+
+  /// 'data-story' → 'Data Story'. The web gets this from `tag.replace('-', ' ')`
+  /// plus a `capitalize` class; with no stylesheet to lean on the chip has to
+  /// do both halves itself.
+  String get label => tag
+      .split('-')
+      .where((String word) => word.isNotEmpty)
+      .map((String word) => '${word[0].toUpperCase()}${word.substring(1)}')
+      .join(' ');
+
+  /// False for a tag the library has no references for — pickable in principle,
+  /// indistinguishable from "no style" in practice.
+  bool get usable => live > 0;
+}
+
 /// `GeneratedPoster` from `lib/services/ai-poster.service.ts`, returned by
 /// `POST /ai/poster`.
 ///
