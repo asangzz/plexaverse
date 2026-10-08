@@ -38,7 +38,7 @@ class CompanyAnalyticsPage extends ConsumerWidget {
     final bool refreshing = analytics.isLoading || posts.isLoading;
 
     return ZaveScaffold(
-      title: 'Company Analytics',
+      largeTitle: 'Company Analytics',
       actions: <Widget>[
         // The web's "Refresh Data" button. It force-refreshes BOTH queries,
         // bypassing the server's 24-hour cache — which is the only path that

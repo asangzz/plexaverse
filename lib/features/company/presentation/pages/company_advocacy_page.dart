@@ -38,7 +38,7 @@ class CompanyAdvocacyPage extends ConsumerWidget {
     _announceAward(context, ref);
 
     return ZaveScaffold(
-      title: 'Employee Amplification',
+      largeTitle: 'Advocacy',
       actions: <Widget>[
         ZaveIconButton(
           icon: const Icon(Icons.refresh),
@@ -55,8 +55,6 @@ class CompanyAdvocacyPage extends ConsumerWidget {
         },
         child: ZaveScrollView(
           children: <Widget>[
-            Text('ADVOCACY TOOLKIT', style: ZaveType.kicker),
-            SizedBox(height: ZaveSpace.md),
             Text(
               // The web ships this sentence with literal `**` around "50 XP" —
               // un-rendered markdown, a visible bug. The emphasis is dropped

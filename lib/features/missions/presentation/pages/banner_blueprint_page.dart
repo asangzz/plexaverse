@@ -156,7 +156,7 @@ class _BannerBlueprintPageState extends ConsumerState<BannerBlueprintPage> {
     );
 
     return ZaveScaffold(
-      title: 'Banner Blueprint',
+      largeTitle: 'Banner Blueprint',
       leading: ZaveIconButton(
         icon: const Icon(Icons.arrow_back),
         tooltip: 'Back to roadmap',
@@ -164,8 +164,6 @@ class _BannerBlueprintPageState extends ConsumerState<BannerBlueprintPage> {
       ),
       body: ZaveScrollView(
         children: <Widget>[
-          Text('Banner Blueprint', style: ZaveType.h2),
-          SizedBox(height: ZaveSpace.md),
           Text(
             "Pick a template. Your name and position are filled in "
             'automatically.',

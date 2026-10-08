@@ -12,8 +12,16 @@ import '../../domain/engagement_repository.dart';
 /// The web renders the step title as an `h1` with an indigo→green gradient
 /// clip, and the Level/Step meta as a pill on the right. Zave has no gradient
 /// text and no indigo — its rule is that colour names a status and nothing is
-/// tinted for decoration — so the title is a plain [ZaveType.h2] and the
-/// emphasis the gradient was carrying is done by the type scale instead.
+/// tinted for decoration — so the emphasis the gradient was carrying is done
+/// by the type scale instead.
+///
+/// **The step's NAME is not here.** It is the screen's `largeTitle`, in the
+/// collapsing header. It used to be an h2 on this block as well, and the
+/// result was a page that said "Comment on posts" in the bar and "Comment on
+/// posts" again two lines below it — because on these two screens the roadmap
+/// step and the screen are the same thing, so `mission.title` and the page
+/// name are the same string. What is left here is what the bar does NOT say:
+/// which day and step it is, what the step asks for, and what it pays.
 ///
 /// [mission] is null when today's roadmap day has no step for this screen: a
 /// company-brand user has no `/connections` step at all, and Season 2+ users
@@ -22,15 +30,12 @@ import '../../domain/engagement_repository.dart';
 class MissionHeader extends StatelessWidget {
   const MissionHeader({
     required this.mission,
-    required this.fallbackTitle,
     required this.fallbackDescription,
     super.key,
   });
 
   final EngagementMission? mission;
 
-  /// Shown when the roadmap has no step today — the screen still needs a name.
-  final String fallbackTitle;
   final String fallbackDescription;
 
   @override
@@ -44,8 +49,6 @@ class MissionHeader extends StatelessWidget {
           m == null ? 'DAILY HABIT' : 'DAY ${m.levelId} · STEP ${m.stepId}',
           style: ZaveType.kicker,
         ),
-        SizedBox(height: ZaveSpace.md),
-        Text(m?.title ?? fallbackTitle, style: ZaveType.h2),
         SizedBox(height: ZaveSpace.md),
         Text(m?.description ?? fallbackDescription, style: ZaveType.lead),
         SizedBox(height: ZaveSpace.lg),

@@ -54,7 +54,8 @@ class _SchedulesPageState extends ConsumerState<SchedulesPage> {
     );
 
     return ZaveScaffold(
-      title: 'Schedules',
+      largeTitle: 'Schedules',
+      subtitle: 'When AI generates your posts',
       body: RefreshIndicator(
         color: ZaveColors.white,
         backgroundColor: ZaveColors.deep,

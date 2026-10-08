@@ -70,7 +70,7 @@ class PricingPage extends ConsumerWidget {
     );
 
     return ZaveScaffold(
-      title: 'Pricing',
+      largeTitle: 'Pricing',
       leading: ZaveIconButton(
         icon: const Icon(Icons.arrow_back),
         tooltip: 'Back',

@@ -47,7 +47,8 @@ class StudioPage extends ConsumerWidget {
 
     return access.when(
       loading: () => ZaveScaffold(
-        title: 'Studio',
+        largeTitle: 'Studio',
+        subtitle: 'Your creative engine',
         body: ZaveScrollView(
           children: <Widget>[
             StudioSkeleton(height: _Skeleton.header),
@@ -57,7 +58,8 @@ class StudioPage extends ConsumerWidget {
         ),
       ),
       error: (Object error, StackTrace _) => ZaveScaffold(
-        title: 'Studio',
+        largeTitle: 'Studio',
+        subtitle: 'Your creative engine',
         body: ZaveScrollView(
           children: <Widget>[
             StudioNotice.failure(
@@ -108,12 +110,11 @@ class _LockedStudio extends ConsumerWidget {
     final bool affordable = access.canAfford;
 
     return ZaveScaffold(
-      title: 'Studio',
+      largeTitle: 'Studio',
+      subtitle: 'Your creative engine',
       body: ZaveScrollView(
         children: <Widget>[
           Text('LOCKED', style: ZaveType.kicker),
-          SizedBox(height: ZaveSpace.md),
-          Text('Plexa Studio', style: ZaveType.h2),
           SizedBox(height: ZaveSpace.lg),
           Text(
             'The design surface behind your posters. Open a saved design, '
@@ -203,7 +204,8 @@ class _StudioLibraryViewState extends ConsumerState<StudioLibraryView> {
         : templates;
 
     return ZaveScaffold(
-      title: 'Studio',
+      largeTitle: 'Studio',
+      subtitle: 'Your creative engine',
       actions: <Widget>[
         ZaveIconButton(
           icon: const Icon(Icons.add),
@@ -221,8 +223,6 @@ class _StudioLibraryViewState extends ConsumerState<StudioLibraryView> {
         },
         child: ZaveScrollView(
           children: <Widget>[
-            Text('YOUR CREATIVE ENGINE', style: ZaveType.kicker),
-            SizedBox(height: ZaveSpace.lg),
             const _TemplateGuideCard(),
             SizedBox(height: ZaveSpace.xxl),
             Row(

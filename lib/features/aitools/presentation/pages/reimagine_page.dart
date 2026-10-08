@@ -46,7 +46,8 @@ class ReimaginePage extends ConsumerWidget {
     final String? selected = ref.watch(reimagineCategoryProvider);
 
     return ZaveScaffold(
-      title: 'Reimagine',
+      largeTitle: 'Reimagine',
+      subtitle: 'Browse designs and make them yours',
       body: RefreshIndicator(
         color: ZaveColors.white,
         backgroundColor: ZaveColors.deep,
@@ -173,26 +174,19 @@ class _Intro extends StatelessWidget {
   const _Intro();
 
   @override
-  Widget build(BuildContext context) => Column(
-    crossAxisAlignment: CrossAxisAlignment.start,
-    children: <Widget>[
-      Text(
-        'Browse template designs and make them your own.',
-        style: ZaveType.lead,
+  // The lead sentence that used to open this block is now the scaffold's
+  // subtitle. Keeping it here as well put the same sentence on screen twice,
+  // once in the collapsing header and once directly under it.
+  Widget build(BuildContext context) => Wrap(
+    spacing: ZaveSpace.sm,
+    runSpacing: ZaveSpace.sm,
+    children: const <Widget>[
+      ZavePill(
+        label: 'Free to copy',
+        color: ZaveColors.green,
+        leading: ZaveDot(ZaveColors.green),
       ),
-      SizedBox(height: ZaveSpace.lg),
-      Wrap(
-        spacing: ZaveSpace.sm,
-        runSpacing: ZaveSpace.sm,
-        children: const <Widget>[
-          ZavePill(
-            label: 'Free to copy',
-            color: ZaveColors.green,
-            leading: ZaveDot(ZaveColors.green),
-          ),
-          ZavePill(label: 'Edit in Studio on the web', color: ZaveColors.ink62),
-        ],
-      ),
+      ZavePill(label: 'Edit in Studio on the web', color: ZaveColors.ink62),
     ],
   );
 }

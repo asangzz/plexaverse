@@ -52,7 +52,8 @@ class HeadshotsPage extends ConsumerWidget {
     );
 
     return ZaveScaffold(
-      title: 'Headshots',
+      largeTitle: 'Visual Persona',
+      subtitle: 'AI headshots for LinkedIn',
       body: ZaveScrollView(
         children: <Widget>[
           const _Intro(),
@@ -93,9 +94,10 @@ class HeadshotsPage extends ConsumerWidget {
   }
 }
 
-/// The heading block. The web's h1 is "The **Visual** Persona" with one word
-/// in a gradient; Zave has no gradient text and a gradient is not a status, so
-/// the emphasis is carried by the kicker above it instead.
+/// Where the page sits in the roadmap, and what it costs. The name itself is
+/// the scaffold's large title now; repeating it here would say it twice on one
+/// screen. The web's h1 carries one word in a gradient — Zave has no gradient
+/// text and a gradient is not a status, so the emphasis stays with the kicker.
 class _Intro extends StatelessWidget {
   const _Intro();
 
@@ -105,13 +107,6 @@ class _Intro extends StatelessWidget {
     children: <Widget>[
       Text('LEVEL 1 · STEP 5 OF 7', style: ZaveType.kicker),
       SizedBox(height: ZaveSpace.md),
-      Text('The Visual Persona', style: ZaveType.h2),
-      SizedBox(height: ZaveSpace.md),
-      Text(
-        'Professional AI headshots for your LinkedIn profile.',
-        style: ZaveType.lead,
-      ),
-      SizedBox(height: ZaveSpace.lg),
       Wrap(
         spacing: ZaveSpace.sm,
         runSpacing: ZaveSpace.sm,

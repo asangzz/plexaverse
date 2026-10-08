@@ -31,7 +31,7 @@ class CompanyInboxPage extends ConsumerWidget {
     );
 
     return ZaveScaffold(
-      title: 'Community Inbox',
+      largeTitle: 'Community Inbox',
       body: RefreshIndicator(
         color: ZaveColors.white,
         backgroundColor: ZaveColors.deep,

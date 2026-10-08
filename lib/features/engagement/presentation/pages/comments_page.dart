@@ -123,6 +123,7 @@ class CommentsPage extends ConsumerWidget {
         m != null && !m.isCompleted && data != null && sent >= target;
 
     return ZaveScaffold(
+      largeTitle: 'Comment on posts',
       leading: ZaveIconButton(
         icon: const Icon(Icons.arrow_back),
         tooltip: 'Back to the roadmap',
@@ -181,7 +182,6 @@ class CommentsPage extends ConsumerWidget {
 
   Widget _header(EngagementMission? mission) => MissionHeader(
     mission: mission,
-    fallbackTitle: 'Comment on posts',
     fallbackDescription:
         'Leave helpful comments on recent posts so the right people see your '
         'name before they see your profile.',

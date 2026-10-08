@@ -164,7 +164,7 @@ class _HeadlineHookPageState extends ConsumerState<HeadlineHookPage> {
     );
 
     return ZaveScaffold(
-      title: 'Headline Hook',
+      largeTitle: 'The Headline Hook',
       leading: ZaveIconButton(
         icon: const Icon(Icons.arrow_back),
         tooltip: 'Back to roadmap',
@@ -203,7 +203,6 @@ class _HeadlineHookPageState extends ConsumerState<HeadlineHookPage> {
     return ZaveScrollView(
       children: <Widget>[
         const MissionHeader(
-          title: 'The Headline Hook',
           subtitle:
               'Step 3: Craft a digital billboard that makes recruiters stop '
               'scrolling.',

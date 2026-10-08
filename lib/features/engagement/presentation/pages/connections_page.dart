@@ -77,6 +77,7 @@ class ConnectionsPage extends ConsumerWidget {
         m != null && !m.isCompleted && data != null && sent >= target;
 
     return ZaveScaffold(
+      largeTitle: 'Connections',
       leading: ZaveIconButton(
         icon: const Icon(Icons.arrow_back),
         tooltip: 'Back to the roadmap',
@@ -130,7 +131,6 @@ class ConnectionsPage extends ConsumerWidget {
 
   Widget _header(EngagementMission? mission) => MissionHeader(
     mission: mission,
-    fallbackTitle: 'Send connection requests',
     fallbackDescription:
         'Reach out to people in your field with a note that says something, '
         'so the request reads as a person rather than a prompt.',

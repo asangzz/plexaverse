@@ -14,16 +14,29 @@ import '../../../../core/ui/zave/zave_kit.dart';
 /// is points, everywhere in this app.
 class MissionHeader extends StatelessWidget {
   const MissionHeader({
-    required this.title,
     required this.subtitle,
     required this.level,
     required this.step,
     required this.totalSteps,
     required this.rewardXp,
+    this.title,
     super.key,
   });
 
-  final String title;
+  /// The mission's name, or null when the screen's [ZaveScaffold] already
+  /// carries it as a `largeTitle`.
+  ///
+  /// Null is the normal case now. These screens used to wear the name twice —
+  /// a compact bar reading "Headline Hook" over a body h2 reading "The
+  /// Headline Hook", and on Banner Blueprint the two were the same string
+  /// exactly. The name belongs in the header, where it collapses out of the
+  /// way once you start reading; repeating it here would put the screen back
+  /// to two names, which is the thing the expanded header was added to fix.
+  ///
+  /// The kicker and the reward pill stay regardless: "LEVEL 1 · STEP 3 OF 7"
+  /// and the XP are facts about the step, not a second title.
+  final String? title;
+
   final String subtitle;
   final int level;
   final int step;
@@ -40,8 +53,10 @@ class MissionHeader extends StatelessWidget {
           style: ZaveType.kicker,
         ),
         SizedBox(height: ZaveSpace.md),
-        Text(title, style: ZaveType.h2),
-        SizedBox(height: ZaveSpace.md),
+        if (title != null) ...<Widget>[
+          Text(title!, style: ZaveType.h2),
+          SizedBox(height: ZaveSpace.md),
+        ],
         Text(subtitle, style: ZaveType.lead),
         SizedBox(height: ZaveSpace.lg),
         Align(

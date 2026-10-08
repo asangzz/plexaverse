@@ -186,7 +186,7 @@ class _AboutOdysseyPageState extends ConsumerState<AboutOdysseyPage> {
     );
 
     return ZaveScaffold(
-      title: 'About Odyssey',
+      largeTitle: 'The About Odyssey',
       leading: ZaveIconButton(
         icon: const Icon(Icons.arrow_back),
         tooltip: 'Back to roadmap',
@@ -225,7 +225,6 @@ class _AboutOdysseyPageState extends ConsumerState<AboutOdysseyPage> {
     return ZaveScrollView(
       children: <Widget>[
         const MissionHeader(
-          title: 'The About Odyssey',
           subtitle:
               'Step 4: Craft a storytelling summary and showcase your skill '
               'stack.',

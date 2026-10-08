@@ -36,7 +36,8 @@ class FestivePage extends ConsumerWidget {
     final String? selected = ref.watch(festiveCategoryProvider);
 
     return ZaveScaffold(
-      title: 'Festive',
+      largeTitle: 'Festive',
+      subtitle: 'Occasion posters in a few taps',
       body: RefreshIndicator(
         color: ZaveColors.white,
         backgroundColor: ZaveColors.deep,
@@ -135,28 +136,19 @@ class _Body extends ConsumerWidget {
 
 /// The heading block — the web's emoji + h1 + "NEW" pill + subtitle + XP badge.
 ///
-/// The gradient "NEW" pill does not survive the port: in Zave a fill names a
-/// status, and "new" is a marketing label rather than a state of the user's
-/// work. The XP badge does survive, because a cost is something the user needs
-/// before they tap, not after.
+/// The title and its lead now live in the scaffold's large header, so what is
+/// left here is the cost. The gradient "NEW" pill does not survive the port: in
+/// Zave a fill names a status, and "new" is a marketing label rather than a
+/// state of the user's work. The XP badge does survive, because a cost is
+/// something the user needs before they tap, not after.
 class _Intro extends StatelessWidget {
   const _Intro();
 
   @override
-  Widget build(BuildContext context) => Column(
-    crossAxisAlignment: CrossAxisAlignment.start,
-    children: <Widget>[
-      Text(
-        'Make a festive poster for LinkedIn in a few taps.',
-        style: ZaveType.lead,
-      ),
-      SizedBox(height: ZaveSpace.lg),
-      const XpCostRow(
-        cost: '800 XP per poster',
-        detail:
-            'Charged only when a poster comes back, so a failed one costs you '
-            'nothing.',
-      ),
-    ],
+  Widget build(BuildContext context) => const XpCostRow(
+    cost: '800 XP per poster',
+    detail:
+        'Charged only when a poster comes back, so a failed one costs you '
+        'nothing.',
   );
 }

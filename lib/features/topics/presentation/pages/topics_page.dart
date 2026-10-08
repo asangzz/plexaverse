@@ -137,7 +137,8 @@ class _TopicsPageState extends ConsumerState<TopicsPage> {
     );
 
     return ZaveScaffold(
-      title: 'Topics',
+      largeTitle: 'Topics',
+      subtitle: 'Topics for AI-generated content',
       // This screen has no nav entry on either platform — it is opened from a
       // roadmap task or from scheduling — so it needs the way back that a
       // tab would otherwise provide. Guarded, so it is absent if the
@@ -172,9 +173,6 @@ class _TopicsPageState extends ConsumerState<TopicsPage> {
     final int count = topics.value?.length ?? 0;
 
     return <Widget>[
-      Text('Define topics for AI-generated content', style: ZaveType.lead),
-      SizedBox(height: ZaveSpace.xl),
-
       // Stacked, not side by side. The web's own header is `flex flex-wrap`,
       // so this IS its narrow-width rendering — and two pills sharing a phone's
       // width would ellipsize "Suggest Topics (50 XP)" down to the point where
