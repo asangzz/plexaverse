@@ -138,23 +138,56 @@ class SlotCard extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: <Widget>[
+                    // spaceBetween + two Flexibles, not a Spacer.
+                    //
+                    // A Spacer can shrink to nothing; the two text runs either
+                    // side of it cannot, so the longest combination in the
+                    // week — "THURSDAY · TODAY" against "Ready to post" —
+                    // overflowed by 41px. It only appears on the one day that
+                    // IS today and only for that status, which is why it sat
+                    // here unseen. Now whichever side is longer ellipsizes.
                     Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: <Widget>[
-                        Text(slot.day.toUpperCase(), style: ZaveType.kicker),
-                        SizedBox(width: ZaveSpace.sm),
-                        if (isToday)
-                          Text(
-                            '· TODAY',
-                            style: ZaveType.kicker.copyWith(
-                              color: ZaveColors.lavenderLo,
-                            ),
+                        // TODAY REPLACES the weekday rather than following it.
+                        //
+                        // "THURSDAY · TODAY" beside "Ready to post" is what
+                        // overflowed, and ellipsizing it gave "TH… · TODAY" —
+                        // fixing the banner and keeping the ugliness. The day
+                        // name is the redundant half: the circle to the left
+                        // already carries the letter, and nobody reading
+                        // "TODAY" needs telling which weekday that is.
+                        Flexible(
+                          child: Text(
+                            isToday ? 'TODAY' : slot.day.toUpperCase(),
+                            style: isToday
+                                ? ZaveType.kicker.copyWith(
+                                    color: ZaveColors.lavenderLo,
+                                  )
+                                : ZaveType.kicker,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
                           ),
-                        const Spacer(),
-                        ZaveDot(signal.color),
+                        ),
                         SizedBox(width: ZaveSpace.sm),
-                        Text(
-                          signal.label,
-                          style: ZaveType.caption.copyWith(color: signal.color),
+                        Flexible(
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: <Widget>[
+                              ZaveDot(signal.color),
+                              SizedBox(width: ZaveSpace.sm),
+                              Flexible(
+                                child: Text(
+                                  signal.label,
+                                  style: ZaveType.caption.copyWith(
+                                    color: signal.color,
+                                  ),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
+                            ],
+                          ),
                         ),
                       ],
                     ),
