@@ -179,26 +179,40 @@ class ZaveScaffold extends StatelessWidget {
         (actions?.isNotEmpty ?? false);
     final double topInset = MediaQuery.paddingOf(context).top;
 
+    // Built ONCE and measured, not described twice.
+    //
+    // The inset below used to be spelled out as `_ZaveHeader._height +
+    // topInset` — a second copy of the header's own height arithmetic. It was
+    // right until the header learned to expand, and then it was 90 pixels
+    // short: every screen using `largeTitle` published a clearance for the
+    // control row alone, so the top of its content sat UNDER the blurred bar
+    // and could not be scrolled out from behind it.
+    //
+    // `preferredSize` is what the Scaffold itself lays the header out at, so
+    // reading it back is the one number that cannot disagree with what was
+    // drawn.
+    final _ZaveHeader? header = hasHeader
+        ? _ZaveHeader(
+            title: title,
+            largeTitle: largeTitle,
+            subtitle: subtitle,
+            leading: effectiveLeading,
+            actions: actions,
+            // The header draws its own status-bar padding, so its
+            // preferredSize must include that inset — otherwise Scaffold
+            // under-reports the header height, puts too little into the
+            // body's MediaQuery padding, and the first line of content
+            // renders clipped underneath it.
+            topInset: topInset,
+          )
+        : null;
+
     return ZaveGroundBox(
       glow: glow,
       child: Scaffold(
         backgroundColor: Colors.transparent,
         extendBodyBehindAppBar: true,
-        appBar: hasHeader
-            ? _ZaveHeader(
-                title: title,
-                largeTitle: largeTitle,
-                subtitle: subtitle,
-                leading: effectiveLeading,
-                actions: actions,
-                // The header draws its own status-bar padding, so its
-                // preferredSize must include that inset — otherwise Scaffold
-                // under-reports the header height, puts too little into the
-                // body's MediaQuery padding, and the first line of content
-                // renders clipped underneath it.
-                topInset: topInset,
-              )
-            : null,
+        appBar: header,
         body: _ZaveContentInset(
           // The exact height ZaveScaffold just built its header at, published
           // so a scrolling body can clear it. Derived here rather than read
@@ -210,7 +224,7 @@ class ZaveScaffold extends StatelessWidget {
           // SafeArea(top: true) already consumes the status bar, so the inset
           // is zero — publishing it again double-padded every headerless
           // screen by the notch height.
-          top: hasHeader ? _ZaveHeader._height + topInset : 0,
+          top: header?.preferredSize.height ?? 0,
           child: SafeArea(top: !hasHeader, bottom: safeBottom, child: body),
         ),
         bottomNavigationBar: bottomBar,

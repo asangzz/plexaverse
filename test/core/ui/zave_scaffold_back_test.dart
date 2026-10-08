@@ -181,6 +181,115 @@ void main() {
     });
   });
 
+  group('the body clears the header it was given', () {
+    /// What a scrolling body is told to leave clear at the top.
+    double publishedInset(WidgetTester tester) {
+      final BuildContext ctx = tester.element(find.byKey(const Key('probe')));
+      return ZaveScaffold.contentTop(ctx);
+    }
+
+    /// What the header actually occupies. `_ZaveHeader` is private and is not
+    /// an AppBar — it is a bare PreferredSizeWidget — so it is matched by type
+    /// name rather than by type.
+    double headerHeight(WidgetTester tester) => tester
+        .getSize(
+          find.byWidgetPredicate(
+            (Widget w) => w.runtimeType.toString() == '_ZaveHeader',
+          ),
+        )
+        .height;
+
+    testWidgets('compact header: the inset matches it', (
+      WidgetTester tester,
+    ) async {
+      await tester.pumpWidget(
+        const MaterialApp(
+          home: ZaveScaffold(
+            title: 'Schedules',
+            body: SizedBox(key: Key('probe')),
+          ),
+        ),
+      );
+      expect(publishedInset(tester), greaterThan(0));
+    });
+
+    testWidgets('EXPANDED header: the inset grows with it', (
+      WidgetTester tester,
+    ) async {
+      // The bug: the inset was spelled out as the control row's height, so a
+      // screen with a large title published a clearance ~90px short and the
+      // top of its content sat behind the blurred bar — unreachable, because
+      // the bar is pinned and the content had already scrolled as far as it
+      // could.
+      await tester.pumpWidget(
+        const MaterialApp(
+          home: ZaveScaffold(
+            title: 'Settings',
+            body: SizedBox(key: Key('probe')),
+          ),
+        ),
+      );
+      final double compact = publishedInset(tester);
+
+      await tester.pumpWidget(
+        const MaterialApp(
+          home: ZaveScaffold(
+            largeTitle: 'Settings',
+            subtitle: 'Manage integrations and preferences',
+            body: SizedBox(key: Key('probe')),
+          ),
+        ),
+      );
+      final double expanded = publishedInset(tester);
+
+      expect(
+        expanded,
+        greaterThan(compact),
+        reason:
+            'an expanded header publishes the same clearance as a compact '
+            'one, so everything under its title block is hidden behind it',
+      );
+    });
+
+    testWidgets('the inset is exactly the header height, both ways', (
+      WidgetTester tester,
+    ) async {
+      for (final ZaveScaffold s in <ZaveScaffold>[
+        const ZaveScaffold(
+          title: 'Schedules',
+          body: SizedBox(key: Key('probe')),
+        ),
+        const ZaveScaffold(
+          largeTitle: 'Your Persona',
+          subtitle: 'Everything Plexa knows about you',
+          body: SizedBox(key: Key('probe')),
+        ),
+      ]) {
+        await tester.pumpWidget(MaterialApp(home: s));
+        await tester.pumpAndSettle();
+
+        expect(
+          publishedInset(tester),
+          moreOrLessEquals(headerHeight(tester), epsilon: 0.5),
+          reason:
+              'the clearance a body is told to leave and the space the header '
+              'actually takes have drifted apart',
+        );
+      }
+    });
+
+    testWidgets('no header publishes no inset', (WidgetTester tester) async {
+      // SafeArea(top: true) already consumes the status bar there; publishing
+      // it again double-padded every headerless screen by the notch height.
+      await tester.pumpWidget(
+        const MaterialApp(
+          home: ZaveScaffold(body: SizedBox(key: Key('probe'))),
+        ),
+      );
+      expect(publishedInset(tester), 0);
+    });
+  });
+
   group('pushed routes carry the back gesture', () {
     testWidgets('every full-screen route builds a page that supports it', (
       WidgetTester tester,
