@@ -16,7 +16,7 @@
 library;
 
 export '../../theme/zave/zave.dart';
-export 'zave_bottom_bar.dart';
+export 'zave_actions.dart';
 export 'zave_button.dart';
 export 'zave_card.dart';
 export 'zave_chip.dart';

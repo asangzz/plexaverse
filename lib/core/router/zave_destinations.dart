@@ -154,17 +154,26 @@ const List<ZaveDestination> zaveDestinations = <ZaveDestination>[
   ),
 ];
 
-/// The four routes promoted to the bottom bar, in bar order.
+/// The four routes that get their own shell BRANCH, in branch order.
 ///
-/// A desktop sidebar lists sixteen things; a phone's bottom bar cannot, so the
-/// tree above is split rather than truncated — these four sit in the bar, and
-/// **every remaining visible destination appears in the More sheet**. Nothing
-/// the web shows a user is unreachable here.
+/// They were the bottom bar's four tabs; the bar is gone and every destination
+/// now lives in the More sheet. These four keep a branch anyway, and the
+/// distinction is state, not navigation: a branch is an entry in the shell's
+/// IndexedStack, so its page stays built and keeps its scroll position,
+/// filters and in-progress edits while you are elsewhere. They also preload,
+/// so none of them opens on a skeleton — see `app_router.dart`.
 ///
-/// These four are the ones a user touches daily: Home is the habit surface,
-/// Plan is the week, Calendar is the schedule, Posts is the library. Write is
-/// deliberately NOT among them — it is the primary action, so it gets the
-/// centre compose button ([composeRouteFor]) instead of a tab.
+/// These four earn it because they are the ones a user returns to within a
+/// session: Home is the habit surface, Plan is the week, Calendar is the
+/// schedule, Posts is the library. Everything else is pushed over the shell
+/// and rebuilt on each visit, which is the right trade for a screen you open
+/// once and leave.
+///
+/// **The name is kept deliberately.** `ZaveShellHost` indexes this list to
+/// name the current route, the order must match the branch order in
+/// `app_router.dart`, and a test pins the two together — renaming it to
+/// `branchRoutes` would be more accurate and would touch every one of those
+/// call sites for a word. If you do rename it, rename it everywhere in one go.
 const List<String> tabRoutes = <String>[
   ZaveRoutes.dashboard,
   ZaveRoutes.planner,
@@ -194,11 +203,7 @@ List<ZaveDestination> visibleDestinations({
     )
     .toList(growable: false);
 
-/// The visible destinations that are NOT in the bottom bar — the More sheet's
-/// contents, still grouped and ordered as the web sidebar groups them.
-List<ZaveDestination> moreDestinations({
-  required String? role,
-  required BrandType? brandType,
-}) => visibleDestinations(role: role, brandType: brandType)
-    .where((ZaveDestination d) => !tabRoutes.contains(d.route))
-    .toList(growable: false);
+// `moreDestinations` lived here — visibleDestinations minus the bar's four.
+// It went with the bar. The sheet is now handed `visibleDestinations` whole,
+// because it is the only way to anywhere: subtracting the four branch routes
+// would have made Home, Plan, Calendar and Posts unreachable.

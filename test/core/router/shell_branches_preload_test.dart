@@ -4,7 +4,7 @@ import 'package:plexaverse/core/router/app_router.dart';
 import 'package:plexaverse/core/router/zave_destinations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-/// Every bottom-bar branch preloads.
+/// Every shell branch preloads.
 ///
 /// ## The bug this pins
 ///
@@ -51,17 +51,17 @@ void main() {
 
   tearDown(() => container.dispose());
 
-  test('the shell has one branch per bottom-bar tab', () {
+  test('the shell has one branch per entry in tabRoutes', () {
     // Guards the other assertion: if the branch list and `tabRoutes` drift,
     // ZaveShellHost indexes into the wrong route name and the preload check
-    // below would be covering a set that no longer matches the bar.
+    // below covers a set that no longer matches the shell.
     expect(
       branchesOf(router.configuration.routes),
       hasLength(tabRoutes.length),
     );
   });
 
-  test('every branch preloads, so no tab opens on a skeleton', () {
+  test('every branch preloads, so no screen opens on a skeleton', () {
     final List<StatefulShellBranch> branches = branchesOf(
       router.configuration.routes,
     );
@@ -72,7 +72,7 @@ void main() {
         isTrue,
         reason:
             'Branch $i (${tabRoutes[i]}) does not preload, so its page is '
-            'built on first tap and shows a loading skeleton for the length '
+            'built on first visit and shows a loading skeleton for the length '
             'of its fetch. Set preload: true.',
       );
     }
