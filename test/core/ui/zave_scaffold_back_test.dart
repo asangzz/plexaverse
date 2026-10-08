@@ -97,56 +97,103 @@ void main() {
     });
   });
 
-  group('the expanded header', () {
-    testWidgets('carries the large title and subtitle', (
+  group('the expanded header collapses on scroll', () {
+    /// A page tall enough to scroll.
+    Widget host({String? subtitle}) => MaterialApp(
+      home: ZaveScaffold(
+        largeTitle: 'Your Persona',
+        subtitle: subtitle,
+        body: ListView(
+          key: const Key('probe'),
+          children: <Widget>[
+            for (int i = 0; i < 40; i++)
+              SizedBox(height: 60, child: Text('row $i')),
+          ],
+        ),
+      ),
+    );
+
+    double headerHeight(WidgetTester tester) =>
+        tester.getSize(find.byKey(zaveSliverHeaderKey)).height;
+
+    testWidgets('opens expanded and shrinks to the control row', (
       WidgetTester tester,
     ) async {
-      await tester.pumpWidget(
-        const MaterialApp(
-          home: ZaveScaffold(
-            largeTitle: 'Settings',
-            subtitle: 'Manage integrations and preferences',
-            body: SizedBox(),
-          ),
-        ),
-      );
+      // The whole point: a 34px title is an entrance, not a fixture. It costs
+      // ~90px of a phone screen on every frame it stays pinned.
+      await tester.pumpWidget(host(subtitle: 'Everything Plexa knows'));
+      await tester.pumpAndSettle();
 
-      expect(find.text('Settings'), findsOneWidget);
-      expect(find.text('Manage integrations and preferences'), findsOneWidget);
+      final double open = headerHeight(tester);
+
+      await tester.drag(find.byKey(const Key('probe')), const Offset(0, -400));
+      await tester.pumpAndSettle();
+
+      final double collapsed = headerHeight(tester);
+
+      expect(
+        collapsed,
+        lessThan(open),
+        reason: 'the header did not collapse — it is still a fixed bar',
+      );
+      expect(
+        open - collapsed,
+        greaterThan(40),
+        reason: 'it collapsed by less than the title block it should shed',
+      );
+    });
+
+    testWidgets('the control row survives the collapse', (
+      WidgetTester tester,
+    ) async {
+      // Pinned, not floating away: the back button has to stay reachable at
+      // any scroll offset, which is the entire reason it was added.
+      await tester.pumpWidget(host());
+      await tester.drag(find.byKey(const Key('probe')), const Offset(0, -600));
+      await tester.pumpAndSettle();
+
+      expect(find.byIcon(Icons.arrow_back), findsNothing); // root route
+      expect(headerHeight(tester), greaterThan(0));
       expect(tester.takeException(), isNull);
     });
 
-    testWidgets('does not overflow at a range of heights', (
+    testWidgets('the title is on screen at both ends of the scroll', (
       WidgetTester tester,
     ) async {
-      // The Scaffold can hand the header a pixel less than `preferredSize`
-      // asked for — rounding, or a harness with no status-bar inset — and a
-      // rigid control row then overflowed the Column by exactly that pixel.
-      // It surfaced as three red RenderFlex failures in this file rather than
-      // anywhere near the header, so the sizes are swept here directly.
-      for (final double h in <double>[600, 700, 812, 900]) {
-        tester.view.physicalSize = Size(390 * 3, h * 3);
-        tester.view.devicePixelRatio = 3;
-        addTearDown(tester.view.reset);
+      // Two renderings of one string — the big one leaves as the compact one
+      // arrives — so the screen is never nameless mid-scroll.
+      await tester.pumpWidget(host(subtitle: 'Everything Plexa knows'));
+      await tester.pumpAndSettle();
+      expect(find.text('Your Persona'), findsWidgets);
 
-        await tester.pumpWidget(
-          const MaterialApp(
-            home: ZaveScaffold(
-              largeTitle: 'Your Persona',
-              subtitle: 'Everything Plexa knows about you',
-              body: SizedBox(),
-            ),
-          ),
-        );
-        expect(tester.takeException(), isNull, reason: 'overflowed at ${h}px');
-      }
+      await tester.drag(find.byKey(const Key('probe')), const Offset(0, -600));
+      await tester.pumpAndSettle();
+      expect(find.text('Your Persona'), findsWidgets);
+    });
+
+    testWidgets('content starts BELOW the header, not behind it', (
+      WidgetTester tester,
+    ) async {
+      // The failure this replaces: the body cleared only the control row, so
+      // its first rows sat behind the bar and could not be scrolled out.
+      await tester.pumpWidget(host(subtitle: 'Everything Plexa knows'));
+      await tester.pumpAndSettle();
+
+      final double headerBottom = tester
+          .getRect(find.byKey(zaveSliverHeaderKey))
+          .bottom;
+      final double firstRowTop = tester.getRect(find.text('row 0')).top;
+
+      expect(
+        firstRowTop,
+        greaterThanOrEqualTo(headerBottom - 0.5),
+        reason: 'the first row is underneath the header',
+      );
     });
 
     testWidgets('a long title truncates rather than growing the bar', (
       WidgetTester tester,
     ) async {
-      // `preferredSize` has to be known before layout, so a title that wrapped
-      // would be clipped by the Scaffold rather than making room for itself.
       await tester.pumpWidget(
         const MaterialApp(
           home: ZaveScaffold(
@@ -155,19 +202,25 @@ void main() {
           ),
         ),
       );
+      await tester.pumpAndSettle();
 
-      final Text title = tester.widget<Text>(
-        find.text('A title far longer than any screen in this app uses'),
-      );
-      expect(title.maxLines, 1);
-      expect(title.overflow, TextOverflow.ellipsis);
+      for (final Text t
+          in tester
+              .widgetList<Text>(
+                find.text(
+                  'A title far longer than any screen in this app uses',
+                ),
+              )
+              .toList()) {
+        expect(t.maxLines, 1);
+        expect(t.overflow, TextOverflow.ellipsis);
+      }
       expect(tester.takeException(), isNull);
     });
 
     testWidgets('title and largeTitle together is a programming error', (
       WidgetTester tester,
     ) async {
-      // Two renderings of the same thing. A screen never wears both.
       await tester.pumpWidget(
         const MaterialApp(
           home: ZaveScaffold(
@@ -188,9 +241,9 @@ void main() {
       return ZaveScaffold.contentTop(ctx);
     }
 
-    /// What the header actually occupies. `_ZaveHeader` is private and is not
-    /// an AppBar — it is a bare PreferredSizeWidget — so it is matched by type
-    /// name rather than by type.
+    /// What the COMPACT header actually occupies. `_ZaveHeader` is private and
+    /// is a bare PreferredSizeWidget rather than an AppBar, so it is matched
+    /// by type name.
     double headerHeight(WidgetTester tester) => tester
         .getSize(
           find.byWidgetPredicate(
@@ -199,38 +252,14 @@ void main() {
         )
         .height;
 
-    testWidgets('compact header: the inset matches it', (
+    testWidgets('an EXPANDED header publishes no inset — it is a sliver', (
       WidgetTester tester,
     ) async {
-      await tester.pumpWidget(
-        const MaterialApp(
-          home: ZaveScaffold(
-            title: 'Schedules',
-            body: SizedBox(key: Key('probe')),
-          ),
-        ),
-      );
-      expect(publishedInset(tester), greaterThan(0));
-    });
-
-    testWidgets('EXPANDED header: the inset grows with it', (
-      WidgetTester tester,
-    ) async {
-      // The bug: the inset was spelled out as the control row's height, so a
-      // screen with a large title published a clearance ~90px short and the
-      // top of its content sat behind the blurred bar — unreachable, because
-      // the bar is pinned and the content had already scrolled as far as it
-      // could.
-      await tester.pumpWidget(
-        const MaterialApp(
-          home: ZaveScaffold(
-            title: 'Settings',
-            body: SizedBox(key: Key('probe')),
-          ),
-        ),
-      );
-      final double compact = publishedInset(tester);
-
+      // It used to be a pinned appBar whose body padded to clear it. It is a
+      // NestedScrollView header now, which lays the body out BELOW itself, so
+      // publishing a clearance as well would push the first item down by the
+      // header height twice over. "content starts BELOW the header" above is
+      // what proves the body is genuinely clear of it.
       await tester.pumpWidget(
         const MaterialApp(
           home: ZaveScaffold(
@@ -240,42 +269,34 @@ void main() {
           ),
         ),
       );
-      final double expanded = publishedInset(tester);
-
-      expect(
-        expanded,
-        greaterThan(compact),
-        reason:
-            'an expanded header publishes the same clearance as a compact '
-            'one, so everything under its title block is hidden behind it',
-      );
+      expect(publishedInset(tester), 0);
     });
 
-    testWidgets('the inset is exactly the header height, both ways', (
+    testWidgets('a COMPACT header still publishes its own height', (
       WidgetTester tester,
     ) async {
-      for (final ZaveScaffold s in <ZaveScaffold>[
-        const ZaveScaffold(
-          title: 'Schedules',
-          body: SizedBox(key: Key('probe')),
+      // Unchanged, deliberately: one 56px row has nothing worth reclaiming,
+      // and its body scrolls under the blur the way the web's sticky header
+      // does — which needs the clearance published. This is the arithmetic
+      // that silently went 90px short when the header learned to expand, so
+      // it is measured against the header rather than described again.
+      await tester.pumpWidget(
+        const MaterialApp(
+          home: ZaveScaffold(
+            title: 'Schedules',
+            body: SizedBox(key: Key('probe')),
+          ),
         ),
-        const ZaveScaffold(
-          largeTitle: 'Your Persona',
-          subtitle: 'Everything Plexa knows about you',
-          body: SizedBox(key: Key('probe')),
-        ),
-      ]) {
-        await tester.pumpWidget(MaterialApp(home: s));
-        await tester.pumpAndSettle();
+      );
+      await tester.pumpAndSettle();
 
-        expect(
-          publishedInset(tester),
-          moreOrLessEquals(headerHeight(tester), epsilon: 0.5),
-          reason:
-              'the clearance a body is told to leave and the space the header '
-              'actually takes have drifted apart',
-        );
-      }
+      expect(
+        publishedInset(tester),
+        moreOrLessEquals(headerHeight(tester), epsilon: 0.5),
+        reason:
+            'the clearance a body is told to leave and the space the header '
+            'actually takes have drifted apart',
+      );
     });
 
     testWidgets('no header publishes no inset', (WidgetTester tester) async {

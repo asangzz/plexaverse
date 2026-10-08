@@ -1,3 +1,4 @@
+import 'dart:math' as math;
 import 'dart:ui' show ImageFilter;
 
 import 'package:flutter/material.dart';
@@ -207,6 +208,54 @@ class ZaveScaffold extends StatelessWidget {
           )
         : null;
 
+    // ── The expanded header COLLAPSES, so it is a sliver ────────────────────
+    //
+    // A pinned bar carrying a 34px title costs ~90px of a phone screen on
+    // every frame, including the ones where the user is reading something
+    // further down. The large title is an entrance, not a fixture: it belongs
+    // on screen when you arrive and gone once you are reading.
+    //
+    // `NestedScrollView` rather than making every page hand us slivers.
+    // Pages give `ZaveScaffold` a plain widget — usually a ListView via
+    // ZaveScrollView, sometimes wrapped in a RefreshIndicator — and
+    // NestedScrollView is the one thing that drives an outer sliver header
+    // from an ordinary scrollable body. Converting ~25 page bodies to
+    // CustomScrollView to get a collapse would have been the alternative.
+    //
+    // Only the expanded case. The compact header stays a pinned `appBar:`
+    // exactly as it was: it is one 56px row, there is nothing to reclaim by
+    // collapsing it, and the body deliberately scrolls UNDER its blur the way
+    // the web's sticky header does.
+    if (largeTitle != null) {
+      return ZaveGroundBox(
+        glow: glow,
+        child: Scaffold(
+          backgroundColor: Colors.transparent,
+          body: _ZaveContentInset(
+            // Zero: NestedScrollView lays the body out below the header, so
+            // the body must NOT also pad for it. Padding here would push the
+            // first item down by the header height on top of the space the
+            // header already occupies.
+            top: 0,
+            child: NestedScrollView(
+              headerSliverBuilder: (BuildContext context, bool _) => <Widget>[
+                _ZaveSliverHeader(
+                  largeTitle: largeTitle!,
+                  subtitle: subtitle,
+                  leading: effectiveLeading,
+                  actions: actions,
+                  topInset: topInset,
+                ),
+              ],
+              body: SafeArea(top: false, bottom: safeBottom, child: body),
+            ),
+          ),
+          bottomNavigationBar: bottomBar,
+          floatingActionButton: floatingAction,
+        ),
+      );
+    }
+
     return ZaveGroundBox(
       glow: glow,
       child: Scaffold(
@@ -229,6 +278,178 @@ class ZaveScaffold extends StatelessWidget {
         ),
         bottomNavigationBar: bottomBar,
         floatingActionButton: floatingAction,
+      ),
+    );
+  }
+}
+
+/// Identifies the collapsing header's painted box, so a test can measure what
+/// it actually occupies at a given scroll offset.
+const Key zaveSliverHeaderKey = Key('zave-sliver-header');
+
+/// The collapsing header: the large title scrolls away, the control row stays.
+///
+/// Hand-driven rather than `FlexibleSpaceBar`, which animates ONE title text
+/// between a large and a small size using a scale factor off the AppBar theme.
+/// This header changes two things at once — the `.h2` and its `.lead` leave
+/// while a `.h3` arrives beside the back button — and the two sizes are a 1.7x
+/// jump that FlexibleSpaceBar's default scaling will not make. Driving it off
+/// the collapse fraction directly is a few more lines and does exactly what it
+/// says.
+class _ZaveSliverHeader extends StatelessWidget {
+  const _ZaveSliverHeader({
+    required this.largeTitle,
+    required this.topInset,
+    this.subtitle,
+    this.leading,
+    this.actions,
+  });
+
+  final String largeTitle;
+  final String? subtitle;
+  final Widget? leading;
+  final List<Widget>? actions;
+  final double topInset;
+
+  /// Matches the pinned header, so a screen does not change height when it
+  /// switches between the two.
+  static const double _collapsed = _ZaveHeader._height;
+
+  double get _block {
+    final double titleLine = ZaveType.h2.fontSize! * 1.05;
+    final double subLine = subtitle == null
+        ? 0
+        : ZaveType.lead.fontSize! * 1.6 + ZaveSpace.xs;
+    return ZaveSpace.sm + titleLine + subLine + ZaveSpace.lg;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final double maxExtent = _collapsed + _block + topInset;
+    final double minExtent = _collapsed + topInset;
+
+    return SliverAppBar(
+      pinned: true,
+      elevation: 0,
+      scrolledUnderElevation: 0,
+      backgroundColor: Colors.transparent,
+      surfaceTintColor: Colors.transparent,
+      automaticallyImplyLeading: false,
+      toolbarHeight: _collapsed,
+      collapsedHeight: _collapsed,
+      expandedHeight: _collapsed + _block,
+      flexibleSpace: LayoutBuilder(
+        builder: (BuildContext context, BoxConstraints c) {
+          // 1 fully open, 0 fully collapsed.
+          final double t = maxExtent == minExtent
+              ? 0
+              : ((c.maxHeight - minExtent) / (maxExtent - minExtent)).clamp(
+                  0.0,
+                  1.0,
+                );
+
+          // Everything below is sized from what we were actually GIVEN, never
+          // from the constant. A SliverAppBar hands its flexibleSpace a box
+          // that is a pixel under `collapsedHeight` at the end of the
+          // collapse, and a rigid 56px row inside it overflows the Column by
+          // exactly that pixel — the same 1px fault the pinned header had,
+          // which is why the row there is Expanded.
+          final double available = math.max(0, c.maxHeight - topInset);
+          final double rowHeight = math.min(_collapsed, available);
+
+          return ClipRect(
+            // A handle for the collapse test: the rendered height of this box
+            // IS the behaviour, and there is nothing else in the tree that
+            // reports it.
+            key: zaveSliverHeaderKey,
+            child: BackdropFilter(
+              filter: ImageFilter.blur(
+                sigmaX: ZaveSurface.headerBlurSigma,
+                sigmaY: ZaveSurface.headerBlurSigma,
+              ),
+              child: Container(
+                decoration: ZaveSurface.header,
+                // A Stack, not a Column.
+                //
+                // The pieces are positioned, so neither can overflow the box
+                // the SliverAppBar hands down — and it hands down a box that
+                // is a pixel under `collapsedHeight` at the end of the
+                // collapse, and a box smaller than the title block all the
+                // way through it. A Column asserts on both; a Stack lets the
+                // outer ClipRect do what it is there for.
+                child: Stack(
+                  clipBehavior: Clip.hardEdge,
+                  children: <Widget>[
+                    // The title block sits under the control row and is the
+                    // part that leaves. Laid out at its natural height and
+                    // clipped, so it slides out rather than reflowing.
+                    Positioned(
+                      top: topInset + _collapsed + ZaveSpace.sm,
+                      left: ZaveSpace.gutter,
+                      right: ZaveSpace.gutter,
+                      child: Opacity(
+                        opacity: t,
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          mainAxisSize: MainAxisSize.min,
+                          children: <Widget>[
+                            Text(
+                              largeTitle,
+                              style: ZaveType.h2,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                            if (subtitle != null) ...<Widget>[
+                              SizedBox(height: ZaveSpace.xs),
+                              Text(
+                                subtitle!,
+                                style: ZaveType.lead,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ],
+                          ],
+                        ),
+                      ),
+                    ),
+                    // The control row stays put and stays on top: the back
+                    // button has to be reachable at every scroll offset.
+                    Positioned(
+                      top: topInset,
+                      left: 0,
+                      right: 0,
+                      height: rowHeight,
+                      child: Row(
+                        children: <Widget>[
+                          SizedBox(width: ZaveSpace.gutter),
+                          if (leading != null) ...<Widget>[
+                            leading!,
+                            SizedBox(width: ZaveSpace.md),
+                          ],
+                          // The compact title arrives as the big one leaves,
+                          // so the screen is never nameless mid-scroll.
+                          Expanded(
+                            child: Opacity(
+                              opacity: 1 - t,
+                              child: Text(
+                                largeTitle,
+                                style: ZaveType.h3,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                          ),
+                          ...?actions,
+                          SizedBox(width: ZaveSpace.gutter),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          );
+        },
       ),
     );
   }
