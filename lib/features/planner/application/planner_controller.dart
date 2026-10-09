@@ -3,6 +3,7 @@ import 'package:riverpod_annotation/riverpod_annotation.dart';
 import '../../../core/network/failure.dart';
 import '../../settings/application/settings_controllers.dart';
 import '../../settings/domain/settings_entities.dart';
+import '../../posts/application/post_library_controllers.dart';
 import '../data/planner_repositories.dart';
 import '../domain/plan_slot.dart';
 import '../domain/planner_repository.dart';
@@ -169,6 +170,68 @@ class PlannerController extends _$PlannerController {
     } on Object {
       // Deliberately swallowed — see the doc comment.
     }
+  }
+
+  /// Draws a NEW poster for the post a slot already has.
+  ///
+  /// The deliberate opposite of [_attachPoster] in two ways. It runs on
+  /// demand rather than as a silent tail of generation, so its failure is
+  /// REPORTED — the user pressed a button and paid XP, and swallowing that
+  /// would leave them staring at the old image wondering whether anything
+  /// happened. And it draws from the post's own body rather than from a
+  /// generation result, because by now the user may have edited the words the
+  /// picture is supposed to illustrate.
+  ///
+  /// Returns whether a new image landed.
+  Future<bool> regeneratePoster(int slotIndex) async {
+    final PlannerState? current = state.value;
+    final WeekPlan? plan = current?.plan;
+    if (plan == null || slotIndex >= plan.posts.length) return false;
+
+    final PlanSlot slot = plan.posts[slotIndex];
+    final String? postId = slot.postId;
+    if (postId == null || postId.isEmpty) return false;
+
+    final PlannerRepository repo = ref.read(plannerRepositoryProvider);
+
+    String userName = '';
+    String? profileImageUrl;
+    try {
+      final AccountSnapshot account = await ref.read(
+        accountSnapshotProvider.future,
+      );
+      userName = account.user.name;
+      profileImageUrl = account.user.avatarUrl;
+    } on Object {
+      userName = '';
+      profileImageUrl = null;
+    }
+
+    // The words as they stand now, not as they were generated.
+    String? body;
+    try {
+      body = (await ref.read(postDetailProvider(postId).future)).content;
+    } on Object {
+      body = null;
+    }
+
+    final String? imageUrl = await repo.generateSlotPoster(
+      topic: plan.topic ?? '',
+      content: _posterBrief(body, slot.title, plan.topic),
+      posterTitle: slot.title,
+      slotType: slot.type,
+      userName: userName,
+      profileImageUrl: profileImageUrl,
+      posterTag: slot.posterTag,
+    );
+    if (imageUrl == null || imageUrl.isEmpty) return false;
+
+    await repo.attachPostImage(postId: postId, imageUrl: imageUrl);
+    // Both: the planner carries the slot's preview, the post detail carries
+    // the full image, and the sheet shows one of each.
+    ref.invalidate(postDetailProvider(postId));
+    ref.invalidateSelf();
+    return true;
   }
 
   /// What the poster is drawn FROM: the body just written, then the day's

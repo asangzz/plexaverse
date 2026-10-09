@@ -222,6 +222,38 @@ class SlotCard extends StatelessWidget {
             // third tag no longer fits beside the other two. Wrapping keeps
             // every tag visible — a horizontal scroller would hide the third
             // one behind an edge nobody would think to drag.
+            // The poster this day actually produced.
+            //
+            // Before this the planner showed a `text_image` day exactly as it
+            // showed a text day, so a generated poster was invisible here and
+            // the only evidence it existed was a chip saying the format. A day
+            // that promises an image should show the image once it has one.
+            // The poster this day produced.
+            //
+            // NOT its own tap target. It briefly was, and the inner
+            // GestureDetector won the arena against the card's — so tapping
+            // the artwork opened an image viewer while tapping anywhere else
+            // opened the day. One card, one destination: the slot sheet shows
+            // the poster too, and the full-bleed zoom is reached from there.
+            if (slot.previewImageUrl case final String src when src.isNotEmpty)
+              Padding(
+                padding: EdgeInsets.only(bottom: ZaveSpace.md),
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(ZaveRadius.cardSm),
+                  child: AspectRatio(
+                    aspectRatio: 16 / 9,
+                    child: Image.network(
+                      src,
+                      fit: BoxFit.cover,
+                      // Silent on failure: this is a preview inside a list,
+                      // and a broken-image glyph on a card the user did not
+                      // ask to load is noise. The day still reads correctly
+                      // without it.
+                      errorBuilder: (_, _, _) => const SizedBox.shrink(),
+                    ),
+                  ),
+                ),
+              ),
             Wrap(
               spacing: ZaveSpace.sm,
               runSpacing: ZaveSpace.sm,

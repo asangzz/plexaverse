@@ -363,25 +363,72 @@ class _PostDetailPageState extends ConsumerState<PostDetailPage> {
           ),
         ),
 
+        // SHOW the poster, rather than assert that it exists.
+        //
+        // This block used to be the sentence "This post has an image. Change it
+        // on the web." and nothing else — so a planner post whose poster had
+        // just been generated, uploaded and thumbnailed looked, on the phone,
+        // exactly like a post with no poster at all. It was reported as the
+        // planner failing to generate one. Editing still belongs on the web;
+        // that is the only part of the old copy worth keeping.
         if (post.allImages.isNotEmpty) ...<Widget>[
           SizedBox(height: ZaveSpace.xl),
-          ZaveCard(
-            size: ZaveCardSize.small,
-            child: Row(
-              children: <Widget>[
-                Icon(Icons.image_outlined, size: 20, color: ZaveColors.ink45),
-                SizedBox(width: ZaveSpace.md),
-                Expanded(
-                  child: Text(
-                    post.allImages.length == 1
-                        ? 'This post has an image. Change it on the web.'
-                        : 'This post has ${post.allImages.length} images. '
-                              'Change them on the web.',
-                    style: ZaveType.caption,
+          if (post.imageSrc case final String src when src.isNotEmpty)
+            GestureDetector(
+              // Square here, and a poster is not square — the crop can take
+              // the title off the top of the very thing that carries it. Tap
+              // for the whole image.
+              onTap: () => showPosterSheet(
+                context,
+                imageUrl: (post.imageUrl?.isNotEmpty ?? false)
+                    ? post.imageUrl!
+                    : src,
+                title: post.title,
+              ),
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(ZaveRadius.cardSm),
+                child: AspectRatio(
+                  aspectRatio: 1,
+                  child: Image.network(
+                    src,
+                    fit: BoxFit.cover,
+                    // A poster that will not load must not read as no poster:
+                    // say so, and keep the count below honest either way.
+                    errorBuilder: (_, _, _) => ColoredBox(
+                      color: ZaveGlass.hover,
+                      child: Center(
+                        child: Icon(
+                          Icons.broken_image_outlined,
+                          size: 28,
+                          color: ZaveColors.ink45,
+                        ),
+                      ),
+                    ),
+                    loadingBuilder:
+                        (_, Widget child, ImageChunkEvent? progress) =>
+                            progress == null
+                            ? child
+                            : ColoredBox(
+                                color: ZaveGlass.hover,
+                                child: const Center(
+                                  child: SizedBox.square(
+                                    dimension: 22,
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2,
+                                    ),
+                                  ),
+                                ),
+                              ),
                   ),
                 ),
-              ],
+              ),
             ),
+          SizedBox(height: ZaveSpace.md),
+          Text(
+            post.allImages.length == 1
+                ? 'Change this image on the web.'
+                : '${post.allImages.length} images. Change them on the web.',
+            style: ZaveType.caption,
           ),
         ],
 

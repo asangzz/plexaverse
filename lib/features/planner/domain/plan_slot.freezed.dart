@@ -18,7 +18,17 @@ mixin _$PlanSlot {
 /// 'Monday' … 'Sunday'.
  String get day;/// The content type — 'niche', 'general', 'productive', 'poll'.
  String get type;/// 'text' | 'image' | 'poll' | 'carousel'.
- String get format;/// The editorial angle the model was given. Free text it may rewrite.
+ String get format;/// The day's poster, when one has been generated.
+///
+/// Derived by the server on read (`getWeekPlan`) from the post this slot
+/// points at — a thumbnail where one exists, never an inline `data:` URI.
+/// Absent until the day is generated, and absent for a slot that produces
+/// no image.
+ String? get previewImageUrl;/// The same poster at full size, for the tap-to-open sheet.
+///
+/// Separate from [previewImageUrl] because that one is a 160px thumbnail —
+/// right for the card, a smear at full width.
+ String? get fullImageUrl;/// The editorial angle the model was given. Free text it may rewrite.
  String get angle; String get title; bool get titleEditedByUser; List<String> get hashtags;@JsonKey(unknownEnumValue: SlotStatus.planned) SlotStatus get status;/// The server id of the generated post, once one exists.
  String? get postId;/// What this day produces. **Absent on every plan written before the
 /// pivot**, which is why it is nullable and why nothing reads it directly
@@ -48,16 +58,16 @@ $PlanSlotCopyWith<PlanSlot> get copyWith => _$PlanSlotCopyWithImpl<PlanSlot>(thi
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is PlanSlot&&(identical(other.day, day) || other.day == day)&&(identical(other.type, type) || other.type == type)&&(identical(other.format, format) || other.format == format)&&(identical(other.angle, angle) || other.angle == angle)&&(identical(other.title, title) || other.title == title)&&(identical(other.titleEditedByUser, titleEditedByUser) || other.titleEditedByUser == titleEditedByUser)&&const DeepCollectionEquality().equals(other.hashtags, hashtags)&&(identical(other.status, status) || other.status == status)&&(identical(other.postId, postId) || other.postId == postId)&&(identical(other.rawKind, rawKind) || other.rawKind == rawKind)&&(identical(other.restDay, restDay) || other.restDay == restDay)&&(identical(other.artifact, artifact) || other.artifact == artifact)&&(identical(other.posterTag, posterTag) || other.posterTag == posterTag));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is PlanSlot&&(identical(other.day, day) || other.day == day)&&(identical(other.type, type) || other.type == type)&&(identical(other.format, format) || other.format == format)&&(identical(other.previewImageUrl, previewImageUrl) || other.previewImageUrl == previewImageUrl)&&(identical(other.fullImageUrl, fullImageUrl) || other.fullImageUrl == fullImageUrl)&&(identical(other.angle, angle) || other.angle == angle)&&(identical(other.title, title) || other.title == title)&&(identical(other.titleEditedByUser, titleEditedByUser) || other.titleEditedByUser == titleEditedByUser)&&const DeepCollectionEquality().equals(other.hashtags, hashtags)&&(identical(other.status, status) || other.status == status)&&(identical(other.postId, postId) || other.postId == postId)&&(identical(other.rawKind, rawKind) || other.rawKind == rawKind)&&(identical(other.restDay, restDay) || other.restDay == restDay)&&(identical(other.artifact, artifact) || other.artifact == artifact)&&(identical(other.posterTag, posterTag) || other.posterTag == posterTag));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
-int get hashCode => Object.hash(runtimeType,day,type,format,angle,title,titleEditedByUser,const DeepCollectionEquality().hash(hashtags),status,postId,rawKind,restDay,artifact,posterTag);
+int get hashCode => Object.hash(runtimeType,day,type,format,previewImageUrl,fullImageUrl,angle,title,titleEditedByUser,const DeepCollectionEquality().hash(hashtags),status,postId,rawKind,restDay,artifact,posterTag);
 
 @override
 String toString() {
-  return 'PlanSlot(day: $day, type: $type, format: $format, angle: $angle, title: $title, titleEditedByUser: $titleEditedByUser, hashtags: $hashtags, status: $status, postId: $postId, rawKind: $rawKind, restDay: $restDay, artifact: $artifact, posterTag: $posterTag)';
+  return 'PlanSlot(day: $day, type: $type, format: $format, previewImageUrl: $previewImageUrl, fullImageUrl: $fullImageUrl, angle: $angle, title: $title, titleEditedByUser: $titleEditedByUser, hashtags: $hashtags, status: $status, postId: $postId, rawKind: $rawKind, restDay: $restDay, artifact: $artifact, posterTag: $posterTag)';
 }
 
 
@@ -68,7 +78,7 @@ abstract mixin class $PlanSlotCopyWith<$Res>  {
   factory $PlanSlotCopyWith(PlanSlot value, $Res Function(PlanSlot) _then) = _$PlanSlotCopyWithImpl;
 @useResult
 $Res call({
- String day, String type, String format, String angle, String title, bool titleEditedByUser, List<String> hashtags,@JsonKey(unknownEnumValue: SlotStatus.planned) SlotStatus status, String? postId,@JsonKey(name: 'kind') String? rawKind, bool restDay, String? artifact, String? posterTag
+ String day, String type, String format, String? previewImageUrl, String? fullImageUrl, String angle, String title, bool titleEditedByUser, List<String> hashtags,@JsonKey(unknownEnumValue: SlotStatus.planned) SlotStatus status, String? postId,@JsonKey(name: 'kind') String? rawKind, bool restDay, String? artifact, String? posterTag
 });
 
 
@@ -85,12 +95,14 @@ class _$PlanSlotCopyWithImpl<$Res>
 
 /// Create a copy of PlanSlot
 /// with the given fields replaced by the non-null parameter values.
-@pragma('vm:prefer-inline') @override $Res call({Object? day = null,Object? type = null,Object? format = null,Object? angle = null,Object? title = null,Object? titleEditedByUser = null,Object? hashtags = null,Object? status = null,Object? postId = freezed,Object? rawKind = freezed,Object? restDay = null,Object? artifact = freezed,Object? posterTag = freezed,}) {
+@pragma('vm:prefer-inline') @override $Res call({Object? day = null,Object? type = null,Object? format = null,Object? previewImageUrl = freezed,Object? fullImageUrl = freezed,Object? angle = null,Object? title = null,Object? titleEditedByUser = null,Object? hashtags = null,Object? status = null,Object? postId = freezed,Object? rawKind = freezed,Object? restDay = null,Object? artifact = freezed,Object? posterTag = freezed,}) {
   return _then(_self.copyWith(
 day: null == day ? _self.day : day // ignore: cast_nullable_to_non_nullable
 as String,type: null == type ? _self.type : type // ignore: cast_nullable_to_non_nullable
 as String,format: null == format ? _self.format : format // ignore: cast_nullable_to_non_nullable
-as String,angle: null == angle ? _self.angle : angle // ignore: cast_nullable_to_non_nullable
+as String,previewImageUrl: freezed == previewImageUrl ? _self.previewImageUrl : previewImageUrl // ignore: cast_nullable_to_non_nullable
+as String?,fullImageUrl: freezed == fullImageUrl ? _self.fullImageUrl : fullImageUrl // ignore: cast_nullable_to_non_nullable
+as String?,angle: null == angle ? _self.angle : angle // ignore: cast_nullable_to_non_nullable
 as String,title: null == title ? _self.title : title // ignore: cast_nullable_to_non_nullable
 as String,titleEditedByUser: null == titleEditedByUser ? _self.titleEditedByUser : titleEditedByUser // ignore: cast_nullable_to_non_nullable
 as bool,hashtags: null == hashtags ? _self.hashtags : hashtags // ignore: cast_nullable_to_non_nullable
@@ -185,10 +197,10 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String day,  String type,  String format,  String angle,  String title,  bool titleEditedByUser,  List<String> hashtags, @JsonKey(unknownEnumValue: SlotStatus.planned)  SlotStatus status,  String? postId, @JsonKey(name: 'kind')  String? rawKind,  bool restDay,  String? artifact,  String? posterTag)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String day,  String type,  String format,  String? previewImageUrl,  String? fullImageUrl,  String angle,  String title,  bool titleEditedByUser,  List<String> hashtags, @JsonKey(unknownEnumValue: SlotStatus.planned)  SlotStatus status,  String? postId, @JsonKey(name: 'kind')  String? rawKind,  bool restDay,  String? artifact,  String? posterTag)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _PlanSlot() when $default != null:
-return $default(_that.day,_that.type,_that.format,_that.angle,_that.title,_that.titleEditedByUser,_that.hashtags,_that.status,_that.postId,_that.rawKind,_that.restDay,_that.artifact,_that.posterTag);case _:
+return $default(_that.day,_that.type,_that.format,_that.previewImageUrl,_that.fullImageUrl,_that.angle,_that.title,_that.titleEditedByUser,_that.hashtags,_that.status,_that.postId,_that.rawKind,_that.restDay,_that.artifact,_that.posterTag);case _:
   return orElse();
 
 }
@@ -206,10 +218,10 @@ return $default(_that.day,_that.type,_that.format,_that.angle,_that.title,_that.
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String day,  String type,  String format,  String angle,  String title,  bool titleEditedByUser,  List<String> hashtags, @JsonKey(unknownEnumValue: SlotStatus.planned)  SlotStatus status,  String? postId, @JsonKey(name: 'kind')  String? rawKind,  bool restDay,  String? artifact,  String? posterTag)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String day,  String type,  String format,  String? previewImageUrl,  String? fullImageUrl,  String angle,  String title,  bool titleEditedByUser,  List<String> hashtags, @JsonKey(unknownEnumValue: SlotStatus.planned)  SlotStatus status,  String? postId, @JsonKey(name: 'kind')  String? rawKind,  bool restDay,  String? artifact,  String? posterTag)  $default,) {final _that = this;
 switch (_that) {
 case _PlanSlot():
-return $default(_that.day,_that.type,_that.format,_that.angle,_that.title,_that.titleEditedByUser,_that.hashtags,_that.status,_that.postId,_that.rawKind,_that.restDay,_that.artifact,_that.posterTag);case _:
+return $default(_that.day,_that.type,_that.format,_that.previewImageUrl,_that.fullImageUrl,_that.angle,_that.title,_that.titleEditedByUser,_that.hashtags,_that.status,_that.postId,_that.rawKind,_that.restDay,_that.artifact,_that.posterTag);case _:
   throw StateError('Unexpected subclass');
 
 }
@@ -226,10 +238,10 @@ return $default(_that.day,_that.type,_that.format,_that.angle,_that.title,_that.
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String day,  String type,  String format,  String angle,  String title,  bool titleEditedByUser,  List<String> hashtags, @JsonKey(unknownEnumValue: SlotStatus.planned)  SlotStatus status,  String? postId, @JsonKey(name: 'kind')  String? rawKind,  bool restDay,  String? artifact,  String? posterTag)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String day,  String type,  String format,  String? previewImageUrl,  String? fullImageUrl,  String angle,  String title,  bool titleEditedByUser,  List<String> hashtags, @JsonKey(unknownEnumValue: SlotStatus.planned)  SlotStatus status,  String? postId, @JsonKey(name: 'kind')  String? rawKind,  bool restDay,  String? artifact,  String? posterTag)?  $default,) {final _that = this;
 switch (_that) {
 case _PlanSlot() when $default != null:
-return $default(_that.day,_that.type,_that.format,_that.angle,_that.title,_that.titleEditedByUser,_that.hashtags,_that.status,_that.postId,_that.rawKind,_that.restDay,_that.artifact,_that.posterTag);case _:
+return $default(_that.day,_that.type,_that.format,_that.previewImageUrl,_that.fullImageUrl,_that.angle,_that.title,_that.titleEditedByUser,_that.hashtags,_that.status,_that.postId,_that.rawKind,_that.restDay,_that.artifact,_that.posterTag);case _:
   return null;
 
 }
@@ -241,7 +253,7 @@ return $default(_that.day,_that.type,_that.format,_that.angle,_that.title,_that.
 @JsonSerializable()
 
 class _PlanSlot extends PlanSlot {
-  const _PlanSlot({required this.day, this.type = 'general', this.format = 'text', this.angle = '', this.title = '', this.titleEditedByUser = false, final  List<String> hashtags = const <String>[], @JsonKey(unknownEnumValue: SlotStatus.planned) this.status = SlotStatus.planned, this.postId, @JsonKey(name: 'kind') this.rawKind, this.restDay = false, this.artifact, this.posterTag}): _hashtags = hashtags,super._();
+  const _PlanSlot({required this.day, this.type = 'general', this.format = 'text', this.previewImageUrl, this.fullImageUrl, this.angle = '', this.title = '', this.titleEditedByUser = false, final  List<String> hashtags = const <String>[], @JsonKey(unknownEnumValue: SlotStatus.planned) this.status = SlotStatus.planned, this.postId, @JsonKey(name: 'kind') this.rawKind, this.restDay = false, this.artifact, this.posterTag}): _hashtags = hashtags,super._();
   factory _PlanSlot.fromJson(Map<String, dynamic> json) => _$PlanSlotFromJson(json);
 
 /// 'Monday' … 'Sunday'.
@@ -250,6 +262,18 @@ class _PlanSlot extends PlanSlot {
 @override@JsonKey() final  String type;
 /// 'text' | 'image' | 'poll' | 'carousel'.
 @override@JsonKey() final  String format;
+/// The day's poster, when one has been generated.
+///
+/// Derived by the server on read (`getWeekPlan`) from the post this slot
+/// points at — a thumbnail where one exists, never an inline `data:` URI.
+/// Absent until the day is generated, and absent for a slot that produces
+/// no image.
+@override final  String? previewImageUrl;
+/// The same poster at full size, for the tap-to-open sheet.
+///
+/// Separate from [previewImageUrl] because that one is a 160px thumbnail —
+/// right for the card, a smear at full width.
+@override final  String? fullImageUrl;
 /// The editorial angle the model was given. Free text it may rewrite.
 @override@JsonKey() final  String angle;
 @override@JsonKey() final  String title;
@@ -297,16 +321,16 @@ Map<String, dynamic> toJson() {
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is _PlanSlot&&(identical(other.day, day) || other.day == day)&&(identical(other.type, type) || other.type == type)&&(identical(other.format, format) || other.format == format)&&(identical(other.angle, angle) || other.angle == angle)&&(identical(other.title, title) || other.title == title)&&(identical(other.titleEditedByUser, titleEditedByUser) || other.titleEditedByUser == titleEditedByUser)&&const DeepCollectionEquality().equals(other._hashtags, _hashtags)&&(identical(other.status, status) || other.status == status)&&(identical(other.postId, postId) || other.postId == postId)&&(identical(other.rawKind, rawKind) || other.rawKind == rawKind)&&(identical(other.restDay, restDay) || other.restDay == restDay)&&(identical(other.artifact, artifact) || other.artifact == artifact)&&(identical(other.posterTag, posterTag) || other.posterTag == posterTag));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is _PlanSlot&&(identical(other.day, day) || other.day == day)&&(identical(other.type, type) || other.type == type)&&(identical(other.format, format) || other.format == format)&&(identical(other.previewImageUrl, previewImageUrl) || other.previewImageUrl == previewImageUrl)&&(identical(other.fullImageUrl, fullImageUrl) || other.fullImageUrl == fullImageUrl)&&(identical(other.angle, angle) || other.angle == angle)&&(identical(other.title, title) || other.title == title)&&(identical(other.titleEditedByUser, titleEditedByUser) || other.titleEditedByUser == titleEditedByUser)&&const DeepCollectionEquality().equals(other._hashtags, _hashtags)&&(identical(other.status, status) || other.status == status)&&(identical(other.postId, postId) || other.postId == postId)&&(identical(other.rawKind, rawKind) || other.rawKind == rawKind)&&(identical(other.restDay, restDay) || other.restDay == restDay)&&(identical(other.artifact, artifact) || other.artifact == artifact)&&(identical(other.posterTag, posterTag) || other.posterTag == posterTag));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
-int get hashCode => Object.hash(runtimeType,day,type,format,angle,title,titleEditedByUser,const DeepCollectionEquality().hash(_hashtags),status,postId,rawKind,restDay,artifact,posterTag);
+int get hashCode => Object.hash(runtimeType,day,type,format,previewImageUrl,fullImageUrl,angle,title,titleEditedByUser,const DeepCollectionEquality().hash(_hashtags),status,postId,rawKind,restDay,artifact,posterTag);
 
 @override
 String toString() {
-  return 'PlanSlot(day: $day, type: $type, format: $format, angle: $angle, title: $title, titleEditedByUser: $titleEditedByUser, hashtags: $hashtags, status: $status, postId: $postId, rawKind: $rawKind, restDay: $restDay, artifact: $artifact, posterTag: $posterTag)';
+  return 'PlanSlot(day: $day, type: $type, format: $format, previewImageUrl: $previewImageUrl, fullImageUrl: $fullImageUrl, angle: $angle, title: $title, titleEditedByUser: $titleEditedByUser, hashtags: $hashtags, status: $status, postId: $postId, rawKind: $rawKind, restDay: $restDay, artifact: $artifact, posterTag: $posterTag)';
 }
 
 
@@ -317,7 +341,7 @@ abstract mixin class _$PlanSlotCopyWith<$Res> implements $PlanSlotCopyWith<$Res>
   factory _$PlanSlotCopyWith(_PlanSlot value, $Res Function(_PlanSlot) _then) = __$PlanSlotCopyWithImpl;
 @override @useResult
 $Res call({
- String day, String type, String format, String angle, String title, bool titleEditedByUser, List<String> hashtags,@JsonKey(unknownEnumValue: SlotStatus.planned) SlotStatus status, String? postId,@JsonKey(name: 'kind') String? rawKind, bool restDay, String? artifact, String? posterTag
+ String day, String type, String format, String? previewImageUrl, String? fullImageUrl, String angle, String title, bool titleEditedByUser, List<String> hashtags,@JsonKey(unknownEnumValue: SlotStatus.planned) SlotStatus status, String? postId,@JsonKey(name: 'kind') String? rawKind, bool restDay, String? artifact, String? posterTag
 });
 
 
@@ -334,12 +358,14 @@ class __$PlanSlotCopyWithImpl<$Res>
 
 /// Create a copy of PlanSlot
 /// with the given fields replaced by the non-null parameter values.
-@override @pragma('vm:prefer-inline') $Res call({Object? day = null,Object? type = null,Object? format = null,Object? angle = null,Object? title = null,Object? titleEditedByUser = null,Object? hashtags = null,Object? status = null,Object? postId = freezed,Object? rawKind = freezed,Object? restDay = null,Object? artifact = freezed,Object? posterTag = freezed,}) {
+@override @pragma('vm:prefer-inline') $Res call({Object? day = null,Object? type = null,Object? format = null,Object? previewImageUrl = freezed,Object? fullImageUrl = freezed,Object? angle = null,Object? title = null,Object? titleEditedByUser = null,Object? hashtags = null,Object? status = null,Object? postId = freezed,Object? rawKind = freezed,Object? restDay = null,Object? artifact = freezed,Object? posterTag = freezed,}) {
   return _then(_PlanSlot(
 day: null == day ? _self.day : day // ignore: cast_nullable_to_non_nullable
 as String,type: null == type ? _self.type : type // ignore: cast_nullable_to_non_nullable
 as String,format: null == format ? _self.format : format // ignore: cast_nullable_to_non_nullable
-as String,angle: null == angle ? _self.angle : angle // ignore: cast_nullable_to_non_nullable
+as String,previewImageUrl: freezed == previewImageUrl ? _self.previewImageUrl : previewImageUrl // ignore: cast_nullable_to_non_nullable
+as String?,fullImageUrl: freezed == fullImageUrl ? _self.fullImageUrl : fullImageUrl // ignore: cast_nullable_to_non_nullable
+as String?,angle: null == angle ? _self.angle : angle // ignore: cast_nullable_to_non_nullable
 as String,title: null == title ? _self.title : title // ignore: cast_nullable_to_non_nullable
 as String,titleEditedByUser: null == titleEditedByUser ? _self.titleEditedByUser : titleEditedByUser // ignore: cast_nullable_to_non_nullable
 as bool,hashtags: null == hashtags ? _self._hashtags : hashtags // ignore: cast_nullable_to_non_nullable

@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart' show Clipboard, ClipboardData;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -7,6 +9,9 @@ import '../../../../core/ui/widgets/open_link.dart';
 import '../../../../core/ui/zave/zave_kit.dart';
 import '../../application/planner_controller.dart';
 import '../../data/planner_repositories.dart';
+import '../../../posts/application/post_library_controllers.dart';
+import '../../../posts/data/post_library_repositories.dart';
+import '../../../posts/domain/library_post.dart';
 import '../../domain/plan_slot.dart';
 import '../../domain/video_script.dart';
 import '../../domain/weekly_article.dart';
@@ -75,6 +80,17 @@ class _PlannerBody extends StatelessWidget {
   /// overhang here would promise something that is not there.
   static const double _tileWidth = 164;
 
+  /// How wide one day is in the week strip.
+  ///
+  /// Most of the screen, but deliberately not all of it: the sliver of the
+  /// next card showing past the edge is the only thing that says the row
+  /// scrolls. Capped so it does not become a single absurd card on a tablet.
+  static double _dayCardWidth(BuildContext context) {
+    final double usable =
+        MediaQuery.sizeOf(context).width - ZaveSpace.gutter * 2;
+    return math.min(usable * 0.86, 340);
+  }
+
   const _PlannerBody({
     required this.state,
     required this.article,
@@ -122,74 +138,37 @@ class _PlannerBody extends StatelessWidget {
         _WeekHeader(state: state, plan: plan),
         SizedBox(height: ZaveSpace.xl),
 
-        // The article first: it is the week's spine, and the weekday titles are
-        // chosen from ITS section headings rather than re-derived from the
-        // topic. Putting the days first would read as seven angles that happen
-        // to share a subject, which is the thing this design exists to avoid.
-        article.when(
-          loading: () => const _CardSkeleton(height: 180),
-          error: (Object e, StackTrace _) => const SizedBox.shrink(),
-          data: (ArticleState a) => ArticleCard(
-            state: a,
-            onOpen: () => _openArticle(context, ref, a),
-            onCopy: () => _copyArticle(context, ref, a),
-            onMarkPublished: () =>
-                ref.read(articleControllerProvider.notifier).markPublished(),
-            onNameNewsletter: () => _nameNewsletter(context, ref, a),
-            onSetReminder: () => _setReminder(context, ref, a),
-          ),
-        ),
-
-        // The week at a glance, before the day-by-day. The reference opens its
-        // Training screen the same way: two readings side by side, then the
-        // list underneath. Both numbers here are counted off `plan`, and the
-        // wedge draws the same ratio the first one states.
-        SizedBox(height: ZaveSpace.xl),
-        SingleChildScrollView(
-          scrollDirection: Axis.horizontal,
-          child: IntrinsicHeight(
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: <Widget>[
-                SizedBox(
-                  width: _tileWidth,
-                  child: ZaveStatCard(
-                    label: 'Published',
-                    sublabel: 'this week',
-                    value: '${plan.publishedCount}',
-                    unit: 'of ${plan.liveSlotCount}',
-                    chart: plan.liveSlotCount == 0
-                        ? null
-                        : ZaveAreaWedge(
-                            progress: plan.publishedCount / plan.liveSlotCount,
-                          ),
-                  ),
-                ),
-                SizedBox(width: ZaveSpace.md),
-                SizedBox(
-                  width: _tileWidth,
-                  child: ZaveStatCard(
-                    label: 'Week',
-                    sublabel: plan.phase ?? 'of the season',
-                    value: '${plan.weekNumber}',
-                    filled: true,
-                  ),
-                ),
-              ],
+        // The week is a SETUP before it is a schedule.
+        //
+        // Three things have to exist before a week is really planned: the
+        // Thursday article has to be scheduled, the two posts written, and
+        // the two scripts drafted. Previously all of that was one long
+        // column, so the only way to know what was still outstanding was to
+        // scroll the whole week and work it out. As steps, the page says it.
+        //
+        // The tabs are not gated. The article is written unattended by the
+        // Sunday batch, not by the user, so a week whose article generation
+        // failed would lock someone out of their posts for no reason they
+        // caused. Progress is reported; nothing is withheld.
+        _WeekSetup(
+          plan: plan,
+          article: article,
+          scripts: scripts,
+          articleCard: article.when(
+            loading: () => const _CardSkeleton(height: 180),
+            error: (Object e, StackTrace _) => const SizedBox.shrink(),
+            data: (ArticleState a) => ArticleCard(
+              state: a,
+              onOpen: () => _openArticle(context, ref, a),
+              onCopy: () => _copyArticle(context, ref, a),
+              onMarkPublished: () =>
+                  ref.read(articleControllerProvider.notifier).markPublished(),
+              onNameNewsletter: () => _nameNewsletter(context, ref, a),
+              onSetReminder: () => _setReminder(context, ref, a),
             ),
           ),
-        ),
-
-        SizedBox(height: ZaveSpace.xxl),
-        ZaveSectionHeader(
-          title: 'The week',
-          actionLabel: '${plan.publishedCount}/${plan.liveSlotCount} published',
-          onTap: () {},
-        ),
-        SizedBox(height: ZaveSpace.lg),
-
-        for (int i = 0; i < plan.posts.length; i++) ...<Widget>[
-          SlotCard(
+          analytics: _WeekAnalytics(plan: plan, tileWidth: _tileWidth),
+          dayCard: (int i) => SlotCard(
             slot: plan.posts[i],
             isToday: plan.posts[i].day == today,
             handoff: _handoffFor(plan.posts[i], i, scripts, article),
@@ -203,8 +182,8 @@ class _PlannerBody extends StatelessWidget {
                 ? () => _approve(context, ref, i)
                 : null,
           ),
-          SizedBox(height: ZaveSpace.md),
-        ],
+          dayCardWidth: _dayCardWidth(context),
+        ),
       ],
     );
   }
@@ -471,8 +450,7 @@ class _PlannerBody extends StatelessWidget {
       context: context,
       backgroundColor: Colors.transparent,
       isScrollControlled: true,
-      builder: (BuildContext ctx) =>
-          _SlotSheet(slot: slot, slotIndex: slotIndex),
+      builder: (BuildContext ctx) => _SlotSheet(slotIndex: slotIndex),
     );
   }
 
@@ -594,21 +572,52 @@ class _WeekHeader extends ConsumerWidget {
         // leaves, and the two halves are one phrase: truncating gives
         // "Week 12 planne…", and wrapping puts the serif word alone on a
         // second line. Shrinking the pair keeps it reading as a title.
-        FittedBox(
-          fit: BoxFit.scaleDown,
-          alignment: Alignment.centerLeft,
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.baseline,
-            textBaseline: TextBaseline.alphabetic,
-            children: <Widget>[
-              Text('Week $week', style: ZaveType.h2),
-              SizedBox(width: ZaveSpace.sm),
-              Text(
-                'planner',
-                style: plannerSerif(size: 26, color: ZaveColors.peri),
+        // Title on the left, the two week arrows on the right of the same
+        // line. They used to be a row of labelled buttons under the topic,
+        // which cost a full line of a phone screen to say "Previous" and
+        // "Next" — words the arrows already say. Up here they also sit where
+        // the thing they change is written, so it reads as one control.
+        Row(
+          children: <Widget>[
+            Expanded(
+              child: FittedBox(
+                fit: BoxFit.scaleDown,
+                alignment: Alignment.centerLeft,
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.baseline,
+                  textBaseline: TextBaseline.alphabetic,
+                  children: <Widget>[
+                    Text('Week $week', style: ZaveType.h2),
+                    SizedBox(width: ZaveSpace.sm),
+                    Text(
+                      'planner',
+                      style: plannerSerif(size: 26, color: ZaveColors.peri),
+                    ),
+                  ],
+                ),
               ),
-            ],
-          ),
+            ),
+            SizedBox(width: ZaveSpace.sm),
+            ZaveIconButton(
+              icon: const Icon(Icons.chevron_left),
+              tooltip: 'Previous week',
+              // Week 1 is the floor — there is no week 0 to fetch, and a
+              // disabled control says that better than an error would.
+              onPressed: week <= 1
+                  ? null
+                  : () => ref
+                        .read(plannerWeekProvider.notifier)
+                        .show(week - 1, season),
+            ),
+            SizedBox(width: ZaveSpace.xs),
+            ZaveIconButton(
+              icon: const Icon(Icons.chevron_right),
+              tooltip: 'Next week',
+              onPressed: () => ref
+                  .read(plannerWeekProvider.notifier)
+                  .show(week + 1, season),
+            ),
+          ],
         ),
         if (phase != null) ...<Widget>[
           SizedBox(height: ZaveSpace.sm),
@@ -634,48 +643,26 @@ class _WeekHeader extends ConsumerWidget {
             ],
           ),
         ],
-        SizedBox(height: ZaveSpace.lg),
-        // Scrolls sideways rather than overflowing. Three buttons do not fit a
-        // phone's width, and the third only appears once the user navigates
-        // away from the current week — the same door the ungenerated-week
-        // preview sat behind, which is why a 114px overflow lived here unseen.
-        // A Wrap was the other option; it stacked all three full-width and
-        // pushed the week itself below the fold. These are navigation, not
-        // the content.
-        SingleChildScrollView(
-          scrollDirection: Axis.horizontal,
-          child: Row(
-            children: <Widget>[
-              ZaveButton(
-                label: 'Previous',
-                icon: const Icon(Icons.chevron_left),
-                // Week 1 is the floor — there is no week 0 to fetch, and a
-                // disabled control says that better than an error would.
-                onPressed: week <= 1
-                    ? null
-                    : () => ref
-                          .read(plannerWeekProvider.notifier)
-                          .show(week - 1, season),
-              ),
-              SizedBox(width: ZaveSpace.sm),
-              ZaveButton(
-                label: 'Next',
-                trailing: const Icon(Icons.chevron_right),
-                onPressed: () => ref
-                    .read(plannerWeekProvider.notifier)
-                    .show(week + 1, season),
-              ),
-              if (browsing) ...<Widget>[
-                SizedBox(width: ZaveSpace.md),
-                ZaveButton(
-                  label: 'This week',
-                  onPressed: () =>
-                      ref.read(plannerWeekProvider.notifier).showCurrent(),
-                ),
-              ],
-            ],
+        // The way back, and only when there is somewhere to come back FROM.
+        //
+        // A chip rather than a button: it is a return to the default, not an
+        // action on the week, and a full-width button for it outranked the
+        // week's own content. The web says "Back to this week" and so does
+        // this — "This week" alone reads as a label for where you already
+        // are, which is exactly the state in which this is not shown.
+        if (browsing) ...<Widget>[
+          SizedBox(height: ZaveSpace.md),
+          Align(
+            alignment: Alignment.centerLeft,
+            child: ZaveChip(
+              label: 'Back to this week',
+              selected: false,
+              icon: const Icon(Icons.refresh, size: 14),
+              onTap: () =>
+                  ref.read(plannerWeekProvider.notifier).showCurrent(),
+            ),
           ),
-        ),
+        ],
       ],
     );
   }
@@ -834,10 +821,44 @@ class _UpcomingWeek extends StatelessWidget {
 
 /// A slot's detail, as a bottom sheet — the phone's stand-in for the web's
 /// right-hand preview rail.
+/// One day, one sheet: the post as it will go out, and everything that
+/// changes it.
+///
+/// ## Why this is the only sheet
+///
+/// There were briefly two. Tapping the poster opened a viewer and tapping
+/// anywhere else opened this, because the poster thumbnail sat in its own
+/// `GestureDetector` inside the card and won the tap arena against the card's.
+/// One card, two mutually exclusive targets, two unrelated sheets — and
+/// neither of them showed the post. This sheet showed the PLAN for the day
+/// (title, angle, hashtags) and the viewer showed the artwork, so the words
+/// that were actually going to be published appeared in neither.
+///
+/// So: the card has one tap target again, and this is what it opens. The
+/// full-bleed [showPosterSheet] still exists, but only as the zoom you reach
+/// by tapping the poster inside here — a crop is a thumbnail, and the whole
+/// image is one tap further in, not a different destination.
+///
+/// ## Why it reads the slot live
+///
+/// It used to be handed a [PlanSlot] by value at open time, and every planner
+/// mutation ends in `invalidateSelf()` — which rebuilds the week BEHIND the
+/// sheet and leaves the sheet showing the old one. That was survivable while
+/// the sheet showed only a title: "Rewrite the title" simply closed itself
+/// afterwards, and a comment here said so. It is not survivable now. A sheet
+/// that shows the body and the poster, and offers a button to replace each,
+/// must show what those buttons produced.
+///
+/// So it takes the INDEX and reads the slot from the provider. Three
+/// consequences worth knowing: `invalidateSelf` keeps the previous value while
+/// it refetches, so the sheet does not blank mid-action; the plan can be null
+/// or shorter than the index when the week behind changes, which closes the
+/// sheet rather than throwing; and the body is keyed on `postId`, so a
+/// regenerate that creates a new post reloads it instead of showing the old
+/// draft's text.
 class _SlotSheet extends ConsumerStatefulWidget {
-  const _SlotSheet({required this.slot, required this.slotIndex});
+  const _SlotSheet({required this.slotIndex});
 
-  final PlanSlot slot;
   final int slotIndex;
 
   @override
@@ -848,6 +869,40 @@ class _SlotSheetState extends ConsumerState<_SlotSheet> {
   bool _busy = false;
   bool _titleBusy = false;
   bool _scriptBusy = false;
+  bool _posterBusy = false;
+  bool _saving = false;
+
+  final TextEditingController _title = TextEditingController();
+  final TextEditingController _body = TextEditingController();
+
+  /// Which post the body field was filled from.
+  ///
+  /// A regenerate replaces the post rather than editing it, so the id changes
+  /// under the sheet. Keying on it is what reloads the field instead of
+  /// leaving the previous draft's text in a box labelled with the new one.
+  String? _bodyLoadedFor;
+
+  /// The title the server last gave us, so an AI rewrite lands in the field
+  /// while a half-typed edit is not thrown away by an unrelated rebuild.
+  String? _titleLoadedFrom;
+
+  bool _titleDirty = false;
+  bool _bodyDirty = false;
+
+  @override
+  void dispose() {
+    _title.dispose();
+    _body.dispose();
+    super.dispose();
+  }
+
+  void _say(String message) {
+    ScaffoldMessenger.of(context)
+      ..hideCurrentSnackBar()
+      ..showSnackBar(SnackBar(content: Text(message, style: ZaveType.body)));
+  }
+
+  // ── Video-script day ──────────────────────────────────────────────────────
 
   Future<void> _generateScript() async {
     setState(() => _scriptBusy = true);
@@ -884,10 +939,52 @@ class _SlotSheetState extends ConsumerState<_SlotSheet> {
     if (mounted) _say('Caption copied.');
   }
 
-  void _say(String message) {
-    ScaffoldMessenger.of(context)
-      ..hideCurrentSnackBar()
-      ..showSnackBar(SnackBar(content: Text(message, style: ZaveType.body)));
+  // ── Editing ───────────────────────────────────────────────────────────────
+
+  /// Writes the title to the SLOT and the body to the POST.
+  ///
+  /// Two rows, two calls, deliberately — the planner slot owns the title and
+  /// the post owns the words, and there is no endpoint that writes both.
+  ///
+  /// The body goes through `update(id, content:)` and nothing else. That is
+  /// not tidiness: `updateUserPost` detaches the post from its planner day
+  /// whenever `scheduledFor` is PRESENT in the body, unchanged or not, so a
+  /// "save everything" call would silently blank the day it was saving.
+  Future<void> _save(PlanSlot slot) async {
+    final String title = _title.text.trim();
+    final String body = _body.text;
+    setState(() => _saving = true);
+    String? failure;
+    try {
+      if (_titleDirty && title.isNotEmpty && title != slot.title) {
+        await ref
+            .read(plannerControllerProvider.notifier)
+            .rename(widget.slotIndex, title);
+      }
+      final String? postId = slot.postId;
+      if (_bodyDirty && postId != null && body.trim().isNotEmpty) {
+        await ref
+            .read(postLibraryRepositoryProvider)
+            .update(postId, content: body);
+        ref.invalidate(postDetailProvider(postId));
+      }
+    } on Object catch (e) {
+      failure = e is PlannerGenerateFailure
+          ? (e.message ?? 'That did not save.')
+          : 'That did not save. Try again.';
+    } finally {
+      if (mounted) setState(() => _saving = false);
+    }
+    if (!mounted) return;
+    if (failure != null) {
+      _say(failure);
+      return;
+    }
+    setState(() {
+      _titleDirty = false;
+      _bodyDirty = false;
+    });
+    _say('Saved.');
   }
 
   Future<void> _rewriteTitle() async {
@@ -901,19 +998,20 @@ class _SlotSheetState extends ConsumerState<_SlotSheet> {
       if (mounted) setState(() => _titleBusy = false);
     }
     if (!mounted) return;
-    // The sheet holds a snapshot of the slot, so the new title lands on the
-    // week behind it rather than here. Closing is the honest move — leaving
-    // a stale title on screen after a successful rewrite reads as a no-op.
-    if (failure == null) {
-      Navigator.of(context).pop();
+    if (failure != null) {
+      _say(failure);
       return;
     }
-    ScaffoldMessenger.of(context)
-      ..hideCurrentSnackBar()
-      ..showSnackBar(SnackBar(content: Text(failure, style: ZaveType.body)));
+    // The sheet reads the slot live now, so the new title arrives here. Clear
+    // the dirty flag or the next save would write the old typed one back over
+    // the rewrite the user just asked for.
+    setState(() {
+      _titleDirty = false;
+      _titleLoadedFrom = null;
+    });
   }
 
-  PlanSlot get slot => widget.slot;
+  // ── Generation ────────────────────────────────────────────────────────────
 
   /// Nothing written yet — the day is a title and an angle and no post.
   /// Only a post day has anything to generate.
@@ -921,28 +1019,36 @@ class _SlotSheetState extends ConsumerState<_SlotSheet> {
   /// `isPublishable` first, because the server refuses the other five days
   /// with NOT_A_POST_DAY and a button that can only ever fail is worse than no
   /// button — the user spends a tap and a round trip to be told no.
-  bool get _canGenerate =>
+  bool _canGenerate(PlanSlot slot) =>
       slot.isPublishable &&
       slot.postId == null &&
       slot.status != SlotStatus.generating;
 
   /// A draft exists and can be thrown away for a different one. Never once it
   /// is on LinkedIn: there is nothing to replace at that point.
-  bool get _canRegenerate =>
+  bool _canRegenerate(PlanSlot slot) =>
       slot.isPublishable &&
       slot.postId != null &&
       slot.status != SlotStatus.generating &&
       slot.status != SlotStatus.published;
 
-  Future<void> _run({required bool force}) async {
+  Future<void> _run(PlanSlot slot, {required bool force}) async {
     if (force) {
       final bool? confirmed = await showDialog<bool>(
         context: context,
         builder: (BuildContext ctx) => AlertDialog(
           title: const Text('Write it again?'),
-          content: const Text(
-            'This replaces the current draft with a new one and costs XP. '
-            'The old draft is deleted.',
+          content: Text(
+            _bodyDirty
+                // The edits are in a field that is about to be replaced, and
+                // the post behind it is about to be deleted. Saying so is the
+                // difference between a choice and a surprise.
+                ? 'This replaces the current draft with a new one and costs '
+                      'XP. Your unsaved edits to this post will be lost. The '
+                      'poster is kept.'
+                : 'This replaces the current draft with a new one and costs '
+                      'XP. The old draft is deleted. The poster is kept — '
+                      'use "New image" to change that.',
           ),
           actions: <Widget>[
             TextButton(
@@ -980,6 +1086,12 @@ class _SlotSheetState extends ConsumerState<_SlotSheet> {
         GeneratedSlot(alreadyGenerated: true) => 'That day already has a post.',
         _ => force ? 'Rewritten.' : 'Written. Review it, then approve.',
       };
+      // The new post is a different row, so the field must refill from it
+      // rather than keep the replaced draft's words.
+      if (result != null && !result.alreadyGenerated) {
+        _bodyLoadedFor = null;
+        _bodyDirty = false;
+      }
     } on PlannerGenerateFailure catch (e) {
       note = switch (e.kind) {
         // The server's message names the price and the balance, which is the
@@ -1000,13 +1112,62 @@ class _SlotSheetState extends ConsumerState<_SlotSheet> {
     }
 
     if (!mounted || note.isEmpty) return;
-    ScaffoldMessenger.of(context)
-      ..hideCurrentSnackBar()
-      ..showSnackBar(SnackBar(content: Text(note, style: ZaveType.body)));
+    _say(note);
   }
+
+  /// Draws a new poster for the post that already exists.
+  ///
+  /// Separate from [_run] because the two are separate costs and separate
+  /// intents: rewriting the words keeps the picture, and this changes the
+  /// picture without touching a word. Collapsing them into one "regenerate"
+  /// is what made the old flow charge for artwork nobody asked to change.
+  Future<void> _newPoster(PlanSlot slot) async {
+    setState(() => _posterBusy = true);
+    String note;
+    try {
+      final bool ok = await ref
+          .read(plannerControllerProvider.notifier)
+          .regeneratePoster(widget.slotIndex);
+      note = ok
+          ? 'New image.'
+          : 'The image did not come back. Your post is unchanged.';
+    } on Object {
+      note = 'The image did not come back. Your post is unchanged.';
+    } finally {
+      if (mounted) setState(() => _posterBusy = false);
+    }
+    if (mounted) _say(note);
+  }
+
+  // ── Build ─────────────────────────────────────────────────────────────────
 
   @override
   Widget build(BuildContext context) {
+    final AsyncValue<PlannerState> planner = ref.watch(
+      plannerControllerProvider,
+    );
+    final List<PlanSlot> posts = planner.value?.plan?.posts ?? <PlanSlot>[];
+
+    // The week behind the sheet changed out from under it — browsing to
+    // another week, or a plan that went away. Closing is the only honest
+    // answer; the alternative is a range error or a sheet editing a day that
+    // is no longer on screen.
+    if (widget.slotIndex >= posts.length) {
+      return const _Sheet(
+        children: <Widget>[
+          Text('That day is no longer in this week.'),
+        ],
+      );
+    }
+    final PlanSlot slot = posts[widget.slotIndex];
+
+    // Refill the title field whenever the server's title changes and the user
+    // has not typed over it.
+    if (!_titleDirty && _titleLoadedFrom != slot.title) {
+      _titleLoadedFrom = slot.title;
+      _title.text = slot.title;
+    }
+
     final AsyncValue<List<VideoScript>> scripts = ref.watch(
       videoScriptsControllerProvider,
     );
@@ -1029,6 +1190,22 @@ class _SlotSheetState extends ConsumerState<_SlotSheet> {
           : HandoffState.ready,
     );
 
+    // The post itself, once the day has one. Lazily — the planner payload
+    // carries no body, and seven of them would be most of the response.
+    final String? postId = slot.postId;
+    final AsyncValue<LibraryPost>? post = postId == null
+        ? null
+        : ref.watch(postDetailProvider(postId));
+    if (post?.value case final LibraryPost p when _bodyLoadedFor != p.id) {
+      _bodyLoadedFor = p.id;
+      _body.text = p.content;
+      _bodyDirty = false;
+    }
+
+    final String? poster =
+        slot.fullImageUrl ?? post?.value?.imageUrl ?? slot.previewImageUrl;
+    final bool editable = slot.status != SlotStatus.published;
+
     return _Sheet(
       children: <Widget>[
         Row(
@@ -1044,14 +1221,26 @@ class _SlotSheetState extends ConsumerState<_SlotSheet> {
           ],
         ),
         SizedBox(height: ZaveSpace.lg),
-        Text(slot.title, style: ZaveType.h2),
-        // Free, so no confirm — and it clears the server's
-        // `titleEditedByUser`, which is what stops a later regenerate from
-        // quietly overwriting a title someone typed by hand.
-        if (slot.status != SlotStatus.published) ...<Widget>[
+
+        // ── Title ────────────────────────────────────────────────────────
+        if (editable)
+          ZaveField(
+            controller: _title,
+            label: 'TITLE',
+            maxLines: 2,
+            onChanged: (_) {
+              if (!_titleDirty) setState(() => _titleDirty = true);
+            },
+          )
+        else
+          Text(slot.title, style: ZaveType.h2),
+        if (editable) ...<Widget>[
           SizedBox(height: ZaveSpace.sm),
           Align(
             alignment: Alignment.centerLeft,
+            // Free, so no confirm — and it clears the server's
+            // `titleEditedByUser`, which is what stops a later regenerate
+            // from quietly overwriting a title someone typed by hand.
             child: ZaveButton(
               label: 'Rewrite the title',
               busy: _titleBusy,
@@ -1059,6 +1248,7 @@ class _SlotSheetState extends ConsumerState<_SlotSheet> {
             ),
           ),
         ],
+
         if (slot.angle.isNotEmpty) ...<Widget>[
           SizedBox(height: ZaveSpace.lg),
           Text('ANGLE', style: ZaveType.kicker),
@@ -1076,6 +1266,52 @@ class _SlotSheetState extends ConsumerState<_SlotSheet> {
             ],
           ),
         ],
+
+        // ── The poster ───────────────────────────────────────────────────
+        if (poster case final String src when src.isNotEmpty) ...<Widget>[
+          SizedBox(height: ZaveSpace.xl),
+          GestureDetector(
+            // The whole image, one tap further in — this is a 16:9 crop of a
+            // taller poster.
+            onTap: () =>
+                showPosterSheet(context, imageUrl: src, title: slot.title),
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(ZaveRadius.cardSm),
+              child: AspectRatio(
+                aspectRatio: 16 / 9,
+                child: Image.network(
+                  src,
+                  fit: BoxFit.cover,
+                  errorBuilder: (_, _, _) => const SizedBox.shrink(),
+                ),
+              ),
+            ),
+          ),
+        ],
+
+        // ── The post ─────────────────────────────────────────────────────
+        if (post != null) ...<Widget>[
+          SizedBox(height: ZaveSpace.xl),
+          switch (post) {
+            AsyncValue<LibraryPost>(hasValue: true) => editable
+                ? ZaveField(
+                    controller: _body,
+                    label: 'POST',
+                    maxLines: 14,
+                    minLines: 6,
+                    onChanged: (_) {
+                      if (!_bodyDirty) setState(() => _bodyDirty = true);
+                    },
+                  )
+                : Text(post.value!.content, style: ZaveType.body),
+            AsyncValue<LibraryPost>(hasError: true) => Text(
+              'The post could not be loaded.',
+              style: ZaveType.bodyMuted,
+            ),
+            _ => Text('Loading the post…', style: ZaveType.bodyMuted),
+          },
+        ],
+
         // A video day. Without this the sheet offered one action — rewriting
         // the title of a script it could not show — on a day whose entire
         // output is that script.
@@ -1093,29 +1329,431 @@ class _SlotSheetState extends ConsumerState<_SlotSheet> {
               onPosted: script.isPosted ? null : _markScriptPosted,
             ),
         ],
-        // The planner's primary action. Without it this sheet was a read-only
-        // description of a day the user could do nothing about.
-        if (_canGenerate || _canRegenerate) ...<Widget>[
+
+        // ── Actions ──────────────────────────────────────────────────────
+        if (editable && (_titleDirty || _bodyDirty)) ...<Widget>[
           SizedBox(height: ZaveSpace.xl),
-          if (_canGenerate)
+          ZaveButton.primary(
+            label: 'Save changes',
+            expand: true,
+            busy: _saving,
+            onPressed: _saving ? null : () => _save(slot),
+          ),
+        ],
+        if (_canGenerate(slot) || _canRegenerate(slot)) ...<Widget>[
+          SizedBox(height: ZaveSpace.md),
+          if (_canGenerate(slot))
             ZaveButton.primary(
               label: slot.format == 'carousel'
                   ? 'Build this carousel'
                   : 'Write this post',
               expand: true,
               busy: _busy,
-              onPressed: _busy ? null : () => _run(force: false),
+              onPressed: _busy ? null : () => _run(slot, force: false),
             )
-          else
+          else ...<Widget>[
             ZaveButton(
               label: slot.format == 'carousel'
                   ? 'Build it again'
                   : 'Write it again',
               expand: true,
               busy: _busy,
-              onPressed: _busy ? null : () => _run(force: true),
+              onPressed: _busy ? null : () => _run(slot, force: true),
             ),
+            // Only where the day actually carries one. Offering new artwork
+            // on a text-only day would charge for an image nothing shows.
+            if (slot.format == 'text_image') ...<Widget>[
+              SizedBox(height: ZaveSpace.md),
+              ZaveButton(
+                label: poster == null ? 'Add an image' : 'New image',
+                expand: true,
+                busy: _posterBusy,
+                onPressed: _posterBusy ? null : () => _newPoster(slot),
+              ),
+            ],
+          ],
         ],
+      ],
+    );
+  }
+}
+
+/// Which part of the week's setup is on screen.
+enum _SetupTab { article, posts, scripts, analytics }
+
+/// The week as a setup, then the week as a schedule.
+///
+/// ## Why steps
+///
+/// A planned week is three pieces of work with an order to them — the
+/// Thursday article is the spine, the weekday titles are chosen from ITS
+/// section headings, and the two scripts hang off the same topic (CLAUDE.md
+/// §6b). Shown as one column, that order was invisible and so was the
+/// progress: the only way to learn that Friday still had no script was to
+/// scroll to Friday.
+///
+/// ## Why the tabs are not gated
+///
+/// The article is written unattended by the Sunday batch, and
+/// `generateWeeklyArticle` NEVER throws — a model hiccup returns null and the
+/// week carries on without one, deliberately. Gating posts behind a scheduled
+/// article would turn that survivable miss into a locked week, which is the
+/// exact trade §6b says not to make. So every tab is reachable and the ticks
+/// report rather than enforce.
+///
+/// The full week strip appears underneath once all three are done: before
+/// that it is a duplicate of the steps above it, and after it is the thing
+/// the page is actually for.
+class _WeekSetup extends StatefulWidget {
+  const _WeekSetup({
+    required this.plan,
+    required this.article,
+    required this.scripts,
+    required this.articleCard,
+    required this.analytics,
+    required this.dayCard,
+    required this.dayCardWidth,
+  });
+
+  final WeekPlan plan;
+  final AsyncValue<ArticleState> article;
+  final AsyncValue<List<VideoScript>> scripts;
+
+  /// Built by the page, which owns the article's callbacks.
+  final Widget articleCard;
+  final Widget analytics;
+
+  /// One day of the week, by slot index — the same card the strip uses.
+  final Widget Function(int index) dayCard;
+  final double dayCardWidth;
+
+  @override
+  State<_WeekSetup> createState() => _WeekSetupState();
+}
+
+class _WeekSetupState extends State<_WeekSetup> {
+  _SetupTab _tab = _SetupTab.article;
+
+  /// Scheduled, or already out. Either way the user has nothing left to do
+  /// with it — and `isPublished` matters because the article is the one thing
+  /// in the week we cannot publish for them (there is no LinkedIn article
+  /// endpoint), so "I published it" is the only completion it ever gets.
+  bool get _articleDone {
+    final WeeklyArticle? a = widget.article.value?.article;
+    if (a == null) return false;
+    return a.isPublished || a.hasReminder();
+  }
+
+  List<int> get _postDays => <int>[
+    for (int i = 0; i < widget.plan.posts.length; i++)
+      if (widget.plan.posts[i].kind == DayKind.post) i,
+  ];
+
+  List<int> get _scriptDays => <int>[
+    for (int i = 0; i < widget.plan.posts.length; i++)
+      if (widget.plan.posts[i].kind == DayKind.videoScript) i,
+  ];
+
+  bool get _postsDone =>
+      _postDays.isNotEmpty &&
+      _postDays.every((int i) => widget.plan.posts[i].hasPost);
+
+  bool get _scriptsDone {
+    final List<VideoScript>? written = widget.scripts.value;
+    if (written == null) return false;
+    final List<int> days = _scriptDays;
+    return days.isNotEmpty &&
+        days.every(
+          (int i) => written.any((VideoScript v) => v.dayIndex == i),
+        );
+  }
+
+  bool _done(_SetupTab tab) => switch (tab) {
+    _SetupTab.article => _articleDone,
+    _SetupTab.posts => _postsDone,
+    _SetupTab.scripts => _scriptsDone,
+    _SetupTab.analytics => false,
+  };
+
+  /// Left for the next step, right for the previous. Stops at both ends
+  /// rather than wrapping: a stepper that loops from Analytics back to
+  /// Article reads as having lost your place.
+  void _onSwipe(DragEndDetails details) {
+    final double v = details.primaryVelocity ?? 0;
+    // A deliberate flick, not a stray horizontal wobble during a vertical
+    // scroll — the page itself scrolls vertically and those drags are rarely
+    // perfectly straight.
+    if (v.abs() < 200) return;
+    final int next = _tab.index + (v < 0 ? 1 : -1);
+    if (next < 0 || next >= _SetupTab.values.length) return;
+    setState(() => _tab = _SetupTab.values[next]);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final bool setUp = _articleDone && _postsDone && _scriptsDone;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: <Widget>[
+        // Sideways rather than wrapped: four labels do not fit a phone's
+        // width, and a Wrap would stack them two-by-two into something that
+        // no longer reads as a row of steps.
+        SingleChildScrollView(
+          scrollDirection: Axis.horizontal,
+          child: Row(
+            children: <Widget>[
+              for (final _SetupTab tab in _SetupTab.values) ...<Widget>[
+                // A chevron between each pair, the way a stepper draws its
+                // connector. Not a control — the chips are the control, and a
+                // second tappable thing doing the same job in a 4pt gap
+                // between two of them is a mis-tap waiting to happen.
+                if (tab != _SetupTab.article) ...<Widget>[
+                  SizedBox(width: ZaveSpace.xs),
+                  Icon(
+                    Icons.chevron_right,
+                    size: 16,
+                    color: ZaveColors.ink35,
+                  ),
+                  SizedBox(width: ZaveSpace.xs),
+                ],
+                ZaveChip(
+                  label: switch (tab) {
+                    _SetupTab.article => '1 · Article',
+                    _SetupTab.posts => '2 · Posts',
+                    _SetupTab.scripts => '3 · Scripts',
+                    _SetupTab.analytics => 'Analytics',
+                  },
+                  selected: _tab == tab,
+                  // A tick, not a count: the step is done or it is not, and a
+                  // half-written week is still a week with work left in it.
+                  icon: _done(tab)
+                      ? const Icon(Icons.check, size: 14)
+                      : null,
+                  onTap: _tab == tab ? null : () => setState(() => _tab = tab),
+                ),
+              ],
+            ],
+          ),
+        ),
+        SizedBox(height: ZaveSpace.lg),
+
+        // Swipe to change step.
+        //
+        // ## The nested-gesture problem, and why this is not a PageView
+        //
+        // Two of the four steps contain a horizontally scrolling strip of day
+        // cards, so an outer horizontal drag and an inner one are competing
+        // for the same gesture. A `PageView` would also have to be given a
+        // fixed height — and the steps differ by hundreds of pixels, from a
+        // row of stat tiles to a full article card, so any number would be
+        // wrong for three of them.
+        //
+        // A plain drag recognizer solves both. The inner `SingleChildScrollView`
+        // sits deeper in the hit-test path, so when a drag STARTS on the day
+        // strip the strip wins the arena and scrolls as before; this one only
+        // ever sees drags that began somewhere else on the step. That is
+        // exactly the behaviour wanted: the cards still swipe, and the step
+        // still swipes, and neither steals from the other.
+        GestureDetector(
+          // Opaque so a drag starting on empty ground inside the step still
+          // registers — without it only the painted children are draggable
+          // and the Analytics step is mostly empty.
+          behavior: HitTestBehavior.opaque,
+          onHorizontalDragEnd: _onSwipe,
+          child: switch (_tab) {
+            _SetupTab.article => widget.articleCard,
+            _SetupTab.posts => _StepDays(
+              label: 'The two posts this week publishes.',
+              days: _postDays,
+              dayCard: widget.dayCard,
+              width: widget.dayCardWidth,
+            ),
+            _SetupTab.scripts => _StepDays(
+              label: 'We write these; you record and post them.',
+              days: _scriptDays,
+              dayCard: widget.dayCard,
+              width: widget.dayCardWidth,
+            ),
+            _SetupTab.analytics => widget.analytics,
+          },
+        ),
+
+        // The whole week, once there is a whole week to show.
+        if (setUp) ...<Widget>[
+          SizedBox(height: ZaveSpace.xxl),
+          ZaveSectionHeader(
+            title: 'The week',
+            actionLabel:
+                '${widget.plan.publishedCount}/${widget.plan.liveSlotCount} published',
+            onTap: () {},
+          ),
+          SizedBox(height: ZaveSpace.lg),
+          _DayStrip(
+            count: widget.plan.posts.length,
+            dayCard: widget.dayCard,
+            width: widget.dayCardWidth,
+          ),
+        ],
+      ],
+    );
+  }
+}
+
+/// The days belonging to one step, as a horizontal strip.
+class _StepDays extends StatelessWidget {
+  const _StepDays({
+    required this.label,
+    required this.days,
+    required this.dayCard,
+    required this.width,
+  });
+
+  final String label;
+  final List<int> days;
+  final Widget Function(int index) dayCard;
+  final double width;
+
+  @override
+  Widget build(BuildContext context) {
+    if (days.isEmpty) {
+      return Text(
+        'This week has none of these.',
+        style: ZaveType.bodyMuted,
+      );
+    }
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: <Widget>[
+        Text(label, style: ZaveType.bodyMuted),
+        SizedBox(height: ZaveSpace.lg),
+        _DayStrip(
+          count: days.length,
+          dayCard: (int i) => dayCard(days[i]),
+          width: width,
+        ),
+      ],
+    );
+  }
+}
+
+/// A row of day cards that scrolls sideways.
+///
+/// `IntrinsicHeight` rather than a fixed height: the cards differ by several
+/// hundred pixels depending on whether the day has a poster, an Approve
+/// button or a hand-off, and a hardcoded number would be wrong for most of
+/// them the moment any of that changes. It also makes every card as tall as
+/// the tallest, which is what stops the row looking ragged.
+class _DayStrip extends StatelessWidget {
+  const _DayStrip({
+    required this.count,
+    required this.dayCard,
+    required this.width,
+  });
+
+  final int count;
+  final Widget Function(int index) dayCard;
+  final double width;
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      width: double.infinity,
+      child: SingleChildScrollView(
+        scrollDirection: Axis.horizontal,
+        clipBehavior: Clip.none,
+        child: IntrinsicHeight(
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: <Widget>[
+              for (int i = 0; i < count; i++) ...<Widget>[
+                if (i > 0) SizedBox(width: ZaveSpace.md),
+                // The card ends short of the edge so the next one is visibly
+                // there — the affordance that says this scrolls at all.
+                SizedBox(width: width, child: dayCard(i)),
+              ],
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// The Analytics step: what the week has actually done.
+class _WeekAnalytics extends StatelessWidget {
+  const _WeekAnalytics({required this.plan, required this.tileWidth});
+
+  final WeekPlan plan;
+  final double tileWidth;
+
+  @override
+  Widget build(BuildContext context) {
+    final int published = plan.publishedCount;
+    final int live = plan.liveSlotCount;
+    final int written = plan.posts
+        .where((PlanSlot s) => s.isPublishable && s.hasPost)
+        .length;
+    final int awaiting = plan.awaitingApproval.length;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: <Widget>[
+        // Both numbers are counted off `plan`, and the wedge draws the same
+        // ratio the first one states.
+        SingleChildScrollView(
+          scrollDirection: Axis.horizontal,
+          child: IntrinsicHeight(
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: <Widget>[
+                SizedBox(
+                  width: tileWidth,
+                  child: ZaveStatCard(
+                    label: 'Published',
+                    sublabel: 'this week',
+                    value: '$published',
+                    unit: 'of $live',
+                    chart: live == 0
+                        ? null
+                        : ZaveAreaWedge(progress: published / live),
+                  ),
+                ),
+                SizedBox(width: ZaveSpace.md),
+                SizedBox(
+                  width: tileWidth,
+                  child: ZaveStatCard(
+                    label: 'Week',
+                    sublabel: plan.phase ?? 'of the season',
+                    value: '${plan.weekNumber}',
+                    filled: true,
+                  ),
+                ),
+                SizedBox(width: ZaveSpace.md),
+                SizedBox(
+                  width: tileWidth,
+                  child: ZaveStatCard(
+                    label: 'Written',
+                    sublabel: 'ready to go out',
+                    value: '$written',
+                    unit: 'of $live',
+                  ),
+                ),
+                if (awaiting > 0) ...<Widget>[
+                  SizedBox(width: ZaveSpace.md),
+                  SizedBox(
+                    width: tileWidth,
+                    child: ZaveStatCard(
+                      label: 'Awaiting you',
+                      sublabel: 'needs approval',
+                      value: '$awaiting',
+                    ),
+                  ),
+                ],
+              ],
+            ),
+          ),
+        ),
       ],
     );
   }

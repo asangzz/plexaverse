@@ -82,6 +82,20 @@ abstract class PlanSlot with _$PlanSlot {
     /// 'text' | 'image' | 'poll' | 'carousel'.
     @Default('text') String format,
 
+    /// The day's poster, when one has been generated.
+    ///
+    /// Derived by the server on read (`getWeekPlan`) from the post this slot
+    /// points at — a thumbnail where one exists, never an inline `data:` URI.
+    /// Absent until the day is generated, and absent for a slot that produces
+    /// no image.
+    String? previewImageUrl,
+
+    /// The same poster at full size, for the tap-to-open sheet.
+    ///
+    /// Separate from [previewImageUrl] because that one is a 160px thumbnail —
+    /// right for the card, a smear at full width.
+    String? fullImageUrl,
+
     /// The editorial angle the model was given. Free text it may rewrite.
     @Default('') String angle,
     @Default('') String title,
