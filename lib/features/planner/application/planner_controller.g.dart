@@ -282,7 +282,7 @@ final class ArticleControllerProvider
   ArticleController create() => ArticleController();
 }
 
-String _$articleControllerHash() => r'68f47e9ca43042a6825bde5502cde5a465ad2b60';
+String _$articleControllerHash() => r'028d1da4bb897bdde852be5078ec73cdac5f32bb';
 
 /// The week's long-form article — Thursday's newsletter.
 ///

@@ -23,28 +23,32 @@ import 'package:flutter_test/flutter_test.dart';
 /// None of those were caught by review, because each was one plausible-looking
 /// import added to a file that already had twenty.
 void main() {
-  /// The one file still allowed to do this, and why.
+  /// Empty, and meant to stay that way.
   ///
-  /// `PlexaChatController` is a plain `ChangeNotifier` constructed by hand in
-  /// the sheet's field initializer, because the conversation is deliberately
-  /// per-sheet rather than global — so the sheet must hand it a repository,
-  /// which means importing `data/`. Converting it to an `@riverpod` notifier
-  /// is a real design change, not a move, and it is tracked separately.
+  /// It briefly held `plexa_day_sheet.dart`, whose `PlexaChatController` is a
+  /// hand-built ChangeNotifier — the conversation is per-sheet on purpose —
+  /// so the sheet had to hand it a repository. That turned out not to need a
+  /// rewrite: a small `@riverpod` factory in `application/` builds the
+  /// controller instead, which keeps the ChangeNotifier and the twenty-odd
+  /// tests that construct it directly, and moves only the wiring.
   ///
-  /// Nothing else may be added here. A second entry means the rule has been
-  /// renegotiated, and that is a conversation, not a diff.
-  const Set<String> allowed = <String>{
-    'lib/features/plexa/presentation/plexa_day_sheet.dart',
-  };
+  /// An entry here means the rule has been renegotiated, and that is a
+  /// conversation rather than a diff.
+  const Set<String> allowed = <String>{};
+
+  // Matches a data/ import whether it is this slice's (`../../data/`) or
+  // another slice's (`../../../posts/data/`) — the cross-slice form is the
+  // worse of the two and was the one most recently introduced.
+  //
+  // Shared by both tests deliberately. The allowlist check first asked
+  // whether the file merely CONTAINED the text "data/", which a comment
+  // explaining the exemption satisfied — so the exemption could not be
+  // detected as obsolete by the test written to detect exactly that.
+  final RegExp dataImport = RegExp(
+    r"""import\s+'(?:\.\./)+(?:[a-z_]+/)?data/""",
+  );
 
   test('no presentation file imports a data layer', () {
-    // Matches a data/ import whether it is this slice's (`../../data/`) or
-    // another slice's (`../../../posts/data/`) — the cross-slice form is the
-    // worse of the two and was the one most recently introduced.
-    final RegExp dataImport = RegExp(
-      r"""import\s+'(?:\.\./)+(?:[a-z_]+/)?data/""",
-    );
-
     final List<String> offenders = <String>[];
 
     for (final FileSystemEntity entity
@@ -79,8 +83,8 @@ void main() {
       final File f = File(path);
       expect(f.existsSync(), isTrue, reason: '$path no longer exists');
       expect(
-        f.readAsStringSync(),
-        contains("data/"),
+        dataImport.hasMatch(f.readAsStringSync()),
+        isTrue,
         reason:
             '$path no longer imports data/ — delete it from the allowlist '
             'rather than leaving a standing exemption nothing uses.',

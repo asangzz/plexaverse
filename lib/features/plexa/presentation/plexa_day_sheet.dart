@@ -11,7 +11,6 @@ import '../../home/application/home_controllers.dart';
 import '../../home/domain/roadmap_level.dart';
 import '../../home/domain/roadmap_progress.dart';
 import '../application/plexa_chat_controller.dart';
-import '../data/plexa_repositories.dart';
 import '../domain/chat_bubble.dart';
 import '../domain/plexa_day.dart';
 import 'widgets/chat_bubbles.dart';
@@ -49,15 +48,11 @@ class _PlexaDaySheet extends ConsumerStatefulWidget {
 }
 
 class _PlexaDaySheetState extends ConsumerState<_PlexaDaySheet> {
-  late final PlexaChatController _chat = PlexaChatController(
-    ref.read(plexaRepositoryProvider),
-    // Clearing a lane credits the roadmap step on the SERVER, and nothing was
-    // telling the app. Both launch sites open this sheet fire-and-forget, so
-    // without this a user could finish their whole day in Plexa, close the
-    // sheet, and find the roadmap behind it still showing the step undone —
-    // until something unrelated happened to refetch it.
-    onLaneCredited: () => ref.invalidate(roadmapProgressControllerProvider),
-  );
+  // Built by `plexaChatProvider` in application/, not here. The sheet used to
+  // construct it, which meant importing the repository provider from data/ —
+  // the dependency arrow backwards, and the last such import in the app.
+  late final PlexaChatController _chat = ref.read(plexaChatProvider);
+
   final ScrollController _scroll = ScrollController();
 
   @override
@@ -137,7 +132,8 @@ class _PlexaDaySheetState extends ConsumerState<_PlexaDaySheet> {
   @override
   void dispose() {
     _chat.removeListener(_onChat);
-    _chat.dispose();
+    // NOT disposed here: `plexaChatProvider` is autoDispose and disposes it
+    // when this sheet stops listening. Disposing it twice would throw.
     _scroll.dispose();
     super.dispose();
   }

@@ -1,10 +1,48 @@
 import 'dart:async';
 
 import 'package:flutter/foundation.dart';
+import 'package:riverpod_annotation/riverpod_annotation.dart';
 
+import '../../home/application/home_controllers.dart';
+import '../data/plexa_repositories.dart';
 import '../domain/plexa_repository.dart';
 import '../domain/chat_bubble.dart';
 import '../domain/plexa_day.dart';
+
+part 'plexa_chat_controller.g.dart';
+
+/// Builds the sheet's conversation, wired to its dependencies.
+///
+/// ## Why a factory and not a Notifier
+///
+/// [PlexaChatController] is a ChangeNotifier on purpose: the conversation is
+/// per-sheet, it is driven by a typing script rather than by state
+/// replacement, and twenty-odd tests construct it directly against a fake
+/// repository. Rewriting it as a Notifier to satisfy the annotation rule
+/// would change all of that to remove one import.
+///
+/// What was actually wrong is that the SHEET built it, and therefore had to
+/// read `plexaRepositoryProvider` itself — presentation importing data/,
+/// which is the dependency arrow backwards and the last such import in the
+/// app. The construction belongs here, where reaching for a repository is
+/// this layer's job.
+///
+/// autoDispose, so the lifetime still matches the sheet exactly: created when
+/// the sheet first watches it, disposed when the sheet closes and the last
+/// listener goes. Reopening deals a fresh conversation, which is what it did
+/// before.
+@riverpod
+PlexaChatController plexaChat(Ref ref) {
+  final PlexaChatController controller = PlexaChatController(
+    ref.watch(plexaRepositoryProvider),
+    // Clearing a lane credits the roadmap step on the SERVER. Without this
+    // the user could finish their whole day in Plexa, close the sheet, and
+    // find the roadmap behind it still showing the step undone.
+    onLaneCredited: () => ref.invalidate(roadmapProgressControllerProvider),
+  );
+  ref.onDispose(controller.dispose);
+  return controller;
+}
 
 /// Where the conversation is.
 enum PlexaPhase { loading, intro, working, done, empty }
