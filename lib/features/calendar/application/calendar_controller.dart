@@ -72,8 +72,15 @@ class CalendarController extends _$CalendarController {
   /// whose server side does real work — it re-queues the Cloud Task, rewrites
   /// the Google Calendar event and detaches the post from its planner slot — so
   /// a local guess at the result can be wrong in ways the user would only find
-  /// out about when the post failed to go out. The caller shows a busy state
-  /// for the round-trip instead.
+  /// out about when the post failed to go out.
+  ///
+  /// This method reports the round-trip by completing or throwing, and nothing
+  /// more. [RescheduleController] holds the busy and failure state around it.
+  /// It used to say "the caller shows a busy state instead", and the caller
+  /// was a widget — so a user who left the screen mid-flight took the failure
+  /// with them and the post silently stayed on its old day. The non-optimism
+  /// above was always the right call; putting the OUTCOME on something
+  /// disposable was not.
   Future<void> reschedule({
     required String postId,
     required DateTime when,

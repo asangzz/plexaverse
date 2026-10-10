@@ -2,9 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
-import '../../../../core/logging/app_logger.dart';
 import '../../../../core/ui/zave/zave_kit.dart';
 import '../../application/calendar_controller.dart';
+import '../../application/reschedule_controller.dart';
 import '../../domain/calendar_month.dart';
 import '../../domain/calendar_post.dart';
 import '../widgets/calendar_month_grid.dart';
@@ -55,11 +55,8 @@ class _CalendarPageState extends ConsumerState<CalendarPage> {
 
   /// A reschedule is in flight — the grid is not lying to the user while the
   /// server re-queues the Cloud Task.
-  bool _busy = false;
 
   /// The last reschedule failed. Surfaced inline rather than as a snackbar:
-  /// Material's snackbar carries none of Zave's surfaces.
-  String? _error;
 
   static DateTime _currentMonth() {
     final DateTime now = DateTime.now();
@@ -95,6 +92,9 @@ class _CalendarPageState extends ConsumerState<CalendarPage> {
 
   Widget _body(CalendarBuckets buckets) {
     final Map<String, List<CalendarPost>> byDay = groupByDay(buckets.scheduled);
+    // The in-flight state AND the last failure of a drag onto a new day. On
+    // the controller so neither dies with this screen.
+    final AsyncValue<void> reschedule = ref.watch(rescheduleControllerProvider);
     final CalendarPost? moving = _moving;
 
     return ZaveScrollView(
@@ -124,17 +124,22 @@ class _CalendarPageState extends ConsumerState<CalendarPage> {
           onToday: () => setState(() => _viewMonth = _currentMonth()),
         ),
 
-        if (_error != null) ...<Widget>[
+        // Read from the controller, not from this State. These used to be
+        // widget fields, which meant a failure died with the screen — see
+        // RescheduleController.
+        if (reschedule.error case final Object err) ...<Widget>[
           SizedBox(height: ZaveSpace.lg),
           _Banner(
             // Amber, not red — Zave has no red, and a failed reschedule is
             // "this needs you", not a destructive state.
             tone: ZaveColors.amber,
             kicker: 'Could not reschedule',
-            body: _error!,
+            body: '$err',
             action: ZaveButton(
               label: 'Dismiss',
-              onPressed: () => setState(() => _error = null),
+              onPressed: () => ref
+                  .read(rescheduleControllerProvider.notifier)
+                  .acknowledge(),
             ),
           ),
         ],
@@ -152,7 +157,7 @@ class _CalendarPageState extends ConsumerState<CalendarPage> {
           ),
         ],
 
-        if (_busy) ...<Widget>[
+        if (reschedule.isLoading) ...<Widget>[
           SizedBox(height: ZaveSpace.lg),
           _Banner(
             tone: ZaveColors.scheduled,
@@ -242,42 +247,15 @@ class _CalendarPageState extends ConsumerState<CalendarPage> {
     );
     if (when == null || !mounted) return;
 
-    // Read BEFORE the round-trip. `ref` is backed by the element and throws
-    // once the widget unmounts, so reaching for the logger inside the catch —
-    // which is precisely where a user who backed out lands — would itself blow
-    // up and lose the failure a second time.
-    final AppLogger log = ref.read(appLoggerProvider);
-
-    setState(() {
-      _busy = true;
-      _error = null;
-    });
-    try {
-      await ref
-          .read(calendarControllerProvider.notifier)
-          .reschedule(postId: post.id, when: when);
-      if (!mounted) return;
-      setState(() => _busy = false);
-    } on Object catch (error, stackTrace) {
-      // Record first, check `mounted` second. `_busy` and `_error` are widget
-      // fields and die with the screen: a user who navigates away during the
-      // round-trip used to get a reschedule that failed with no trace anywhere
-      // — no banner, no log, no retry — and the next poll showed the post
-      // sitting on its old day as though nothing had been attempted. The
-      // banner below is still best-effort; this line is the part that outlives
-      // the widget.
-      log.error(
-        'Calendar reschedule failed: post ${post.id} → '
-        '${when.toIso8601String()}',
-        error: error,
-        stackTrace: stackTrace,
-      );
-      if (!mounted) return;
-      setState(() {
-        _busy = false;
-        _error = '$error';
-      });
-    }
+    // Everything from here lives on the controller: the in-flight flag, the
+    // failure, and the log line. A user who backs out mid-round-trip used to
+    // take the outcome with them — no banner, no state, no retry — and the
+    // next poll showed the post on its old day as though nothing had been
+    // tried. The controller outlives this screen, so the failure is still
+    // here when they come back.
+    await ref
+        .read(rescheduleControllerProvider.notifier)
+        .run(postId: post.id, when: when);
   }
 }
 
