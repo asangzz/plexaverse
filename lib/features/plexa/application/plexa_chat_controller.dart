@@ -39,9 +39,21 @@ enum PlexaPhase { loading, intro, working, done, empty }
 /// Asking a second time would add a turn per item, ten times a day, to collect
 /// an answer nothing can verify.
 class PlexaChatController extends ChangeNotifier {
-  PlexaChatController(this._repository);
+  PlexaChatController(this._repository, {this.onLaneCredited});
 
   final PlexaRepository _repository;
+
+  /// Fired once per lane, after the server has accepted that lane's roadmap
+  /// step — the hook the sheet hangs a roadmap re-read on.
+  ///
+  /// Injected rather than reached through a `Ref`, for the same reason
+  /// [openAndCount] takes its `openUrl`: this is a plain [ChangeNotifier] with
+  /// no provider scope of its own, and the roadmap lives in another slice.
+  /// Without this the write is invisible — the server knows the step is done
+  /// and the roadmap behind the sheet goes on showing it undone until
+  /// something unrelated happens to refetch, which is how a user ends up
+  /// redoing a day's work on the engagement screens.
+  final VoidCallback? onLaneCredited;
 
   final List<ChatBubble> bubbles = <ChatBubble>[];
   bool isBotTyping = false;
@@ -431,6 +443,20 @@ class PlexaChatController extends ChangeNotifier {
       await _repository.completeStep(levelId: currentDay, stepId: stepId);
     } on Object {
       _credited.remove(lane);
+      return;
+    }
+
+    // Deliberately OUTSIDE the write's own catch, and guarded separately.
+    // Telling the roadmap to re-read can fail on its own — this runs
+    // unawaited, so the sheet (and the `Ref` the listener closes over) may
+    // already be gone by the time the POST lands. Letting that land in the
+    // branch above would retract `_credited` and re-POST a step the server
+    // has already taken, to repair nothing: a stale roadmap is the smaller
+    // wrong, and the next open fixes it.
+    try {
+      onLaneCredited?.call();
+    } on Object {
+      // Nothing to say and nothing to retry. The lane IS credited.
     }
   }
 

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
+import '../../../../core/logging/app_logger.dart';
 import '../../../../core/ui/zave/zave_kit.dart';
 import '../../application/calendar_controller.dart';
 import '../../domain/calendar_month.dart';
@@ -241,6 +242,12 @@ class _CalendarPageState extends ConsumerState<CalendarPage> {
     );
     if (when == null || !mounted) return;
 
+    // Read BEFORE the round-trip. `ref` is backed by the element and throws
+    // once the widget unmounts, so reaching for the logger inside the catch —
+    // which is precisely where a user who backed out lands — would itself blow
+    // up and lose the failure a second time.
+    final AppLogger log = ref.read(appLoggerProvider);
+
     setState(() {
       _busy = true;
       _error = null;
@@ -251,7 +258,20 @@ class _CalendarPageState extends ConsumerState<CalendarPage> {
           .reschedule(postId: post.id, when: when);
       if (!mounted) return;
       setState(() => _busy = false);
-    } on Object catch (error) {
+    } on Object catch (error, stackTrace) {
+      // Record first, check `mounted` second. `_busy` and `_error` are widget
+      // fields and die with the screen: a user who navigates away during the
+      // round-trip used to get a reschedule that failed with no trace anywhere
+      // — no banner, no log, no retry — and the next poll showed the post
+      // sitting on its old day as though nothing had been attempted. The
+      // banner below is still best-effort; this line is the part that outlives
+      // the widget.
+      log.error(
+        'Calendar reschedule failed: post ${post.id} → '
+        '${when.toIso8601String()}',
+        error: error,
+        stackTrace: stackTrace,
+      );
       if (!mounted) return;
       setState(() {
         _busy = false;

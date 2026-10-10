@@ -223,7 +223,12 @@ class _FestiveCustomizerSheetState
     final FestivePosterState poster = ref.watch(
       festivePosterControllerProvider(widget.template.id),
     );
-    final bool busy = poster.isBusy;
+    // One gate for the whole form, and the logo upload has to be part of it.
+    // That upload lives in this widget's State, so `poster.isBusy` cannot see
+    // it: before it was folded in here, Generate stayed live through an upload,
+    // the tap read `_logoUrl` while it was still null, and the user was charged
+    // 800 XP for a poster missing the logo they had just picked.
+    final bool busy = poster.isBusy || _uploadingLogo;
 
     return <Widget>[
       Row(
@@ -240,7 +245,7 @@ class _FestiveCustomizerSheetState
           ZaveButton(
             label: _logoUrl == null ? 'Choose' : 'Replace',
             busy: _uploadingLogo,
-            onPressed: busy || _uploadingLogo ? null : _pickLogo,
+            onPressed: busy ? null : _pickLogo,
           ),
         ],
       ),
@@ -330,15 +335,20 @@ class _FestiveCustomizerSheetState
       ),
       SizedBox(height: ZaveSpace.lg),
 
-      // `busy` blocks the tap on its own (ZaveButton stops dispatching while
-      // it spins), so `onPressed` stays non-null — a null one would dim the
-      // button to 50% and make its own spinner nearly invisible.
+      // Two different blocks, deliberately, because they want different faces.
+      // While the CONTROLLER is working, `busy` stops the dispatch on its own
+      // and `onPressed` stays non-null — a null one would dim the button to 50%
+      // and make its own spinner nearly invisible. While the LOGO is uploading
+      // the button must still refuse the tap, but it must not spin: the spinner
+      // here means "your poster is being made", the preview veil keys off
+      // `generating` alone, and a button claiming to generate while nothing is
+      // generating is a lie the user would wait on.
       ZaveButton(
         label: 'Generate poster',
         kind: ZaveButtonKind.primary,
         expand: true,
-        busy: busy,
-        onPressed: () => controller.generate(_values),
+        busy: poster.isBusy,
+        onPressed: _uploadingLogo ? null : () => controller.generate(_values),
       ),
     ];
   }

@@ -51,6 +51,12 @@ class _PlexaDaySheet extends ConsumerStatefulWidget {
 class _PlexaDaySheetState extends ConsumerState<_PlexaDaySheet> {
   late final PlexaChatController _chat = PlexaChatController(
     ref.read(plexaRepositoryProvider),
+    // Clearing a lane credits the roadmap step on the SERVER, and nothing was
+    // telling the app. Both launch sites open this sheet fire-and-forget, so
+    // without this a user could finish their whole day in Plexa, close the
+    // sheet, and find the roadmap behind it still showing the step undone —
+    // until something unrelated happened to refetch it.
+    onLaneCredited: () => ref.invalidate(roadmapProgressControllerProvider),
   );
   final ScrollController _scroll = ScrollController();
 

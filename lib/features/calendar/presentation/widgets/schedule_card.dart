@@ -30,7 +30,10 @@ class ScheduleCard extends StatelessWidget {
 
   final VoidCallback onDelete;
 
-  /// A write is in flight; the controls stop taking taps.
+  /// A write is in flight **for this row** — never for the screen.
+  ///
+  /// Only Delete reacts to it. The switch deliberately does not: see the
+  /// comment at its call site below.
   final bool busy;
 
   @override
@@ -51,12 +54,17 @@ class ScheduleCard extends StatelessWidget {
                   style: ZaveType.kicker,
                 ),
               ),
+              // Never gated on [busy]. `SchedulesController.setActive` is
+              // optimistic precisely so this switch moves on the tap; a
+              // disabled ZaveSwitch is drawn at 50% opacity, so gating it
+              // would dim the very state change the controller just made and
+              // put the round-trip back in the user's face.
               ZaveSwitch(
                 value: schedule.isActive,
                 semanticLabel: schedule.isActive
                     ? 'Pause this schedule'
                     : 'Resume this schedule',
-                onChanged: busy ? null : onToggle,
+                onChanged: onToggle,
               ),
             ],
           ),
@@ -80,7 +88,11 @@ class ScheduleCard extends StatelessWidget {
             child: ZaveButton(
               label: 'Delete',
               icon: const Icon(Icons.delete_outline),
-              onPressed: busy ? null : onDelete,
+              // `busy`, not a nulled handler: ZaveButton already refuses taps
+              // while busy, and null would dim the button behind its own
+              // spinner. Blocks the double-tap that would DELETE twice.
+              busy: busy,
+              onPressed: onDelete,
             ),
           ),
         ],

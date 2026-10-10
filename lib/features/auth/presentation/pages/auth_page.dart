@@ -363,17 +363,34 @@ class _AuthPageState extends ConsumerState<AuthPage>
   /// Shared success tail: persist the session, then drive the auth gate so the
   /// router's redirect fires. `SessionStore` is the single session source of
   /// truth — no navigation call here; the router owns the redirect.
+  ///
+  /// **Nothing in here is allowed to depend on this widget surviving.** The
+  /// token write is the point of no return: once it lands the user IS signed
+  /// in on disk, and the only thing that tells the router so is the gate
+  /// invalidation below. This used to sit behind `if (!mounted) return;` after
+  /// the write, so a widget disposed mid-write — back tap, route rebuild —
+  /// left tokens in the keychain and the gate stale. Signed in, still staring
+  /// at the login screen, recoverable only by relaunching the app.
+  ///
+  /// Hence the captured [ProviderContainer] rather than `ref`: every
+  /// `WidgetRef` method asserts the element is still mounted
+  /// (`ConsumerStatefulElement._assertNotDisposed`) and throws otherwise, so
+  /// simply deleting the guard would have traded a stuck screen for an
+  /// exception at the same instant. The container outlives the widget; reading
+  /// it here, before the first `await`, is the only part that needs us alive.
   Future<void> _onAuthenticated(AuthTokens tokens) async {
-    await ref
+    final ProviderContainer container = ref.container;
+
+    await container
         .read(sessionStoreProvider)
         .writeTokens(
           accessToken: tokens.accessToken,
           refreshToken: tokens.refreshToken,
         );
-    if (!mounted) return;
-    ref.invalidate(authGateProvider);
+
+    container.invalidate(authGateProvider);
     try {
-      await ref.read(authGateProvider.future);
+      await container.read(authGateProvider.future);
     } on Object {
       // A gate error is treated as signed-out by the router; the redirect
       // still resolves to a sensible destination.

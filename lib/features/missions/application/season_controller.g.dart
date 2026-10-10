@@ -25,7 +25,7 @@ final seasonAdvanceControllerProvider = SeasonAdvanceControllerProvider._();
 /// take on the web. `POST /season/advance` did not exist on the mobile API
 /// until now.
 final class SeasonAdvanceControllerProvider
-    extends $NotifierProvider<SeasonAdvanceController, void> {
+    extends $NotifierProvider<SeasonAdvanceController, bool> {
   /// Starting Season 2.
   ///
   /// Day 66 used to be a dead end in the app: the Season Complete recap showed
@@ -51,16 +51,16 @@ final class SeasonAdvanceControllerProvider
   SeasonAdvanceController create() => SeasonAdvanceController();
 
   /// {@macro riverpod.override_with_value}
-  Override overrideWithValue(void value) {
+  Override overrideWithValue(bool value) {
     return $ProviderOverride(
       origin: this,
-      providerOverride: $SyncValueProvider<void>(value),
+      providerOverride: $SyncValueProvider<bool>(value),
     );
   }
 }
 
 String _$seasonAdvanceControllerHash() =>
-    r'54f6fec4f874dab1f96056c058f68fa506c41d08';
+    r'c39434af526741068096a3baf176f83cb01ff04a';
 
 /// Starting Season 2.
 ///
@@ -69,17 +69,17 @@ String _$seasonAdvanceControllerHash() =>
 /// take on the web. `POST /season/advance` did not exist on the mobile API
 /// until now.
 
-abstract class _$SeasonAdvanceController extends $Notifier<void> {
-  void build();
+abstract class _$SeasonAdvanceController extends $Notifier<bool> {
+  bool build();
   @$mustCallSuper
   @override
   void runBuild() {
-    final ref = this.ref as $Ref<void, void>;
+    final ref = this.ref as $Ref<bool, bool>;
     final element =
         ref.element
             as $ClassProviderElement<
-              AnyNotifier<void, void>,
-              void,
+              AnyNotifier<bool, bool>,
+              bool,
               Object?,
               Object?
             >;

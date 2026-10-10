@@ -443,17 +443,32 @@ class _DataPrivacySectionState extends ConsumerState<DataPrivacySection> {
   }
 
   Future<void> _confirmDelete() async {
-    final bool? confirmed = await showDialog<bool>(
+    // The server bcrypt-compares a password only when the row HAS one, and
+    // refuses the whole call with PASSWORD_REQUIRED when it has one and none
+    // arrives. A Google-only account has nothing to compare, and demanding a
+    // password there would block exactly the people who cannot produce one
+    // from exercising an s12 right. Null is "we don't know yet" — the status
+    // read failed, and it returns null rather than throwing — so we ask
+    // without insisting: a status endpoint being down must never be the thing
+    // that stops an erasure.
+    final bool? hasPassword =
+        ref.read(googleLinkControllerProvider).value?.hasPassword;
+
+    final String? password = await showDialog<String>(
       context: context,
-      builder: (BuildContext ctx) => const _DeleteAccountDialog(),
+      builder: (BuildContext ctx) =>
+          _DeleteAccountDialog(hasPassword: hasPassword),
     );
-    if (confirmed != true || !mounted) return;
+    // Null is "backed out". An EMPTY string is a deliberate confirmation from
+    // an account that has no password — the repository drops the key for it,
+    // which is what the server expects from a Google-only row.
+    if (password == null || !mounted) return;
 
     setState(() => _busy = true);
     try {
       final List<String> retained = await ref
           .read(settingsRepositoryProvider)
-          .deleteAccount(password: _password);
+          .deleteAccount(password: password);
       if (!mounted) return;
       _say(
         retained.isEmpty
@@ -463,13 +478,20 @@ class _DataPrivacySectionState extends ConsumerState<DataPrivacySection> {
       // The account is gone; the session has nothing left to point at.
       await ref.read(signOutControllerProvider.notifier).signOut();
     } on Object {
-      _say("We couldn't delete your account. Nothing was changed.");
+      // This route's rejections are not translated into a typed result yet, so
+      // a wrong password and an unreachable server land here identically. Name
+      // both where a password was in play rather than sending the user off to
+      // retype one that was never the problem.
+      _say(
+        hasPassword == false
+            ? "We couldn't delete your account. Nothing was changed."
+            : "We couldn't delete your account — the password may be wrong, "
+                  "or we couldn't reach the server. Nothing was changed.",
+      );
     } finally {
       if (mounted) setState(() => _busy = false);
     }
   }
-
-  final String _password = '';
 
   @override
   Widget build(BuildContext context) {
@@ -610,10 +632,24 @@ class _ConsentRow extends StatelessWidget {
   }
 }
 
-/// The typed confirmation. Erasure is irreversible and a phone is easy to
-/// mis-tap, so the gate is a phrase the user has to mean.
+/// The typed confirmation, plus the password when the account signs in with
+/// one. Pops the password on confirm (`''` when there is none) and null when
+/// the user backs out.
+///
+/// Erasure is irreversible and a phone is easy to mis-tap, so the first gate is
+/// a phrase the user has to mean. The password is the SERVER's gate, not
+/// decoration: `DELETE /user/account` bcrypt-compares it whenever the row has
+/// one and rejects the call outright when it does not arrive. Collecting it
+/// here is what makes the button work at all for a password account — sending
+/// an empty string, as this once did, failed every time and reported it as a
+/// generic "couldn't delete".
 class _DeleteAccountDialog extends StatefulWidget {
-  const _DeleteAccountDialog();
+  const _DeleteAccountDialog({required this.hasPassword});
+
+  /// Whether this account has a password. **Null is unknown**, not false — the
+  /// status read answers null on any failure, and treating that as "no
+  /// password" would quietly restore the bug this field exists to fix.
+  final bool? hasPassword;
 
   @override
   State<_DeleteAccountDialog> createState() => _DeleteAccountDialogState();
@@ -622,16 +658,26 @@ class _DeleteAccountDialog extends StatefulWidget {
 class _DeleteAccountDialogState extends State<_DeleteAccountDialog> {
   static const String _phrase = 'DELETE MY ACCOUNT';
   final TextEditingController _typed = TextEditingController();
+  final TextEditingController _password = TextEditingController();
 
   @override
   void dispose() {
     _typed.dispose();
+    _password.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    final bool ready = _typed.text.trim() == _phrase;
+    // Offered whenever a password might exist; demanded only when we KNOW one
+    // does. Demanding it on an unknown would strand a Google-only user behind
+    // a field they can never fill.
+    final bool offerPassword = widget.hasPassword != false;
+    // Mirrors the server's own rule so a password account is told while typing
+    // rather than after a round trip that erased nothing. Not trimmed: a space
+    // can be part of a password.
+    final bool ready = _typed.text.trim() == _phrase &&
+        (widget.hasPassword != true || _password.text.isNotEmpty);
     return AlertDialog(
       title: const Text('Delete your account?'),
       content: Column(
@@ -651,18 +697,42 @@ class _DeleteAccountDialogState extends State<_DeleteAccountDialog> {
             hint: _phrase,
             onChanged: (_) => setState(() {}),
           ),
+          if (offerPassword) ...<Widget>[
+            SizedBox(height: ZaveSpace.lg),
+            Text(
+              widget.hasPassword == true
+                  ? 'Enter your password'
+                  : 'Enter your password, if you sign in with one',
+              style: ZaveType.caption,
+            ),
+            SizedBox(height: ZaveSpace.sm),
+            ZaveField(
+              controller: _password,
+              hint: '••••••••',
+              obscure: true,
+              // A password the user may never have typed on this device — let
+              // the password manager offer it rather than making a forgotten
+              // one the reason an erasure cannot proceed.
+              autofillHints: const <String>[AutofillHints.password],
+              onChanged: (_) => setState(() {}),
+            ),
+          ],
         ],
       ),
       actions: <Widget>[
         TextButton(
-          onPressed: () => Navigator.of(context).pop(false),
+          // No value: null is how the caller tells backing out apart from a
+          // confirmed deletion that carries an empty password.
+          onPressed: () => Navigator.of(context).pop(),
           child: Text(
             'Keep my account',
             style: ZaveType.button.copyWith(color: ZaveColors.ink62),
           ),
         ),
         TextButton(
-          onPressed: ready ? () => Navigator.of(context).pop(true) : null,
+          onPressed: ready
+              ? () => Navigator.of(context).pop(_password.text)
+              : null,
           child: Text(
             'Delete',
             // Amber, not red. Zave has no red, including here.

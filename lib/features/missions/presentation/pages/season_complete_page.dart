@@ -268,8 +268,12 @@ class _StatCard extends StatelessWidget {
 ///
 /// Choosing is confirmed because it is not reversible from here — it starts
 /// the season, rebooks the auto-post chain and, on the transformation path,
-/// resets the 66-day clock. The server is idempotent, so a double-tap is
-/// harmless; the dialog is about intent, not about the request.
+/// resets the 66-day clock. The dialog is about intent, not about the request.
+///
+/// The in-flight guard is NOT per card. It is read off
+/// [seasonAdvanceControllerProvider] so that starting any path closes all
+/// three — see that controller for what tapping a second path mid-write did.
+/// The spinner stays per card, because only one of them was actually tapped.
 class _PathCard extends ConsumerStatefulWidget {
   const _PathCard({
     required this.choice,
@@ -286,6 +290,8 @@ class _PathCard extends ConsumerStatefulWidget {
 }
 
 class _PathCardState extends ConsumerState<_PathCard> {
+  /// Spinner only. The guard that stops a second advance is the shared one on
+  /// [seasonAdvanceControllerProvider]; this just says which card was tapped.
   bool _busy = false;
 
   /// The pivot path's new direction. Only the transformation card builds one.
@@ -350,6 +356,12 @@ class _PathCardState extends ConsumerState<_PathCard> {
       ),
     );
     if (confirmed != true || !mounted) return;
+    // Re-check after the dialog, not just before it. The shared flag closes
+    // the other cards the moment a write starts, but it cannot close a dialog
+    // that was already open — a double-tap on THIS card stacks two of them,
+    // and the second confirm would otherwise post a second advance. The first
+    // one's snackbar reports the outcome, so there is nothing to say here.
+    if (ref.read(seasonAdvanceControllerProvider)) return;
 
     setState(() => _busy = true);
     String message;
@@ -373,21 +385,28 @@ class _PathCardState extends ConsumerState<_PathCard> {
   }
 
   @override
-  Widget build(BuildContext context) => ZaveCard(
-    child: Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: <Widget>[
-        Text(widget.title, style: ZaveType.h3),
-        SizedBox(height: ZaveSpace.sm),
-        Text(widget.description, style: ZaveType.bodyMuted),
-        SizedBox(height: ZaveSpace.lg),
-        ZaveButton(
-          label: 'Choose this path',
-          expand: true,
-          busy: _busy,
-          onPressed: _busy ? null : _choose,
-        ),
-      ],
-    ),
-  );
+  Widget build(BuildContext context) {
+    // Watched, not read: an advance started from ANY of the three cards has
+    // to disable this one too.
+    final bool advancing = ref.watch(seasonAdvanceControllerProvider);
+
+    return ZaveCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: <Widget>[
+          Text(widget.title, style: ZaveType.h3),
+          SizedBox(height: ZaveSpace.sm),
+          Text(widget.description, style: ZaveType.bodyMuted),
+          SizedBox(height: ZaveSpace.lg),
+          ZaveButton(
+            label: 'Choose this path',
+            expand: true,
+            // Only the tapped card spins; all three go dead.
+            busy: _busy,
+            onPressed: (advancing || _busy) ? null : _choose,
+          ),
+        ],
+      ),
+    );
+  }
 }
