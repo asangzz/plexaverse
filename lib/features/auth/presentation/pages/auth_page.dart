@@ -3,12 +3,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/extensions/string_extensions.dart';
-import '../../../../core/router/auth_gate.dart';
-import '../../../../core/storage/session_store.dart';
 import '../../../../core/links/plexaverse.dart';
 import '../../../../core/ui/widgets/open_link.dart';
 import '../../../../core/ui/zave/zave_kit.dart';
-import '../../data/auth_repository_providers.dart';
+import '../../application/auth_controller.dart';
 import '../../domain/auth_repository.dart';
 import '../widgets/auth_divider.dart';
 import '../widgets/auth_welcome.dart';
@@ -16,7 +14,6 @@ import '../widgets/form_error_banner.dart';
 import '../widgets/password_strength_bar.dart';
 import '../widgets/referral_code_field.dart';
 import '../widgets/social_auth_button.dart';
-import '../../../../core/consent/notice.dart';
 import '../widgets/consent_block.dart';
 import '../widgets/consent_sheet.dart';
 
@@ -38,10 +35,17 @@ enum _AuthMode { signIn, createAccount }
 /// skin — `#6C63FF` violet pills on `#121212`, a Material [SegmentedButton]
 /// mode toggle, a light/dark fork with a hand-painted grid-paper backdrop, and
 /// its own hex literals throughout. All of that is gone and every value now
-/// comes from a Zave token. The state, the validators, the sealed-result
-/// switches and the `SessionStore` → `authGateProvider` success tail are
-/// untouched: the auth data and application layers are correct and this pass
-/// was presentation only.
+/// comes from a Zave token. The validators and the sealed-result switches are
+/// untouched by that pass.
+///
+/// **The three use cases are not here any more.** Sign in, create account and
+/// the Google hand-off — along with their in-flight flags and the
+/// `SessionStore` → `authGateProvider` success tail — live on
+/// [AuthController]. This file once read `authRepositoryProvider` straight out
+/// of `data/`, which was the slice's only outward-pointing import and the
+/// reason a disposed widget could strand a signed-in user on the login form.
+/// What remains below is a form: controllers, validation, the shake, the
+/// consent decision, and the copy for every outcome.
 ///
 /// Three Zave rules drive the layout:
 ///
@@ -84,11 +88,6 @@ class _AuthPageState extends ConsumerState<AuthPage>
   String? _emailError;
   String? _passwordError;
   String? _formError;
-
-  // Submission flags. `_submitting` drives the primary CTA spinner; the two
-  // social flags drive theirs. Guarded so only one runs at a time.
-  bool _submitting = false;
-  bool _googleLoading = false;
 
   /// What the user has ticked on the create-account notice. Reset when the
   /// mode toggles, so switching to sign-in and back cannot leave a stale
@@ -174,7 +173,10 @@ class _AuthPageState extends ConsumerState<AuthPage>
 
   bool get _isSignIn => _mode == _AuthMode.signIn;
 
-  bool get _busy => _submitting || _googleLoading;
+  /// The one handle onto the three use cases. Read, never watched, from the
+  /// callbacks — [build] does the watching, which is also what keeps the
+  /// autoDispose controller alive for as long as this screen is on it.
+  AuthController get _auth => ref.read(authControllerProvider.notifier);
 
   void _clearErrors() {
     _nameError = null;
@@ -204,26 +206,25 @@ class _AuthPageState extends ConsumerState<AuthPage>
       return;
     }
 
-    setState(() => _submitting = true);
-    final SignInResult result = await ref
-        .read(authRepositoryProvider)
-        .signIn(email: _emailCtrl.text.trim(), password: _passwordCtrl.text);
+    final SignInResult result = await _auth.signIn(
+      email: _emailCtrl.text.trim(),
+      password: _passwordCtrl.text,
+    );
     if (!mounted) return;
 
     switch (result) {
-      case SignInSuccess(:final AuthTokens tokens):
-        await _onAuthenticated(tokens);
+      case SignInSuccess():
+        // Tokens are written and the gate re-resolved before this returns;
+        // the router owns what happens next and the spinner stays up until
+        // it does. Nothing for the form to say.
+        break;
       case SignInInvalidCredentials():
         setState(() {
-          _submitting = false;
           _formError = 'Incorrect email or password';
           _triggerShake();
         });
       case SignInNetworkFailure():
-        setState(() {
-          _submitting = false;
-          _formError = 'Something went wrong. Please try again.';
-        });
+        setState(() => _formError = 'Something went wrong. Please try again.');
     }
   }
 
@@ -250,30 +251,25 @@ class _AuthPageState extends ConsumerState<AuthPage>
       return;
     }
 
-    setState(() => _submitting = true);
     final String referral = _referralCtrl.text.trim();
-    final RegisterResult result = await ref
-        .read(authRepositoryProvider)
-        .register(
-          name: _nameCtrl.text.trim(),
-          email: _emailCtrl.text.trim(),
-          password: _passwordCtrl.text,
-          acceptedNotice: _consent.acceptedNotice,
-          noticeVersion: kNoticeVersion,
-          consents: _consent.consents,
-          referralCode: referral.isEmpty ? null : referral,
-        );
+    final RegisterResult result = await _auth.register(
+      name: _nameCtrl.text.trim(),
+      email: _emailCtrl.text.trim(),
+      password: _passwordCtrl.text,
+      acceptedNotice: _consent.acceptedNotice,
+      consents: _consent.consents,
+      referralCode: referral.isEmpty ? null : referral,
+    );
     if (!mounted) return;
 
     switch (result) {
-      case RegisterSuccess(:final AuthTokens tokens):
-        await _onAuthenticated(tokens);
+      case RegisterSuccess():
+        break; // see [_submitSignIn]
       case RegisterInvalid(
         :final String? message,
         :final Map<String, String> fieldErrors,
       ):
         setState(() {
-          _submitting = false;
           _nameError = fieldErrors['name'];
           _emailError = fieldErrors['email'];
           _passwordError = fieldErrors['password'];
@@ -281,49 +277,37 @@ class _AuthPageState extends ConsumerState<AuthPage>
           _triggerShake();
         });
       case RegisterNetworkFailure():
-        setState(() {
-          _submitting = false;
-          _formError = 'Something went wrong. Please try again.';
-        });
+        setState(() => _formError = 'Something went wrong. Please try again.');
     }
   }
 
   Future<void> _startGoogle() async {
-    setState(() {
-      _formError = null;
-      _googleLoading = true;
-    });
+    setState(() => _formError = null);
 
-    final GoogleResult result = await ref
-        .read(authRepositoryProvider)
-        .signInWithGoogle();
+    final GoogleResult result = await _auth.startGoogle();
     if (!mounted) return;
 
     switch (result) {
-      case GoogleSignedIn(:final AuthTokens tokens):
-        await _onAuthenticated(tokens);
+      case GoogleSignedIn():
+        break; // see [_submitSignIn]
 
       case GoogleConsentRequired():
         // A brand-new data principal. Nothing has been stored about them yet,
         // and nothing will be until they accept the notice.
-        setState(() => _googleLoading = false);
         await _completeGoogleSignUp(result);
 
       case GoogleCancelled():
         // Backing out is a decision, not an error — no banner.
-        setState(() => _googleLoading = false);
+        break;
 
       case GoogleAccountExistsWithPassword(:final String message):
-        setState(() {
-          _googleLoading = false;
-          _formError = message;
-        });
+        setState(() => _formError = message);
 
       case GoogleFailure(:final String? message):
-        setState(() {
-          _googleLoading = false;
-          _formError = message ?? 'Google sign-in failed. Please try again.';
-        });
+        setState(
+          () => _formError =
+              message ?? 'Google sign-in failed. Please try again.',
+        );
     }
   }
 
@@ -336,64 +320,22 @@ class _AuthPageState extends ConsumerState<AuthPage>
     );
     if (!mounted || decision == null) return; // dismissed — nothing written
 
-    setState(() => _googleLoading = true);
-    final GoogleResult result = await ref
-        .read(authRepositoryProvider)
-        .completeGoogleSignUp(
-          signupTicket: step.signupTicket,
-          noticeVersion: step.noticeVersion,
-          acceptedNotice: decision.acceptedNotice,
-          consents: decision.consents,
-        );
+    final GoogleResult result = await _auth.completeGoogleSignUp(
+      step: step,
+      acceptedNotice: decision.acceptedNotice,
+      consents: decision.consents,
+    );
     if (!mounted) return;
 
     switch (result) {
-      case GoogleSignedIn(:final AuthTokens tokens):
-        await _onAuthenticated(tokens);
+      case GoogleSignedIn():
+        break; // see [_submitSignIn]
       case GoogleFailure(:final String? message):
-        setState(() {
-          _googleLoading = false;
-          _formError = message ?? 'Could not create your account.';
-        });
-      case GoogleResult():
-        setState(() => _googleLoading = false);
-    }
-  }
-
-  /// Shared success tail: persist the session, then drive the auth gate so the
-  /// router's redirect fires. `SessionStore` is the single session source of
-  /// truth — no navigation call here; the router owns the redirect.
-  ///
-  /// **Nothing in here is allowed to depend on this widget surviving.** The
-  /// token write is the point of no return: once it lands the user IS signed
-  /// in on disk, and the only thing that tells the router so is the gate
-  /// invalidation below. This used to sit behind `if (!mounted) return;` after
-  /// the write, so a widget disposed mid-write — back tap, route rebuild —
-  /// left tokens in the keychain and the gate stale. Signed in, still staring
-  /// at the login screen, recoverable only by relaunching the app.
-  ///
-  /// Hence the captured [ProviderContainer] rather than `ref`: every
-  /// `WidgetRef` method asserts the element is still mounted
-  /// (`ConsumerStatefulElement._assertNotDisposed`) and throws otherwise, so
-  /// simply deleting the guard would have traded a stuck screen for an
-  /// exception at the same instant. The container outlives the widget; reading
-  /// it here, before the first `await`, is the only part that needs us alive.
-  Future<void> _onAuthenticated(AuthTokens tokens) async {
-    final ProviderContainer container = ref.container;
-
-    await container
-        .read(sessionStoreProvider)
-        .writeTokens(
-          accessToken: tokens.accessToken,
-          refreshToken: tokens.refreshToken,
+        setState(
+          () => _formError = message ?? 'Could not create your account.',
         );
-
-    container.invalidate(authGateProvider);
-    try {
-      await container.read(authGateProvider.future);
-    } on Object {
-      // A gate error is treated as signed-out by the router; the redirect
-      // still resolves to a sensible destination.
+      case GoogleResult():
+        break;
     }
   }
 
@@ -409,14 +351,23 @@ class _AuthPageState extends ConsumerState<AuthPage>
   Widget build(BuildContext context) {
     final bool isSignIn = _isSignIn;
 
+    // Both spinners and every disabled-while-working gate come from the one
+    // controller value. They used to be two widget booleans, which meant the
+    // welcome stage and the form stage could only agree about what was in
+    // flight for as long as this State survived the request.
+    final AuthBusy busy = ref.watch(authControllerProvider);
+    final bool googleLoading = busy == AuthBusy.google;
+    final bool submitting = busy == AuthBusy.credentials;
+    final bool anyBusy = busy != AuthBusy.idle;
+
     if (!_emailStage) {
       return ZaveScaffold(
         body: SafeArea(
           child: Padding(
             padding: EdgeInsets.symmetric(horizontal: ZaveSpace.gutter),
             child: AuthWelcome(
-              googleBusy: _googleLoading,
-              onGoogle: _busy ? null : _startGoogle,
+              googleBusy: googleLoading,
+              onGoogle: anyBusy ? null : _startGoogle,
               onEmail: () => setState(() => _emailStage = true),
             ),
           ),
@@ -486,8 +437,8 @@ class _AuthPageState extends ConsumerState<AuthPage>
             SocialAuthButton(
               provider: SocialButtonProvider.google,
               isSignIn: isSignIn,
-              isLoading: _googleLoading,
-              onPressed: _busy ? null : _startGoogle,
+              isLoading: googleLoading,
+              onPressed: anyBusy ? null : _startGoogle,
             ),
 
             SizedBox(height: ZaveSpace.xl),
@@ -571,10 +522,10 @@ class _AuthPageState extends ConsumerState<AuthPage>
             ZaveButton.primary(
               label: isSignIn ? 'Continue' : 'Create account',
               expand: true,
-              busy: _submitting,
+              busy: submitting,
               // Create-account stays disabled until the notice is accepted —
               // matching the web's submit gate, and the server's.
-              onPressed: _busy || (!isSignIn && !_consent.isComplete)
+              onPressed: anyBusy || (!isSignIn && !_consent.isComplete)
                   ? null
                   : (isSignIn ? _submitSignIn : _submitRegister),
             ),

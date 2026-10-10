@@ -314,6 +314,73 @@ class PlannerController extends _$PlannerController {
     }
   }
 
+  /// Writes the sheet's edits: the title to the SLOT row, the body to the
+  /// POST row.
+  ///
+  /// A null argument means the user never touched that field. The dirty flags
+  /// that decide it stay on the sheet — only a text field knows whether its
+  /// contents are something a person typed or something we put there — but
+  /// everything after that decision is a use case: two rows, two endpoints, an
+  /// order between them, and one sentence to show when one refuses.
+  ///
+  /// It lived on `_SlotSheetState` until this change, and the price of that
+  /// placement was a widget holding `postLibraryRepositoryProvider` — another
+  /// slice's DATA layer — and then hand-invalidating that slice's cache
+  /// afterwards, because having written around the controller that owns the
+  /// post there was nothing else that could have told it.
+  ///
+  /// ## The body call sends `content` and NOTHING else. That is load-bearing.
+  ///
+  /// `updateUserPost` detaches a post from its planner day whenever
+  /// `scheduledFor` is PRESENT in the request body — changed or not, null or
+  /// not. It clears the slot's `postId` and drops the day back to `planned`.
+  /// So the obvious shape for an edit form, one call carrying every field,
+  /// would blank the very day it was saving. [PostDetail.save] is used here
+  /// rather than the post repository precisely because it cannot send
+  /// `scheduledFor`; [PostDetail.setSchedule] is the method that can, and
+  /// nothing on this path may ever reach for it.
+  ///
+  /// Returns an error sentence, or null when everything the user changed
+  /// landed.
+  Future<String?> saveSlotEdits(
+    int slotIndex, {
+    String? title,
+    String? body,
+  }) async {
+    final WeekPlan? plan = state.value?.plan;
+    if (plan == null || slotIndex >= plan.posts.length) {
+      return 'That day is no longer in this week.';
+    }
+    final PlanSlot slot = plan.posts[slotIndex];
+
+    try {
+      // Title first, so a rename that lands is visible even when the body
+      // call is the one that refuses. Through [rename] rather than a bare
+      // patch because that is what sets `titleEditedByUser` — the flag that
+      // stops the next regenerate overwriting a title someone typed by hand.
+      final String trimmed = title?.trim() ?? '';
+      if (trimmed.isNotEmpty && trimmed != slot.title) {
+        await rename(slotIndex, trimmed);
+      }
+
+      // The body goes up exactly as typed. The trim is only to ask whether
+      // there is anything here at all — emptying a post is not a save, and
+      // the user's own trailing blank line is theirs to keep.
+      final String? postId = slot.postId;
+      if (body != null && body.trim().isNotEmpty && postId != null) {
+        // No invalidation after this, deliberately. [PostDetail.save]
+        // publishes the row the write returned into its own cache, so the
+        // sheet's body and the library row behind it are already current.
+        await ref.read(postDetailProvider(postId).notifier).save(content: body);
+      }
+      return null;
+    } on PlannerGenerateFailure catch (e) {
+      return e.message ?? 'That did not save.';
+    } on Object {
+      return 'That did not save. Try again.';
+    }
+  }
+
   /// Renames a slot. [titleEditedByUser] tells the generator not to overwrite
   /// it on a regenerate.
   Future<void> rename(int slotIndex, String title) =>
@@ -509,6 +576,27 @@ class ArticleController extends _$ArticleController {
   /// Not optimistic. This is a deliberate choice with a time attached, and a
   /// reminder that appeared to save and then reverted would be worse than one
   /// that took a moment — the user cannot tell whether to expect the nudge.
+  /// The article's body, fetched only when something is about to show it.
+  ///
+  /// The week summary deliberately does not carry it — it was ninety percent
+  /// of that response for text no card renders. Null on failure, so the
+  /// caller can say so rather than opening an empty sheet or copying nothing.
+  ///
+  /// Here rather than on the page: reading a repository is the data layer's
+  /// business, and the page was importing `data/` for this one call.
+  Future<String?> fetchArticleBody(ArticleState a) async {
+    final WeeklyArticle? article = a.article;
+    if (article == null) return null;
+    if (article.hasBody) return article.body;
+    try {
+      return await ref
+          .read(plannerRepositoryProvider)
+          .fetchArticleBody(week: a.weekNumber, season: a.season);
+    } on Object {
+      return null;
+    }
+  }
+
   Future<String?> setArticleReminder(DateTime? when) async {
     final ArticleState? current = state.value;
     if (current?.article == null) {

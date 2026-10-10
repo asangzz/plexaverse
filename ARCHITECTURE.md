@@ -63,15 +63,27 @@ lib/
 │   ├── ui/                # shared UI primitives
 │   └── extensions/        # BuildContext / String extensions
 │
-├── features/
-│   ├── auth/              # application · data · domain · presentation
-│   ├── home/              # application · data · domain · presentation
-│   ├── posts/             # application · data · domain · presentation
-│   ├── odyssey/           # application · data · domain · presentation
-│   ├── analytics/         # application · data · domain · presentation
-│   ├── notifications/     # application · data · domain · presentation
-│   ├── settings/          # application · data · domain · presentation
-│   └── onboarding/        # application · presentation (no data/domain — UI-only)
+├── features/             # 19 slices. All four layers unless noted.
+│   ├── aitools/           # festive / headshots / reimagine
+│   ├── auth/
+│   ├── calendar/          # calendar + schedules
+│   ├── company/           # company-brand surfaces
+│   ├── compose/           # "Write post"
+│   ├── engagement/        # comments + connections habits
+│   ├── home/
+│   ├── missions/          # the roadmap missions
+│   ├── notifications/
+│   ├── onboarding/
+│   ├── persona/
+│   ├── planner/           # the week — article, posts, scripts
+│   ├── plexa/             # the Plexa day chat
+│   ├── posts/
+│   ├── preferences/       # NO presentation/ — a shared state slice other
+│   │                      # slices' UI reads; it owns no screen of its own
+│   ├── pricing/
+│   ├── settings/
+│   ├── studio/
+│   └── topics/
 │
 ├── theme/                 # AppColors, AppTextStyles, AppThemeMode
 └── l10n/                  # ARB localisation files
@@ -112,9 +124,9 @@ flutter run -t lib/main_mock.dart
 
 No network, no live API, no Firebase config required — the app resolves the
 `Mock*` repositories, which read the bundled fixtures under `assets/mock/`
-(`auth/`, `home/`, `posts/`, `odyssey/`, `analytics/`, `notifications/`,
-`settings/`) via `core/mock/mock_api.dart`. Ideal for UI work, demos, and
-widget/golden tests.
+via `core/mock/mock_api.dart`. Ideal for UI work, demos, and widget/golden
+tests. (The fixture set tracks the slices; see `assets/mock/` for what is
+actually there rather than a list here, which is what went stale last time.)
 
 ---
 
@@ -169,8 +181,51 @@ Every feature slice follows the same internal layering:
 - **`presentation/`** — pages and widgets. UI only; reads state from
   `application/` controllers.
 
-`onboarding` is intentionally lighter (`application/` + `presentation/` only) —
-it is a UI-only flow with no repository or persisted entities.
+`preferences` is the one slice with no `presentation/`. It owns no screen; it
+holds the user's preferences as shared state that other slices' UI reads, so
+it stops at `application/`. (`onboarding` was once listed as lighter too — it
+has since grown a full `domain/` and `data/`, and is now an ordinary slice.)
+
+---
+
+## Where state lives — and when `setState` is allowed
+
+This is the rule most often broken, so it is written out rather than implied.
+
+**`application/` owns anything that outlives the widget or that two parts of
+the app must agree on.** In practice that means:
+
+- in-flight flags for an async use case (`_busy`, `_saving`, `_submitting`)
+- the result or error of a repository call
+- anything a second screen would need to observe
+- any decision about what to send, or whether something is complete
+
+**`setState` is correct, and not a violation, for state that is genuinely
+local to one widget and has no meaning outside it:** a `TextEditingController`
+or `FocusNode`, an animation flag, a press highlight, an expanded/collapsed
+section, a password-visibility toggle, which tab of a local control is
+selected.
+
+The test is not "does this rebuild UI" — all state does. The test is: **if the
+widget were disposed mid-operation, or a second screen asked the same
+question, would the answer be wrong?** If yes, it belongs in a controller.
+
+That is not pedantry. Every one of these shipped as a user-visible defect
+because an async operation's state sat on a disposable widget:
+
+| symptom | cause |
+|---|---|
+| signed in on disk, stuck on the login screen | the post-auth router handoff ran on the page and was skipped once the page was disposed |
+| two concurrent season-advance writes | three cards each held their own `_busy`, so only the tapped one disabled |
+| 800 XP charged for a poster with no logo | half an operation's state on the widget, half on the controller; the form's gate could not see both |
+| pausing one schedule greyed out every other row | one screen-wide `_busy` cannot say *which* row is working |
+| a failed reschedule vanished without trace | the failure was recorded after a `mounted` check, so leaving the screen discarded it |
+
+**Reaching for a repository from `presentation/` is always wrong**, including
+for a single call — `import '../../data/...'` in a page or widget reverses the
+dependency arrow the whole structure rests on, and is what leaves an
+operation's state with nowhere to live but the widget. The two are the same
+defect seen from different sides.
 
 ---
 

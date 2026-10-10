@@ -152,8 +152,8 @@ abstract class _$FestiveController extends $AsyncNotifier<FestiveGallery> {
   }
 }
 
-/// One run of the customizer: generate a poster, then save it somewhere it can
-/// be used.
+/// One run of the customizer: pick a logo, generate a poster, then save it
+/// somewhere it can be used.
 ///
 /// Scoped per template id so opening a second template does not show the first
 /// one's poster. Without the family, closing and reopening the sheet on a
@@ -162,16 +162,16 @@ abstract class _$FestiveController extends $AsyncNotifier<FestiveGallery> {
 @ProviderFor(FestivePosterController)
 final festivePosterControllerProvider = FestivePosterControllerFamily._();
 
-/// One run of the customizer: generate a poster, then save it somewhere it can
-/// be used.
+/// One run of the customizer: pick a logo, generate a poster, then save it
+/// somewhere it can be used.
 ///
 /// Scoped per template id so opening a second template does not show the first
 /// one's poster. Without the family, closing and reopening the sheet on a
 /// different tile would surface a stale image that belongs to another design.
 final class FestivePosterControllerProvider
-    extends $NotifierProvider<FestivePosterController, FestivePosterState> {
-  /// One run of the customizer: generate a poster, then save it somewhere it can
-  /// be used.
+    extends $NotifierProvider<FestivePosterController, FestiveCustomizerState> {
+  /// One run of the customizer: pick a logo, generate a poster, then save it
+  /// somewhere it can be used.
   ///
   /// Scoped per template id so opening a second template does not show the first
   /// one's poster. Without the family, closing and reopening the sheet on a
@@ -202,10 +202,10 @@ final class FestivePosterControllerProvider
   FestivePosterController create() => FestivePosterController();
 
   /// {@macro riverpod.override_with_value}
-  Override overrideWithValue(FestivePosterState value) {
+  Override overrideWithValue(FestiveCustomizerState value) {
     return $ProviderOverride(
       origin: this,
-      providerOverride: $SyncValueProvider<FestivePosterState>(value),
+      providerOverride: $SyncValueProvider<FestiveCustomizerState>(value),
     );
   }
 
@@ -222,10 +222,10 @@ final class FestivePosterControllerProvider
 }
 
 String _$festivePosterControllerHash() =>
-    r'ae2986b796202a39c7bf55ff4144298d92ee9346';
+    r'd8c206ff0319c9b41216ef93b47d8adc1b44d7f5';
 
-/// One run of the customizer: generate a poster, then save it somewhere it can
-/// be used.
+/// One run of the customizer: pick a logo, generate a poster, then save it
+/// somewhere it can be used.
 ///
 /// Scoped per template id so opening a second template does not show the first
 /// one's poster. Without the family, closing and reopening the sheet on a
@@ -235,9 +235,9 @@ final class FestivePosterControllerFamily extends $Family
     with
         $ClassFamilyOverride<
           FestivePosterController,
-          FestivePosterState,
-          FestivePosterState,
-          FestivePosterState,
+          FestiveCustomizerState,
+          FestiveCustomizerState,
+          FestiveCustomizerState,
           String
         > {
   FestivePosterControllerFamily._()
@@ -249,8 +249,8 @@ final class FestivePosterControllerFamily extends $Family
         isAutoDispose: true,
       );
 
-  /// One run of the customizer: generate a poster, then save it somewhere it can
-  /// be used.
+  /// One run of the customizer: pick a logo, generate a poster, then save it
+  /// somewhere it can be used.
   ///
   /// Scoped per template id so opening a second template does not show the first
   /// one's poster. Without the family, closing and reopening the sheet on a
@@ -263,27 +263,29 @@ final class FestivePosterControllerFamily extends $Family
   String toString() => r'festivePosterControllerProvider';
 }
 
-/// One run of the customizer: generate a poster, then save it somewhere it can
-/// be used.
+/// One run of the customizer: pick a logo, generate a poster, then save it
+/// somewhere it can be used.
 ///
 /// Scoped per template id so opening a second template does not show the first
 /// one's poster. Without the family, closing and reopening the sheet on a
 /// different tile would surface a stale image that belongs to another design.
 
-abstract class _$FestivePosterController extends $Notifier<FestivePosterState> {
+abstract class _$FestivePosterController
+    extends $Notifier<FestiveCustomizerState> {
   late final _$args = ref.$arg as String;
   String get templateId => _$args;
 
-  FestivePosterState build(String templateId);
+  FestiveCustomizerState build(String templateId);
   @$mustCallSuper
   @override
   void runBuild() {
-    final ref = this.ref as $Ref<FestivePosterState, FestivePosterState>;
+    final ref =
+        this.ref as $Ref<FestiveCustomizerState, FestiveCustomizerState>;
     final element =
         ref.element
             as $ClassProviderElement<
-              AnyNotifier<FestivePosterState, FestivePosterState>,
-              FestivePosterState,
+              AnyNotifier<FestiveCustomizerState, FestiveCustomizerState>,
+              FestiveCustomizerState,
               Object?,
               Object?
             >;

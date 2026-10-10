@@ -6,7 +6,6 @@ import '../../../preferences/domain/user_preferences.dart';
 import '../../../preferences/application/preferences_controller.dart';
 import 'settings_section.dart';
 import '../../../../core/platform/image_picking.dart';
-import '../../data/settings_repositories.dart';
 
 /// **Company Brand Details** — company-brand users only.
 ///
@@ -102,11 +101,8 @@ class _CompanyBrandSectionState extends ConsumerState<CompanyBrandSection> {
       switch (picked) {
         case PickedImage(:final String dataUri):
           final String url = await ref
-              .read(settingsRepositoryProvider)
-              .uploadImage(dataUri);
-          await ref
               .read(preferencesControllerProvider.notifier)
-              .saveCompanyBrand(companyLogoUrl: url);
+              .uploadCompanyLogo(dataUri);
           if (!mounted) return;
           setState(() => _logoUrl = url);
           note = 'Logo saved.';

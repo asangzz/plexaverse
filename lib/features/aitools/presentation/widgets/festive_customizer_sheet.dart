@@ -8,8 +8,6 @@ import '../../domain/festive_template.dart';
 import 'ai_tool_image.dart';
 import 'ai_tool_note.dart';
 import 'ai_tool_sheet.dart';
-import '../../../../core/platform/image_picking.dart';
-import '../../data/ai_tools_repositories.dart';
 
 /// **Customize poster** — the web's `FestiveCustomizer`.
 ///
@@ -20,14 +18,18 @@ import '../../data/ai_tools_repositories.dart';
 ///
 /// ## Three deliberate departures
 ///
-/// • **No logo upload.** The web reads a file into a data URI with
-///   `FileReader`. This app ships no image-picker package and `pubspec.yaml`
-///   is not this slice's to edit, so the control states the position instead
-///   of opening nothing. Everything else on the form works, and the poster
-///   generates without a logo — `logoUrl` is optional server-side.
-/// • **Preset swatches instead of a colour wheel.** There is no colour-picker
-///   package either. The presets are Zave's own signal colours plus white, and
-///   a hex field takes anything else. Note that the swatch renders the chosen
+/// • **The logo is uploaded, not inlined.** The web reads the file into a
+///   data URI with `FileReader` and posts that inline as `logoUrl`. A phone
+///   photo is still megabytes after the picker downscales it, and base64 adds
+///   a third on top, so sending it with the generate call would park that
+///   upload in front of the 800 XP round-trip. The pick uploads to storage
+///   immediately instead — while the user is still typing — and generate
+///   sends the short URL it returned. Nothing about that upload is kept here:
+///   it is [FestivePosterController]'s, because its in-flight flag and
+///   Generate's have to be the same gate.
+/// • **Preset swatches instead of a colour wheel.** The app ships no
+///   colour-picker package. The presets are Zave's signal colours plus white,
+///   and a hex field takes anything else. Note the swatch renders the chosen
 ///   value: this is the one place in the app where a colour is DATA rather
 ///   than chrome, so it is not bound by "colour only names a status".
 /// • **"Save to my images" instead of "Use as post".** The web stashes the
@@ -57,41 +59,18 @@ class _FestiveCustomizerSheetState
 
   DateTime? _date;
 
-  /// The uploaded logo's URL, once the user has picked one. Uploaded on pick
-  /// rather than on submit so a slow upload does not sit in front of the
-  /// generate button.
-  String? _logoUrl;
-  bool _uploadingLogo = false;
-
-  Future<void> _pickLogo() async {
-    setState(() => _uploadingLogo = true);
-    String? note;
-    try {
-      final ImagePickResult picked = await ref
-          .read(imagePickingProvider)
-          .pick(ImageSourceKind.gallery);
-      switch (picked) {
-        case PickedImage(:final String dataUri):
-          final String url = await ref
-              .read(aiToolsRepositoryProvider)
-              .uploadDataUri(dataUri);
-          if (!mounted) return;
-          setState(() => _logoUrl = url);
-        // Closing the picker is a decision.
-        case ImagePickCancelled():
-          break;
-        case ImagePickFailure(:final String? message):
-          note = message ?? 'Could not open your photos.';
-      }
-    } on Object {
-      note = "That logo didn't upload. Try again.";
-    } finally {
-      if (mounted) setState(() => _uploadingLogo = false);
-    }
-    if (note == null || !mounted) return;
+  /// The sheet's whole part in the logo flow: say what came back.
+  ///
+  /// The pick, the upload and the flag that gates the form are the
+  /// controller's — see [FestivePosterController.pickLogo]. Only the snackbar
+  /// is left here, because a `ScaffoldMessenger` needs a `BuildContext` and
+  /// that is the one thing application/ cannot hold.
+  Future<void> _pickLogo(FestivePosterController controller) async {
+    final String? message = await controller.pickLogo();
+    if (message == null || !mounted) return;
     ScaffoldMessenger.of(context)
       ..hideCurrentSnackBar()
-      ..showSnackBar(SnackBar(content: Text(note, style: ZaveType.body)));
+      ..showSnackBar(SnackBar(content: Text(message, style: ZaveType.body)));
   }
 
   /// `RRGGBB`, already upper-cased by the caller.
@@ -119,8 +98,9 @@ class _FestiveCustomizerSheetState
     super.dispose();
   }
 
+  /// What the user typed, and only that. `logoUrl` is filled in by the
+  /// controller on its way out — see [FestivePosterController.generate].
   FestiveCustomizations get _values => FestiveCustomizations(
-    logoUrl: _logoUrl,
     companyName: _company.text,
     eventName: _event.text,
     additionalText: _message.text,
@@ -163,7 +143,7 @@ class _FestiveCustomizerSheetState
 
   @override
   Widget build(BuildContext context) {
-    final FestivePosterState poster = ref.watch(
+    final FestiveCustomizerState customizer = ref.watch(
       festivePosterControllerProvider(widget.template.id),
     );
     final FestivePosterController controller = ref.read(
@@ -183,33 +163,33 @@ class _FestiveCustomizerSheetState
           child: Stack(
             children: <Widget>[
               AiToolImage(
-                source: poster.hasPoster
-                    ? poster.poster!.imageUrl
+                source: customizer.run.hasPoster
+                    ? customizer.run.poster!.imageUrl
                     : widget.template.previewUrl,
                 aspectRatio: 1,
-                label: poster.hasPoster ? null : 'Preview',
+                label: customizer.run.hasPoster ? null : 'Preview',
               ),
-              if (poster.busy == FestivePosterBusy.generating)
+              if (customizer.run.busy == FestivePosterBusy.generating)
                 const Positioned.fill(child: _GeneratingVeil()),
             ],
           ),
         ),
         SizedBox(height: ZaveSpace.xl),
 
-        if (poster.error != null) ...<Widget>[
+        if (customizer.run.error != null) ...<Widget>[
           AiToolNoteRow(
-            title: poster.insufficientXp
+            title: customizer.run.insufficientXp
                 ? 'Not enough XP'
                 : 'That did not work',
-            message: poster.error!,
+            message: customizer.run.error!,
           ),
           SizedBox(height: ZaveSpace.lg),
         ],
 
-        if (poster.hasPoster)
+        if (customizer.run.hasPoster)
           _Result(
-            savedUrl: poster.savedUrl,
-            saving: poster.busy == FestivePosterBusy.saving,
+            savedUrl: customizer.run.savedUrl,
+            saving: customizer.run.busy == FestivePosterBusy.saving,
             onSave: controller.save,
             onRegenerate: controller.reset,
           )
@@ -220,22 +200,23 @@ class _FestiveCustomizerSheetState
   }
 
   List<Widget> _form(FestivePosterController controller) {
-    final FestivePosterState poster = ref.watch(
+    final FestiveCustomizerState customizer = ref.watch(
       festivePosterControllerProvider(widget.template.id),
     );
-    // One gate for the whole form, and the logo upload has to be part of it.
-    // That upload lives in this widget's State, so `poster.isBusy` cannot see
-    // it: before it was folded in here, Generate stayed live through an upload,
-    // the tap read `_logoUrl` while it was still null, and the user was charged
-    // 800 XP for a poster missing the logo they had just picked.
-    final bool busy = poster.isBusy || _uploadingLogo;
+    // One gate for the whole form, and it is now one field rather than an
+    // `||` of two. The half that used to live on this widget — the logo
+    // upload's in-flight flag — was invisible to the other: Generate stayed
+    // live through an upload, the tap read a `logoUrl` that was still null,
+    // and the user was charged 800 XP for a poster missing the logo they had
+    // just picked.
+    final bool busy = customizer.busy;
 
     return <Widget>[
       Row(
         children: <Widget>[
           Expanded(
             child: Text(
-              _logoUrl == null
+              customizer.logoUrl == null
                   ? 'Add your logo (optional)'
                   : 'Logo added — it will be composited onto the poster.',
               style: ZaveType.caption,
@@ -243,9 +224,9 @@ class _FestiveCustomizerSheetState
           ),
           SizedBox(width: ZaveSpace.md),
           ZaveButton(
-            label: _logoUrl == null ? 'Choose' : 'Replace',
-            busy: _uploadingLogo,
-            onPressed: busy ? null : _pickLogo,
+            label: customizer.logoUrl == null ? 'Choose' : 'Replace',
+            busy: customizer.uploadingLogo,
+            onPressed: busy ? null : () => _pickLogo(controller),
           ),
         ],
       ),
@@ -335,20 +316,24 @@ class _FestiveCustomizerSheetState
       ),
       SizedBox(height: ZaveSpace.lg),
 
-      // Two different blocks, deliberately, because they want different faces.
-      // While the CONTROLLER is working, `busy` stops the dispatch on its own
-      // and `onPressed` stays non-null — a null one would dim the button to 50%
-      // and make its own spinner nearly invisible. While the LOGO is uploading
-      // the button must still refuse the tap, but it must not spin: the spinner
-      // here means "your poster is being made", the preview veil keys off
-      // `generating` alone, and a button claiming to generate while nothing is
-      // generating is a lie the user would wait on.
+      // Two different halves of `busy`, deliberately, because they want
+      // different faces. While the POSTER is being made or saved, the spinner
+      // stops the dispatch on its own and `onPressed` stays non-null — a null
+      // one would dim the button to 50% and make its own spinner nearly
+      // invisible. While the LOGO is uploading the button must still refuse
+      // the tap, but it must not spin: the spinner here means "your poster is
+      // being made", the preview veil keys off `generating` alone, and a
+      // button claiming to generate while nothing is generating is a lie the
+      // user would wait on. `generate` refuses on either half regardless —
+      // this only decides which refusal the user sees.
       ZaveButton(
         label: 'Generate poster',
         kind: ZaveButtonKind.primary,
         expand: true,
-        busy: poster.isBusy,
-        onPressed: _uploadingLogo ? null : () => controller.generate(_values),
+        busy: customizer.run.isBusy,
+        onPressed: customizer.uploadingLogo
+            ? null
+            : () => controller.generate(_values),
       ),
     ];
   }

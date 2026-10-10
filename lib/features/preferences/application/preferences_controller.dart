@@ -144,6 +144,23 @@ class PreferencesController extends _$PreferencesController {
 
   /// Company-brand identity. Company users only — these anchor the voice every
   /// company post is written in.
+  /// Uploads a company logo and saves it to the brand, as one operation.
+  ///
+  /// Both halves here rather than on the widget: the upload is only ever
+  /// wanted in order to save, and splitting them is what let a sheet hold
+  /// half the operation's state — the settings logo picker was reading the
+  /// repository itself, which is the inward dependency rule backwards.
+  ///
+  /// Returns the stored URL. Throws on failure; the caller decides what to
+  /// say, because it is the only thing that knows where the user is.
+  Future<String> uploadCompanyLogo(String dataUri) async {
+    final String url = await ref
+        .read(settingsRepositoryProvider)
+        .uploadImage(dataUri);
+    await saveCompanyBrand(companyLogoUrl: url);
+    return url;
+  }
+
   Future<void> saveCompanyBrand({
     String? companyIndustry,
     String? companyWebsite,

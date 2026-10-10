@@ -5,12 +5,12 @@ import '../../../../core/ui/zave/zave_kit.dart';
 import '../../../auth/application/google_link_controller.dart';
 import '../../../auth/application/sign_out_controller.dart';
 import '../../../auth/domain/auth_repository.dart';
+import '../../application/privacy_controller.dart';
 import '../../application/settings_controllers.dart';
 import '../../domain/settings_repository.dart';
 import 'settings_section.dart';
 import 'dart:convert';
 import 'package:flutter/services.dart';
-import '../../data/settings_repositories.dart';
 
 /// **Account** — who you are signed in as, and the way out.
 ///
@@ -372,9 +372,10 @@ class DataPrivacySection extends ConsumerStatefulWidget {
   ConsumerState<DataPrivacySection> createState() => _DataPrivacySectionState();
 }
 
+/// Stateful only for `mounted`: every one of these flows crosses a dialog the
+/// user can sit in indefinitely, and the request state they used to carry now
+/// lives on [PrivacyController] with the use cases themselves.
 class _DataPrivacySectionState extends ConsumerState<DataPrivacySection> {
-  bool _busy = false;
-
   void _say(String message) {
     if (!mounted) return;
     showSettingsMessage(context, message);
@@ -382,10 +383,12 @@ class _DataPrivacySectionState extends ConsumerState<DataPrivacySection> {
 
   /// DPDP s14 — who may act for the user if they cannot act for themselves.
   Future<void> _nominate() async {
-    final Nominee? existing = await ref
-        .read(settingsRepositoryProvider)
-        .fetchNomination()
-        .catchError((_) => null);
+    final PrivacyController privacy = ref.read(
+      privacyControllerProvider.notifier,
+    );
+    // Null covers both "none on file" and "the read failed" — see the
+    // controller: a read that cannot be reached must not block the naming.
+    final Nominee? existing = await privacy.nomination();
     if (!mounted) return;
 
     final Nominee? next = await showDialog<Nominee>(
@@ -394,8 +397,7 @@ class _DataPrivacySectionState extends ConsumerState<DataPrivacySection> {
     );
     if (next == null || !mounted) return;
 
-    final String? failure =
-        await ref.read(settingsRepositoryProvider).saveNomination(next);
+    final String? failure = await privacy.saveNomination(next);
     _say(failure ?? 'Saved. ${next.name} can act for you.');
   }
 
@@ -408,51 +410,51 @@ class _DataPrivacySectionState extends ConsumerState<DataPrivacySection> {
     );
     if (entry == null || !mounted) return;
 
-    try {
-      final int days = await ref
-          .read(settingsRepositoryProvider)
-          .raiseGrievance(category: entry.category, message: entry.message);
-      // The deadline comes from the server — it is stamped on the row, and
-      // quoting a constant here could promise a date the record disagrees
-      // with.
-      _say('Raised. We will respond within $days days.');
-    } on Object {
-      _say("We couldn't submit that. Try again.");
-    }
+    final int? days = await ref
+        .read(privacyControllerProvider.notifier)
+        .raiseGrievance(category: entry.category, message: entry.message);
+    // The deadline comes from the server — it is stamped on the row, and
+    // quoting a constant here could promise a date the record disagrees with.
+    _say(
+      days == null
+          ? "We couldn't submit that. Try again."
+          : 'Raised. We will respond within $days days.',
+    );
   }
 
   Future<void> _export() async {
-    setState(() => _busy = true);
-    try {
-      final Map<String, dynamic> data =
-          await ref.read(settingsRepositoryProvider).fetchDataExport();
-      if (!mounted) return;
-      // Shown, not downloaded: the app has no file-save path wired up, and a
-      // body the user can read and share beats a file they cannot open.
-      await showModalBottomSheet<void>(
-        context: context,
-        backgroundColor: Colors.transparent,
-        isScrollControlled: true,
-        builder: (BuildContext ctx) => _ExportSheet(json: data),
-      );
-    } on Object {
+    final Map<String, dynamic>? data = await ref
+        .read(privacyControllerProvider.notifier)
+        .export();
+    if (!mounted) return;
+    if (data == null) {
       _say("We couldn't build your export. Try again.");
-    } finally {
-      if (mounted) setState(() => _busy = false);
+      return;
     }
+    // Shown, not downloaded: the app has no file-save path wired up, and a
+    // body the user can read and share beats a file they cannot open.
+    await showModalBottomSheet<void>(
+      context: context,
+      backgroundColor: Colors.transparent,
+      isScrollControlled: true,
+      builder: (BuildContext ctx) => _ExportSheet(json: data),
+    );
   }
 
   Future<void> _confirmDelete() async {
+    final PrivacyController privacy = ref.read(
+      privacyControllerProvider.notifier,
+    );
     // The server bcrypt-compares a password only when the row HAS one, and
     // refuses the whole call with PASSWORD_REQUIRED when it has one and none
     // arrives. A Google-only account has nothing to compare, and demanding a
     // password there would block exactly the people who cannot produce one
     // from exercising an s12 right. Null is "we don't know yet" — the status
-    // read failed, and it returns null rather than throwing — so we ask
+    // read failed, and it answers null rather than throwing — so we ask
     // without insisting: a status endpoint being down must never be the thing
-    // that stops an erasure.
-    final bool? hasPassword =
-        ref.read(googleLinkControllerProvider).value?.hasPassword;
+    // that stops an erasure. Read once here and used twice below, so the
+    // dialog and the failure sentence cannot describe different accounts.
+    final bool? hasPassword = privacy.hasPassword;
 
     final String? password = await showDialog<String>(
       context: context,
@@ -464,39 +466,33 @@ class _DataPrivacySectionState extends ConsumerState<DataPrivacySection> {
     // which is what the server expects from a Google-only row.
     if (password == null || !mounted) return;
 
-    setState(() => _busy = true);
-    try {
-      final List<String> retained = await ref
-          .read(settingsRepositoryProvider)
-          .deleteAccount(password: password);
-      if (!mounted) return;
-      _say(
-        retained.isEmpty
-            ? 'Your account and data have been deleted.'
-            : 'Account deleted. Kept for legal reasons: ${retained.join(', ')}.',
-      );
-      // The account is gone; the session has nothing left to point at.
-      await ref.read(signOutControllerProvider.notifier).signOut();
-    } on Object {
+    // The sign-out that follows a successful erasure is the controller's now,
+    // not a line after this await: it must happen whether or not this screen
+    // is still here to watch it.
+    final ErasureOutcome outcome = await privacy.erase(password: password);
+    _say(switch (outcome) {
+      ErasureSucceeded(:final List<String> retained) => retained.isEmpty
+          ? 'Your account and data have been deleted.'
+          : 'Account deleted. Kept for legal reasons: ${retained.join(', ')}.',
       // This route's rejections are not translated into a typed result yet, so
       // a wrong password and an unreachable server land here identically. Name
       // both where a password was in play rather than sending the user off to
       // retype one that was never the problem.
-      _say(
-        hasPassword == false
-            ? "We couldn't delete your account. Nothing was changed."
-            : "We couldn't delete your account — the password may be wrong, "
-                  "or we couldn't reach the server. Nothing was changed.",
-      );
-    } finally {
-      if (mounted) setState(() => _busy = false);
-    }
+      ErasureFailed() => hasPassword == false
+          ? "We couldn't delete your account. Nothing was changed."
+          : "We couldn't delete your account — the password may be wrong, "
+                "or we couldn't reach the server. Nothing was changed.",
+    });
   }
 
   @override
   Widget build(BuildContext context) {
     final AsyncValue<ConsentLedger> consents =
         ref.watch(consentControllerProvider);
+    // Watched, not read: this is the export's and the erasure's in-flight
+    // state, and watching it is also what holds the autoDispose controller
+    // open for the length of a request this screen started.
+    final bool busy = ref.watch(privacyControllerProvider);
 
     return SettingsSection(
       title: 'Your data',
@@ -539,8 +535,8 @@ class _DataPrivacySectionState extends ConsumerState<DataPrivacySection> {
             child: ZaveButton(
               label: 'Download my data',
               icon: const Icon(Icons.download_outlined),
-              busy: _busy,
-              onPressed: _busy ? null : _export,
+              busy: busy,
+              onPressed: busy ? null : _export,
             ),
           ),
           SizedBox(height: ZaveSpace.lg),
@@ -549,8 +545,8 @@ class _DataPrivacySectionState extends ConsumerState<DataPrivacySection> {
             child: ZaveButton(
               label: 'Delete my account',
               icon: const Icon(Icons.person_remove_outlined),
-              busy: _busy,
-              onPressed: _busy ? null : _confirmDelete,
+              busy: busy,
+              onPressed: busy ? null : _confirmDelete,
             ),
           ),
           const SettingsDivider(),
@@ -559,7 +555,7 @@ class _DataPrivacySectionState extends ConsumerState<DataPrivacySection> {
             child: ZaveButton(
               label: 'Name someone to act for me',
               icon: const Icon(Icons.person_add_alt_outlined),
-              onPressed: _busy ? null : _nominate,
+              onPressed: busy ? null : _nominate,
             ),
           ),
           SizedBox(height: ZaveSpace.lg),
@@ -568,7 +564,7 @@ class _DataPrivacySectionState extends ConsumerState<DataPrivacySection> {
             child: ZaveButton(
               label: 'Raise a concern',
               icon: const Icon(Icons.flag_outlined),
-              onPressed: _busy ? null : _raiseGrievance,
+              onPressed: busy ? null : _raiseGrievance,
             ),
           ),
         ],

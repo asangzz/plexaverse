@@ -8,9 +8,7 @@ import '../../../../core/links/linkedin.dart';
 import '../../../../core/ui/widgets/open_link.dart';
 import '../../../../core/ui/zave/zave_kit.dart';
 import '../../application/planner_controller.dart';
-import '../../data/planner_repositories.dart';
 import '../../../posts/application/post_library_controllers.dart';
-import '../../../posts/data/post_library_repositories.dart';
 import '../../../posts/domain/library_post.dart';
 import '../../domain/plan_slot.dart';
 import '../../domain/video_script.dart';
@@ -454,30 +452,13 @@ class _PlannerBody extends StatelessWidget {
     );
   }
 
-  /// The body, fetched when it is actually needed.
-  ///
-  /// The summary does not carry it — it was ninety percent of that response
-  /// for text the card never shows. Returns null if the fetch fails, and the
-  /// caller says so rather than opening an empty sheet or silently copying
-  /// nothing.
-  Future<String?> _articleBody(WidgetRef ref, ArticleState a) async {
-    if (a.article!.hasBody) return a.article!.body;
-    try {
-      return await ref
-          .read(plannerRepositoryProvider)
-          .fetchArticleBody(week: a.weekNumber, season: a.season);
-    } on Object {
-      return null;
-    }
-  }
-
   Future<void> _openArticle(
     BuildContext context,
     WidgetRef ref,
     ArticleState a,
   ) async {
     if (a.article == null) return;
-    final String? body = await _articleBody(ref, a);
+    final String? body = await ref.read(articleControllerProvider.notifier).fetchArticleBody(a);
     if (!context.mounted) return;
     if (body == null) {
       _say(context, "The article didn't load. Try again.");
@@ -498,7 +479,7 @@ class _PlannerBody extends StatelessWidget {
     ArticleState a,
   ) async {
     if (a.article == null) return;
-    final String? body = await _articleBody(ref, a);
+    final String? body = await ref.read(articleControllerProvider.notifier).fetchArticleBody(a);
     if (!context.mounted) return;
     if (body == null || body.isEmpty) {
       _say(context, "The article didn't load, so there was nothing to copy.");
@@ -941,37 +922,29 @@ class _SlotSheetState extends ConsumerState<_SlotSheet> {
 
   // ── Editing ───────────────────────────────────────────────────────────────
 
-  /// Writes the title to the SLOT and the body to the POST.
+  /// The Save button, and nothing else.
   ///
-  /// Two rows, two calls, deliberately — the planner slot owns the title and
-  /// the post owns the words, and there is no endpoint that writes both.
+  /// Which row gets written, in what order, and what to say when one refuses
+  /// is [PlannerController.saveSlotEdits] now. This used to do all of it from
+  /// here — including reaching into `posts/data/` for a repository the sheet
+  /// had no business holding, and then invalidating that slice's post cache
+  /// by hand because it had just written around it. The server trap that
+  /// shapes the call (only `content` may go up, or the planner day is blanked)
+  /// is documented there, where the call actually is.
   ///
-  /// The body goes through `update(id, content:)` and nothing else. That is
-  /// not tidiness: `updateUserPost` detaches the post from its planner day
-  /// whenever `scheduledFor` is PRESENT in the body, unchanged or not, so a
-  /// "save everything" call would silently blank the day it was saving.
-  Future<void> _save(PlanSlot slot) async {
-    final String title = _title.text.trim();
-    final String body = _body.text;
+  /// Null means "untouched": the dirty flags stay here because only the field
+  /// can tell a typed edit from a value the sheet filled in.
+  Future<void> _save() async {
     setState(() => _saving = true);
     String? failure;
     try {
-      if (_titleDirty && title.isNotEmpty && title != slot.title) {
-        await ref
-            .read(plannerControllerProvider.notifier)
-            .rename(widget.slotIndex, title);
-      }
-      final String? postId = slot.postId;
-      if (_bodyDirty && postId != null && body.trim().isNotEmpty) {
-        await ref
-            .read(postLibraryRepositoryProvider)
-            .update(postId, content: body);
-        ref.invalidate(postDetailProvider(postId));
-      }
-    } on Object catch (e) {
-      failure = e is PlannerGenerateFailure
-          ? (e.message ?? 'That did not save.')
-          : 'That did not save. Try again.';
+      failure = await ref
+          .read(plannerControllerProvider.notifier)
+          .saveSlotEdits(
+            widget.slotIndex,
+            title: _titleDirty ? _title.text : null,
+            body: _bodyDirty ? _body.text : null,
+          );
     } finally {
       if (mounted) setState(() => _saving = false);
     }
@@ -1337,7 +1310,7 @@ class _SlotSheetState extends ConsumerState<_SlotSheet> {
             label: 'Save changes',
             expand: true,
             busy: _saving,
-            onPressed: _saving ? null : () => _save(slot),
+            onPressed: _saving ? null : _save,
           ),
         ],
         if (_canGenerate(slot) || _canRegenerate(slot)) ...<Widget>[
