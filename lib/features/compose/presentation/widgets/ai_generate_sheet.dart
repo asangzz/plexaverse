@@ -63,21 +63,38 @@ class _AiGenerateSheetState extends ConsumerState<AiGenerateSheet> {
   final TextEditingController _topic = TextEditingController();
   final TextEditingController _reference = TextEditingController();
 
-  ComposeTone _tone = ComposeTone.professional;
-  ComposeLength _length = ComposeLength.medium;
+  // The four selections below are notifiers rather than plain fields because
+  // each one is read by exactly one small block of this sheet. Tapping a tone
+  // chip used to rebuild all 190 lines of it — the topic field, the scroll
+  // view, the poster row, the buttons — to invert one chip.
+
+  final ValueNotifier<ComposeTone> _tone = ValueNotifier<ComposeTone>(
+    ComposeTone.professional,
+  );
+  final ValueNotifier<ComposeLength> _length = ValueNotifier<ComposeLength>(
+    ComposeLength.medium,
+  );
 
   /// Null is "no style", and the default — the poster every generation produced
   /// before the reference library existed.
-  String? _posterTag;
+  final ValueNotifier<String?> _posterTag = ValueNotifier<String?>(null);
 
   /// Most posts do not want a reference, and an empty textarea sitting on the
   /// sheet reads as a field somebody forgot to fill in.
-  bool _showReference = false;
+  ///
+  /// Still owned here, not by [_ReferenceField] — see that widget's note: the
+  /// sheet is what clears the controller on remove, and splitting the flag from
+  /// the clear is how a cleared field and a visible one get out of step.
+  final ValueNotifier<bool> _showReference = ValueNotifier<bool>(false);
 
   @override
   void dispose() {
     _topic.dispose();
     _reference.dispose();
+    _tone.dispose();
+    _length.dispose();
+    _posterTag.dispose();
+    _showReference.dispose();
     super.dispose();
   }
 
@@ -89,9 +106,9 @@ class _AiGenerateSheetState extends ConsumerState<AiGenerateSheet> {
         .read(composeActionsProvider.notifier)
         .generate(
           topic: topic,
-          tone: _tone,
-          length: _length,
-          posterTag: _posterTag,
+          tone: _tone.value,
+          length: _length.value,
+          posterTag: _posterTag.value,
           reference: _reference.text.trim(),
         );
 
@@ -191,79 +208,101 @@ class _AiGenerateSheetState extends ConsumerState<AiGenerateSheet> {
                   SizedBox(height: ZaveSpace.xl),
                   Text('POSTER STYLE', style: ZaveType.kicker),
                   SizedBox(height: ZaveSpace.md),
-                  Wrap(
-                    spacing: ZaveSpace.sm,
-                    runSpacing: ZaveSpace.sm,
-                    children: <Widget>[
-                      // Explicit, and first. "No style" is the default and has
-                      // to be reachable again after a tap, or the first chip
-                      // the user tries becomes permanent.
-                      ZaveChip(
-                        label: 'None',
-                        selected: _posterTag == null,
-                        onTap: busy
-                            ? null
-                            : () => setState(() => _posterTag = null),
-                      ),
-                      for (final PosterTagOption option in styles)
-                        ZaveChip(
-                          label: option.label,
-                          selected: option.tag == _posterTag,
-                          onTap: busy
-                              ? null
-                              : () => setState(() => _posterTag = option.tag),
-                        ),
-                    ],
+                  ValueListenableBuilder<String?>(
+                    valueListenable: _posterTag,
+                    builder:
+                        (BuildContext context, String? selected, Widget? _) =>
+                            Wrap(
+                              spacing: ZaveSpace.sm,
+                              runSpacing: ZaveSpace.sm,
+                              children: <Widget>[
+                                // Explicit, and first. "No style" is the
+                                // default and has to be reachable again after a
+                                // tap, or the first chip the user tries becomes
+                                // permanent.
+                                ZaveChip(
+                                  label: 'None',
+                                  selected: selected == null,
+                                  onTap: busy
+                                      ? null
+                                      : () => _posterTag.value = null,
+                                ),
+                                for (final PosterTagOption option in styles)
+                                  ZaveChip(
+                                    label: option.label,
+                                    selected: option.tag == selected,
+                                    onTap: busy
+                                        ? null
+                                        : () => _posterTag.value = option.tag,
+                                  ),
+                              ],
+                            ),
                   ),
                 ],
 
                 SizedBox(height: ZaveSpace.xl),
                 Text('TONE', style: ZaveType.kicker),
                 SizedBox(height: ZaveSpace.md),
-                Wrap(
-                  spacing: ZaveSpace.sm,
-                  runSpacing: ZaveSpace.sm,
-                  children: <Widget>[
-                    for (final ComposeTone tone in ComposeTone.values)
-                      ZaveChip(
-                        label: tone.label,
-                        selected: tone == _tone,
-                        onTap: busy ? null : () => setState(() => _tone = tone),
-                      ),
-                  ],
+                ValueListenableBuilder<ComposeTone>(
+                  valueListenable: _tone,
+                  builder:
+                      (BuildContext context, ComposeTone selected, Widget? _) =>
+                          Wrap(
+                            spacing: ZaveSpace.sm,
+                            runSpacing: ZaveSpace.sm,
+                            children: <Widget>[
+                              for (final ComposeTone tone in ComposeTone.values)
+                                ZaveChip(
+                                  label: tone.label,
+                                  selected: tone == selected,
+                                  onTap: busy ? null : () => _tone.value = tone,
+                                ),
+                            ],
+                          ),
                 ),
 
                 SizedBox(height: ZaveSpace.xl),
                 Text('LENGTH', style: ZaveType.kicker),
                 SizedBox(height: ZaveSpace.md),
-                Wrap(
-                  spacing: ZaveSpace.sm,
-                  runSpacing: ZaveSpace.sm,
-                  children: <Widget>[
-                    for (final ComposeLength length in ComposeLength.values)
-                      ZaveChip(
-                        label: length.label,
-                        selected: length == _length,
-                        onTap: busy
-                            ? null
-                            : () => setState(() => _length = length),
+                ValueListenableBuilder<ComposeLength>(
+                  valueListenable: _length,
+                  builder:
+                      (
+                        BuildContext context,
+                        ComposeLength selected,
+                        Widget? _,
+                      ) => Wrap(
+                        spacing: ZaveSpace.sm,
+                        runSpacing: ZaveSpace.sm,
+                        children: <Widget>[
+                          for (final ComposeLength length
+                              in ComposeLength.values)
+                            ZaveChip(
+                              label: length.label,
+                              selected: length == selected,
+                              onTap: busy ? null : () => _length.value = length,
+                            ),
+                        ],
                       ),
-                  ],
                 ),
 
                 SizedBox(height: ZaveSpace.xl),
-                _ReferenceField(
-                  controller: _reference,
-                  open: _showReference,
-                  enabled: !busy,
-                  onOpen: () => setState(() => _showReference = true),
-                  // Removing clears the text as well as the box. Leaving it
-                  // behind would send a reference the user had just taken off
-                  // the screen.
-                  onRemove: () => setState(() {
-                    _showReference = false;
-                    _reference.clear();
-                  }),
+                ValueListenableBuilder<bool>(
+                  valueListenable: _showReference,
+                  builder: (BuildContext context, bool open, Widget? _) =>
+                      _ReferenceField(
+                        controller: _reference,
+                        open: open,
+                        enabled: !busy,
+                        onOpen: () => _showReference.value = true,
+                        // Removing clears the text as well as the box. Leaving
+                        // it behind would send a reference the user had just
+                        // taken off the screen.
+                        onRemove: () {
+                          _showReference.value = false;
+                          _reference.clear();
+                        },
+                      ),
                 ),
 
                 if (busy) ...<Widget>[

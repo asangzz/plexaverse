@@ -67,6 +67,13 @@ class _ComposePageState extends ConsumerState<ComposePage> {
   final TextEditingController _title = TextEditingController();
   final TextEditingController _body = TextEditingController();
 
+  /// Editor vs preview. A `setState` and not a notifier: it chooses between
+  /// `_Preview` and the whole thirteen-control editor, so the rebuild it
+  /// triggers is the rebuild that has to happen. Scoping it would mean a
+  /// builder around everything below [_ModeTabs] — `setState` with extra steps
+  /// — and `_editor` returns a `List<Widget>` spread straight into the
+  /// ZaveScrollView's ListView, so a builder would also have to collapse those
+  /// children into one Column to satisfy the type.
   bool _showPreview = false;
 
   @override

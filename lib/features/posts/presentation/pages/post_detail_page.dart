@@ -69,6 +69,10 @@ class _PostDetailPageState extends ConsumerState<PostDetailPage> {
   /// View mode vs edit mode. Genuinely this widget's: it is which face of one
   /// screen is showing, it means nothing to anyone else, and a screen that is
   /// gone is not in edit mode.
+  ///
+  /// Stays a `setState` rather than a notifier: it chooses between two whole
+  /// bodies, so the rebuild it triggers is the rebuild that has to happen. A
+  /// builder around the entire body would be `setState` with extra steps.
   bool _editing = false;
 
   /// True once the controllers have been seeded from the loaded post, so a
@@ -342,9 +346,6 @@ class _PostDetailPageState extends ConsumerState<PostDetailPage> {
   // ── Edit mode ────────────────────────────────────────────────────────────
 
   Widget _editBody(LibraryPost post, bool busy) {
-    final int length = _content.text.characters.length;
-    final bool empty = _content.text.trim().isEmpty;
-
     return ZaveScrollView(
       children: <Widget>[
         ZaveField(
@@ -354,28 +355,52 @@ class _PostDetailPageState extends ConsumerState<PostDetailPage> {
           helper: 'Only you see this. LinkedIn shows the body.',
         ),
         SizedBox(height: ZaveSpace.xl),
-        ZaveField(
-          controller: _content,
-          label: 'Post',
-          hint: 'Post content...',
-          minLines: 8,
-          maxLines: null,
-          maxLength: _charLimit,
-          error: empty ? 'A post needs some words.' : null,
-          onChanged: (String _) => setState(() {}),
-        ),
-        SizedBox(height: ZaveSpace.sm),
-        Align(
-          alignment: Alignment.centerRight,
-          child: Text(
-            '$length/$_charLimit',
-            // Amber past 90% of the limit, as on the web. Amber is "waiting /
-            // attention" in Zave; there is no red to escalate to, and none is
-            // needed — the field simply stops accepting input at the cap.
-            style: ZaveType.caption.copyWith(
-              color: length > _charWarnAt ? ZaveColors.amber : ZaveColors.ink50,
-            ),
-          ),
+
+        // The body field and its counter, and nothing else, redraw per
+        // keystroke. This used to be `onChanged: setState(() {})`, which
+        // rebuilt the whole screen — scaffold, poster, every button — to move
+        // a character count; that is how a text field starts dropping input on
+        // a slow phone. The controller is already a ValueNotifier, so there is
+        // no second copy of the text to keep in step with it.
+        ValueListenableBuilder<TextEditingValue>(
+          valueListenable: _content,
+          builder: (BuildContext context, TextEditingValue value, Widget? _) {
+            final int length = value.text.characters.length;
+            return Column(
+              // ZaveScrollView is a ListView, so its children are already full
+              // width; a Column inside one has to stretch to stay that way.
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: <Widget>[
+                ZaveField(
+                  controller: _content,
+                  label: 'Post',
+                  hint: 'Post content...',
+                  minLines: 8,
+                  maxLines: null,
+                  maxLength: _charLimit,
+                  error: value.text.trim().isEmpty
+                      ? 'A post needs some words.'
+                      : null,
+                ),
+                SizedBox(height: ZaveSpace.sm),
+                Align(
+                  alignment: Alignment.centerRight,
+                  child: Text(
+                    '$length/$_charLimit',
+                    // Amber past 90% of the limit, as on the web. Amber is
+                    // "waiting / attention" in Zave; there is no red to
+                    // escalate to, and none is needed — the field simply stops
+                    // accepting input at the cap.
+                    style: ZaveType.caption.copyWith(
+                      color: length > _charWarnAt
+                          ? ZaveColors.amber
+                          : ZaveColors.ink50,
+                    ),
+                  ),
+                ),
+              ],
+            );
+          },
         ),
 
         // SHOW the poster, rather than assert that it exists.
@@ -448,17 +473,32 @@ class _PostDetailPageState extends ConsumerState<PostDetailPage> {
         ],
 
         SizedBox(height: ZaveSpace.xl),
-        ZaveButton.primary(
-          label: 'Save changes',
-          expand: true,
-          busy: busy,
-          onPressed: empty ? null : () => _save(asDraft: false),
-        ),
-        SizedBox(height: ZaveSpace.md),
-        ZaveButton(
-          label: 'Save as draft',
-          expand: true,
-          onPressed: empty || busy ? null : () => _save(asDraft: true),
+        // The same listenable a second time rather than one builder spanning
+        // everything from the field down: the poster block sits between the
+        // two, and it has no business redrawing because a character was typed.
+        // Cancel is outside because it is gated on `busy` alone.
+        ValueListenableBuilder<TextEditingValue>(
+          valueListenable: _content,
+          builder: (BuildContext context, TextEditingValue value, Widget? _) {
+            final bool empty = value.text.trim().isEmpty;
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: <Widget>[
+                ZaveButton.primary(
+                  label: 'Save changes',
+                  expand: true,
+                  busy: busy,
+                  onPressed: empty ? null : () => _save(asDraft: false),
+                ),
+                SizedBox(height: ZaveSpace.md),
+                ZaveButton(
+                  label: 'Save as draft',
+                  expand: true,
+                  onPressed: empty || busy ? null : () => _save(asDraft: true),
+                ),
+              ],
+            );
+          },
         ),
         SizedBox(height: ZaveSpace.md),
         ZaveButton(

@@ -873,13 +873,33 @@ class _SlotSheetState extends ConsumerState<_SlotSheet> {
   /// while a half-typed edit is not thrown away by an unrelated rebuild.
   String? _titleLoadedFrom;
 
-  bool _titleDirty = false;
-  bool _bodyDirty = false;
+  /// Notifiers rather than fields behind `setState`, because the only thing
+  /// they DRAW is the Save button at the bottom of the sheet. Everywhere else
+  /// they are read, not listened to — the refill guards below and the confirm
+  /// dialog's wording take `.value` at the moment they run and want no rebuild
+  /// at all. So a first keystroke now repaints one button instead of a sheet
+  /// carrying a poster, two text fields and a script.
+  ///
+  /// The two LOADED-FROM markers above stay plain fields: clearing one has to
+  /// re-run this State's own build to refill a controller, which is a rebuild
+  /// a scoped notifier cannot ask for. They keep their `setState`.
+  final ValueNotifier<bool> _titleDirty = ValueNotifier<bool>(false);
+  final ValueNotifier<bool> _bodyDirty = ValueNotifier<bool>(false);
+
+  /// Either field being dirty shows the same button, so one listener rather
+  /// than a builder nested in a builder. Built once: a fresh `Listenable.merge`
+  /// per build would re-subscribe on every rebuild for no gain.
+  late final Listenable _dirty = Listenable.merge(<Listenable>[
+    _titleDirty,
+    _bodyDirty,
+  ]);
 
   @override
   void dispose() {
     _title.dispose();
     _body.dispose();
+    _titleDirty.dispose();
+    _bodyDirty.dispose();
     super.dispose();
   }
 
@@ -933,18 +953,18 @@ class _SlotSheetState extends ConsumerState<_SlotSheet> {
         .read(plannerControllerProvider.notifier)
         .saveSlotEdits(
           widget.slotIndex,
-          title: _titleDirty ? _title.text : null,
-          body: _bodyDirty ? _body.text : null,
+          title: _titleDirty.value ? _title.text : null,
+          body: _bodyDirty.value ? _body.text : null,
         );
     if (!mounted) return;
     if (failure != null) {
       _say(failure);
       return;
     }
-    setState(() {
-      _titleDirty = false;
-      _bodyDirty = false;
-    });
+    // No `setState`: nothing but the Save button reads these, and neither
+    // marker moved, so there is nothing for a full rebuild to refill.
+    _titleDirty.value = false;
+    _bodyDirty.value = false;
     _say('Saved.');
   }
 
@@ -960,10 +980,10 @@ class _SlotSheetState extends ConsumerState<_SlotSheet> {
     // The sheet reads the slot live now, so the new title arrives here. Clear
     // the dirty flag or the next save would write the old typed one back over
     // the rewrite the user just asked for.
-    setState(() {
-      _titleDirty = false;
-      _titleLoadedFrom = null;
-    });
+    _titleDirty.value = false;
+    // The marker, and so the refill, still needs this State's own build to
+    // run again — the field is refilled up in [build].
+    setState(() => _titleLoadedFrom = null);
   }
 
   // ── Generation ────────────────────────────────────────────────────────────
@@ -994,7 +1014,7 @@ class _SlotSheetState extends ConsumerState<_SlotSheet> {
         builder: (BuildContext ctx) => AlertDialog(
           title: const Text('Write it again?'),
           content: Text(
-            _bodyDirty
+            _bodyDirty.value
                 // The edits are in a field that is about to be replaced, and
                 // the post behind it is about to be deleted. Saying so is the
                 // difference between a choice and a surprise.
@@ -1043,16 +1063,14 @@ class _SlotSheetState extends ConsumerState<_SlotSheet> {
       // The new post is a different row, so the field must refill from it
       // rather than keep the replaced draft's words.
       //
-      // In a `setState` now that the busy flag's own rebuild no longer trails
-      // this: clearing the marker happens one frame EARLIER than these two
-      // lines — it runs in the controller's `finally`, before this method
-      // resumes — so without this the Save button would keep offering to write
-      // back a draft that has just been replaced.
+      // The marker is still cleared in a `setState`, because the busy flag's
+      // own rebuild no longer trails this: that flag is cleared one frame
+      // EARLIER than these lines — in the controller's `finally`, before this
+      // method resumes — so without an explicit rebuild the Save button would
+      // keep offering to write back a draft that has just been replaced.
       if (result != null && !result.alreadyGenerated && mounted) {
-        setState(() {
-          _bodyLoadedFor = null;
-          _bodyDirty = false;
-        });
+        _bodyDirty.value = false;
+        setState(() => _bodyLoadedFor = null);
       }
     } on PlannerGenerateFailure catch (e) {
       note = switch (e.kind) {
@@ -1128,7 +1146,7 @@ class _SlotSheetState extends ConsumerState<_SlotSheet> {
 
     // Refill the title field whenever the server's title changes and the user
     // has not typed over it.
-    if (!_titleDirty && _titleLoadedFrom != slot.title) {
+    if (!_titleDirty.value && _titleLoadedFrom != slot.title) {
       _titleLoadedFrom = slot.title;
       _title.text = slot.title;
     }
@@ -1164,7 +1182,12 @@ class _SlotSheetState extends ConsumerState<_SlotSheet> {
     if (post?.value case final LibraryPost p when _bodyLoadedFor != p.id) {
       _bodyLoadedFor = p.id;
       _body.text = p.content;
-      _bodyDirty = false;
+      // A no-op on every path that gets here through [_run], which clears it
+      // first. It only bites when the post changed from elsewhere while the
+      // field held typed text, and the Save button it notifies is a
+      // descendant of this build — which is the one direction a notify during
+      // build is allowed, and it is about to be rebuilt anyway.
+      _bodyDirty.value = false;
     }
 
     final String? poster =
@@ -1193,9 +1216,7 @@ class _SlotSheetState extends ConsumerState<_SlotSheet> {
             controller: _title,
             label: 'TITLE',
             maxLines: 2,
-            onChanged: (_) {
-              if (!_titleDirty) setState(() => _titleDirty = true);
-            },
+            onChanged: (_) => _titleDirty.value = true,
           )
         else
           Text(slot.title, style: ZaveType.h2),
@@ -1265,9 +1286,7 @@ class _SlotSheetState extends ConsumerState<_SlotSheet> {
                       label: 'POST',
                       maxLines: 14,
                       minLines: 6,
-                      onChanged: (_) {
-                        if (!_bodyDirty) setState(() => _bodyDirty = true);
-                      },
+                      onChanged: (_) => _bodyDirty.value = true,
                     )
                   : Text(post.value!.content, style: ZaveType.body),
             AsyncValue<LibraryPost>(hasError: true) => Text(
@@ -1297,15 +1316,31 @@ class _SlotSheetState extends ConsumerState<_SlotSheet> {
         ],
 
         // ── Actions ──────────────────────────────────────────────────────
-        if (editable && (_titleDirty || _bodyDirty)) ...<Widget>[
-          SizedBox(height: ZaveSpace.xl),
-          ZaveButton.primary(
-            label: 'Save changes',
-            expand: true,
-            busy: saving,
-            onPressed: saving ? null : _save,
+        if (editable)
+          // The one thing the dirty flags draw. A shrink rather than nothing
+          // when clean: a zero-sized child leaves the column exactly as it
+          // was, and the gap above the button travels with it.
+          ListenableBuilder(
+            listenable: _dirty,
+            builder: (BuildContext context, Widget? _) {
+              if (!_titleDirty.value && !_bodyDirty.value) {
+                return const SizedBox.shrink();
+              }
+              return Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: <Widget>[
+                  SizedBox(height: ZaveSpace.xl),
+                  ZaveButton.primary(
+                    label: 'Save changes',
+                    expand: true,
+                    busy: saving,
+                    onPressed: saving ? null : _save,
+                  ),
+                ],
+              );
+            },
           ),
-        ],
         if (_canGenerate(slot) || _canRegenerate(slot)) ...<Widget>[
           SizedBox(height: ZaveSpace.md),
           if (_canGenerate(slot))
@@ -1398,7 +1433,22 @@ class _WeekSetup extends StatefulWidget {
 }
 
 class _WeekSetupState extends State<_WeekSetup> {
-  _SetupTab _tab = _SetupTab.article;
+  /// Which step is on screen.
+  ///
+  /// A notifier rather than a field behind `setState`, because only two
+  /// patches of this build read it: the chip row and the step's own content.
+  /// The whole-week strip underneath is the expensive part — seven day cards
+  /// — and it does not care which step is selected, so a tap on a chip has no
+  /// business rebuilding it.
+  final ValueNotifier<_SetupTab> _tab = ValueNotifier<_SetupTab>(
+    _SetupTab.article,
+  );
+
+  @override
+  void dispose() {
+    _tab.dispose();
+    super.dispose();
+  }
 
   /// Scheduled, or already out. Either way the user has nothing left to do
   /// with it — and `isPublished` matters because the article is the one thing
@@ -1448,9 +1498,9 @@ class _WeekSetupState extends State<_WeekSetup> {
     // scroll — the page itself scrolls vertically and those drags are rarely
     // perfectly straight.
     if (v.abs() < 200) return;
-    final int next = _tab.index + (v < 0 ? 1 : -1);
+    final int next = _tab.value.index + (v < 0 ? 1 : -1);
     if (next < 0 || next >= _SetupTab.values.length) return;
-    setState(() => _tab = _SetupTab.values[next]);
+    _tab.value = _SetupTab.values[next];
   }
 
   @override
@@ -1463,36 +1513,48 @@ class _WeekSetupState extends State<_WeekSetup> {
         // Sideways rather than wrapped: four labels do not fit a phone's
         // width, and a Wrap would stack them two-by-two into something that
         // no longer reads as a row of steps.
-        SingleChildScrollView(
-          scrollDirection: Axis.horizontal,
-          child: Row(
-            children: <Widget>[
-              for (final _SetupTab tab in _SetupTab.values) ...<Widget>[
-                // A chevron between each pair, the way a stepper draws its
-                // connector. Not a control — the chips are the control, and a
-                // second tappable thing doing the same job in a 4pt gap
-                // between two of them is a mis-tap waiting to happen.
-                if (tab != _SetupTab.article) ...<Widget>[
-                  SizedBox(width: ZaveSpace.xs),
-                  Icon(Icons.chevron_right, size: 16, color: ZaveColors.ink35),
-                  SizedBox(width: ZaveSpace.xs),
-                ],
-                ZaveChip(
-                  label: switch (tab) {
-                    _SetupTab.article => '1 · Article',
-                    _SetupTab.posts => '2 · Posts',
-                    _SetupTab.scripts => '3 · Scripts',
-                    _SetupTab.analytics => 'Analytics',
-                  },
-                  selected: _tab == tab,
-                  // A tick, not a count: the step is done or it is not, and a
-                  // half-written week is still a week with work left in it.
-                  icon: _done(tab) ? const Icon(Icons.check, size: 14) : null,
-                  onTap: _tab == tab ? null : () => setState(() => _tab = tab),
+        ValueListenableBuilder<_SetupTab>(
+          valueListenable: _tab,
+          builder: (BuildContext context, _SetupTab current, Widget? _) =>
+              SingleChildScrollView(
+                scrollDirection: Axis.horizontal,
+                child: Row(
+                  children: <Widget>[
+                    for (final _SetupTab tab in _SetupTab.values) ...<Widget>[
+                      // A chevron between each pair, the way a stepper draws
+                      // its connector. Not a control — the chips are the
+                      // control, and a second tappable thing doing the same
+                      // job in a 4pt gap between two of them is a mis-tap
+                      // waiting to happen.
+                      if (tab != _SetupTab.article) ...<Widget>[
+                        SizedBox(width: ZaveSpace.xs),
+                        Icon(
+                          Icons.chevron_right,
+                          size: 16,
+                          color: ZaveColors.ink35,
+                        ),
+                        SizedBox(width: ZaveSpace.xs),
+                      ],
+                      ZaveChip(
+                        label: switch (tab) {
+                          _SetupTab.article => '1 · Article',
+                          _SetupTab.posts => '2 · Posts',
+                          _SetupTab.scripts => '3 · Scripts',
+                          _SetupTab.analytics => 'Analytics',
+                        },
+                        selected: current == tab,
+                        // A tick, not a count: the step is done or it is not,
+                        // and a half-written week is still a week with work
+                        // left in it.
+                        icon: _done(tab)
+                            ? const Icon(Icons.check, size: 14)
+                            : null,
+                        onTap: current == tab ? null : () => _tab.value = tab,
+                      ),
+                    ],
+                  ],
                 ),
-              ],
-            ],
-          ),
+              ),
         ),
         SizedBox(height: ZaveSpace.lg),
 
@@ -1519,22 +1581,28 @@ class _WeekSetupState extends State<_WeekSetup> {
           // and the Analytics step is mostly empty.
           behavior: HitTestBehavior.opaque,
           onHorizontalDragEnd: _onSwipe,
-          child: switch (_tab) {
-            _SetupTab.article => widget.articleCard,
-            _SetupTab.posts => _StepDays(
-              label: 'The two posts this week publishes.',
-              days: _postDays,
-              dayCard: widget.dayCard,
-              width: widget.dayCardWidth,
-            ),
-            _SetupTab.scripts => _StepDays(
-              label: 'We write these; you record and post them.',
-              days: _scriptDays,
-              dayCard: widget.dayCard,
-              width: widget.dayCardWidth,
-            ),
-            _SetupTab.analytics => widget.analytics,
-          },
+          // The recognizer above does not depend on which step is showing, so
+          // only the step's content listens.
+          child: ValueListenableBuilder<_SetupTab>(
+            valueListenable: _tab,
+            builder: (BuildContext context, _SetupTab current, Widget? _) =>
+                switch (current) {
+                  _SetupTab.article => widget.articleCard,
+                  _SetupTab.posts => _StepDays(
+                    label: 'The two posts this week publishes.',
+                    days: _postDays,
+                    dayCard: widget.dayCard,
+                    width: widget.dayCardWidth,
+                  ),
+                  _SetupTab.scripts => _StepDays(
+                    label: 'We write these; you record and post them.',
+                    days: _scriptDays,
+                    dayCard: widget.dayCard,
+                    width: widget.dayCardWidth,
+                  ),
+                  _SetupTab.analytics => widget.analytics,
+                },
+          ),
         ),
 
         // The whole week, once there is a whole week to show.

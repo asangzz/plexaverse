@@ -59,13 +59,32 @@ class _BannerBlueprintPageState extends ConsumerState<BannerBlueprintPage> {
   /// renders. Both are this widget's by nature — a page index is a selection
   /// inside one local control, and a `GlobalKey` identifies a render object
   /// that only exists while this page is mounted.
-  int _index = 0;
+  ///
+  /// A notifier rather than a field behind `setState`, because the index is
+  /// read by the carousel and by nothing else on this page. Under `setState` a
+  /// swipe rebuilt the heading, the position field, the notice and the three
+  /// buttons below as well.
+  final ValueNotifier<int> _index = ValueNotifier<int>(0);
   final GlobalKey _bannerKey = GlobalKey();
+
+  /// Everything the carousel reads that is not a provider: the chosen page and
+  /// the position text, which is substituted into every preview.
+  ///
+  /// Merged once and held rather than rebuilt inside `build`, so an unrelated
+  /// rebuild does not re-subscribe the builder to both of them. The text half
+  /// is why the field no longer carries `onChanged: (_) => setState(() {})` —
+  /// a [TextEditingController] is already a [Listenable], and that call was
+  /// rebuilding the whole page on every keystroke to re-render one row.
+  late final Listenable _carouselInputs = Listenable.merge(<Listenable>[
+    _position,
+    _index,
+  ]);
 
   @override
   void dispose() {
     _pages.dispose();
     _position.dispose();
+    _index.dispose();
     super.dispose();
   }
 
@@ -131,11 +150,12 @@ class _BannerBlueprintPageState extends ConsumerState<BannerBlueprintPage> {
             ),
             data: (MissionProfile p) {
               _seed(p);
+              // No `onChanged`: the carousel listens to this controller
+              // directly, which is the only thing the typed text feeds.
               return ZaveField(
                 controller: _position,
                 label: 'Your position',
                 hint: 'e.g. Founder & CEO',
-                onChanged: (String _) => setState(() {}),
               );
             },
           ),
@@ -152,8 +172,13 @@ class _BannerBlueprintPageState extends ConsumerState<BannerBlueprintPage> {
                   'lost — try again.',
               onRetry: () => ref.invalidate(bannerTemplatesProvider),
             ),
-            data: (List<BannerTemplate> list) =>
-                list.isEmpty ? const _NoTemplates() : _carousel(list, profile),
+            data: (List<BannerTemplate> list) => list.isEmpty
+                ? const _NoTemplates()
+                : ListenableBuilder(
+                    listenable: _carouselInputs,
+                    builder: (BuildContext context, Widget? _) =>
+                        _carousel(list, profile),
+                  ),
           ),
 
           SizedBox(height: ZaveSpace.xl),
@@ -221,6 +246,8 @@ class _BannerBlueprintPageState extends ConsumerState<BannerBlueprintPage> {
     );
   }
 
+  /// Built inside the [ListenableBuilder] above, so reading `_position.text`
+  /// and `_index.value` here is a subscribed read, not a stale snapshot.
   Widget _carousel(
     List<BannerTemplate> templates,
     AsyncValue<MissionProfile> profile,
@@ -229,6 +256,7 @@ class _BannerBlueprintPageState extends ConsumerState<BannerBlueprintPage> {
     // the preview re-renders the moment the real name arrives.
     final String name = profile.value?.bannerName ?? 'Plexaverse User';
     final String position = _position.text.trim();
+    final int index = _index.value;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -240,10 +268,10 @@ class _BannerBlueprintPageState extends ConsumerState<BannerBlueprintPage> {
           child: PageView.builder(
             controller: _pages,
             itemCount: templates.length,
-            onPageChanged: (int i) => setState(() => _index = i),
+            onPageChanged: (int i) => _index.value = i,
             itemBuilder: (BuildContext context, int i) {
               final BannerTemplate template = templates[i];
-              final bool active = i == _index;
+              final bool active = i == index;
               // Personalise on the way out, exactly as the web does in its
               // useMemo: substitute, then crop the canvas to the artwork.
               final BannerDesign design = template.data!
@@ -309,9 +337,9 @@ class _BannerBlueprintPageState extends ConsumerState<BannerBlueprintPage> {
                   duration: ZaveMotion.fast,
                   curve: ZaveMotion.curve,
                   height: 6,
-                  width: i == _index ? 40 : 10,
+                  width: i == index ? 40 : 10,
                   decoration: BoxDecoration(
-                    color: i == _index ? ZaveColors.white : ZaveColors.rule,
+                    color: i == index ? ZaveColors.white : ZaveColors.rule,
                     borderRadius: ZaveRadius.pillBr,
                   ),
                 ),

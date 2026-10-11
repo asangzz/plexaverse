@@ -56,13 +56,32 @@ class _HeadlineHookPageState extends ConsumerState<HeadlineHookPage> {
   // them, and no second screen asks — three switches whose whole life is this
   // one card. What they ADD UP TO is a different question, and that one the
   // controller answers: `finish(checklistDone: …)`.
-  bool _urlCleanup = false;
-  bool _featuredAdded = false;
-  bool _keywordsAdded = false;
+  //
+  // Notifiers rather than fields behind `setState`, because that whole life is
+  // the Final Polish card at the bottom of a long page. Toggling one switch
+  // used to rebuild the header, the headline field, the three help cards and
+  // the hand-off card above it, none of which can tell the difference.
+  final ValueNotifier<bool> _urlCleanup = ValueNotifier<bool>(false);
+  final ValueNotifier<bool> _featuredAdded = ValueNotifier<bool>(false);
+  final ValueNotifier<bool> _keywordsAdded = ValueNotifier<bool>(false);
+
+  /// One subscription for the three, because they feed one small area: the
+  /// rows and the Finish button are interleaved with the controller's notice,
+  /// so three separate builders would mean three nests around forty lines.
+  ///
+  /// Merged once and held rather than rebuilt inside `build`.
+  late final Listenable _checklist = Listenable.merge(<Listenable>[
+    _urlCleanup,
+    _featuredAdded,
+    _keywordsAdded,
+  ]);
 
   @override
   void dispose() {
     _headline.dispose();
+    _urlCleanup.dispose();
+    _featuredAdded.dispose();
+    _keywordsAdded.dispose();
     super.dispose();
   }
 
@@ -90,7 +109,7 @@ class _HeadlineHookPageState extends ConsumerState<HeadlineHookPage> {
     final bool done = await _form.finish(
       levelId: HeadlineHookPage.levelId,
       stepId: HeadlineHookPage.stepId,
-      checklistDone: _urlCleanup && _featuredAdded,
+      checklistDone: _urlCleanup.value && _featuredAdded.value,
     );
     // Back to the roadmap, which re-reads its own progress on the way in.
     // The failure path has already been recorded on the controller, so
@@ -285,40 +304,57 @@ class _HeadlineHookPageState extends ConsumerState<HeadlineHookPage> {
               ),
               SizedBox(height: ZaveSpace.lg),
 
-              _ChecklistRow(
-                label: 'Clean URL',
-                detail: 'Remove the random numbers from your /in/ link.',
-                value: _urlCleanup,
-                onChanged: (bool v) => setState(() => _urlCleanup = v),
-              ),
-              SizedBox(height: ZaveSpace.md),
-              _ChecklistRow(
-                label: 'Feature content',
-                detail: 'Add one or two projects to your Featured section.',
-                value: _featuredAdded,
-                onChanged: (bool v) => setState(() => _featuredAdded = v),
-              ),
-              SizedBox(height: ZaveSpace.md),
-              _ChecklistRow(
-                label: 'SEO boost',
-                detail: 'Make sure your top skills appear in your intro.',
-                value: _keywordsAdded,
-                onChanged: (bool v) => setState(() => _keywordsAdded = v),
-              ),
+              // The rows and the button they gate, as one rebuild scope. The
+              // notice sits between them and does not depend on the switches;
+              // it is inside only because splitting the span around it would
+              // cost two builders to save one `MissionMessage`.
+              ListenableBuilder(
+                listenable: _checklist,
+                builder: (BuildContext context, Widget? _) => Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: <Widget>[
+                    _ChecklistRow(
+                      label: 'Clean URL',
+                      detail: 'Remove the random numbers from your /in/ link.',
+                      value: _urlCleanup.value,
+                      onChanged: (bool v) => _urlCleanup.value = v,
+                    ),
+                    SizedBox(height: ZaveSpace.md),
+                    _ChecklistRow(
+                      label: 'Feature content',
+                      detail:
+                          'Add one or two projects to your Featured section.',
+                      value: _featuredAdded.value,
+                      onChanged: (bool v) => _featuredAdded.value = v,
+                    ),
+                    SizedBox(height: ZaveSpace.md),
+                    _ChecklistRow(
+                      label: 'SEO boost',
+                      detail: 'Make sure your top skills appear in your intro.',
+                      value: _keywordsAdded.value,
+                      onChanged: (bool v) => _keywordsAdded.value = v,
+                    ),
 
-              if (form.notice case final MissionNotice notice) ...<Widget>[
-                SizedBox(height: ZaveSpace.lg),
-                MissionMessage(text: notice.text, tone: notice.tone),
-              ],
+                    if (form.notice
+                        case final MissionNotice notice) ...<Widget>[
+                      SizedBox(height: ZaveSpace.lg),
+                      MissionMessage(text: notice.text, tone: notice.tone),
+                    ],
 
-              SizedBox(height: ZaveSpace.lg),
-              ZaveButton.primary(
-                label: 'Finish step',
-                // The first two are the gate the web enforces; SEO boost is
-                // advice, so it does not block.
-                onPressed: (_urlCleanup && _featuredAdded) ? _finish : null,
-                busy: form.finishing,
-                expand: true,
+                    SizedBox(height: ZaveSpace.lg),
+                    ZaveButton.primary(
+                      label: 'Finish step',
+                      // The first two are the gate the web enforces; SEO boost
+                      // is advice, so it does not block.
+                      onPressed: (_urlCleanup.value && _featuredAdded.value)
+                          ? _finish
+                          : null,
+                      busy: form.finishing,
+                      expand: true,
+                    ),
+                  ],
+                ),
               ),
             ],
           ),

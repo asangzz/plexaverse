@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -77,6 +78,9 @@ class _AuthPageState extends ConsumerState<AuthPage>
   /// state and in-flight flags all live on this State, and pushing a second
   /// page would mean either lifting all of that out or losing what the user
   /// had typed every time they went back.
+  ///
+  /// `setState` is right here for the same reason [_mode] keeps it — the two
+  /// stages are two different screens, so the rebuild is not wasted work.
   bool _emailStage = false;
 
   final TextEditingController _emailCtrl = TextEditingController();
@@ -84,14 +88,31 @@ class _AuthPageState extends ConsumerState<AuthPage>
   final TextEditingController _nameCtrl = TextEditingController();
   final TextEditingController _referralCtrl = TextEditingController();
 
-  String? _nameError;
-  String? _emailError;
-  String? _passwordError;
-  String? _formError;
+  /// The four error strings, as notifiers rather than plain fields.
+  ///
+  /// Each one is read in exactly ONE place — three of them inside a single
+  /// [ZaveField], the fourth inside the banner above the form — while the
+  /// build they sat in is the whole screen. Worse, `onChanged` clears a field
+  /// error on EVERY keystroke, so typing an email address used to rebuild the
+  /// heading, the mode toggle, the Google button, the divider, the consent
+  /// block and the CTA once per character. A [ValueNotifier] only notifies
+  /// when the value actually changes, so clearing an already-null error is now
+  /// free, and a real error repaints one field.
+  final ValueNotifier<String?> _nameError = ValueNotifier<String?>(null);
+  final ValueNotifier<String?> _emailError = ValueNotifier<String?>(null);
+  final ValueNotifier<String?> _passwordError = ValueNotifier<String?>(null);
+  final ValueNotifier<String?> _formError = ValueNotifier<String?>(null);
 
   /// What the user has ticked on the create-account notice. Reset when the
   /// mode toggles, so switching to sign-in and back cannot leave a stale
   /// acceptance behind.
+  ///
+  /// Stays `setState` rather than becoming a notifier: it is read in two
+  /// places that are not adjacent — the [ConsentBlock] and the CTA's
+  /// `onPressed` gate, with a gap between them in the same `children` list —
+  /// so scoping it would mean either two builders over one value or a wrapper
+  /// that swallows everything in between. It also changes a handful of times
+  /// per account, not once per keystroke.
   ConsentDecision _consent = const ConsentDecision(
     acceptedNotice: false,
     consents: <String, bool>{},
@@ -168,6 +189,10 @@ class _AuthPageState extends ConsumerState<AuthPage>
     _shakeCtrl.dispose();
     _termsTap.dispose();
     _privacyTap.dispose();
+    _nameError.dispose();
+    _emailError.dispose();
+    _passwordError.dispose();
+    _formError.dispose();
     super.dispose();
   }
 
@@ -179,30 +204,34 @@ class _AuthPageState extends ConsumerState<AuthPage>
   AuthController get _auth => ref.read(authControllerProvider.notifier);
 
   void _clearErrors() {
-    _nameError = null;
-    _emailError = null;
-    _passwordError = null;
-    _formError = null;
+    _nameError.value = null;
+    _emailError.value = null;
+    _passwordError.value = null;
+    _formError.value = null;
   }
 
+  /// No `setState`: [_Shake] listens to the controller through an
+  /// [AnimatedBuilder], so driving the animation is already the repaint. The
+  /// wrapping `setState` these calls used to carry rebuilt the whole screen to
+  /// produce a frame the ticker was about to produce anyway.
   void _triggerShake() => _shakeCtrl.forward(from: 0);
 
   Future<void> _submitSignIn() async {
-    setState(_clearErrors);
+    _clearErrors();
     bool valid = true;
     if (_emailCtrl.text.trim().isEmpty) {
-      _emailError = 'Email address is required';
+      _emailError.value = 'Email address is required';
       valid = false;
     } else if (!_emailCtrl.text.isValidEmail) {
-      _emailError = 'Please enter a valid email address';
+      _emailError.value = 'Please enter a valid email address';
       valid = false;
     }
     if (_passwordCtrl.text.isEmpty) {
-      _passwordError = 'Password is required';
+      _passwordError.value = 'Password is required';
       valid = false;
     }
     if (!valid) {
-      setState(_triggerShake);
+      _triggerShake();
       return;
     }
 
@@ -219,35 +248,33 @@ class _AuthPageState extends ConsumerState<AuthPage>
         // it does. Nothing for the form to say.
         break;
       case SignInInvalidCredentials():
-        setState(() {
-          _formError = 'Incorrect email or password';
-          _triggerShake();
-        });
+        _formError.value = 'Incorrect email or password';
+        _triggerShake();
       case SignInNetworkFailure():
-        setState(() => _formError = 'Something went wrong. Please try again.');
+        _formError.value = 'Something went wrong. Please try again.';
     }
   }
 
   Future<void> _submitRegister() async {
-    setState(_clearErrors);
+    _clearErrors();
     bool valid = true;
     if (_nameCtrl.text.trim().isEmpty) {
-      _nameError = 'Please enter your full name';
+      _nameError.value = 'Please enter your full name';
       valid = false;
     }
     if (_emailCtrl.text.trim().isEmpty) {
-      _emailError = 'Email address is required';
+      _emailError.value = 'Email address is required';
       valid = false;
     } else if (!_emailCtrl.text.isValidEmail) {
-      _emailError = 'Please enter a valid email address';
+      _emailError.value = 'Please enter a valid email address';
       valid = false;
     }
     if (!_passwordCtrl.text.isValidPassword) {
-      _passwordError = 'Password must be at least 8 characters';
+      _passwordError.value = 'Password must be at least 8 characters';
       valid = false;
     }
     if (!valid) {
-      setState(_triggerShake);
+      _triggerShake();
       return;
     }
 
@@ -269,20 +296,19 @@ class _AuthPageState extends ConsumerState<AuthPage>
         :final String? message,
         :final Map<String, String> fieldErrors,
       ):
-        setState(() {
-          _nameError = fieldErrors['name'];
-          _emailError = fieldErrors['email'];
-          _passwordError = fieldErrors['password'];
-          _formError = message ?? 'Please check your details and try again.';
-          _triggerShake();
-        });
+        _nameError.value = fieldErrors['name'];
+        _emailError.value = fieldErrors['email'];
+        _passwordError.value = fieldErrors['password'];
+        _formError.value =
+            message ?? 'Please check your details and try again.';
+        _triggerShake();
       case RegisterNetworkFailure():
-        setState(() => _formError = 'Something went wrong. Please try again.');
+        _formError.value = 'Something went wrong. Please try again.';
     }
   }
 
   Future<void> _startGoogle() async {
-    setState(() => _formError = null);
+    _formError.value = null;
 
     final GoogleResult result = await _auth.startGoogle();
     if (!mounted) return;
@@ -301,13 +327,11 @@ class _AuthPageState extends ConsumerState<AuthPage>
         break;
 
       case GoogleAccountExistsWithPassword(:final String message):
-        setState(() => _formError = message);
+        _formError.value = message;
 
       case GoogleFailure(:final String? message):
-        setState(
-          () => _formError =
-              message ?? 'Google sign-in failed. Please try again.',
-        );
+        _formError.value =
+            message ?? 'Google sign-in failed. Please try again.';
     }
   }
 
@@ -331,20 +355,19 @@ class _AuthPageState extends ConsumerState<AuthPage>
       case GoogleSignedIn():
         break; // see [_submitSignIn]
       case GoogleFailure(:final String? message):
-        setState(
-          () => _formError = message ?? 'Could not create your account.',
-        );
+        _formError.value = message ?? 'Could not create your account.';
       case GoogleResult():
         break;
     }
   }
 
+  /// Still `setState`: the mode swaps the entire form — fields, CTA label,
+  /// heading, consent block — so the rebuild IS the screen. A notifier here
+  /// would be one builder around the whole build method.
   void _setMode(_AuthMode next) {
     if (_mode == next) return;
-    setState(() {
-      _clearErrors();
-      _mode = next;
-    });
+    _clearErrors();
+    setState(() => _mode = next);
   }
 
   @override
@@ -381,10 +404,10 @@ class _AuthPageState extends ConsumerState<AuthPage>
       leading: ZaveIconButton(
         icon: const Icon(Icons.arrow_back),
         tooltip: 'Back',
-        onPressed: () => setState(() {
+        onPressed: () {
           _clearErrors();
-          _emailStage = false;
-        }),
+          setState(() => _emailStage = false);
+        },
       ),
       body: GestureDetector(
         onTap: () => FocusScope.of(context).unfocus(),
@@ -407,25 +430,34 @@ class _AuthPageState extends ConsumerState<AuthPage>
 
             // Form-level error. Sized-in rather than faded so the buttons below
             // move once, not twice.
-            AnimatedSwitcher(
-              duration: ZaveMotion.fast,
-              switchInCurve: ZaveMotion.curve,
-              switchOutCurve: ZaveMotion.curve,
-              transitionBuilder: (Widget child, Animation<double> anim) =>
-                  SizeTransition(
-                    sizeFactor: anim,
-                    child: FadeTransition(opacity: anim, child: child),
+            //
+            // The banner is the only reader of [_formError], so it is the only
+            // thing that rebuilds when one arrives — a failed sign-in no longer
+            // repaints the heading, the toggle and the fields to show a line of
+            // text above them.
+            ValueListenableBuilder<String?>(
+              valueListenable: _formError,
+              builder: (BuildContext context, String? formError, Widget? _) =>
+                  AnimatedSwitcher(
+                    duration: ZaveMotion.fast,
+                    switchInCurve: ZaveMotion.curve,
+                    switchOutCurve: ZaveMotion.curve,
+                    transitionBuilder: (Widget child, Animation<double> anim) =>
+                        SizeTransition(
+                          sizeFactor: anim,
+                          child: FadeTransition(opacity: anim, child: child),
+                        ),
+                    child: formError == null
+                        ? const SizedBox(width: double.infinity)
+                        : Padding(
+                            key: ValueKey<String>(formError),
+                            padding: EdgeInsets.only(bottom: ZaveSpace.lg),
+                            child: Semantics(
+                              liveRegion: true,
+                              child: FormErrorBanner(message: formError),
+                            ),
+                          ),
                   ),
-              child: _formError == null
-                  ? const SizedBox(width: double.infinity)
-                  : Padding(
-                      key: ValueKey<String>(_formError!),
-                      padding: EdgeInsets.only(bottom: ZaveSpace.lg),
-                      child: Semantics(
-                        liveRegion: true,
-                        child: FormErrorBanner(message: _formError!),
-                      ),
-                    ),
             ),
 
             // Google only. The web offers exactly two providers — Google and
@@ -484,9 +516,8 @@ class _AuthPageState extends ConsumerState<AuthPage>
                       emailError: _emailError,
                       passwordError: _passwordError,
                       shake: _shakeAnim,
-                      onEmailChanged: (_) => setState(() => _emailError = null),
-                      onPasswordChanged: (_) =>
-                          setState(() => _passwordError = null),
+                      onEmailChanged: (_) => _emailError.value = null,
+                      onPasswordChanged: (_) => _passwordError.value = null,
                     )
                   : _RegisterFields(
                       key: const ValueKey<_AuthMode>(_AuthMode.createAccount),
@@ -498,10 +529,9 @@ class _AuthPageState extends ConsumerState<AuthPage>
                       emailError: _emailError,
                       passwordError: _passwordError,
                       shake: _shakeAnim,
-                      onNameChanged: (_) => setState(() => _nameError = null),
-                      onEmailChanged: (_) => setState(() => _emailError = null),
-                      onPasswordChanged: (_) =>
-                          setState(() => _passwordError = null),
+                      onNameChanged: (_) => _nameError.value = null,
+                      onEmailChanged: (_) => _emailError.value = null,
+                      onPasswordChanged: (_) => _passwordError.value = null,
                     ),
             ),
 
@@ -651,13 +681,17 @@ class _ModeHalf extends StatelessWidget {
 // Field sets
 // ════════════════════════════════════════════════════════════════════════════
 
+/// The errors arrive as [ValueListenable]s rather than strings so that each
+/// field subscribes to its own: a rejected password repaints the password
+/// field and leaves the email field, the shake wrapper and everything above
+/// them alone.
 class _SignInFields extends StatelessWidget {
   const _SignInFields({
     required this.emailCtrl,
     required this.passwordCtrl,
+    required this.emailError,
+    required this.passwordError,
     required this.shake,
-    this.emailError,
-    this.passwordError,
     this.onEmailChanged,
     this.onPasswordChanged,
     super.key,
@@ -665,8 +699,8 @@ class _SignInFields extends StatelessWidget {
 
   final TextEditingController emailCtrl;
   final TextEditingController passwordCtrl;
-  final String? emailError;
-  final String? passwordError;
+  final ValueListenable<String?> emailError;
+  final ValueListenable<String?> passwordError;
   final Animation<double> shake;
   final ValueChanged<String>? onEmailChanged;
   final ValueChanged<String>? onPasswordChanged;
@@ -678,23 +712,31 @@ class _SignInFields extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: <Widget>[
-          ZaveField(
-            controller: emailCtrl,
-            label: 'Email address',
-            hint: 'you@example.com',
-            error: emailError,
-            keyboardType: TextInputType.emailAddress,
-            textInputAction: TextInputAction.next,
-            autofillHints: const <String>[AutofillHints.email],
-            prefix: const Icon(Icons.mail_outline),
-            onChanged: onEmailChanged,
+          ValueListenableBuilder<String?>(
+            valueListenable: emailError,
+            builder: (BuildContext context, String? error, Widget? _) =>
+                ZaveField(
+                  controller: emailCtrl,
+                  label: 'Email address',
+                  hint: 'you@example.com',
+                  error: error,
+                  keyboardType: TextInputType.emailAddress,
+                  textInputAction: TextInputAction.next,
+                  autofillHints: const <String>[AutofillHints.email],
+                  prefix: const Icon(Icons.mail_outline),
+                  onChanged: onEmailChanged,
+                ),
           ),
           SizedBox(height: ZaveSpace.lg),
-          _PasswordField(
-            controller: passwordCtrl,
-            autofillHint: AutofillHints.password,
-            error: passwordError,
-            onChanged: onPasswordChanged,
+          ValueListenableBuilder<String?>(
+            valueListenable: passwordError,
+            builder: (BuildContext context, String? error, Widget? _) =>
+                _PasswordField(
+                  controller: passwordCtrl,
+                  autofillHint: AutofillHints.password,
+                  error: error,
+                  onChanged: onPasswordChanged,
+                ),
           ),
         ],
       ),
@@ -702,16 +744,17 @@ class _SignInFields extends StatelessWidget {
   }
 }
 
+/// See [_SignInFields] for why the errors are listenables.
 class _RegisterFields extends StatefulWidget {
   const _RegisterFields({
     required this.nameCtrl,
     required this.emailCtrl,
     required this.passwordCtrl,
     required this.referralCtrl,
+    required this.nameError,
+    required this.emailError,
+    required this.passwordError,
     required this.shake,
-    this.nameError,
-    this.emailError,
-    this.passwordError,
     this.onNameChanged,
     this.onEmailChanged,
     this.onPasswordChanged,
@@ -722,9 +765,9 @@ class _RegisterFields extends StatefulWidget {
   final TextEditingController emailCtrl;
   final TextEditingController passwordCtrl;
   final TextEditingController referralCtrl;
-  final String? nameError;
-  final String? emailError;
-  final String? passwordError;
+  final ValueListenable<String?> nameError;
+  final ValueListenable<String?> emailError;
+  final ValueListenable<String?> passwordError;
   final Animation<double> shake;
   final ValueChanged<String>? onNameChanged;
   final ValueChanged<String>? onEmailChanged;
@@ -735,26 +778,34 @@ class _RegisterFields extends StatefulWidget {
 }
 
 class _RegisterFieldsState extends State<_RegisterFields> {
-  // Mirrors the password controller so the strength bar rebuilds live.
-  late String _passwordText = widget.passwordCtrl.text;
+  /// Mirrors the password controller so the strength bar rebuilds live.
+  ///
+  /// A notifier, not a field: this changes on every keystroke of the longest
+  /// field on the screen, and the only thing that reads it is the one-line
+  /// [PasswordStrengthBar] directly below. As `setState` it rebuilt all four
+  /// fields and the referral row per character — including the password field
+  /// the user is typing into.
+  ///
+  /// The old "did it actually change?" guard is gone because [ValueNotifier]
+  /// already drops a write of an equal value, which is why the controller
+  /// listener and the field's own `onChanged` can both set it.
+  late final ValueNotifier<String> _passwordText;
 
   @override
   void initState() {
     super.initState();
+    _passwordText = ValueNotifier<String>(widget.passwordCtrl.text);
     widget.passwordCtrl.addListener(_onPasswordChanged);
   }
 
   @override
   void dispose() {
     widget.passwordCtrl.removeListener(_onPasswordChanged);
+    _passwordText.dispose();
     super.dispose();
   }
 
-  void _onPasswordChanged() {
-    if (_passwordText != widget.passwordCtrl.text) {
-      setState(() => _passwordText = widget.passwordCtrl.text);
-    }
-  }
+  void _onPasswordChanged() => _passwordText.value = widget.passwordCtrl.text;
 
   @override
   Widget build(BuildContext context) {
@@ -763,39 +814,55 @@ class _RegisterFieldsState extends State<_RegisterFields> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: <Widget>[
-          ZaveField(
-            controller: widget.nameCtrl,
-            label: 'Full name',
-            hint: 'John Doe',
-            error: widget.nameError,
-            textInputAction: TextInputAction.next,
-            autofillHints: const <String>[AutofillHints.name],
-            prefix: const Icon(Icons.person_outline),
-            onChanged: widget.onNameChanged,
+          ValueListenableBuilder<String?>(
+            valueListenable: widget.nameError,
+            builder: (BuildContext context, String? error, Widget? _) =>
+                ZaveField(
+                  controller: widget.nameCtrl,
+                  label: 'Full name',
+                  hint: 'John Doe',
+                  error: error,
+                  textInputAction: TextInputAction.next,
+                  autofillHints: const <String>[AutofillHints.name],
+                  prefix: const Icon(Icons.person_outline),
+                  onChanged: widget.onNameChanged,
+                ),
           ),
           SizedBox(height: ZaveSpace.lg),
-          ZaveField(
-            controller: widget.emailCtrl,
-            label: 'Email address',
-            hint: 'you@example.com',
-            error: widget.emailError,
-            keyboardType: TextInputType.emailAddress,
-            textInputAction: TextInputAction.next,
-            autofillHints: const <String>[AutofillHints.email],
-            prefix: const Icon(Icons.mail_outline),
-            onChanged: widget.onEmailChanged,
+          ValueListenableBuilder<String?>(
+            valueListenable: widget.emailError,
+            builder: (BuildContext context, String? error, Widget? _) =>
+                ZaveField(
+                  controller: widget.emailCtrl,
+                  label: 'Email address',
+                  hint: 'you@example.com',
+                  error: error,
+                  keyboardType: TextInputType.emailAddress,
+                  textInputAction: TextInputAction.next,
+                  autofillHints: const <String>[AutofillHints.email],
+                  prefix: const Icon(Icons.mail_outline),
+                  onChanged: widget.onEmailChanged,
+                ),
           ),
           SizedBox(height: ZaveSpace.lg),
-          _PasswordField(
-            controller: widget.passwordCtrl,
-            autofillHint: AutofillHints.newPassword,
-            error: widget.passwordError,
-            onChanged: (String v) {
-              widget.onPasswordChanged?.call(v);
-              setState(() => _passwordText = v);
-            },
+          ValueListenableBuilder<String?>(
+            valueListenable: widget.passwordError,
+            builder: (BuildContext context, String? error, Widget? _) =>
+                _PasswordField(
+                  controller: widget.passwordCtrl,
+                  autofillHint: AutofillHints.newPassword,
+                  error: error,
+                  onChanged: (String v) {
+                    widget.onPasswordChanged?.call(v);
+                    _passwordText.value = v;
+                  },
+                ),
           ),
-          PasswordStrengthBar(password: _passwordText),
+          ValueListenableBuilder<String>(
+            valueListenable: _passwordText,
+            builder: (BuildContext context, String password, Widget? _) =>
+                PasswordStrengthBar(password: password),
+          ),
           SizedBox(height: ZaveSpace.lg),
           ReferralCodeField(controller: widget.referralCtrl),
         ],
@@ -806,6 +873,13 @@ class _RegisterFieldsState extends State<_RegisterFields> {
 
 /// A [ZaveField] with an eye toggle. Split out because the obscure flag is
 /// local state and both field sets need it.
+///
+/// **The obscure flag stays `setState`.** Splitting it out already did the job
+/// a notifier would do: the tap rebuilds this widget and nothing above it. The
+/// flag is then read in three places inside a build that is one field — the
+/// `obscure` argument, the Semantics label and the icon — so a
+/// [ValueListenableBuilder] would have to wrap the whole build method to reach
+/// them, which is `setState` with more ceremony and no narrower a repaint.
 class _PasswordField extends StatefulWidget {
   const _PasswordField({
     required this.controller,

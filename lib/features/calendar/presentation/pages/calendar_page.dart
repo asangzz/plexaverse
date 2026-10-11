@@ -39,6 +39,13 @@ import '../widgets/schedule_time_sheet.dart';
 /// ephemeral UI state and live here, not in a provider — the same split the web
 /// app's own contract draws between Zustand and React Query. Only the posts go
 /// through a controller.
+///
+/// They are [ValueNotifier]s rather than `setState` fields because of WHERE
+/// they are read, not where they live. All three feed the month grid — 42 cells
+/// — and nothing else on the page: the heading, the two count tiles and the
+/// pending strip depend only on the posts. A `setState` for a day tap rebuilt
+/// all of it and re-ran [groupByDay] over every scheduled post on the way, and
+/// a day tap fires twice (select, then clear when the sheet closes).
 class CalendarPage extends ConsumerStatefulWidget {
   const CalendarPage({super.key});
 
@@ -47,8 +54,10 @@ class CalendarPage extends ConsumerStatefulWidget {
 }
 
 class _CalendarPageState extends ConsumerState<CalendarPage> {
-  late DateTime _viewMonth = _currentMonth();
-  DateTime? _selectedDay;
+  final ValueNotifier<DateTime> _viewMonth = ValueNotifier<DateTime>(
+    _currentMonth(),
+  );
+  final ValueNotifier<DateTime?> _selectedDay = ValueNotifier<DateTime?>(null);
 
   /// The post waiting for a day. Non-null puts the grid into pick-a-day mode.
   ///
@@ -56,11 +65,36 @@ class _CalendarPageState extends ConsumerState<CalendarPage> {
   /// sent, and a page that goes away cancels the pick along with the grid it
   /// was asking you to choose from. The reschedule it leads to is the part
   /// that outlives this screen, and that lives on [RescheduleController].
-  CalendarPost? _moving;
+  final ValueNotifier<CalendarPost?> _moving = ValueNotifier<CalendarPost?>(
+    null,
+  );
+
+  /// The grid reads all three, so it listens to all three — one builder rather
+  /// than three nested ones. Built once and held, because `Listenable.merge`
+  /// returns a new object per call and rebuilding it in `build` would make the
+  /// builder re-subscribe on every parent rebuild.
+  late final Listenable _gridInputs = Listenable.merge(<Listenable>[
+    _viewMonth,
+    _selectedDay,
+    _moving,
+  ]);
 
   static DateTime _currentMonth() {
     final DateTime now = DateTime.now();
     return DateTime(now.year, now.month);
+  }
+
+  void _stepMonth(int delta) {
+    final DateTime month = _viewMonth.value;
+    _viewMonth.value = DateTime(month.year, month.month + delta);
+  }
+
+  @override
+  void dispose() {
+    _viewMonth.dispose();
+    _selectedDay.dispose();
+    _moving.dispose();
+    super.dispose();
   }
 
   @override
@@ -95,7 +129,6 @@ class _CalendarPageState extends ConsumerState<CalendarPage> {
     // The in-flight state AND the last failure of a drag onto a new day. On
     // the controller so neither dies with this screen.
     final AsyncValue<void> reschedule = ref.watch(rescheduleControllerProvider);
-    final CalendarPost? moving = _moving;
 
     return ZaveScrollView(
       children: <Widget>[
@@ -111,17 +144,22 @@ class _CalendarPageState extends ConsumerState<CalendarPage> {
         _CountTiles(buckets: buckets),
 
         SizedBox(height: ZaveSpace.xl),
-        _MonthStepper(
-          viewMonth: _viewMonth,
-          onPrevious: () => setState(() {
-            _viewMonth = DateTime(_viewMonth.year, _viewMonth.month - 1);
-          }),
-          onNext: () => setState(() {
-            _viewMonth = DateTime(_viewMonth.year, _viewMonth.month + 1);
-          }),
-          // `Today` lived in the caption row that is now tiles. It belongs
-          // with the month controls anyway: it IS a month control.
-          onToday: () => setState(() => _viewMonth = _currentMonth()),
+        ValueListenableBuilder<DateTime>(
+          valueListenable: _viewMonth,
+          builder: (BuildContext context, DateTime month, Widget? _) =>
+              _MonthStepper(
+                viewMonth: month,
+                // `_stepMonth`, not arithmetic on the `month` this builder was
+                // handed: that one is a frame old, so two taps landing inside
+                // one frame would both step off it and the second would be
+                // lost. The field is always current.
+                onPrevious: () => _stepMonth(-1),
+                onNext: () => _stepMonth(1),
+                // `Today` lived in the caption row that is now tiles. It
+                // belongs with the month controls anyway: it IS a month
+                // control.
+                onToday: () => _viewMonth.value = _currentMonth(),
+              ),
         ),
 
         // Read from the controller, not from this State. These used to be
@@ -143,18 +181,26 @@ class _CalendarPageState extends ConsumerState<CalendarPage> {
           ),
         ],
 
-        if (moving != null) ...<Widget>[
-          SizedBox(height: ZaveSpace.lg),
-          _Banner(
-            tone: ZaveColors.peri,
-            kicker: 'Pick a day',
-            body: truncate(moving.displayText, 110),
-            action: ZaveButton(
-              label: 'Cancel',
-              onPressed: () => setState(() => _moving = null),
-            ),
-          ),
-        ],
+        // The gap rides inside the builder so it still disappears with the
+        // banner, exactly as the conditional spread it replaces did.
+        ValueListenableBuilder<CalendarPost?>(
+          valueListenable: _moving,
+          builder: (BuildContext context, CalendarPost? moving, Widget? _) =>
+              moving == null
+              ? const SizedBox.shrink()
+              : Padding(
+                  padding: EdgeInsets.only(top: ZaveSpace.lg),
+                  child: _Banner(
+                    tone: ZaveColors.peri,
+                    kicker: 'Pick a day',
+                    body: truncate(moving.displayText, 110),
+                    action: ZaveButton(
+                      label: 'Cancel',
+                      onPressed: () => _moving.value = null,
+                    ),
+                  ),
+                ),
+        ),
 
         if (reschedule.isLoading) ...<Widget>[
           SizedBox(height: ZaveSpace.lg),
@@ -178,16 +224,19 @@ class _CalendarPageState extends ConsumerState<CalendarPage> {
         SizedBox(height: ZaveSpace.md),
         CalendarPendingStrip(
           pending: buckets.pending,
-          onPick: (CalendarPost post) => setState(() => _moving = post),
+          onPick: (CalendarPost post) => _moving.value = post,
         ),
 
         SizedBox(height: ZaveSpace.xxl),
-        CalendarMonthGrid(
-          viewMonth: _viewMonth,
-          byDay: byDay,
-          selectedDay: _selectedDay,
-          pickMode: moving != null,
-          onSelectDay: (DateTime day) => _onSelectDay(day, buckets, byDay),
+        ListenableBuilder(
+          listenable: _gridInputs,
+          builder: (BuildContext context, Widget? _) => CalendarMonthGrid(
+            viewMonth: _viewMonth.value,
+            byDay: byDay,
+            selectedDay: _selectedDay.value,
+            pickMode: _moving.value != null,
+            onSelectDay: (DateTime day) => _onSelectDay(day, buckets, byDay),
+          ),
         ),
       ],
     );
@@ -198,16 +247,16 @@ class _CalendarPageState extends ConsumerState<CalendarPage> {
     CalendarBuckets buckets,
     Map<String, List<CalendarPost>> byDay,
   ) async {
-    final CalendarPost? moving = _moving;
+    final CalendarPost? moving = _moving.value;
 
     // Pick-a-day mode: this tap chooses the destination.
     if (moving != null) {
-      setState(() => _moving = null);
+      _moving.value = null;
       await _scheduleOnto(day: day, post: moving, byDay: byDay);
       return;
     }
 
-    setState(() => _selectedDay = day);
+    _selectedDay.value = day;
 
     final DaySheetRequest? request = await DayDetailSheet.show(
       context,
@@ -215,8 +264,11 @@ class _CalendarPageState extends ConsumerState<CalendarPage> {
       scheduled: byDay[dayKey(day)] ?? const <CalendarPost>[],
       pending: buckets.pending,
     );
+    // Still load-bearing, and now for a second reason: past this point every
+    // write below lands on a notifier this State owns, and writing to a
+    // disposed one throws.
     if (!mounted) return;
-    setState(() => _selectedDay = null);
+    _selectedDay.value = null;
     if (request == null) return;
 
     switch (request.intent) {
@@ -224,7 +276,7 @@ class _CalendarPageState extends ConsumerState<CalendarPage> {
         await _scheduleOnto(day: day, post: request.post, byDay: byDay);
       case DaySheetIntent.moveElsewhere:
         // The destination is not known yet — hand the grid over.
-        setState(() => _moving = request.post);
+        _moving.value = request.post;
     }
   }
 

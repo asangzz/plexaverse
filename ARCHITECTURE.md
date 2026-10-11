@@ -227,6 +227,35 @@ dependency arrow the whole structure rests on, and is what leaves an
 operation's state with nowhere to live but the widget. The two are the same
 defect seen from different sides.
 
+### `setState` or `ValueNotifier` — a second, separate question
+
+Once state is correctly widget-local, there is still the question of how far
+its change propagates. `setState` rebuilds the **entire** subtree of its
+`State`. A `ValueNotifier` read through a `ValueListenableBuilder` rebuilds
+only what listens.
+
+**Reach for a `ValueNotifier` when a small, bounded region of a large widget
+depends on the value** — a field's error line, a character counter, a strength
+bar, a single chip row. Typing an email address should not rebuild a sign-in
+page.
+
+**Keep `setState` when:**
+
+- the value changes the SHAPE of most of the build — a stage switch, a mode
+  toggle that swaps the whole form. One builder wrapped around the whole build
+  method is `setState` with extra steps and more code to read.
+- the value is read in several scattered places, so scoping it would mean
+  nested or duplicated builders.
+- the widget is already small. A 30-line rebuild costs nothing, and the
+  indirection is not free to read.
+
+A conversion that makes a file harder to read is a regression even when it is
+measurably faster. Roughly half the candidates in this codebase were correctly
+left alone on those grounds.
+
+**Every `ValueNotifier` a `State` owns must be disposed in `dispose()`.** It is
+a `ChangeNotifier`; an undisposed one keeps its listeners alive and leaks.
+
 ---
 
 ## Mock Backend
