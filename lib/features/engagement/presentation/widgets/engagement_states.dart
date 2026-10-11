@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../../../core/ui/app_icons.dart';
 import '../../../../core/ui/zave/zave_kit.dart';
 import '../../domain/engagement_repository.dart';
 
@@ -233,7 +234,7 @@ class NewSetUnavailable extends StatelessWidget {
           SizedBox(width: ZaveSpace.md),
           // Disabled on purpose — see the class doc. `null` is what dims it.
           const ZaveIconButton(
-            icon: Icon(Icons.refresh),
+            icon: Icon(AppIcons.refresh),
             tooltip: 'New set (unavailable on mobile)',
             onPressed: null,
           ),

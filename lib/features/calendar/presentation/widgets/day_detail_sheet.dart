@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
+import '../../../../core/ui/app_icons.dart';
 import '../../../../core/ui/zave/zave_kit.dart';
 import '../../domain/calendar_month.dart';
 import '../../domain/calendar_post.dart';
@@ -215,7 +216,7 @@ class _ScheduledRow extends StatelessWidget {
             SizedBox(height: ZaveSpace.lg),
             ZaveButton(
               label: 'Move to…',
-              icon: const Icon(Icons.event_repeat_outlined),
+              icon: const Icon(AppIcons.repeat),
               expand: true,
               onPressed: onMove,
             ),

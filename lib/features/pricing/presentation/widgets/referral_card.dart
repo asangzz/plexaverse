@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+import '../../../../core/ui/app_icons.dart';
 import '../../../../core/ui/zave/zave_kit.dart';
 import '../../domain/pricing.dart';
 
@@ -125,7 +126,7 @@ class _CopyButtonState extends State<_CopyButton> {
   Widget build(BuildContext context) {
     return ZaveButton(
       label: _copied ? 'Copied' : 'Copy code',
-      icon: Icon(_copied ? Icons.check_rounded : Icons.copy_rounded),
+      icon: Icon(_copied ? AppIcons.check : AppIcons.copy),
       onPressed: _copy,
       expand: true,
     );

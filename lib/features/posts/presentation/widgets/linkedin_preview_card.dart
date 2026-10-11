@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
 
+import '../../../../core/ui/app_icons.dart';
 import '../../../../core/ui/zave/zave_kit.dart';
-import '../../domain/library_post.dart';
 import 'post_card.dart' show PostImage;
+import '../../domain/library_post.dart';
 
 /// The post as LinkedIn will render it — the web's "LinkedIn Preview" card on
 /// `/posts/[id]`.
@@ -82,7 +83,11 @@ class _LinkedInPreviewCardState extends State<LinkedInPreviewCard> {
                         SizedBox(height: ZaveSpace.xs),
                         Row(
                           children: <Widget>[
-                            Icon(Icons.public, size: 12, color: _inkSecondary),
+                            Icon(
+                              AppIcons.public,
+                              size: 12,
+                              color: _inkSecondary,
+                            ),
                             SizedBox(width: ZaveSpace.xs),
                             Text(
                               'Public',
@@ -148,11 +153,7 @@ class _LinkedInPreviewCardState extends State<LinkedInPreviewCard> {
               ),
               child: Row(
                 children: <Widget>[
-                  Icon(
-                    Icons.thumb_up_alt_outlined,
-                    size: 14,
-                    color: _inkSecondary,
-                  ),
+                  Icon(AppIcons.like, size: 14, color: _inkSecondary),
                   SizedBox(width: ZaveSpace.sm),
                   Text(
                     '${post.metrics?.reactions ?? 0}',
@@ -197,28 +198,28 @@ class _LinkedInPreviewCardState extends State<LinkedInPreviewCard> {
                 children: <Widget>[
                   Expanded(
                     child: _ActionLabel(
-                      icon: Icons.thumb_up_alt_outlined,
+                      icon: AppIcons.like,
                       label: 'Like',
                       color: _inkSecondary,
                     ),
                   ),
                   Expanded(
                     child: _ActionLabel(
-                      icon: Icons.mode_comment_outlined,
+                      icon: AppIcons.comment,
                       label: 'Comment',
                       color: _inkSecondary,
                     ),
                   ),
                   Expanded(
                     child: _ActionLabel(
-                      icon: Icons.repeat,
+                      icon: AppIcons.repeat,
                       label: 'Repost',
                       color: _inkSecondary,
                     ),
                   ),
                   Expanded(
                     child: _ActionLabel(
-                      icon: Icons.send_outlined,
+                      icon: AppIcons.send,
                       label: 'Send',
                       color: _inkSecondary,
                     ),

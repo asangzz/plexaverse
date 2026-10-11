@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../theme/zave/zave.dart';
 import 'zave_button.dart';
+import 'zave_image.dart';
 
 /// The poster, whole, on a sheet.
 ///
@@ -97,22 +98,16 @@ class _PosterSheet extends StatelessWidget {
                     // The poster's own text is small on a phone, and reading it
                     // is most of why someone opens this.
                     maxScale: 4,
-                    child: Image.network(
-                      imageUrl,
+                    child: ZaveImage(
+                      source: imageUrl,
                       // The whole point. Never `cover` here.
                       fit: BoxFit.contain,
-                      errorBuilder: (_, _, _) => _Fallback(
-                        icon: Icons.broken_image_outlined,
-                        message: 'That image could not be loaded.',
-                      ),
-                      loadingBuilder:
-                          (_, Widget child, ImageChunkEvent? progress) =>
-                              progress == null
-                              ? child
-                              : const _Fallback(
-                                  icon: null,
-                                  message: 'Loading the full image…',
-                                ),
+                      label: 'Loading the full image…',
+                      errorMessage: 'That image could not be loaded.',
+                      // Keeps the sheet a stable size while the full image
+                      // loads or fails, so it does not snap open and then
+                      // collapse.
+                      placeholderAspectRatio: 4 / 5,
                     ),
                   ),
                 ),
@@ -126,41 +121,6 @@ class _PosterSheet extends StatelessWidget {
               ),
             ],
           ),
-        ),
-      ),
-    );
-  }
-}
-
-/// Keeps the sheet a stable size while the full image loads or fails, so it
-/// does not snap open and then collapse.
-class _Fallback extends StatelessWidget {
-  const _Fallback({required this.icon, required this.message});
-
-  final IconData? icon;
-  final String message;
-
-  @override
-  Widget build(BuildContext context) {
-    return AspectRatio(
-      aspectRatio: 4 / 5,
-      child: ColoredBox(
-        color: ZaveGlass.hover,
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: <Widget>[
-            if (icon != null) ...<Widget>[
-              Icon(icon, size: 28, color: ZaveColors.ink45),
-              SizedBox(height: ZaveSpace.md),
-            ] else ...<Widget>[
-              const SizedBox.square(
-                dimension: 22,
-                child: CircularProgressIndicator(strokeWidth: 2),
-              ),
-              SizedBox(height: ZaveSpace.md),
-            ],
-            Text(message, style: ZaveType.caption),
-          ],
         ),
       ),
     );

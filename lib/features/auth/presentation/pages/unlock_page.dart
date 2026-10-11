@@ -3,8 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/responsive/screen_util.dart';
 import '../../../../core/security/biometric_auth_service.dart';
-import '../../../../core/theme/app_spacing.dart';
 import '../../../../core/ui/app_icons.dart';
+import '../../../../core/ui/zave/zave_kit.dart';
 import '../../application/unlock_controller.dart';
 
 /// The biometric / device-credential unlock gate (root navigator), shown over
@@ -16,9 +16,16 @@ import '../../application/unlock_controller.dart';
 /// fallback when biometrics changed, the device is locked out, or the user
 /// simply prefers to re-enter their password.
 ///
-/// Migrated to ProHealth's unlock-gate structure (RULINGS ruling 12), rendered
-/// with Plexaverse product conventions: theme-driven colours (no expressive_m3),
-/// [ScreenUtil] responsive scaling, and the shared [AppIcons] indirection.
+/// Built from the Zave kit, like everything else behind it.
+///
+/// It was not, for longer than anything else: a bare [Scaffold] on flat
+/// midnight with none of [ZaveGroundBox]'s wash, Material's `FilledButton`
+/// and `TextButton`, and a 72pt disc filled with `scheme.primaryContainer` —
+/// a key [ZaveTheme] never sets, so it fell through to Material's baseline
+/// indigo, a colour that appears nowhere else in this app. The gate is shown
+/// over everything on resume from background and on relaunch, which makes it
+/// one of the most-seen screens in the product and the worst one to leave
+/// looking borrowed.
 ///
 /// **Both operations live on [UnlockController], not here.** `_inProgress`,
 /// `_loggingOut` and `_message` were fields on this State, read after an
@@ -61,81 +68,70 @@ class _UnlockPageState extends ConsumerState<UnlockPage> {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final scheme = theme.colorScheme;
-
     final UnlockState unlock = ref.watch(unlockControllerProvider);
     final String? message = _messageFor(unlock.lastFailure);
 
-    return Scaffold(
-      body: SafeArea(
-        child: Padding(
-          padding: EdgeInsets.symmetric(horizontal: AppSpacing.xl.w),
-          child: Center(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: <Widget>[
-                Container(
-                  width: 72.r,
-                  height: 72.r,
-                  alignment: Alignment.center,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    color: scheme.primaryContainer,
-                  ),
-                  child: Icon(
-                    AppIcons.fingerprint,
-                    size: 30.r,
-                    color: scheme.primary,
+    return ZaveScaffold(
+      body: Center(
+        child: SingleChildScrollView(
+          padding: EdgeInsets.symmetric(horizontal: ZaveSpace.xl),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: <Widget>[
+              // The `now` step — the kit's "this is the one" surface, the
+              // same tone ZaveRowCircle uses for the day you are on.
+              Container(
+                width: 72.r,
+                height: 72.r,
+                alignment: Alignment.center,
+                decoration: const BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: ZaveGlass.now,
+                  border: Border.fromBorderSide(
+                    BorderSide(color: ZaveGlass.nowBorder),
                   ),
                 ),
-                SizedBox(height: AppSpacing.lg.h),
-                Text(
-                  'Locked',
-                  textAlign: TextAlign.center,
-                  style: theme.textTheme.headlineMedium,
+                child: Icon(
+                  AppIcons.fingerprint,
+                  size: 30.r,
+                  color: ZaveColors.white,
                 ),
-                SizedBox(height: AppSpacing.sm.h),
-                Text(
-                  message ?? 'Confirm it\'s you to get back into Plexaverse.',
-                  textAlign: TextAlign.center,
-                  style: theme.textTheme.bodyLarge?.copyWith(
-                    color: message != null ? scheme.error : null,
-                  ),
-                ),
-                SizedBox(height: AppSpacing.xl.h),
-                SizedBox(
-                  width: double.infinity,
-                  child: FilledButton.icon(
-                    onPressed: unlock.busy
-                        ? null
-                        : () => ref
-                              .read(unlockControllerProvider.notifier)
-                              .authenticate(),
-                    icon: unlock.authenticating
-                        ? SizedBox(
-                            width: 18.r,
-                            height: 18.r,
-                            child: CircularProgressIndicator(
-                              strokeWidth: 2,
-                              color: scheme.onPrimary,
-                            ),
-                          )
-                        : const Icon(AppIcons.lock),
-                    label: const Text('Unlock'),
-                  ),
-                ),
-                SizedBox(height: AppSpacing.sm.h),
-                TextButton(
-                  onPressed: unlock.signingOut
-                      ? null
-                      : () => ref
-                            .read(unlockControllerProvider.notifier)
-                            .signOut(),
-                  child: const Text('Log out instead'),
-                ),
-              ],
-            ),
+              ),
+              SizedBox(height: ZaveSpace.xl),
+              Text('Locked', textAlign: TextAlign.center, style: ZaveType.h2),
+              SizedBox(height: ZaveSpace.sm),
+              Text(
+                message ?? 'Confirm it\'s you to get back into Plexaverse.',
+                textAlign: TextAlign.center,
+                // Amber, not `scheme.error`: Zave has no red, and a failed
+                // unlock is "try again", not "something is broken".
+                style: message != null
+                    ? ZaveType.body.copyWith(color: ZaveColors.amber)
+                    : ZaveType.bodyMuted,
+              ),
+              SizedBox(height: ZaveSpace.xxl),
+              ZaveButton.primary(
+                label: 'Unlock',
+                expand: true,
+                icon: const Icon(AppIcons.lock),
+                busy: unlock.authenticating,
+                onPressed: unlock.busy
+                    ? null
+                    : () => ref
+                          .read(unlockControllerProvider.notifier)
+                          .authenticate(),
+              ),
+              SizedBox(height: ZaveSpace.md),
+              ZaveButton(
+                label: 'Log out instead',
+                expand: true,
+                busy: unlock.signingOut,
+                onPressed: unlock.signingOut
+                    ? null
+                    : () =>
+                          ref.read(unlockControllerProvider.notifier).signOut(),
+              ),
+            ],
           ),
         ),
       ),

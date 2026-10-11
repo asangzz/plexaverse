@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../../core/ui/app_icons.dart';
 import '../../../../core/ui/zave/zave_kit.dart';
 import '../../application/reimagine_controller.dart';
 import '../../domain/studio_template.dart';
@@ -298,7 +299,7 @@ class _CopiedBanner extends StatelessWidget {
               ),
             ),
             ZaveIconButton(
-              icon: const Icon(Icons.close),
+              icon: const Icon(AppIcons.close),
               tooltip: 'Dismiss',
               onPressed: onDismiss,
             ),

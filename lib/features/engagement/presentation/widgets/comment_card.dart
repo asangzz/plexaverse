@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../../../core/ui/app_icons.dart';
 import '../../../../core/ui/zave/zave_kit.dart';
 import '../../domain/engagement_repository.dart';
 
@@ -176,14 +177,14 @@ class _CommentCardState extends State<CommentCard> {
           // iPhone SE, where a side-by-side pair cannot fit either label.
           ZaveButton(
             label: _justCopied ? 'Copied' : 'Copy & open LinkedIn',
-            icon: Icon(_justCopied ? Icons.check : Icons.copy_all_outlined),
+            icon: Icon(_justCopied ? AppIcons.check : AppIcons.copy),
             expand: true,
             onPressed: draft.hasText ? _copy : null,
           ),
           SizedBox(height: ZaveSpace.md),
           ZaveButton(
             label: 'Find posts',
-            icon: const Icon(Icons.search),
+            icon: const Icon(AppIcons.search),
             expand: true,
             onPressed: draft.searchKeywords.isEmpty
                 ? null

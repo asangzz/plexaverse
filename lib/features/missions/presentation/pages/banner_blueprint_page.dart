@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../../core/links/linkedin.dart';
+import '../../../../core/ui/app_icons.dart';
 import '../../../../core/ui/widgets/open_link.dart';
 import '../../../../core/ui/zave/zave_kit.dart';
 import '../../application/missions_controllers.dart';
@@ -124,7 +125,7 @@ class _BannerBlueprintPageState extends ConsumerState<BannerBlueprintPage> {
     return ZaveScaffold(
       largeTitle: 'Banner Blueprint',
       leading: ZaveIconButton(
-        icon: const Icon(Icons.arrow_back),
+        icon: const Icon(AppIcons.back),
         tooltip: 'Back to roadmap',
         onPressed: () => context.pop(),
       ),
@@ -216,7 +217,7 @@ class _BannerBlueprintPageState extends ConsumerState<BannerBlueprintPage> {
                 // cover-photo editor has no addressable URL.
                 ZaveButton(
                   label: 'Open LinkedIn',
-                  icon: const Icon(Icons.open_in_new_rounded),
+                  icon: const Icon(AppIcons.openExternal),
                   expand: true,
                   onPressed: () =>
                       openLinkAndReport(context, ref, linkedInHomeUrl),
@@ -224,7 +225,7 @@ class _BannerBlueprintPageState extends ConsumerState<BannerBlueprintPage> {
                 SizedBox(height: ZaveSpace.lg),
                 ZaveButton(
                   label: 'Save this banner',
-                  icon: const Icon(Icons.ios_share),
+                  icon: const Icon(AppIcons.share),
                   expand: true,
                   busy: form.saving,
                   onPressed: form.saving

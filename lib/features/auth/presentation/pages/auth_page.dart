@@ -5,18 +5,19 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/extensions/string_extensions.dart';
 import '../../../../core/links/plexaverse.dart';
+import '../../../../core/ui/app_icons.dart';
 import '../../../../core/ui/widgets/open_link.dart';
 import '../../../../core/ui/zave/zave_kit.dart';
 import '../../application/auth_controller.dart';
 import '../../domain/auth_repository.dart';
 import '../widgets/auth_divider.dart';
 import '../widgets/auth_welcome.dart';
+import '../widgets/consent_block.dart';
+import '../widgets/consent_sheet.dart';
 import '../widgets/form_error_banner.dart';
 import '../widgets/password_strength_bar.dart';
 import '../widgets/referral_code_field.dart';
 import '../widgets/social_auth_button.dart';
-import '../widgets/consent_block.dart';
-import '../widgets/consent_sheet.dart';
 
 enum _AuthMode { signIn, createAccount }
 
@@ -402,7 +403,7 @@ class _AuthPageState extends ConsumerState<AuthPage>
       // No title: the screen carries its own `.h2` heading inside the scroll
       // view, and ZaveScaffold's doc is explicit that a screen never has both.
       leading: ZaveIconButton(
-        icon: const Icon(Icons.arrow_back),
+        icon: const Icon(AppIcons.back),
         tooltip: 'Back',
         onPressed: () {
           _clearErrors();
@@ -723,7 +724,7 @@ class _SignInFields extends StatelessWidget {
                   keyboardType: TextInputType.emailAddress,
                   textInputAction: TextInputAction.next,
                   autofillHints: const <String>[AutofillHints.email],
-                  prefix: const Icon(Icons.mail_outline),
+                  prefix: const Icon(AppIcons.email),
                   onChanged: onEmailChanged,
                 ),
           ),
@@ -824,7 +825,7 @@ class _RegisterFieldsState extends State<_RegisterFields> {
                   error: error,
                   textInputAction: TextInputAction.next,
                   autofillHints: const <String>[AutofillHints.name],
-                  prefix: const Icon(Icons.person_outline),
+                  prefix: const Icon(AppIcons.person),
                   onChanged: widget.onNameChanged,
                 ),
           ),
@@ -840,7 +841,7 @@ class _RegisterFieldsState extends State<_RegisterFields> {
                   keyboardType: TextInputType.emailAddress,
                   textInputAction: TextInputAction.next,
                   autofillHints: const <String>[AutofillHints.email],
-                  prefix: const Icon(Icons.mail_outline),
+                  prefix: const Icon(AppIcons.email),
                   onChanged: widget.onEmailChanged,
                 ),
           ),
@@ -911,18 +912,14 @@ class _PasswordFieldState extends State<_PasswordField> {
       obscure: _obscure,
       textInputAction: TextInputAction.done,
       autofillHints: <String>[widget.autofillHint],
-      prefix: const Icon(Icons.lock_outline),
+      prefix: const Icon(AppIcons.lock),
       suffix: Semantics(
         button: true,
         label: _obscure ? 'Show password' : 'Hide password',
         child: GestureDetector(
           onTap: () => setState(() => _obscure = !_obscure),
           behavior: HitTestBehavior.opaque,
-          child: Icon(
-            _obscure
-                ? Icons.visibility_off_outlined
-                : Icons.visibility_outlined,
-          ),
+          child: Icon(_obscure ? AppIcons.eyeSlash : AppIcons.eye),
         ),
       ),
       onChanged: widget.onChanged,

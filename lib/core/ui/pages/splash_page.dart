@@ -65,7 +65,29 @@ class _SplashPageState extends State<SplashPage>
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: <Widget>[
-                _Halo(child: _Wordmark(text: AppL10n.of(context).appName)),
+                _Halo(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: <Widget>[
+                      // The mark, not just the name. It is already bundled
+                      // and already drawn on the welcome screen one tap
+                      // later — so the very first thing the app showed was
+                      // the one place the brand had no logo.
+                      Image.asset(
+                        'assets/branding/logo_mark.png',
+                        // Height only: the mark is taller than it is wide and
+                        // a square would squash it.
+                        height: 64.r,
+                        filterQuality: FilterQuality.medium,
+                        // A missing asset degrades to the wordmark alone,
+                        // never to a broken-image glyph on the first screen.
+                        errorBuilder: (_, _, _) => const SizedBox.shrink(),
+                      ),
+                      SizedBox(height: AppSpacing.md.h),
+                      _Wordmark(text: AppL10n.of(context).appName),
+                    ],
+                  ),
+                ),
                 SizedBox(height: AppSpacing.xl.h),
                 if (reduceMotion)
                   Text(

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../app_icons.dart';
 import '../zave/zave_kit.dart';
 
 /// The Zave design-system reference — the Flutter counterpart of the web's
@@ -31,7 +32,7 @@ class _ZaveStyleguidePageState extends State<ZaveStyleguidePage> {
     return ZaveScaffold(
       title: 'Zave',
       leading: ZaveIconButton(
-        icon: const Icon(Icons.arrow_back),
+        icon: const Icon(AppIcons.back),
         onPressed: () => Navigator.of(context).maybePop(),
         tooltip: 'Back',
       ),
@@ -57,10 +58,7 @@ class _ZaveStyleguidePageState extends State<ZaveStyleguidePage> {
           ]),
 
           _section('02', 'Signal'),
-          Text(
-            'Colour only ever names a status.',
-            style: ZaveType.bodyMuted,
-          ),
+          Text('Colour only ever names a status.', style: ZaveType.bodyMuted),
           SizedBox(height: ZaveSpace.lg),
           _swatches(const <(String, Color)>[
             ('green · done', ZaveColors.green),
@@ -131,17 +129,14 @@ class _ZaveStyleguidePageState extends State<ZaveStyleguidePage> {
               ZaveButton.brand(label: 'Get XP', onPressed: () {}),
               ZaveButton(label: 'Disabled', onPressed: null),
               ZaveButton(label: 'Saving', busy: true, onPressed: () {}),
-              ZaveIconButton(
-                icon: const Icon(Icons.more_horiz),
-                onPressed: () {},
-              ),
+              ZaveIconButton(icon: const Icon(AppIcons.more), onPressed: () {}),
             ],
           ),
           SizedBox(height: ZaveSpace.lg),
           ZaveButton.primary(
             label: 'Full width',
             expand: true,
-            icon: const Icon(Icons.auto_awesome),
+            icon: const Icon(AppIcons.sparkle),
             onPressed: () {},
           ),
 
@@ -217,7 +212,7 @@ class _ZaveStyleguidePageState extends State<ZaveStyleguidePage> {
           const ZaveField(
             hint: 'Search posts',
             pill: true,
-            prefix: Icon(Icons.search),
+            prefix: Icon(AppIcons.search),
           ),
           SizedBox(height: ZaveSpace.lg),
           const ZaveField(

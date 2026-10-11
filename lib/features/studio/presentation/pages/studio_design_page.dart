@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../../core/security/clipboard_policy.dart';
+import '../../../../core/ui/app_icons.dart';
 import '../../../../core/ui/zave/zave_kit.dart';
 import '../../application/studio_editor_controller.dart';
 import '../../application/studio_editor_state.dart';
@@ -62,20 +63,20 @@ class _StudioDesignPageState extends ConsumerState<StudioDesignPage> {
     return ZaveScaffold(
       title: editor.value?.design.name ?? 'Design',
       leading: ZaveIconButton(
-        icon: const Icon(Icons.arrow_back),
+        icon: const Icon(AppIcons.back),
         tooltip: 'Back to Studio',
         onPressed: () => context.pop(),
       ),
       actions: <Widget>[
         if (editor.value != null)
           ZaveIconButton(
-            icon: const Icon(Icons.auto_awesome_outlined),
+            icon: const Icon(AppIcons.sparkle),
             tooltip: 'AI Designer',
             onPressed: _openDesigner,
           ),
         if (editor.value != null)
           ZaveIconButton(
-            icon: const Icon(Icons.ios_share_outlined),
+            icon: const Icon(AppIcons.share),
             tooltip: 'Export',
             onPressed: () => _openExport(editor.value!),
           ),
@@ -212,9 +213,9 @@ class _StudioDesignPageState extends ConsumerState<StudioDesignPage> {
           const StudioUnavailable(
             title: 'Saving the image',
             reason:
-                'Writing a PNG to the camera roll, and the system share '
-                'sheet, both need a platform plugin this build does not ship '
-                '(no image_picker / share_plus in pubspec.yaml).',
+                'Studio renders the design on a canvas here, and nothing in '
+                'the app yet turns that canvas into a PNG to hand to the '
+                'share sheet.',
             detail:
                 'Until then: open the design in Studio on the web to '
                 'export it.',
@@ -567,12 +568,12 @@ class _ImageSwapSheetState extends ConsumerState<_ImageSwapSheet> {
         const StudioUnavailable(
           title: 'Choosing a photo from this phone',
           reason:
-              'The app ships no photo-library plugin (no image_picker in '
-              'pubspec.yaml), so there is nothing to open a picker with.',
+              'Not wired here yet. Describing the image, or pasting a URL, '
+              'both work today.',
           detail:
-              'The upload endpoint it would need, POST /upload/image, '
-              'already exists and accepts base64 — only the picker is '
-              'missing.',
+              'Both halves exist — the picker Compose and Headshots use, and '
+              'POST /upload/image, which accepts base64. Nothing joins them '
+              'to this sheet.',
         ),
       ],
     );

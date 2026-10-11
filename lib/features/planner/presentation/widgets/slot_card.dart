@@ -242,14 +242,13 @@ class SlotCard extends StatelessWidget {
                   borderRadius: BorderRadius.circular(ZaveRadius.cardSm),
                   child: AspectRatio(
                     aspectRatio: 16 / 9,
-                    child: Image.network(
-                      src,
-                      fit: BoxFit.cover,
+                    child: ZaveImage(
+                      source: src,
                       // Silent on failure: this is a preview inside a list,
                       // and a broken-image glyph on a card the user did not
                       // ask to load is noise. The day still reads correctly
                       // without it.
-                      errorBuilder: (_, _, _) => const SizedBox.shrink(),
+                      tone: ZaveImageTone.quiet,
                     ),
                   ),
                 ),

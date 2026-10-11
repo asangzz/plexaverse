@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+import '../../../../core/ui/app_icons.dart';
 import '../../../../core/ui/zave/zave_kit.dart';
 
 /// The collapsible referral-code input on the create-account form.
@@ -79,7 +80,7 @@ class _ReferralCodeFieldState extends State<ReferralCodeField>
           ZaveButton(
             label: 'Have a referral code?',
             onPressed: _expand,
-            icon: const Icon(Icons.card_giftcard_outlined),
+            icon: const Icon(AppIcons.gift),
           ),
         SizeTransition(
           sizeFactor: _curve,
@@ -92,16 +93,13 @@ class _ReferralCodeFieldState extends State<ReferralCodeField>
               error: widget.errorText,
               onChanged: widget.onChanged,
               inputFormatters: <TextInputFormatter>[_upperCase],
-              prefix: const Icon(Icons.card_giftcard_outlined),
+              prefix: const Icon(AppIcons.gift),
               suffix: valid
                   // Green is "done" in Zave; amber carries the failure,
                   // because the palette has no red.
-                  ? const Icon(
-                      Icons.check_circle_outline,
-                      color: ZaveColors.green,
-                    )
+                  ? const Icon(AppIcons.checkCircle, color: ZaveColors.green)
                   : invalid
-                  ? const Icon(Icons.error_outline, color: ZaveColors.amber)
+                  ? const Icon(AppIcons.error, color: ZaveColors.amber)
                   : null,
             ),
           ),

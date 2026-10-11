@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../../../core/ui/app_icons.dart';
 import '../../../../core/ui/zave/zave_kit.dart';
 import '../../domain/compose_context.dart';
 import '../../domain/linkedin_account.dart';
@@ -64,7 +65,7 @@ class LinkedInConnectionPanel extends StatelessWidget {
                   borderRadius: ZaveRadius.inputBr,
                 ),
                 child: Icon(
-                  isCompany ? Icons.business_outlined : Icons.person_outline,
+                  isCompany ? AppIcons.business : AppIcons.person,
                   size: 20,
                   color: ZaveColors.white,
                 ),
@@ -102,7 +103,7 @@ class LinkedInConnectionPanel extends StatelessWidget {
             ZaveButton(
               label: 'Open settings',
               onPressed: onOpenSettings,
-              icon: const Icon(Icons.settings_outlined),
+              icon: const Icon(AppIcons.settings),
             ),
           ],
 

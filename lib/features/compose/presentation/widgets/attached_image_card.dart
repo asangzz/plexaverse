@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../../../core/ui/app_icons.dart';
 import '../../../../core/ui/zave/zave_kit.dart';
 import '../../domain/compose_draft.dart';
 import 'compose_image_view.dart';
@@ -50,7 +51,7 @@ class AttachedImageCard extends StatelessWidget {
                 SizedBox(width: ZaveSpace.sm),
               ],
               ZaveIconButton(
-                icon: const Icon(Icons.close),
+                icon: const Icon(AppIcons.close),
                 tooltip: 'Remove image',
                 onPressed: regenerating ? null : onRemove,
               ),
@@ -83,7 +84,7 @@ class AttachedImageCard extends StatelessWidget {
                           ),
                         )
                       : ZaveIconButton(
-                          icon: const Icon(Icons.refresh),
+                          icon: const Icon(AppIcons.refresh),
                           tooltip: 'Regenerate image',
                           onPressed: onRegenerate,
                         ),

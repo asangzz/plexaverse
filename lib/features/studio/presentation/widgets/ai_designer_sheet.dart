@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../../core/ui/app_icons.dart';
 import '../../../../core/ui/zave/zave_kit.dart';
 import '../../application/studio_editor_controller.dart';
 import '../../application/studio_editor_state.dart';
@@ -67,7 +68,7 @@ class _AiDesignerSheetState extends ConsumerState<AiDesignerSheet> {
             Expanded(child: Text('AI DESIGNER', style: ZaveType.kicker)),
             if (turns.isNotEmpty)
               ZaveIconButton(
-                icon: const Icon(Icons.close),
+                icon: const Icon(AppIcons.close),
                 tooltip: 'Clear the conversation',
                 onPressed: () => ref
                     .read(aiDesignerProvider(widget.designId).notifier)
@@ -125,8 +126,8 @@ class _AiDesignerSheetState extends ConsumerState<AiDesignerSheet> {
           title: 'Attaching a reference image',
           reason:
               'The web lets you drop a screenshot for the model to copy. '
-              'That needs a photo-library plugin this build does not ship '
-              '(no image_picker in pubspec.yaml).',
+              'The mobile designer endpoint takes a prompt only, so there is '
+              'nowhere to send one yet.',
         ),
       ],
     );

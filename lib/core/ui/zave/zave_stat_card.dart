@@ -3,6 +3,7 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 
 import '../../theme/zave/zave.dart';
+import '../app_icons.dart';
 import 'zave_press.dart';
 
 /// The reference's signature tile: a label, a small chart, and a number far
@@ -127,7 +128,13 @@ class ZaveStatCard extends StatelessWidget {
                   overflow: TextOverflow.ellipsis,
                 ),
               ),
-              Icon(Icons.chevron_right, size: 18, color: subColor),
+              // Only when there is somewhere to go.
+              //
+              // This was drawn unconditionally, and not one of the seven
+              // callers passes `onTap` — so every stat tile in the app wore
+              // an affordance it did not have. A chevron is a promise.
+              if (onTap != null)
+                Icon(AppIcons.chevronRight, size: 18, color: subColor),
             ],
           ),
           if (sublabel != null) ...<Widget>[

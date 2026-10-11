@@ -5,10 +5,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../responsive/screen_util.dart';
-import '../../theme/app_radius.dart';
 import '../../theme/app_spacing.dart';
+import '../../theme/zave/zave.dart';
 import '../app_icons.dart';
-import '../motion/spring_press.dart';
+import '../zave/zave_press.dart';
 
 /// A single in-app notification to surface as a foreground banner. Kept
 /// deliberately small and presentation-only so it doesn't depend on the
@@ -66,8 +66,8 @@ class InAppNotificationController extends Notifier<InAppNotification?> {
 /// The single app-wide in-app notification controller.
 final inAppNotificationControllerProvider =
     NotifierProvider<InAppNotificationController, InAppNotification?>(
-  InAppNotificationController.new,
-);
+      InAppNotificationController.new,
+    );
 
 /// Mounts a foreground notification banner above **every** route (wired once
 /// in `PlexaverseApp` via `MaterialApp.builder`, alongside [OfflineOverlay]).
@@ -191,9 +191,6 @@ class _NotificationBanner extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final scheme = theme.colorScheme;
-
     return Padding(
       padding: EdgeInsets.fromLTRB(
         AppSpacing.md.w,
@@ -205,60 +202,63 @@ class _NotificationBanner extends StatelessWidget {
         key: ValueKey<String>('dismiss-${notification.id}'),
         direction: DismissDirection.up,
         onDismissed: (_) => onDismiss(),
-        child: SpringPress(
+        // ZavePress, not SpringPress.
+        //
+        // SpringPress is PressableScale, whose spring OVERSHOOTS on release —
+        // the one motion the kit's own barrel names as forbidden. A banner
+        // that bounces is the most conspicuous place to break that rule,
+        // because it arrives unbidden over whatever the user was reading.
+        child: ZavePress(
           child: Material(
-            color: scheme.surface,
-            elevation: 4,
-            shadowColor: scheme.shadow,
-            borderRadius: BorderRadius.circular(AppRadius.lg.r),
-            clipBehavior: Clip.antiAlias,
-            child: InkWell(
-              onTap: onTap,
-              child: Padding(
-                padding: EdgeInsets.symmetric(
-                  horizontal: AppSpacing.md.w,
-                  vertical: AppSpacing.md.h,
-                ),
-                child: Semantics(
-                  liveRegion: true,
-                  child: Row(
-                    children: <Widget>[
-                      Icon(
-                        AppIcons.notifications,
-                        size: _iconSize.r,
-                        color: scheme.primary,
-                      ),
-                      SizedBox(width: AppSpacing.md.w),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          mainAxisSize: MainAxisSize.min,
-                          children: <Widget>[
-                            Text(
-                              notification.title,
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: theme.textTheme.titleSmall?.copyWith(
-                                color: scheme.onSurface,
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
-                            if (notification.body != null &&
-                                notification.body!.isNotEmpty) ...<Widget>[
-                              SizedBox(height: AppSpacing.xxs.h),
-                              Text(
-                                notification.body!,
-                                maxLines: 2,
-                                overflow: TextOverflow.ellipsis,
-                                style: theme.textTheme.bodySmall?.copyWith(
-                                  color: scheme.onSurfaceVariant,
-                                ),
-                              ),
-                            ],
-                          ],
+            // The kit's card surface, not `scheme.surface` on an elevation.
+            // Zave builds depth from fills and hairlines; a Material shadow
+            // over a dark ground reads as a smudge rather than a lift.
+            color: Colors.transparent,
+            child: DecoratedBox(
+              decoration: ZaveSurface.card,
+              child: InkWell(
+                onTap: onTap,
+                child: Padding(
+                  padding: EdgeInsets.symmetric(
+                    horizontal: AppSpacing.md.w,
+                    vertical: AppSpacing.md.h,
+                  ),
+                  child: Semantics(
+                    liveRegion: true,
+                    child: Row(
+                      children: <Widget>[
+                        Icon(
+                          AppIcons.notifications,
+                          size: _iconSize.r,
+                          color: ZaveColors.white,
                         ),
-                      ),
-                    ],
+                        SizedBox(width: AppSpacing.md.w),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            mainAxisSize: MainAxisSize.min,
+                            children: <Widget>[
+                              Text(
+                                notification.title,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: ZaveType.label,
+                              ),
+                              if (notification.body != null &&
+                                  notification.body!.isNotEmpty) ...<Widget>[
+                                SizedBox(height: AppSpacing.xxs.h),
+                                Text(
+                                  notification.body!,
+                                  maxLines: 2,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: ZaveType.bodyMuted,
+                                ),
+                              ],
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                 ),
               ),

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../../../core/ui/app_icons.dart';
 import '../../../../core/ui/zave/zave_kit.dart';
 import 'chat_lane.dart';
 
@@ -88,7 +89,7 @@ class _ReplyChipState extends State<ReplyChip> {
                 ExcludeSemantics(
                   // 14, matching the web's 13px paper plane: small enough to
                   // stay a hint rather than a second control.
-                  child: Icon(Icons.send_outlined, size: 14, color: fg),
+                  child: Icon(AppIcons.send, size: 14, color: fg),
                 ),
               ],
             ),

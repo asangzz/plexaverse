@@ -2,14 +2,15 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
-import '../../../../core/ui/zave/zave_kit.dart';
-import '../../application/settings_controllers.dart';
+import '../../../../core/router/zave_routes.dart';
+import '../../../../core/ui/app_icons.dart';
 // Re-exports `UserPreferences` alongside the Settings entities, so this file
 // needs one import for both rather than two that overlap.
+import '../../../../core/ui/zave/zave_kit.dart';
+import '../../application/settings_controllers.dart';
+import 'package:go_router/go_router.dart';
 import '../../domain/settings_repository.dart';
 import 'settings_section.dart';
-import 'package:go_router/go_router.dart';
-import '../../../../core/router/zave_routes.dart';
 
 /// **Plan & XP** — the Settings-side view of the web's `/pricing` page.
 ///
@@ -76,14 +77,27 @@ class BillingSection extends ConsumerWidget {
                       style: ZaveType.kicker,
                     ),
                     SizedBox(height: ZaveSpace.xs),
-                    Text(
-                      prices == null
-                          ? '—'
-                          : '${prices.symbol}'
-                                '${prices.priceFor(isCompany: isCompany)}'
-                                ' / month',
-                      style: ZaveType.h3,
-                    ),
+                    // A dim bar, not an em-dash at heading size.
+                    //
+                    // Geo-pricing is a second request, so this is the state
+                    // the panel opens in — and `—` set in h3 reads as a
+                    // price of nothing rather than as a price on its way.
+                    if (prices == null)
+                      Container(
+                        height: ZaveSpace.lg,
+                        width: 110,
+                        decoration: BoxDecoration(
+                          color: ZaveGlass.hover,
+                          borderRadius: ZaveRadius.pillBr,
+                        ),
+                      )
+                    else
+                      Text(
+                        '${prices.symbol}'
+                        '${prices.priceFor(isCompany: isCompany)}'
+                        ' / month',
+                        style: ZaveType.h3,
+                      ),
                     if (prices != null) ...<Widget>[
                       SizedBox(height: ZaveSpace.xs),
                       Text(
@@ -108,19 +122,19 @@ class BillingSection extends ConsumerWidget {
             ),
           ],
 
-          if (subscription.isActive && subscription.currentPeriodEnd != null)
-            ...<Widget>[
-              SizedBox(height: ZaveSpace.md),
-              Text(
-                subscription.isRecurring
-                    ? 'Renews on '
-                          '${DateFormat.yMMMd().format(subscription.currentPeriodEnd!)}'
-                          ' · cancel anytime'
-                    : 'Active until '
-                          '${DateFormat.yMMMd().format(subscription.currentPeriodEnd!)}',
-                style: ZaveType.caption,
-              ),
-            ],
+          if (subscription.isActive &&
+              subscription.currentPeriodEnd != null) ...<Widget>[
+            SizedBox(height: ZaveSpace.md),
+            Text(
+              subscription.isRecurring
+                  ? 'Renews on '
+                        '${DateFormat.yMMMd().format(subscription.currentPeriodEnd!)}'
+                        ' · cancel anytime'
+                  : 'Active until '
+                        '${DateFormat.yMMMd().format(subscription.currentPeriodEnd!)}',
+              style: ZaveType.caption,
+            ),
+          ],
 
           const SettingsDivider(),
 
@@ -135,15 +149,12 @@ class BillingSection extends ConsumerWidget {
                   style: ZaveType.label.copyWith(color: ZaveColors.white),
                 ),
               ),
-              Text(
-                switch (xp) {
-                  AsyncData<XpSummary>(:final XpSummary value) =>
-                    NumberFormat.decimalPattern().format(value.balance),
-                  AsyncError<XpSummary>() => '—',
-                  _ => '…',
-                },
-                style: ZaveType.h3.copyWith(color: ZaveColors.amber),
-              ),
+              Text(switch (xp) {
+                AsyncData<XpSummary>(:final XpSummary value) =>
+                  NumberFormat.decimalPattern().format(value.balance),
+                AsyncError<XpSummary>() => '—',
+                _ => '…',
+              }, style: ZaveType.h3.copyWith(color: ZaveColors.amber)),
             ],
           ),
           SizedBox(height: ZaveSpace.sm),
@@ -161,7 +172,7 @@ class BillingSection extends ConsumerWidget {
             alignment: Alignment.centerLeft,
             child: ZaveButton(
               label: 'Plans and top-ups',
-              icon: const Icon(Icons.bolt_outlined),
+              icon: const Icon(AppIcons.bolt),
               onPressed: () => context.push(ZaveRoutes.pricing),
             ),
           ),

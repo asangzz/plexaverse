@@ -1,11 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../../core/ui/app_icons.dart';
 import '../../../../core/ui/zave/zave_kit.dart';
 import '../../application/company_controllers.dart';
 import '../../domain/company_post.dart';
-import '../../domain/company_repository.dart';
 import '../../domain/inbox_comment.dart' show InboxComment;
+import '../../domain/company_repository.dart';
 import '../widgets/company_states.dart';
 import '../widgets/inbox_widgets.dart';
 
@@ -48,7 +49,7 @@ class CompanyInboxPostPage extends ConsumerWidget {
     return ZaveScaffold(
       title: 'AI Assisted Replies',
       leading: ZaveIconButton(
-        icon: const Icon(Icons.arrow_back),
+        icon: const Icon(AppIcons.back),
         tooltip: 'Back',
         onPressed: () => Navigator.of(context).maybePop(),
       ),

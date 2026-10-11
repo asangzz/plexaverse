@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 
+import '../../../../core/ui/app_icons.dart';
 import '../../../../core/ui/zave/zave_kit.dart';
+import '../../../plexa/presentation/widgets/chat_bubbles.dart';
 import '../../domain/onboarding_repository.dart';
 
 /// Shared geometry for both lanes of the onboarding thread.
@@ -143,29 +145,23 @@ class _UserBubble extends StatelessWidget {
   }
 }
 
-/// Plexa's avatar.
+/// Plexa's avatar — the SAME one the Plexa chat uses, not a lookalike.
 ///
-/// The web draws a two-pixel gradient ring (indigo → cyan → green) with a glow.
-/// Zave has neither decorative gradients nor glows, so the mark is the
-/// [ZaveGlass.now] step — the "this is the one speaking" surface — with the
-/// wordmark's initial in white.
+/// This drew the letter "P" on a glass disc, on the reading that Zave has no
+/// decorative gradients or glows. [BotAvatar] then shipped with the web's
+/// ring — indigo → cyan → green around the real mark — and is what Plexa
+/// looks like everywhere else in the app. So onboarding, the one thread where
+/// Plexa is introduced and where this repeats on every line she speaks, was
+/// the single place she had no face.
+///
+/// Reused rather than copied: a second avatar class drifts the first time one
+/// of them changes, and "which of these is Plexa" is not a question a brand
+/// mark should raise.
 class PlexaAvatar extends StatelessWidget {
   const PlexaAvatar({super.key});
 
   @override
-  Widget build(BuildContext context) {
-    return Container(
-      height: ChatLaneMetrics.avatar,
-      width: ChatLaneMetrics.avatar,
-      alignment: Alignment.center,
-      decoration: BoxDecoration(
-        color: ZaveGlass.now,
-        border: Border.all(color: ZaveGlass.nowBorder, width: 1),
-        shape: BoxShape.circle,
-      ),
-      child: Text('P', style: ZaveType.label.copyWith(color: ZaveColors.white)),
-    );
-  }
+  Widget build(BuildContext context) => BotAvatar(size: ChatLaneMetrics.avatar);
 }
 
 /// The user's avatar. Glass rather than white: the bubble beside it is already
@@ -180,7 +176,7 @@ class _UserAvatar extends StatelessWidget {
       width: ChatLaneMetrics.avatar,
       decoration: ZaveSurface.iconButton,
       // 18 is the icon size ZaveIconButton uses inside the same 38px circle.
-      child: const Icon(Icons.person_outline, size: 18),
+      child: const Icon(AppIcons.person, size: 18),
     );
   }
 }

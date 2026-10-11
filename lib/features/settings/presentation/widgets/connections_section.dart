@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../../core/ui/app_icons.dart';
 import '../../../../core/ui/zave/zave_kit.dart';
 import '../../application/settings_controllers.dart';
 import '../../application/settings_write_controller.dart';
@@ -47,8 +48,7 @@ class ConnectionsSection extends ConsumerWidget {
             ),
             AsyncError<List<LinkedinAccount>>() => SectionError(
               message: "We couldn't load your LinkedIn connection.",
-              onRetry: () =>
-                  ref.invalidate(linkedinAccountsControllerProvider),
+              onRetry: () => ref.invalidate(linkedinAccountsControllerProvider),
             ),
             _ => const SectionSkeleton(),
           },
@@ -171,9 +171,7 @@ class _LinkedinRow extends ConsumerWidget {
 
     final ConnectionStatus status = acct == null
         ? ConnectionStatus.absent
-        : (acct.isHealthy
-              ? ConnectionStatus.live
-              : ConnectionStatus.attention);
+        : (acct.isHealthy ? ConnectionStatus.live : ConnectionStatus.attention);
 
     final String detail = switch (status) {
       ConnectionStatus.absent => absentDetail,
@@ -211,7 +209,8 @@ class _LinkedinRow extends ConsumerWidget {
           badge: badge,
           status: status,
           detail: detail,
-          icon: Icons.work_outline,
+          icon: AppIcons.linkedInIn,
+          iconColor: const Color(0xFF0A66C2),
           trailing: control,
         ),
         if (acct != null) ...<Widget>[
@@ -246,7 +245,9 @@ class _SlackRow extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final AsyncValue<SlackConnection> slack = ref.watch(slackControllerProvider);
+    final AsyncValue<SlackConnection> slack = ref.watch(
+      slackControllerProvider,
+    );
 
     return switch (slack) {
       AsyncError<SlackConnection>() => SectionError(
@@ -264,7 +265,8 @@ class _SlackRow extends ConsumerWidget {
             detail: value.isConnected
                 ? 'Connected to ${value.teamName ?? 'your workspace'}'
                 : 'Receive approval requests',
-            icon: Icons.tag,
+            icon: AppIcons.slack,
+            iconColor: const Color(0xFF611F69),
             trailing: value.isConnected
                 ? ZaveButton(
                     label: 'Disconnect',
@@ -274,7 +276,8 @@ class _SlackRow extends ConsumerWidget {
                     label: 'Connect',
                     onPressed: () => _connect(
                       context,
-                      () => ref.read(slackControllerProvider.notifier).connect(),
+                      () =>
+                          ref.read(slackControllerProvider.notifier).connect(),
                       'Slack connected.',
                     ),
                   ),
@@ -357,7 +360,8 @@ class _CalendarRow extends ConsumerWidget {
                 : (value.isConnected
                       ? 'Calendar synced'
                       : 'Sync published posts'),
-            icon: Icons.calendar_today_outlined,
+            icon: AppIcons.google,
+            iconColor: const Color(0xFF4285F4),
             trailing: value.isConnected
                 ? ZaveButton(
                     label: 'Disconnect',
@@ -367,8 +371,9 @@ class _CalendarRow extends ConsumerWidget {
                     label: 'Connect',
                     onPressed: () => _connect(
                       context,
-                      () =>
-                          ref.read(calendarControllerProvider.notifier).connect(),
+                      () => ref
+                          .read(calendarControllerProvider.notifier)
+                          .connect(),
                       'Google Calendar connected.',
                     ),
                   ),
@@ -419,7 +424,6 @@ class _CalendarRow extends ConsumerWidget {
     }
   }
 }
-
 
 /// **Pick the company page** — shown when a company token is connected but no
 /// page is chosen, which is a state in which nothing can publish: company
@@ -528,7 +532,8 @@ class _CompanyPagePickerState extends ConsumerState<CompanyPagePicker> {
                   ),
                 // The server's own words when it has some — it explains
                 // exactly what to paste, which a generic hint cannot.
-                if (value.message != null && value.message!.isNotEmpty) ...<Widget>[
+                if (value.message != null &&
+                    value.message!.isNotEmpty) ...<Widget>[
                   SizedBox(height: ZaveSpace.sm),
                   Text(value.message!, style: ZaveType.caption),
                 ],
@@ -560,7 +565,6 @@ class _CompanyPagePickerState extends ConsumerState<CompanyPagePicker> {
     );
   }
 }
-
 
 /// Confirms a LinkedIn disconnect, naming what survives and what does not.
 ///
@@ -613,7 +617,6 @@ Future<void> _confirmDisconnectLinkedin(
     failure ?? '${account.profileName} disconnected.',
   );
 }
-
 
 /// Runs a browser connect hand-off and says only what is worth saying.
 ///

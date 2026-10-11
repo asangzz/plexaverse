@@ -4,7 +4,11 @@ import 'package:go_router/go_router.dart';
 
 import '../../../../core/router/zave_destinations.dart';
 
+import '../../../../core/router/zave_routes.dart';
+import '../../../../core/ui/app_icons.dart';
 import '../../../../core/ui/zave/zave_kit.dart';
+import '../../../plexa/presentation/plexa_day_sheet.dart';
+import '../../../preferences/application/preferences_controller.dart';
 import '../../../preferences/domain/user_preferences.dart';
 import '../../application/home_controllers.dart';
 import '../../domain/home_repository.dart';
@@ -14,9 +18,6 @@ import '../widgets/home_states.dart';
 import '../widgets/levels_panel.dart';
 import '../widgets/roadmap_timeline.dart';
 import '../widgets/season_two_view.dart';
-import '../../../plexa/presentation/plexa_day_sheet.dart';
-import '../../../preferences/application/preferences_controller.dart';
-import '../../../../core/router/zave_routes.dart';
 
 /// **Home** — the web's `/dashboard`.
 ///
@@ -362,7 +363,7 @@ class _MissionSheet extends StatelessWidget {
               // like putting something down rather than going back.
               ZaveButton.primary(
                 label: 'Open Plexa',
-                icon: const Icon(Icons.auto_awesome_outlined),
+                icon: const Icon(AppIcons.sparkle),
                 expand: true,
                 onPressed: () => showPlexaDay(context),
               ),
@@ -371,7 +372,7 @@ class _MissionSheet extends StatelessWidget {
                 alignment: Alignment.centerRight,
                 child: ZaveButton(
                   label: 'Open planner',
-                  trailing: const Icon(Icons.arrow_forward),
+                  trailing: const Icon(AppIcons.forward),
                   onPressed: () => _start(context, '/planner'),
                 ),
               ),

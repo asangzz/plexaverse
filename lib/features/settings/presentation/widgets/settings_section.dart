@@ -47,10 +47,7 @@ class SettingsSection extends StatelessWidget {
           Text(lead!, style: ZaveType.caption),
         ],
         SizedBox(height: ZaveSpace.md),
-        ZaveCard(
-          padding: padded ? null : EdgeInsets.zero,
-          child: child,
-        ),
+        ZaveCard(padding: padded ? null : EdgeInsets.zero, child: child),
       ],
     );
   }
@@ -110,6 +107,7 @@ class ConnectionRow extends StatelessWidget {
     required this.status,
     required this.detail,
     required this.icon,
+    this.iconColor,
     this.badge,
     this.trailing,
     this.secondary,
@@ -123,6 +121,14 @@ class ConnectionRow extends StatelessWidget {
   final String detail;
 
   final IconData icon;
+
+  /// A third party's own colour, for the rows where the icon IS the brand.
+  ///
+  /// Default null keeps [ZaveColors.ink85], which is right for the rows whose
+  /// icon is one of ours. On a vendor row the colour is doing identification
+  /// work, which is the one job Zave lets colour do besides naming a status —
+  /// see [ZaveBrandMark].
+  final Color? iconColor;
 
   /// `Personal` / `Company` on the LinkedIn rows, so a user who is mid-
   /// onboarding (and therefore sees both) can tell them apart.
@@ -151,7 +157,7 @@ class ConnectionRow extends StatelessWidget {
                 // The web's tile is `rounded-xl` (12); r16 is the nearest token.
                 borderRadius: ZaveRadius.inputBr,
               ),
-              child: Icon(icon, color: ZaveColors.ink85, size: 20),
+              child: Icon(icon, color: iconColor ?? ZaveColors.ink85, size: 20),
             ),
             SizedBox(width: ZaveSpace.lg),
             Expanded(
@@ -266,19 +272,34 @@ class UnavailableNote extends StatelessWidget {
   }
 }
 
+/// A [ZaveCard] only when the caller has no section around it.
+Widget _maybeBoxed({required bool boxed, required Widget child}) =>
+    boxed ? ZaveCard(child: child) : child;
+
 /// The loading placeholder for one section.
 ///
-/// A glass card at rest with two dim bars in it. No shimmer: Zave's motion rule
-/// is "short and physical; nothing bounces", and a looping sweep on half the
-/// screen is the opposite of that.
+/// Two dim bars at rest. No shimmer: Zave's motion rule is "short and
+/// physical; nothing bounces", and a looping sweep on half the screen is the
+/// opposite of that.
+///
+/// **No card of its own by default.** [SettingsSection] already puts its
+/// child in a [ZaveCard], and sixteen of this widget's eighteen call sites
+/// are that child — so every section in Settings drew a bordered card inside
+/// a bordered card for as long as it was loading or failing. The two
+/// page-level callers, which have no section around them, pass [boxed].
 class SectionSkeleton extends StatelessWidget {
-  const SectionSkeleton({this.lines = 2, super.key});
+  const SectionSkeleton({this.lines = 2, this.boxed = false, super.key});
 
   final int lines;
 
+  /// Draw the surrounding [ZaveCard]. Only for a caller with no
+  /// [SettingsSection] around it.
+  final bool boxed;
+
   @override
   Widget build(BuildContext context) {
-    return ZaveCard(
+    return _maybeBoxed(
+      boxed: boxed,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: <Widget>[
@@ -307,14 +328,23 @@ class SectionSkeleton extends StatelessWidget {
 /// Per-section rather than per-page on purpose: Slack being unreachable must
 /// not take the profile form down with it.
 class SectionError extends StatelessWidget {
-  const SectionError({required this.onRetry, this.message, super.key});
+  const SectionError({
+    required this.onRetry,
+    this.message,
+    this.boxed = false,
+    super.key,
+  });
 
   final VoidCallback onRetry;
   final String? message;
 
+  /// See [SectionSkeleton.boxed].
+  final bool boxed;
+
   @override
   Widget build(BuildContext context) {
-    return ZaveCard(
+    return _maybeBoxed(
+      boxed: boxed,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: <Widget>[

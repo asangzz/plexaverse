@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../../core/ui/app_icons.dart';
 import '../../../../core/ui/zave/zave_kit.dart';
 import '../../../preferences/domain/user_preferences.dart';
 import '../../application/settings_write_controller.dart';
@@ -60,19 +61,19 @@ class ApprovalChannelSection extends ConsumerWidget {
             children: <Widget>[
               ZaveChip(
                 label: 'Slack',
-                icon: const Icon(Icons.tag),
+                icon: const ZaveBrandMark(ZaveBrand.slack, onColor: true),
                 selected: current == 'slack',
                 onTap: saving ? null : () => _select(context, ref, 'slack'),
               ),
               ZaveChip(
                 label: 'WhatsApp',
-                icon: const Icon(Icons.chat_bubble_outline),
+                icon: const Icon(AppIcons.comment),
                 selected: current == 'whatsapp',
                 onTap: saving ? null : () => _select(context, ref, 'whatsapp'),
               ),
               ZaveChip(
                 label: 'Email',
-                icon: const Icon(Icons.mail_outline),
+                icon: const Icon(AppIcons.email),
                 selected: current == 'email',
                 onTap: saving ? null : () => _select(context, ref, 'email'),
               ),

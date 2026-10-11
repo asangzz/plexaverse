@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../../core/ui/app_icons.dart';
 import '../../../../core/ui/zave/zave_kit.dart';
 import '../../application/pricing_controller.dart';
 import '../../domain/pricing.dart';
@@ -42,7 +43,6 @@ import '../widgets/xp_budget_card.dart';
 class PricingPage extends ConsumerWidget {
   const PricingPage({super.key});
 
-
   /// Runs checkout and says what happened.
   ///
   /// Silence on a closed sheet — backing out of a payment is a decision, and
@@ -72,7 +72,7 @@ class PricingPage extends ConsumerWidget {
     return ZaveScaffold(
       largeTitle: 'Pricing',
       leading: ZaveIconButton(
-        icon: const Icon(Icons.arrow_back),
+        icon: const Icon(AppIcons.back),
         tooltip: 'Back',
         onPressed: () => context.pop(),
       ),

@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../../core/platform/image_picking.dart';
+import '../../../../core/router/zave_routes.dart';
+import '../../../../core/ui/app_icons.dart';
 import '../../../../core/ui/widgets/open_link.dart';
 import '../../../../core/ui/zave/zave_kit.dart';
 import '../../application/compose_controller.dart';
@@ -11,12 +14,10 @@ import '../widgets/ai_generate_sheet.dart';
 import '../widgets/attached_image_card.dart';
 import '../widgets/linkedin_connection_panel.dart';
 import '../widgets/linkedin_preview_card.dart';
-import '../widgets/post_optimizer_card.dart';
-import '../widgets/schedule_panel.dart';
-import '../../../../core/platform/image_picking.dart';
 import 'package:go_router/go_router.dart';
 
-import '../../../../core/router/zave_routes.dart';
+import '../widgets/post_optimizer_card.dart';
+import '../widgets/schedule_panel.dart';
 
 /// **Write** — the composer. The web's `/create` and `/company-post`.
 ///
@@ -114,7 +115,7 @@ class _ComposePageState extends ConsumerState<ComposePage> {
       title: 'Write',
       leading: Navigator.of(context).canPop()
           ? ZaveIconButton(
-              icon: const Icon(Icons.arrow_back),
+              icon: const Icon(AppIcons.back),
               tooltip: 'Back',
               onPressed: () => Navigator.of(context).maybePop(),
             )
@@ -196,7 +197,7 @@ class _ComposePageState extends ConsumerState<ComposePage> {
       // first thing a user reaches for.
       ZaveButton(
         label: 'Write this post with AI',
-        icon: const Icon(Icons.auto_awesome_outlined),
+        icon: const Icon(AppIcons.sparkle),
         expand: true,
         onPressed: status.isBusy ? null : () => AiGenerateSheet.show(context),
       ),
@@ -231,7 +232,7 @@ class _ComposePageState extends ConsumerState<ComposePage> {
       Row(
         children: <Widget>[
           ZaveIconButton(
-            icon: const Icon(Icons.image_outlined),
+            icon: const Icon(AppIcons.image),
             tooltip: 'Attach an image',
             onPressed: () => _attach(context, ref),
           ),
@@ -274,7 +275,7 @@ class _ComposePageState extends ConsumerState<ComposePage> {
       SizedBox(height: ZaveSpace.xl),
       ZaveButton(
         label: 'Save as draft',
-        icon: const Icon(Icons.bookmark_border),
+        icon: const Icon(AppIcons.bookmark),
         expand: true,
         onPressed: draft.canSubmit && !status.isBusy ? actions.saveDraft : null,
         busy: status.isSubmitting && status.intent == ComposeOutcome.draftSaved,
@@ -284,9 +285,7 @@ class _ComposePageState extends ConsumerState<ComposePage> {
         // One action, two labels — exactly as on the web, where the presence of
         // a schedule changes the wording but not the wire status.
         label: draft.scheduled ? 'Schedule post' : 'Submit for approval',
-        icon: Icon(
-          draft.scheduled ? Icons.event_outlined : Icons.send_outlined,
-        ),
+        icon: Icon(draft.scheduled ? AppIcons.calendar : AppIcons.send),
         expand: true,
         onPressed: draft.canSubmit && !status.isBusy
             ? actions.submitForApproval
@@ -301,7 +300,7 @@ class _ComposePageState extends ConsumerState<ComposePage> {
         SizedBox(height: ZaveSpace.md),
         ZaveButton(
           label: 'Publish now to ${brand?.companyPageLabel ?? 'the page'}',
-          icon: const Icon(Icons.rocket_launch_outlined),
+          icon: const Icon(AppIcons.odyssey),
           expand: true,
           onPressed:
               draft.canSubmit &&
@@ -433,7 +432,7 @@ class _OutcomeCard extends ConsumerWidget {
             // place a company post's URL ever appears.
             ZaveButton(
               label: 'View on LinkedIn',
-              icon: const Icon(Icons.open_in_new_rounded),
+              icon: const Icon(AppIcons.openExternal),
               expand: true,
               onPressed: () =>
                   openLinkAndReport(context, ref, status.publishedUrl!),
@@ -602,14 +601,14 @@ Future<void> _attach(BuildContext context, WidgetRef ref) async {
               SizedBox(height: ZaveSpace.lg),
               ZaveButton(
                 label: 'Choose a photo',
-                icon: const Icon(Icons.photo_library_outlined),
+                icon: const Icon(AppIcons.photoLibrary),
                 expand: true,
                 onPressed: () => Navigator.of(ctx).pop(ImageSourceKind.gallery),
               ),
               SizedBox(height: ZaveSpace.md),
               ZaveButton(
                 label: 'Take a photo',
-                icon: const Icon(Icons.photo_camera_outlined),
+                icon: const Icon(AppIcons.camera),
                 expand: true,
                 onPressed: () => Navigator.of(ctx).pop(ImageSourceKind.camera),
               ),

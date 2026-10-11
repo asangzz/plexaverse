@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../../core/router/zave_routes.dart';
+import '../../../../core/ui/app_icons.dart';
 import '../../../../core/ui/widgets/open_link.dart';
 import '../../../../core/ui/zave/zave_kit.dart';
 import '../../application/post_library_controllers.dart';
@@ -158,7 +159,7 @@ class _PostsPageState extends ConsumerState<PostsPage> {
               controller: _search,
               pill: true,
               hint: 'Search posts...',
-              prefix: const Icon(Icons.search),
+              prefix: const Icon(AppIcons.search),
               onChanged: (String value) => setState(() => _query = value),
             ),
 
@@ -175,7 +176,7 @@ class _PostsPageState extends ConsumerState<PostsPage> {
             // made "New Post" look like another filter.
             ZaveButton.primary(
               label: 'New Post',
-              icon: const Icon(Icons.add),
+              icon: const Icon(AppIcons.add),
               expand: true,
               onPressed: () => context.push(ZaveRoutes.create),
             ),
@@ -250,7 +251,7 @@ class _PostsPageState extends ConsumerState<PostsPage> {
         Center(
           child: ZaveButton(
             label: 'Load more',
-            icon: const Icon(Icons.keyboard_arrow_down),
+            icon: const Icon(AppIcons.chevronDown),
             busy: state.loadingMore,
             onPressed: () => ref.read(postLibraryProvider.notifier).loadMore(),
           ),

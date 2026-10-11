@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../../../core/ui/app_icons.dart';
 import '../../../../core/ui/zave/zave_kit.dart';
 
 /// The signed-out entry screen: wordmark, hero, two ways in.
@@ -78,7 +79,7 @@ class AuthWelcome extends StatelessWidget {
         ),
         SizedBox(height: ZaveSpace.md),
         _AuthChoice(
-          icon: const Icon(Icons.mail_outline, size: 20),
+          icon: const Icon(AppIcons.email, size: 20),
           label: 'Sign in with Email',
           onPressed: onEmail,
         ),

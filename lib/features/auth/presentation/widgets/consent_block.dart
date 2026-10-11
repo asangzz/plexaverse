@@ -1,14 +1,12 @@
 import 'package:flutter/material.dart';
 
+import '../../../../core/ui/app_icons.dart';
 import '../../../../core/ui/zave/zave_kit.dart';
 import '../../domain/auth_repository.dart';
 
 /// What the user decided on the notice.
 class ConsentDecision {
-  const ConsentDecision({
-    required this.acceptedNotice,
-    required this.consents,
-  });
+  const ConsentDecision({required this.acceptedNotice, required this.consents});
 
   /// The required, unticked-by-default acceptance. Without it there is no
   /// account — the server refuses, and so does the mock.
@@ -78,8 +76,9 @@ class ConsentBlock extends StatelessWidget {
               'my account and processing my content to generate posts. This '
               'includes sending your content to AI providers outside India.',
         ),
-        for (final ConsentPurposeOption p
-            in purposes.where((ConsentPurposeOption p) => !p.required_)) ...<Widget>[
+        for (final ConsentPurposeOption p in purposes.where(
+          (ConsentPurposeOption p) => !p.required_,
+        )) ...<Widget>[
           SizedBox(height: ZaveSpace.md),
           _ConsentRow(
             value: decision.consents[p.purpose] ?? false,
@@ -142,7 +141,7 @@ class _ConsentRow extends StatelessWidget {
                 borderRadius: BorderRadius.circular(6),
               ),
               child: value
-                  ? const Icon(Icons.check, size: 16, color: ZaveColors.ink)
+                  ? const Icon(AppIcons.check, size: 16, color: ZaveColors.ink)
                   : null,
             ),
             SizedBox(width: ZaveSpace.md),
@@ -165,9 +164,10 @@ class _ConsentRow extends StatelessWidget {
                     ),
                     SizedBox(height: ZaveSpace.xs),
                   ],
-                  Text(label, style: ZaveType.caption.copyWith(
-                    color: ZaveColors.ink85,
-                  )),
+                  Text(
+                    label,
+                    style: ZaveType.caption.copyWith(color: ZaveColors.ink85),
+                  ),
                 ],
               ),
             ),

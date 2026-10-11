@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../../core/router/zave_routes.dart';
+import '../../../../core/ui/app_icons.dart';
 import '../../../../core/ui/widgets/open_link.dart';
 import '../../../../core/ui/zave/zave_kit.dart';
 import '../../application/engagement_controllers.dart';
@@ -79,7 +80,7 @@ class ConnectionsPage extends ConsumerWidget {
     return ZaveScaffold(
       largeTitle: 'Connections',
       leading: ZaveIconButton(
-        icon: const Icon(Icons.arrow_back),
+        icon: const Icon(AppIcons.back),
         tooltip: 'Back to the roadmap',
         onPressed: () => _leave(context),
       ),

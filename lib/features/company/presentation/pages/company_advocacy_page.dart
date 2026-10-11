@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../../core/router/zave_routes.dart';
+import '../../../../core/ui/app_icons.dart';
 import '../../../../core/ui/zave/zave_kit.dart';
 import '../../application/company_controllers.dart';
 import '../../domain/advocacy_post.dart';
@@ -41,7 +42,7 @@ class CompanyAdvocacyPage extends ConsumerWidget {
       largeTitle: 'Advocacy',
       actions: <Widget>[
         ZaveIconButton(
-          icon: const Icon(Icons.refresh),
+          icon: const Icon(AppIcons.refresh),
           tooltip: 'Refresh',
           onPressed: () => ref.invalidate(advocacyControllerProvider),
         ),
@@ -107,7 +108,7 @@ class CompanyAdvocacyPage extends ConsumerWidget {
               Expanded(child: Text(state.error!, style: ZaveType.bodyMuted)),
               SizedBox(width: ZaveSpace.md),
               ZaveIconButton(
-                icon: const Icon(Icons.close),
+                icon: const Icon(AppIcons.close),
                 tooltip: 'Dismiss',
                 onPressed: notifier.clearError,
               ),

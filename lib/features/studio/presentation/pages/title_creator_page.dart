@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../../../core/router/zave_routes.dart';
 import '../../../../core/security/clipboard_policy.dart';
+import '../../../../core/ui/app_icons.dart';
 import '../../../../core/ui/zave/zave_kit.dart';
 import '../../../home/application/home_controllers.dart';
 import '../../application/title_controller.dart';
@@ -37,7 +38,7 @@ class TitleCreatorPage extends ConsumerWidget {
     return ZaveScaffold(
       title: 'Title creator',
       leading: ZaveIconButton(
-        icon: const Icon(Icons.arrow_back),
+        icon: const Icon(AppIcons.back),
         tooltip: 'Back',
         onPressed: () => context.pop(),
       ),
@@ -273,7 +274,7 @@ class _ResultStep extends ConsumerWidget {
               SizedBox(height: ZaveSpace.lg),
               ZaveButton(
                 label: 'Copy headline',
-                icon: const Icon(Icons.copy_outlined),
+                icon: const Icon(AppIcons.copy),
                 expand: true,
                 onPressed: () async {
                   await ClipboardPolicy.copyNonSensitive(result.suggestedTitle);

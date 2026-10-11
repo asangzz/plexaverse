@@ -88,7 +88,11 @@ class ZaveButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final (BoxDecoration deco, TextStyle style, EdgeInsets pad) = switch (kind) {
+    final (
+      BoxDecoration deco,
+      TextStyle style,
+      EdgeInsets pad,
+    ) = switch (kind) {
       ZaveButtonKind.primary => (
         BoxDecoration(
           color: ZaveColors.violet,
@@ -117,10 +121,7 @@ class ZaveButton extends StatelessWidget {
         ZaveSpace.btnGhostPad,
       ),
       ZaveButtonKind.brand => (
-        BoxDecoration(
-          color: ZaveColors.blue,
-          borderRadius: ZaveRadius.pillBr,
-        ),
+        BoxDecoration(color: ZaveColors.blue, borderRadius: ZaveRadius.pillBr),
         ZaveType.buttonBrand,
         ZaveSpace.btnBrandPad,
       ),
@@ -128,23 +129,38 @@ class ZaveButton extends StatelessWidget {
 
     final Color fg = style.color ?? ZaveColors.white;
 
+    final Widget labelText = Text(
+      label,
+      style: style,
+      textAlign: TextAlign.center,
+      // A pill never wraps. Without this, a button squeezed by a Row
+      // wraps its label one character per line rather than shrinking,
+      // because the Flexible below hands it an arbitrarily narrow box.
+      maxLines: 1,
+      softWrap: false,
+      overflow: TextOverflow.ellipsis,
+    );
+
     Widget content = busy
-        ? SizedBox(
-            height: (style.fontSize ?? 16) + 4,
-            width: (style.fontSize ?? 16) + 4,
-            child: CircularProgressIndicator(strokeWidth: 2, color: fg),
+        // The label stays, invisible, to hold the button's width.
+        //
+        // Without it a busy button is just its spinner: `width` is only
+        // forced when `expand` is set, so every `Save` and `Connect` in
+        // Settings visibly collapsed to a small circle the moment it was
+        // pressed and sprang back when the write landed. The control the
+        // user just touched should not move while they are watching it.
+        ? Stack(
+            alignment: Alignment.center,
+            children: <Widget>[
+              Opacity(opacity: 0, child: labelText),
+              SizedBox(
+                height: (style.fontSize ?? 16) + 4,
+                width: (style.fontSize ?? 16) + 4,
+                child: CircularProgressIndicator(strokeWidth: 2, color: fg),
+              ),
+            ],
           )
-        : Text(
-            label,
-            style: style,
-            textAlign: TextAlign.center,
-            // A pill never wraps. Without this, a button squeezed by a Row
-            // wraps its label one character per line rather than shrinking,
-            // because the Flexible below hands it an arbitrarily narrow box.
-            maxLines: 1,
-            softWrap: false,
-            overflow: TextOverflow.ellipsis,
-          );
+        : labelText;
 
     if (icon != null || trailing != null) {
       content = Row(
@@ -191,9 +207,7 @@ class ZaveButton extends StatelessWidget {
               child: Container(
                 decoration: deco,
                 padding: pad,
-                constraints: BoxConstraints(
-                  minHeight: ZaveSpace.minTapTarget,
-                ),
+                constraints: BoxConstraints(minHeight: ZaveSpace.minTapTarget),
                 width: expand ? double.infinity : null,
                 alignment: Alignment.center,
                 child: content,

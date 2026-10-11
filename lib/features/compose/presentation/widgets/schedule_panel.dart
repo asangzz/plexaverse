@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../../../core/ui/app_icons.dart';
 import '../../../../core/ui/zave/zave_kit.dart';
 import '../../domain/compose_draft.dart';
 
@@ -154,7 +155,7 @@ class _SchedulePanelState extends State<SchedulePanel> {
                 ZaveChip(
                   label: _moreTimes ? 'Fewer times' : 'More times',
                   selected: false,
-                  icon: const Icon(Icons.schedule_outlined),
+                  icon: const Icon(AppIcons.schedule),
                   onTap: () => setState(() => _moreTimes = !_moreTimes),
                 ),
                 SizedBox(width: ZaveSpace.sm),
@@ -268,7 +269,7 @@ class _DateStrip extends StatelessWidget {
                 label: 'Pick a date',
                 selected:
                     selected != null && selected!.difference(today).inDays >= 5,
-                icon: const Icon(Icons.calendar_today_outlined),
+                icon: const Icon(AppIcons.calendar),
                 onTap: onPickOther,
               ),
             ],
@@ -317,7 +318,7 @@ class _SelectedWhen extends StatelessWidget {
       decoration: ZaveSurface.rowNow,
       child: Row(
         children: <Widget>[
-          Icon(Icons.schedule_outlined, size: 20, color: ZaveColors.peri),
+          Icon(AppIcons.schedule, size: 20, color: ZaveColors.peri),
           SizedBox(width: ZaveSpace.md),
           Expanded(
             child: Column(

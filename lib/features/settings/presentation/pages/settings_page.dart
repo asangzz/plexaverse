@@ -72,6 +72,7 @@ class SettingsPage extends ConsumerWidget {
             SizedBox(height: ZaveSpace.xl),
             switch (preferences) {
               AsyncError<UserPreferences>() => SectionError(
+                boxed: true,
                 message: "We couldn't load your settings.",
                 onRetry: () => ref.invalidate(preferencesControllerProvider),
               ),
@@ -159,7 +160,7 @@ class _SettingsSkeleton extends StatelessWidget {
       children: <Widget>[
         for (int i = 0; i < 4; i++) ...<Widget>[
           if (i > 0) SizedBox(height: SettingsSection.gap),
-          const SectionSkeleton(lines: 3),
+          const SectionSkeleton(lines: 3, boxed: true),
         ],
       ],
     );

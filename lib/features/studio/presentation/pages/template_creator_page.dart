@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../../core/ui/app_icons.dart';
 import '../../../../core/ui/zave/zave_kit.dart';
 import '../../application/template_controller.dart';
 import '../../application/template_creator_state.dart';
@@ -39,7 +40,7 @@ class TemplateCreatorPage extends ConsumerWidget {
     return ZaveScaffold(
       title: 'Template creator',
       leading: ZaveIconButton(
-        icon: const Icon(Icons.arrow_back),
+        icon: const Icon(AppIcons.back),
         tooltip: 'Back',
         onPressed: () => context.pop(),
       ),
@@ -173,9 +174,9 @@ class _UploadStepState extends ConsumerState<_UploadStep> {
         const StudioUnavailable(
           title: 'Picking a file from this phone',
           reason:
-              'The web drops a file into a dropzone and base64s it. That '
-              'needs a photo-library plugin this build does not ship (no '
-              'image_picker in pubspec.yaml).',
+              'Not wired here yet — the web drops a file into a dropzone and '
+              'base64s it. Generating from a description, or pasting a URL, '
+              'both work today.',
         ),
         SizedBox(height: ZaveSpace.xl),
         ZaveButton.primary(
@@ -395,7 +396,7 @@ class _GenerateStep extends ConsumerWidget {
                     ),
                   SizedBox(width: ZaveSpace.md),
                   Icon(
-                    Icons.arrow_forward,
+                    AppIcons.forward,
                     color: ZaveColors.ink45,
                     size: ZaveSpace.xl,
                   ),

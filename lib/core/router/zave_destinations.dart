@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../access/feature_access.dart';
+import '../ui/app_icons.dart';
 import 'zave_routes.dart';
 
 /// One navigable destination, mirroring a `NavItem` in the web sidebar.
@@ -37,21 +38,21 @@ const List<ZaveDestination> zaveDestinations = <ZaveDestination>[
   ZaveDestination(
     label: 'Home',
     route: ZaveRoutes.dashboard,
-    icon: Icons.home_outlined,
+    icon: AppIcons.home,
     visibility: NavVisibility.both,
     group: 'Overview',
   ),
   ZaveDestination(
     label: 'Analytics',
     route: ZaveRoutes.companyAnalytics,
-    icon: Icons.insights_outlined,
+    icon: AppIcons.insights,
     visibility: NavVisibility.company,
     group: 'Overview',
   ),
   ZaveDestination(
     label: 'Inbox',
     route: ZaveRoutes.companyAutoComment,
-    icon: Icons.forum_outlined,
+    icon: AppIcons.forum,
     visibility: NavVisibility.company,
     group: 'Overview',
   ),
@@ -60,49 +61,49 @@ const List<ZaveDestination> zaveDestinations = <ZaveDestination>[
   ZaveDestination(
     label: 'Plan',
     route: ZaveRoutes.planner,
-    icon: Icons.grid_view_outlined,
+    icon: AppIcons.grid,
     visibility: NavVisibility.both,
     group: 'Creation',
   ),
   ZaveDestination(
     label: 'Write',
     route: ZaveRoutes.create,
-    icon: Icons.edit_outlined,
+    icon: AppIcons.edit,
     visibility: NavVisibility.personal,
     group: 'Creation',
   ),
   ZaveDestination(
     label: 'Write',
     route: ZaveRoutes.companyPost,
-    icon: Icons.edit_outlined,
+    icon: AppIcons.edit,
     visibility: NavVisibility.company,
     group: 'Creation',
   ),
   ZaveDestination(
     label: 'Studio',
     route: ZaveRoutes.studio,
-    icon: Icons.brush_outlined,
+    icon: AppIcons.brush,
     visibility: NavVisibility.admin,
     group: 'Creation',
   ),
   ZaveDestination(
     label: 'Reimagine',
     route: ZaveRoutes.reimagine,
-    icon: Icons.auto_awesome_outlined,
+    icon: AppIcons.sparkle,
     visibility: NavVisibility.admin,
     group: 'Creation',
   ),
   ZaveDestination(
     label: 'Templates',
     route: ZaveRoutes.templateCreator,
-    icon: Icons.dashboard_customize_outlined,
+    icon: AppIcons.grid,
     visibility: NavVisibility.admin,
     group: 'Creation',
   ),
   ZaveDestination(
     label: 'Festive',
     route: ZaveRoutes.festive,
-    icon: Icons.celebration_outlined,
+    icon: AppIcons.celebrate,
     visibility: NavVisibility.admin,
     group: 'Creation',
   ),
@@ -111,7 +112,7 @@ const List<ZaveDestination> zaveDestinations = <ZaveDestination>[
   ZaveDestination(
     label: 'Advocacy',
     route: ZaveRoutes.companyAdvocacy,
-    icon: Icons.campaign_outlined,
+    icon: AppIcons.campaign,
     visibility: NavVisibility.admin,
     group: 'Growth & Tools',
   ),
@@ -120,35 +121,35 @@ const List<ZaveDestination> zaveDestinations = <ZaveDestination>[
   ZaveDestination(
     label: 'Persona',
     route: ZaveRoutes.persona,
-    icon: Icons.face_outlined,
+    icon: AppIcons.face,
     visibility: NavVisibility.both,
     group: 'Management',
   ),
   ZaveDestination(
     label: 'Posts',
     route: ZaveRoutes.posts,
-    icon: Icons.article_outlined,
+    icon: AppIcons.article,
     visibility: NavVisibility.both,
     group: 'Management',
   ),
   ZaveDestination(
     label: 'Calendar',
     route: ZaveRoutes.calendar,
-    icon: Icons.calendar_today_outlined,
+    icon: AppIcons.calendar,
     visibility: NavVisibility.both,
     group: 'Management',
   ),
   ZaveDestination(
     label: 'Accounts',
     route: ZaveRoutes.accounts,
-    icon: Icons.link_outlined,
+    icon: AppIcons.link,
     visibility: NavVisibility.admin,
     group: 'Management',
   ),
   ZaveDestination(
     label: 'Settings',
     route: ZaveRoutes.settings,
-    icon: Icons.settings_outlined,
+    icon: AppIcons.settings,
     visibility: NavVisibility.both,
     group: 'Management',
   ),

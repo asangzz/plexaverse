@@ -17,11 +17,13 @@ library;
 
 export '../../theme/zave/zave.dart';
 export 'zave_actions.dart';
+export 'zave_brand_mark.dart';
 export 'zave_button.dart';
 export 'zave_card.dart';
 export 'zave_chip.dart';
 export 'zave_field.dart';
 export 'zave_ground.dart';
+export 'zave_image.dart';
 export 'zave_image_sheet.dart';
 export 'zave_more_sheet.dart';
 export 'zave_press.dart';

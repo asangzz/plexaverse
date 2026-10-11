@@ -1,6 +1,8 @@
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../../core/ui/app_icons.dart';
 import '../../../../core/ui/zave/zave_kit.dart';
 import '../../../auth/application/google_link_controller.dart';
 import '../../../auth/application/sign_out_controller.dart';
@@ -9,9 +11,9 @@ import '../../application/privacy_controller.dart';
 import '../../application/settings_controllers.dart';
 import '../../application/settings_write_controller.dart';
 import '../../domain/settings_repository.dart';
-import 'settings_section.dart';
 import 'dart:convert';
 import 'package:flutter/services.dart';
+import 'settings_section.dart';
 
 /// **Account** — who you are signed in as, and the way out.
 ///
@@ -93,7 +95,7 @@ class _AccountBody extends ConsumerWidget {
           alignment: Alignment.centerLeft,
           child: ZaveButton(
             label: 'Sign out',
-            icon: const Icon(Icons.logout),
+            icon: const Icon(AppIcons.logout),
             onPressed: () => _confirmSignOut(context, ref),
           ),
         ),
@@ -246,7 +248,7 @@ class _GoogleSignInRowState extends ConsumerState<_GoogleSignInRow> {
               detail: value.linked
                   ? 'You can sign in with Google'
                   : 'Sign in with Google instead of your password',
-              icon: Icons.account_circle_outlined,
+              icon: AppIcons.person,
               trailing: value.linked
                   ? (value.canUnlink
                         ? ZaveButton(
@@ -313,18 +315,19 @@ class _Avatar extends StatelessWidget {
         shape: BoxShape.circle,
       ),
       child: url == null || url.isEmpty
-          ? Center(
-              child: Text(
-                identity.initial,
-                style: ZaveType.h3,
-              ),
-            )
-          : Image.network(
-              url,
+          ? Center(child: Text(identity.initial, style: ZaveType.h3))
+          // Cached, not `Image.network`. This rebuilds with every section
+          // around it, and an uncached avatar refetches the provider's CDN
+          // each time — on a connection the user is paying for.
+          : CachedNetworkImage(
+              imageUrl: url,
               fit: BoxFit.cover,
-              // A broken avatar URL must degrade to the initial, not to a
-              // console-red error box in the middle of Settings.
-              errorBuilder: (_, _, _) =>
+              // A broken or still-loading avatar must degrade to the initial,
+              // not to a console-red error box in the middle of Settings and
+              // not to a hole where a face was a moment ago.
+              placeholder: (_, _) =>
+                  Center(child: Text(identity.initial, style: ZaveType.h3)),
+              errorWidget: (_, _, _) =>
                   Center(child: Text(identity.initial, style: ZaveType.h3)),
             ),
     );
@@ -408,9 +411,9 @@ class _DataPrivacySectionState extends ConsumerState<DataPrivacySection> {
   Future<void> _raiseGrievance() async {
     final ({String category, String message})? entry =
         await showDialog<({String category, String message})>(
-      context: context,
-      builder: (BuildContext ctx) => const _GrievanceDialog(),
-    );
+          context: context,
+          builder: (BuildContext ctx) => const _GrievanceDialog(),
+        );
     if (entry == null || !mounted) return;
 
     final int? days = await ref
@@ -474,24 +477,27 @@ class _DataPrivacySectionState extends ConsumerState<DataPrivacySection> {
     // is still here to watch it.
     final ErasureOutcome outcome = await privacy.erase(password: password);
     _say(switch (outcome) {
-      ErasureSucceeded(:final List<String> retained) => retained.isEmpty
-          ? 'Your account and data have been deleted.'
-          : 'Account deleted. Kept for legal reasons: ${retained.join(', ')}.',
+      ErasureSucceeded(:final List<String> retained) =>
+        retained.isEmpty
+            ? 'Your account and data have been deleted.'
+            : 'Account deleted. Kept for legal reasons: ${retained.join(', ')}.',
       // This route's rejections are not translated into a typed result yet, so
       // a wrong password and an unreachable server land here identically. Name
       // both where a password was in play rather than sending the user off to
       // retype one that was never the problem.
-      ErasureFailed() => hasPassword == false
-          ? "We couldn't delete your account. Nothing was changed."
-          : "We couldn't delete your account — the password may be wrong, "
-                "or we couldn't reach the server. Nothing was changed.",
+      ErasureFailed() =>
+        hasPassword == false
+            ? "We couldn't delete your account. Nothing was changed."
+            : "We couldn't delete your account — the password may be wrong, "
+                  "or we couldn't reach the server. Nothing was changed.",
     });
   }
 
   @override
   Widget build(BuildContext context) {
-    final AsyncValue<ConsentLedger> consents =
-        ref.watch(consentControllerProvider);
+    final AsyncValue<ConsentLedger> consents = ref.watch(
+      consentControllerProvider,
+    );
     // Watched, not read: this is the export's and the erasure's in-flight
     // state, and watching it is also what holds the autoDispose controller
     // open for the length of a request this screen started.
@@ -537,7 +543,7 @@ class _DataPrivacySectionState extends ConsumerState<DataPrivacySection> {
             alignment: Alignment.centerLeft,
             child: ZaveButton(
               label: 'Download my data',
-              icon: const Icon(Icons.download_outlined),
+              icon: const Icon(AppIcons.download),
               busy: busy,
               onPressed: busy ? null : _export,
             ),
@@ -547,7 +553,7 @@ class _DataPrivacySectionState extends ConsumerState<DataPrivacySection> {
             alignment: Alignment.centerLeft,
             child: ZaveButton(
               label: 'Delete my account',
-              icon: const Icon(Icons.person_remove_outlined),
+              icon: const Icon(AppIcons.personRemove),
               busy: busy,
               onPressed: busy ? null : _confirmDelete,
             ),
@@ -557,7 +563,7 @@ class _DataPrivacySectionState extends ConsumerState<DataPrivacySection> {
             alignment: Alignment.centerLeft,
             child: ZaveButton(
               label: 'Name someone to act for me',
-              icon: const Icon(Icons.person_add_alt_outlined),
+              icon: const Icon(AppIcons.personAdd),
               onPressed: busy ? null : _nominate,
             ),
           ),
@@ -566,7 +572,7 @@ class _DataPrivacySectionState extends ConsumerState<DataPrivacySection> {
             alignment: Alignment.centerLeft,
             child: ZaveButton(
               label: 'Raise a concern',
-              icon: const Icon(Icons.flag_outlined),
+              icon: const Icon(AppIcons.flag),
               onPressed: busy ? null : _raiseGrievance,
             ),
           ),
@@ -621,10 +627,7 @@ class _ConsentRow extends StatelessWidget {
             ),
           ),
           SizedBox(width: ZaveSpace.lg),
-          ZaveSwitch(
-            value: purpose.granted,
-            onChanged: onChanged,
-          ),
+          ZaveSwitch(value: purpose.granted, onChanged: onChanged),
         ],
       ),
     );
@@ -675,7 +678,8 @@ class _DeleteAccountDialogState extends State<_DeleteAccountDialog> {
     // Mirrors the server's own rule so a password account is told while typing
     // rather than after a round trip that erased nothing. Not trimmed: a space
     // can be part of a password.
-    final bool ready = _typed.text.trim() == _phrase &&
+    final bool ready =
+        _typed.text.trim() == _phrase &&
         (widget.hasPassword != true || _password.text.isNotEmpty);
     return AlertDialog(
       title: const Text('Delete your account?'),
@@ -796,7 +800,6 @@ class _ExportSheet extends StatelessWidget {
   }
 }
 
-
 /// Naming a nominee. Email is validated server-side too; the check here is
 /// so the user is told before a round trip, not instead of one.
 class _NominationDialog extends StatefulWidget {
@@ -809,12 +812,15 @@ class _NominationDialog extends StatefulWidget {
 }
 
 class _NominationDialogState extends State<_NominationDialog> {
-  late final TextEditingController _name =
-      TextEditingController(text: widget.existing?.name ?? '');
-  late final TextEditingController _email =
-      TextEditingController(text: widget.existing?.email ?? '');
-  late final TextEditingController _relationship =
-      TextEditingController(text: widget.existing?.relationship ?? '');
+  late final TextEditingController _name = TextEditingController(
+    text: widget.existing?.name ?? '',
+  );
+  late final TextEditingController _email = TextEditingController(
+    text: widget.existing?.email ?? '',
+  );
+  late final TextEditingController _relationship = TextEditingController(
+    text: widget.existing?.relationship ?? '',
+  );
 
   static final RegExp _emailPattern = RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$');
 
@@ -828,7 +834,8 @@ class _NominationDialogState extends State<_NominationDialog> {
 
   @override
   Widget build(BuildContext context) {
-    final bool ready = _name.text.trim().isNotEmpty &&
+    final bool ready =
+        _name.text.trim().isNotEmpty &&
         _emailPattern.hasMatch(_email.text.trim());
 
     return AlertDialog(
@@ -855,10 +862,7 @@ class _NominationDialogState extends State<_NominationDialog> {
             onChanged: (_) => setState(() {}),
           ),
           SizedBox(height: ZaveSpace.md),
-          ZaveField(
-            controller: _relationship,
-            hint: 'Relationship (optional)',
-          ),
+          ZaveField(controller: _relationship, hint: 'Relationship (optional)'),
         ],
       ),
       actions: <Widget>[
@@ -872,14 +876,14 @@ class _NominationDialogState extends State<_NominationDialog> {
         TextButton(
           onPressed: ready
               ? () => Navigator.of(context).pop(
-                    Nominee(
-                      name: _name.text.trim(),
-                      email: _email.text.trim(),
-                      relationship: _relationship.text.trim().isEmpty
-                          ? null
-                          : _relationship.text.trim(),
-                    ),
-                  )
+                  Nominee(
+                    name: _name.text.trim(),
+                    email: _email.text.trim(),
+                    relationship: _relationship.text.trim().isEmpty
+                        ? null
+                        : _relationship.text.trim(),
+                  ),
+                )
               : null,
           child: Text(
             'Save',
@@ -963,8 +967,9 @@ class _GrievanceDialogState extends State<_GrievanceDialog> {
         ),
         TextButton(
           onPressed: ready
-              ? () => Navigator.of(context)
-                  .pop((category: _category, message: _message.text.trim()))
+              ? () => Navigator.of(
+                  context,
+                ).pop((category: _category, message: _message.text.trim()))
               : null,
           child: Text(
             'Send',

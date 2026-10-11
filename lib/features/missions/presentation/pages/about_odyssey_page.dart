@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../../core/ui/app_icons.dart';
 import '../../../../core/ui/zave/zave_kit.dart';
 import '../../application/missions_controllers.dart';
 import '../../domain/missions_repository.dart';
@@ -99,7 +100,7 @@ class _AboutOdysseyPageState extends ConsumerState<AboutOdysseyPage> {
     return ZaveScaffold(
       largeTitle: 'The About Odyssey',
       leading: ZaveIconButton(
-        icon: const Icon(Icons.arrow_back),
+        icon: const Icon(AppIcons.back),
         tooltip: 'Back to roadmap',
         onPressed: () => context.pop(),
       ),
@@ -218,7 +219,7 @@ class _AboutOdysseyPageState extends ConsumerState<AboutOdysseyPage> {
               // dim the button and hide its spinner.
               ZaveButton(
                 label: form.generating ? 'Drafting…' : 'AI Spark',
-                icon: const Icon(Icons.auto_awesome),
+                icon: const Icon(AppIcons.sparkle),
                 onPressed: _generate,
                 busy: form.generating,
                 expand: true,
@@ -277,7 +278,7 @@ class _AboutOdysseyPageState extends ConsumerState<AboutOdysseyPage> {
                   ),
                   SizedBox(width: ZaveSpace.sm),
                   ZaveIconButton(
-                    icon: const Icon(Icons.add_rounded),
+                    icon: const Icon(AppIcons.add),
                     tooltip: 'Add skill',
                     onPressed: skills.length >= AboutOdysseyController.maxSkills
                         ? null
@@ -312,7 +313,7 @@ class _AboutOdysseyPageState extends ConsumerState<AboutOdysseyPage> {
                       ZaveChip(
                         label: skill,
                         selected: false,
-                        icon: const Icon(Icons.close_rounded),
+                        icon: const Icon(AppIcons.close),
                         onTap: () => _form.removeSkill(skill),
                       ),
                   ],

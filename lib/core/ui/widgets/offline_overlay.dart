@@ -8,6 +8,7 @@ import '../../network/internet_monitor.dart';
 import '../../responsive/screen_util.dart';
 import '../../theme/app_radius.dart';
 import '../../theme/app_spacing.dart';
+import '../../theme/zave/zave.dart';
 import '../app_icons.dart';
 
 /// Mounts the global connectivity pill above **every** route. Plexaverse is
@@ -172,7 +173,6 @@ class _PillSurface extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
     return Padding(
       padding: EdgeInsets.fromLTRB(
         AppSpacing.md.w,
@@ -180,11 +180,21 @@ class _PillSurface extends StatelessWidget {
         AppSpacing.md.w,
         0,
       ),
+      // Zave tokens, not `scheme.inverseSurface`.
+      //
+      // `ZaveTheme` never sets `inverseSurface`, so this fell through to
+      // Material's dark-theme default — a near-white #E6E1E5 — and drew the
+      // ONE white surface in a midnight app, over every screen, at the moment
+      // the user is already unhappy. Amber because Zave has no red and this is
+      // "waiting on something", not "broken".
       child: Material(
-        color: scheme.inverseSurface,
-        elevation: 3,
-        shadowColor: scheme.shadow,
+        color: ZaveColors.deep,
+        elevation: 0,
         borderRadius: BorderRadius.circular(AppRadius.lg.r),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(AppRadius.lg.r),
+          side: const BorderSide(color: ZaveColors.amber, width: 1),
+        ),
         child: Padding(
           padding: EdgeInsets.symmetric(
             horizontal: AppSpacing.md.w,
@@ -216,15 +226,14 @@ class _OfflinePill extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final scheme = theme.colorScheme;
     final l = AppL10n.of(context);
 
     // TODO(l10n): promote the transient copy to ARB keys.
     final String message = checking
         ? 'Checking connection…'
         : stillOffline
-            ? "Still offline. We'll keep trying."
-            : l.networkError;
+        ? "Still offline. We'll keep trying."
+        : l.networkError;
 
     return _PillSurface(
       child: Row(
@@ -235,15 +244,11 @@ class _OfflinePill extends StatelessWidget {
               height: 16.r,
               child: CircularProgressIndicator(
                 strokeWidth: 2,
-                color: scheme.onInverseSurface,
+                color: ZaveColors.ink85,
               ),
             )
           else
-            Icon(
-              AppIcons.offline,
-              size: 14.r,
-              color: scheme.onInverseSurface,
-            ),
+            Icon(AppIcons.offline, size: 14.r, color: ZaveColors.ink85),
           SizedBox(width: AppSpacing.sm.w),
           Expanded(
             child: Text(
@@ -251,7 +256,7 @@ class _OfflinePill extends StatelessWidget {
               maxLines: 2,
               overflow: TextOverflow.ellipsis,
               style: theme.textTheme.bodySmall?.copyWith(
-                color: scheme.onInverseSurface,
+                color: ZaveColors.ink85,
                 fontWeight: FontWeight.w500,
               ),
             ),
@@ -260,14 +265,16 @@ class _OfflinePill extends StatelessWidget {
             TextButton(
               onPressed: onRetry,
               style: TextButton.styleFrom(
-                foregroundColor: scheme.inversePrimary,
-                minimumSize: Size(48.w, 40.h),
+                foregroundColor: ZaveColors.amber,
+                // 44 high, not 40: this is the control a user reaches for
+                // when the app has already failed them once.
+                minimumSize: Size(48.w, 44.h),
                 padding: EdgeInsets.symmetric(horizontal: AppSpacing.sm.w),
               ),
               child: Text(
                 l.retry,
                 style: theme.textTheme.bodySmall?.copyWith(
-                  color: scheme.inversePrimary,
+                  color: ZaveColors.amber,
                   fontWeight: FontWeight.w600,
                 ),
               ),
@@ -280,12 +287,11 @@ class _OfflinePill extends StatelessWidget {
               button: true,
               child: IconButton(
                 onPressed: onDismiss,
-                visualDensity: VisualDensity.compact,
-                icon: Icon(
-                  AppIcons.close,
-                  size: 14.r,
-                  color: scheme.onInverseSurface,
-                ),
+                // `VisualDensity.compact` took the default 48pt box down to
+                // about 40 — under the 44pt minimum, on a 14pt glyph.
+                constraints: BoxConstraints(minWidth: 44.w, minHeight: 44.h),
+                padding: EdgeInsets.zero,
+                icon: Icon(AppIcons.close, size: 14.r, color: ZaveColors.ink85),
               ),
             ),
           ],
@@ -302,15 +308,10 @@ class _BackOnlinePill extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final scheme = theme.colorScheme;
     return _PillSurface(
       child: Row(
         children: <Widget>[
-          Icon(
-            AppIcons.checkCircle,
-            size: 14.r,
-            color: scheme.inversePrimary,
-          ),
+          Icon(AppIcons.checkCircle, size: 14.r, color: ZaveColors.amber),
           SizedBox(width: AppSpacing.sm.w),
           Expanded(
             child: Padding(
@@ -321,7 +322,7 @@ class _BackOnlinePill extends StatelessWidget {
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
                 style: theme.textTheme.bodySmall?.copyWith(
-                  color: scheme.onInverseSurface,
+                  color: ZaveColors.ink85,
                   fontWeight: FontWeight.w500,
                 ),
               ),

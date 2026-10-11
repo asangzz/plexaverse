@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../../../core/ui/app_icons.dart';
 import '../../../../core/ui/zave/zave_kit.dart';
 import '../../domain/studio_design.dart';
 import 'css_value.dart';
@@ -97,7 +98,7 @@ class DesignTile extends StatelessWidget {
             )
           else if (onMore != null)
             ZaveIconButton(
-              icon: const Icon(Icons.more_horiz),
+              icon: const Icon(AppIcons.more),
               tooltip: 'Design actions',
               onPressed: onMore,
             ),
@@ -159,23 +160,36 @@ class _Thumbnail extends StatelessWidget {
         height: _size,
         width: _size,
         child: provider == null
-            ? DecoratedBox(
-                decoration: BoxDecoration(
-                  color: ZaveGlass.now,
-                  border: Border.all(color: ZaveColors.rule, width: 1),
-                ),
-                child: const Icon(
-                  Icons.crop_original_outlined,
-                  color: ZaveColors.ink35,
-                ),
-              )
+            ? const _TilePlaceholder()
             : Image(
                 image: provider,
                 fit: BoxFit.cover,
-                errorBuilder: (_, _, _) =>
-                    const ColoredBox(color: ZaveGlass.now),
+                // A tile that is still decoding, and one that failed, both
+                // used to be a blank square. Same glyph as the no-thumbnail
+                // branch above, so a slow grid reads as a grid of designs
+                // rather than a grid of holes.
+                frameBuilder:
+                    (_, Widget child, int? frame, bool wasSyncLoaded) =>
+                        wasSyncLoaded || frame != null
+                        ? child
+                        : const _TilePlaceholder(),
+                errorBuilder: (_, _, _) => const _TilePlaceholder(),
               ),
       ),
     );
   }
+}
+
+/// What a tile shows before, and instead of, a thumbnail.
+class _TilePlaceholder extends StatelessWidget {
+  const _TilePlaceholder();
+
+  @override
+  Widget build(BuildContext context) => DecoratedBox(
+    decoration: BoxDecoration(
+      color: ZaveGlass.now,
+      border: Border.all(color: ZaveColors.rule, width: 1),
+    ),
+    child: const Icon(AppIcons.image, color: ZaveColors.ink35),
+  );
 }

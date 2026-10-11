@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
 
 import '../../l10n/gen/app_localizations.dart';
-import '../theme/zave/zave_colors.dart';
 import '../responsive/screen_util.dart';
 import '../theme/app_spacing.dart';
+import '../theme/zave/zave_colors.dart';
+import '../ui/app_icons.dart';
 
 /// App-wide privacy mask (RULINGS §12 hardening). When the app leaves the
 /// foreground (app-switcher preview, a system interruption, backgrounding),
@@ -82,18 +83,14 @@ class _PrivacyMask extends StatelessWidget {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: <Widget>[
-                Icon(
-                  Icons.lock_outline,
-                  size: 40.r,
-                  color: ZaveColors.white,
-                ),
+                Icon(AppIcons.lock, size: 40.r, color: ZaveColors.white),
                 SizedBox(height: AppSpacing.md.h),
                 Text(
                   l.appName,
                   style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                        color: ZaveColors.white,
-                        fontWeight: FontWeight.w700,
-                      ),
+                    color: ZaveColors.white,
+                    fontWeight: FontWeight.w700,
+                  ),
                 ),
                 SizedBox(height: AppSpacing.xs.h),
                 Text(
@@ -102,9 +99,9 @@ class _PrivacyMask extends StatelessWidget {
                   // literal until the l10n phase lands the key.
                   'Hidden while the app is in the background',
                   textAlign: TextAlign.center,
-                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: ZaveColors.ink85,
-                      ),
+                  style: Theme.of(
+                    context,
+                  ).textTheme.bodySmall?.copyWith(color: ZaveColors.ink85),
                 ),
               ],
             ),

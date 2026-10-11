@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../../../core/ui/app_icons.dart';
 import '../../../../core/ui/zave/zave_kit.dart';
 
 /// Zave has no icon-size scale. [ZaveChip] sizes a leading icon at 16, and
@@ -126,7 +127,7 @@ class TopicsEmpty extends StatelessWidget {
           // new.
           ZaveButton(
             label: 'Create Topic',
-            icon: const Icon(Icons.add),
+            icon: const Icon(AppIcons.add),
             onPressed: onCreate,
           ),
         ],

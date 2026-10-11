@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
+import '../../../../core/ui/app_icons.dart';
 import '../../../../core/ui/widgets/open_link.dart';
 import '../../../../core/ui/zave/zave_kit.dart';
 import '../../application/post_library_controllers.dart';
@@ -227,7 +228,7 @@ class _PostDetailPageState extends ConsumerState<PostDetailPage> {
     return ZaveScaffold(
       title: _editing ? 'Edit post' : 'Post',
       leading: ZaveIconButton(
-        icon: const Icon(Icons.arrow_back),
+        icon: const Icon(AppIcons.back),
         tooltip: 'Back to posts',
         onPressed: () => context.pop(),
       ),
@@ -429,36 +430,11 @@ class _PostDetailPageState extends ConsumerState<PostDetailPage> {
                 borderRadius: BorderRadius.circular(ZaveRadius.cardSm),
                 child: AspectRatio(
                   aspectRatio: 1,
-                  child: Image.network(
-                    src,
-                    fit: BoxFit.cover,
+                  child: ZaveImage(
+                    source: src,
                     // A poster that will not load must not read as no poster:
                     // say so, and keep the count below honest either way.
-                    errorBuilder: (_, _, _) => ColoredBox(
-                      color: ZaveGlass.hover,
-                      child: Center(
-                        child: Icon(
-                          Icons.broken_image_outlined,
-                          size: 28,
-                          color: ZaveColors.ink45,
-                        ),
-                      ),
-                    ),
-                    loadingBuilder:
-                        (_, Widget child, ImageChunkEvent? progress) =>
-                            progress == null
-                            ? child
-                            : ColoredBox(
-                                color: ZaveGlass.hover,
-                                child: const Center(
-                                  child: SizedBox.square(
-                                    dimension: 22,
-                                    child: CircularProgressIndicator(
-                                      strokeWidth: 2,
-                                    ),
-                                  ),
-                                ),
-                              ),
+                    errorMessage: 'That poster could not be loaded.',
                   ),
                 ),
               ),
@@ -606,7 +582,7 @@ class _ActionBar extends StatelessWidget {
         if (!post.isPublished) ...<Widget>[
           ZaveButton.primary(
             label: 'Publish now',
-            icon: const Icon(Icons.send_outlined),
+            icon: const Icon(AppIcons.send),
             expand: true,
             busy: busy,
             onPressed: onPublish,
@@ -622,34 +598,34 @@ class _ActionBar extends StatelessWidget {
             if (post.canApprove)
               ZaveButton(
                 label: 'Approve',
-                icon: const Icon(Icons.check_circle_outline),
+                icon: const Icon(AppIcons.checkCircle),
                 onPressed: busy ? null : onApprove,
               ),
             if (!post.isPublished) ...<Widget>[
               ZaveButton(
                 label: 'Edit',
-                icon: const Icon(Icons.edit_outlined),
+                icon: const Icon(AppIcons.edit),
                 onPressed: busy ? null : onEdit,
               ),
               ZaveButton(
                 label: post.scheduledFor == null ? 'Schedule' : 'Reschedule',
-                icon: const Icon(Icons.schedule),
+                icon: const Icon(AppIcons.schedule),
                 onPressed: busy ? null : onSchedule,
               ),
             ],
             ZaveButton(
               label: 'Copy text',
-              icon: const Icon(Icons.copy_all_outlined),
+              icon: const Icon(AppIcons.copy),
               onPressed: onCopyBody,
             ),
             if (post.linkedinUrl != null)
               ZaveButton(
                 label: 'View on LinkedIn',
-                icon: const Icon(Icons.open_in_new_rounded),
+                icon: const Icon(AppIcons.openExternal),
                 onPressed: onOpenLinkedIn,
               ),
             ZaveIconButton(
-              icon: const Icon(Icons.delete_outline),
+              icon: const Icon(AppIcons.delete),
               tooltip: 'Delete post',
               onPressed: busy ? null : onDelete,
             ),

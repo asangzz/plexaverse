@@ -4,6 +4,7 @@ import 'dart:ui' show ImageFilter;
 import 'package:flutter/material.dart';
 
 import '../../theme/zave/zave.dart';
+import '../app_icons.dart';
 import 'zave_button.dart';
 
 /// The app ground — the gradient every signed-in Zave screen sits on.
@@ -161,7 +162,7 @@ class ZaveScaffold extends StatelessWidget {
         leading ??
         (canPop
             ? ZaveIconButton(
-                icon: const Icon(Icons.arrow_back),
+                icon: const Icon(AppIcons.back),
                 tooltip: 'Back',
                 onPressed: () => Navigator.of(context).maybePop(),
               )

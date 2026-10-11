@@ -332,12 +332,241 @@ class AppIcons {
     0xf08c,
     fontFamily: _brandFamily,
     fontPackage: _pkg,
-  ); // linkedin (brand)
+  ); // linkedin (brand) — the squared tile
+
+  /// The bare "in" mark, without LinkedIn's rounded tile.
+  ///
+  /// The right one inside a button or a chip, where the surrounding shape IS
+  /// the tile and nesting a second one reads as a logo inside a logo.
+  static const IconData linkedInIn = IconData(
+    0xf0e1,
+    fontFamily: _brandFamily,
+    fontPackage: _pkg,
+  ); // linkedin-in (brand)
+
+  static const IconData slack = IconData(
+    0xf198,
+    fontFamily: _brandFamily,
+    fontPackage: _pkg,
+  ); // slack (brand)
+
+  // ── The glyphs the screens kept reaching past this file for ───────────
+  //
+  // Every entry below replaced a stock Material icon that was being drawn
+  // beside Font Awesome ones. Font Awesome solid is a heavy, geometric face;
+  // Material's default set is a thin outline face. Mixed in one row they do
+  // not read as one product, and the mix was in 86 files.
+  //
+  // Codepoints are read off the bundled `font_awesome_flutter` 10.12.0
+  // (Font Awesome 7.1.0), not from memory — `wand-magic-sparkles` is 0xe2ca
+  // in FA7 and 0xf72b in FA6, and a wrong one renders tofu, not a fallback.
+
+  /// AI, generation, "make me one". Replaces Material's `auto_awesome`.
+  static const IconData sparkle = IconData(
+    0xe2ca,
+    fontFamily: _family,
+    fontPackage: _pkg,
+  ); // wandMagicSparkles
+
+  /// Leaves the app. Replaces Material's `open_in_new`.
+  static const IconData openExternal = IconData(
+    0xf08e,
+    fontFamily: _family,
+    fontPackage: _pkg,
+  ); // arrowUpRightFromSquare
+
+  /// Replaces Material's `copy_all_outlined` / `copy_rounded`.
+  static const IconData copy = IconData(
+    0xf0c5,
+    fontFamily: _family,
+    fontPackage: _pkg,
+  ); // copy
+
+  /// An overflow menu. Replaces Material's `more_horiz`.
+  static const IconData more = IconData(
+    0xf141,
+    fontFamily: _family,
+    fontPackage: _pkg,
+  ); // ellipsis
+
+  /// Audience and reach — LinkedIn's own "anyone" control is a globe.
+  ///
+  /// Shares its codepoint with [language] on purpose: Font Awesome draws one
+  /// globe and the two meanings are told apart by what sits beside them, not
+  /// by a second glyph.
+  static const IconData public = IconData(
+    0xf0ac,
+    fontFamily: _family,
+    fontPackage: _pkg,
+  ); // globe
+
+  /// Referrals. Replaces Material's `card_giftcard_outlined`.
+  static const IconData gift = IconData(
+    0xf06b,
+    fontFamily: _family,
+    fontPackage: _pkg,
+  ); // gift
+
+  static const IconData upload = IconData(
+    0xf093,
+    fontFamily: _family,
+    fontPackage: _pkg,
+  ); // upload
+
+  static const IconData download = IconData(
+    0xf019,
+    fontFamily: _family,
+    fontPackage: _pkg,
+  ); // download
+
+  static const IconData link = IconData(
+    0xf0c1,
+    fontFamily: _family,
+    fontPackage: _pkg,
+  ); // link
+
+  /// A repeating schedule. Replaces Material's `event_repeat_outlined`.
+  static const IconData repeat = IconData(
+    0xf363,
+    fontFamily: _family,
+    fontPackage: _pkg,
+  ); // repeat
+
+  static const IconData play = IconData(
+    0xf04b,
+    fontFamily: _family,
+    fontPackage: _pkg,
+  ); // play
+
+  /// XP, streaks, energy. Replaces Material's `bolt_rounded`.
+  static const IconData bolt = IconData(
+    0xf0e7,
+    fontFamily: _family,
+    fontPackage: _pkg,
+  ); // bolt
+
+  /// The long-form article — the one thing we write and never publish.
+  static const IconData article = IconData(
+    0xf15c,
+    fontFamily: _family,
+    fontPackage: _pkg,
+  ); // fileLines
+
+  /// A company page, as opposed to a person. Replaces Material's `business_outlined`.
+  static const IconData business = IconData(
+    0xf1ad,
+    fontFamily: _family,
+    fontPackage: _pkg,
+  ); // building
+
+  static const IconData brush = IconData(
+    0xf1fc,
+    fontFamily: _family,
+    fontPackage: _pkg,
+  ); // paintbrush
+
+  /// A season finished. Replaces Material's `celebration_outlined`.
+  static const IconData celebrate = IconData(
+    0xf79f,
+    fontFamily: _family,
+    fontPackage: _pkg,
+  ); // champagneGlasses
+
+  /// Advocacy — asking the team to amplify. Replaces Material's `campaign_outlined`.
+  static const IconData campaign = IconData(
+    0xf0a1,
+    fontFamily: _family,
+    fontPackage: _pkg,
+  ); // bullhorn
+
+  static const IconData flag = IconData(
+    0xf024,
+    fontFamily: _family,
+    fontPackage: _pkg,
+  ); // flag
+
+  /// A headshot / the user's own face. Replaces Material's `face_outlined`.
+  static const IconData face = IconData(
+    0xf118,
+    fontFamily: _family,
+    fontPackage: _pkg,
+  ); // faceSmile
+
+  /// A thread, as opposed to a single [comment].
+  static const IconData forum = IconData(
+    0xf086,
+    fontFamily: _family,
+    fontPackage: _pkg,
+  ); // comments
+
+  /// A gallery or board. Replaces Material's `grid_view_outlined`.
+  static const IconData grid = IconData(
+    0xf00a,
+    fontFamily: _family,
+    fontPackage: _pkg,
+  ); // tableCells
+
+  /// Trend over time, as opposed to [analytics]' bars. Replaces Material's
+  /// `insights_outlined` and `bar_chart_rounded`.
+  static const IconData insights = IconData(
+    0xf201,
+    fontFamily: _family,
+    fontPackage: _pkg,
+  ); // chartLine
+
+  /// An experiment or a preview feature. Replaces Material's `science_rounded`.
+  static const IconData science = IconData(
+    0xf0c3,
+    fontFamily: _family,
+    fontPackage: _pkg,
+  ); // flask
+
+  static const IconData crop = IconData(
+    0xf125,
+    fontFamily: _family,
+    fontPackage: _pkg,
+  ); // crop
+
+  static const IconData bookmark = IconData(
+    0xf02e,
+    fontFamily: _family,
+    fontPackage: _pkg,
+  ); // bookmark
+
+  /// Replaces Material's `person_add_alt_outlined`.
+  static const IconData personAdd = IconData(
+    0xf234,
+    fontFamily: _family,
+    fontPackage: _pkg,
+  ); // userPlus
+
+  /// Replaces Material's `person_remove_outlined`.
+  static const IconData personRemove = IconData(
+    0xf503,
+    fontFamily: _family,
+    fontPackage: _pkg,
+  ); // userMinus
+
+  /// All of them handled. Replaces Material's `done_all_rounded`.
+  static const IconData doneAll = IconData(
+    0xf560,
+    fontFamily: _family,
+    fontPackage: _pkg,
+  ); // checkDouble
+
+  /// Forward, as a direction. The twin of [back].
+  static const IconData forward = IconData(
+    0xf061,
+    fontFamily: _family,
+    fontPackage: _pkg,
+  ); // arrowRight
 
   /// Every icon in the vocabulary with its semantic name — drives the style
   /// guide's icon gallery so the set stays self-documenting.
   static const Map<String, IconData> all = <String, IconData>{
     'home': home,
+    'slack': slack,
+    'linkedInIn': linkedInIn,
     'posts': posts,
     'odyssey': odyssey,
     'analytics': analytics,
@@ -391,5 +620,34 @@ class AppIcons {
     'language': language,
     'google': google,
     'linkedin': linkedin,
+    'sparkle': sparkle,
+    'openExternal': openExternal,
+    'copy': copy,
+    'more': more,
+    'public': public,
+    'gift': gift,
+    'upload': upload,
+    'download': download,
+    'link': link,
+    'repeat': repeat,
+    'play': play,
+    'bolt': bolt,
+    'article': article,
+    'business': business,
+    'brush': brush,
+    'celebrate': celebrate,
+    'campaign': campaign,
+    'flag': flag,
+    'face': face,
+    'forum': forum,
+    'grid': grid,
+    'insights': insights,
+    'science': science,
+    'crop': crop,
+    'bookmark': bookmark,
+    'personAdd': personAdd,
+    'personRemove': personRemove,
+    'doneAll': doneAll,
+    'forward': forward,
   };
 }

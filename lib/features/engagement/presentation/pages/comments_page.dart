@@ -5,9 +5,10 @@ import 'package:go_router/go_router.dart';
 
 import '../../../../core/links/linkedin.dart';
 import '../../../../core/router/zave_routes.dart';
-import '../../../../core/week/comment_targets.dart';
+import '../../../../core/ui/app_icons.dart';
 import '../../../../core/ui/widgets/open_link.dart';
 import '../../../../core/ui/zave/zave_kit.dart';
+import '../../../../core/week/comment_targets.dart';
 import '../../application/engagement_controllers.dart';
 import '../../domain/engagement_repository.dart';
 import '../widgets/comment_card.dart';
@@ -125,7 +126,7 @@ class CommentsPage extends ConsumerWidget {
     return ZaveScaffold(
       largeTitle: 'Comment on posts',
       leading: ZaveIconButton(
-        icon: const Icon(Icons.arrow_back),
+        icon: const Icon(AppIcons.back),
         tooltip: 'Back to the roadmap',
         onPressed: () => _leave(context),
       ),

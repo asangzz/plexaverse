@@ -4,6 +4,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:plexaverse/core/router/app_router.dart';
+import 'package:plexaverse/core/ui/app_icons.dart';
 import 'package:plexaverse/core/ui/zave/zave_kit.dart';
 
 /// Every screen you can push onto has a way back off it.
@@ -41,7 +42,7 @@ void main() {
       tester.state<NavigatorState>(find.byType(Navigator)).pushNamed('/next');
       await tester.pumpAndSettle();
 
-      expect(find.byIcon(Icons.arrow_back), findsOneWidget);
+      expect(find.byIcon(AppIcons.back), findsOneWidget);
     });
 
     testWidgets('tapping it pops', (WidgetTester tester) async {
@@ -58,7 +59,7 @@ void main() {
       await tester.pumpAndSettle();
       expect(find.text('pushed'), findsOneWidget);
 
-      await tester.tap(find.byIcon(Icons.arrow_back));
+      await tester.tap(find.byIcon(AppIcons.back));
       await tester.pumpAndSettle();
       expect(find.text('root'), findsOneWidget);
     });
@@ -69,7 +70,7 @@ void main() {
       await tester.pumpWidget(
         const MaterialApp(home: ZaveScaffold(body: SizedBox())),
       );
-      expect(find.byIcon(Icons.arrow_back), findsNothing);
+      expect(find.byIcon(AppIcons.back), findsNothing);
     });
 
     testWidgets('a page that passes its own leading keeps it', (
@@ -82,7 +83,7 @@ void main() {
           home: const Scaffold(body: SizedBox()),
           routes: <String, WidgetBuilder>{
             '/next': (_) => const ZaveScaffold(
-              leading: Icon(Icons.close),
+              leading: Icon(AppIcons.close),
               body: SizedBox(),
             ),
           },
@@ -92,8 +93,8 @@ void main() {
       tester.state<NavigatorState>(find.byType(Navigator)).pushNamed('/next');
       await tester.pumpAndSettle();
 
-      expect(find.byIcon(Icons.close), findsOneWidget);
-      expect(find.byIcon(Icons.arrow_back), findsNothing);
+      expect(find.byIcon(AppIcons.close), findsOneWidget);
+      expect(find.byIcon(AppIcons.back), findsNothing);
     });
   });
 
@@ -152,7 +153,7 @@ void main() {
       await tester.drag(find.byKey(const Key('probe')), const Offset(0, -600));
       await tester.pumpAndSettle();
 
-      expect(find.byIcon(Icons.arrow_back), findsNothing); // root route
+      expect(find.byIcon(AppIcons.back), findsNothing); // root route
       expect(headerHeight(tester), greaterThan(0));
       expect(tester.takeException(), isNull);
     });

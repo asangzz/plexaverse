@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
+import '../../../../core/ui/app_icons.dart';
 import '../../../../core/ui/zave/zave_kit.dart';
 import '../../application/calendar_controller.dart';
 import '../../application/reschedule_controller.dart';
@@ -219,7 +220,6 @@ class _CalendarPageState extends ConsumerState<CalendarPage> {
         ZaveSectionHeader(
           title: 'Not yet placed',
           actionLabel: '${buckets.pending.length}',
-          onTap: buckets.pending.isEmpty ? null : () {},
         ),
         SizedBox(height: ZaveSpace.md),
         CalendarPendingStrip(
@@ -333,7 +333,7 @@ class _MonthStepper extends StatelessWidget {
   Widget build(BuildContext context) => Row(
     children: <Widget>[
       ZaveIconButton(
-        icon: const Icon(Icons.chevron_left),
+        icon: const Icon(AppIcons.chevronLeft),
         tooltip: 'Previous month',
         onPressed: onPrevious,
       ),
@@ -350,7 +350,7 @@ class _MonthStepper extends StatelessWidget {
         ),
       ),
       ZaveIconButton(
-        icon: const Icon(Icons.chevron_right),
+        icon: const Icon(AppIcons.chevronRight),
         tooltip: 'Next month',
         onPressed: onNext,
       ),

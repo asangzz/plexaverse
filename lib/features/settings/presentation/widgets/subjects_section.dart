@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/engagement/top_voice_categories.dart';
+import '../../../../core/ui/app_icons.dart';
 import '../../../../core/ui/zave/zave_kit.dart';
 import '../../../preferences/application/preferences_controller.dart';
 import '../../../preferences/domain/user_preferences.dart';
@@ -163,7 +164,7 @@ class _SubjectPickerState extends State<_SubjectPicker> {
                       ),
                     ),
                     ZaveIconButton(
-                      icon: const Icon(Icons.close),
+                      icon: const Icon(AppIcons.close),
                       tooltip: 'Close without saving',
                       onPressed: () => Navigator.of(context).pop(),
                     ),

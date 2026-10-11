@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../theme/zave/zave.dart';
+import '../app_icons.dart';
 import 'zave_press.dart';
 
 /// `Your activity ›` — a section title with its way in on the right.
@@ -24,7 +25,14 @@ class ZaveSectionHeader extends StatelessWidget {
   final String title;
   final VoidCallback? onTap;
 
-  /// Words instead of a chevron, for a section that opens a screen.
+  /// Words instead of a chevron — either a section that opens a screen, or a
+  /// plain readout like `3/5 published`.
+  ///
+  /// Shown whether or not there is an [onTap]. It used to be gated behind
+  /// one, so a header that just wanted to show a count had to pass an empty
+  /// closure to get it — and two did. That made them press-responsive: they
+  /// scaled under the finger and then did nothing, which is a worse answer
+  /// than not reacting at all.
   final String? actionLabel;
 
   @override
@@ -32,14 +40,12 @@ class ZaveSectionHeader extends StatelessWidget {
     final Widget row = Row(
       children: <Widget>[
         Expanded(child: Text(title, style: ZaveType.h3)),
-        if (onTap != null)
-          if (actionLabel != null)
-            Text(
-              actionLabel!,
-              style: ZaveType.label.copyWith(color: ZaveColors.ink62),
-            )
-          else
-            Icon(Icons.chevron_right, size: 22, color: ZaveColors.ink62),
+        if (actionLabel case final String label)
+          Text(label, style: ZaveType.label.copyWith(color: ZaveColors.ink62))
+        // The bare chevron is an affordance, so it still needs somewhere to
+        // go — unlike a readout, which is just information.
+        else if (onTap != null)
+          Icon(AppIcons.chevronRight, size: 22, color: ZaveColors.ink62),
       ],
     );
 

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../../core/ui/app_icons.dart';
 import '../../../../core/ui/zave/zave_kit.dart';
 import '../../application/schedule_write_controller.dart';
 import '../../application/schedules_controller.dart';
@@ -99,9 +100,6 @@ class _SchedulesPageState extends ConsumerState<SchedulesPage> {
 
     return ZaveScrollView(
       children: <Widget>[
-        Text('Configure when AI generates your posts.', style: ZaveType.lead),
-        SizedBox(height: ZaveSpace.xl),
-
         if (accountsLoaded && connected.isEmpty) ...<Widget>[
           const _NoAccountNotice(),
           SizedBox(height: ZaveSpace.lg),
@@ -120,7 +118,7 @@ class _SchedulesPageState extends ConsumerState<SchedulesPage> {
         ZaveButton(
           label: 'Add schedule',
           kind: ZaveButtonKind.primarySmall,
-          icon: const Icon(Icons.add),
+          icon: const Icon(AppIcons.add),
           expand: true,
           busy: write.creating,
           onPressed: canCreate

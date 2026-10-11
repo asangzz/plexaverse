@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/links/linkedin.dart';
+import '../../../../core/ui/app_icons.dart';
 import '../../../../core/ui/widgets/open_link.dart';
 import '../../../../core/ui/zave/zave_kit.dart';
 import '../../application/persona_controller.dart';
@@ -530,7 +531,7 @@ class _ImportReachButton extends ConsumerWidget {
         SizedBox(height: ZaveSpace.md),
         ZaveButton(
           label: 'Open LinkedIn analytics',
-          icon: const Icon(Icons.open_in_new_rounded),
+          icon: const Icon(AppIcons.openExternal),
           expand: true,
           onPressed: () =>
               openLinkAndReport(context, ref, linkedInCreatorAnalyticsUrl),
@@ -538,7 +539,7 @@ class _ImportReachButton extends ConsumerWidget {
         SizedBox(height: ZaveSpace.md),
         ZaveButton(
           label: 'Import my LinkedIn export',
-          icon: const Icon(Icons.upload_file_outlined),
+          icon: const Icon(AppIcons.upload),
           busy: busy,
           onPressed: busy ? null : () => _import(context, ref),
         ),

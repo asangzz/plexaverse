@@ -9,6 +9,7 @@ import '../../../core/storage/app_database.dart';
 import '../../../core/theme/app_radius.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/plexaverse_colors.dart';
+import '../../../core/ui/app_icons.dart';
 import '../application/notification_controllers.dart';
 import 'notification_visuals.dart';
 
@@ -46,7 +47,9 @@ class NotificationDrawer extends ConsumerWidget {
       width: screenWidth * 0.8,
       backgroundColor: brand.canvas,
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.horizontal(left: Radius.circular(AppRadius.xxl.r)),
+        borderRadius: BorderRadius.horizontal(
+          left: Radius.circular(AppRadius.xxl.r),
+        ),
       ),
       child: Column(
         children: <Widget>[
@@ -54,9 +57,8 @@ class NotificationDrawer extends ConsumerWidget {
             onMarkAll: reads.markAllRead,
             onClearAll: dao.clearAll,
             onSimulate: kDebugMode
-                ? () => ref
-                    .read(notificationIngestorProvider.notifier)
-                    .simulate()
+                ? () =>
+                      ref.read(notificationIngestorProvider.notifier).simulate()
                 : null,
           ),
           Expanded(
@@ -139,7 +141,7 @@ class _DrawerHeader extends StatelessWidget {
               ),
               const Spacer(),
               IconButton(
-                icon: Icon(Icons.close_rounded, size: 20.r),
+                icon: Icon(AppIcons.close, size: 20.r),
                 color: scheme.onSurface.withValues(alpha: 0.5),
                 onPressed: () => Navigator.of(context).pop(),
                 tooltip: 'Close',
@@ -151,13 +153,13 @@ class _DrawerHeader extends StatelessWidget {
             children: <Widget>[
               _HeaderAction(
                 label: 'Mark all read',
-                icon: Icons.done_all_rounded,
+                icon: AppIcons.doneAll,
                 onTap: onMarkAll,
               ),
               SizedBox(width: AppSpacing.sm.w),
               _HeaderAction(
                 label: 'Clear all',
-                icon: Icons.delete_sweep_rounded,
+                icon: AppIcons.delete,
                 color: scheme.error,
                 onTap: onClearAll,
               ),
@@ -165,7 +167,7 @@ class _DrawerHeader extends StatelessWidget {
                 SizedBox(width: AppSpacing.sm.w),
                 _HeaderAction(
                   label: 'Simulate',
-                  icon: Icons.science_rounded,
+                  icon: AppIcons.science,
                   onTap: onSimulate!,
                 ),
               ],
@@ -267,7 +269,7 @@ class _NotificationTile extends StatelessWidget {
         alignment: Alignment.centerRight,
         padding: EdgeInsets.only(right: AppSpacing.xl.w),
         color: scheme.error.withValues(alpha: 0.85),
-        child: Icon(Icons.delete_outline_rounded, color: scheme.onError, size: 22.r),
+        child: Icon(AppIcons.delete, color: scheme.onError, size: 22.r),
       ),
       onDismissed: (_) => onDismiss(),
       child: InkWell(
@@ -311,8 +313,9 @@ class _NotificationTile extends StatelessWidget {
                           child: Text(
                             notification.title,
                             style: theme.textTheme.bodyMedium?.copyWith(
-                              fontWeight:
-                                  isUnread ? FontWeight.w700 : FontWeight.w500,
+                              fontWeight: isUnread
+                                  ? FontWeight.w700
+                                  : FontWeight.w500,
                             ),
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
@@ -378,7 +381,7 @@ class _EmptyState extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           children: <Widget>[
             Icon(
-              Icons.notifications_none_rounded,
+              AppIcons.notifications,
               size: 48.r,
               color: scheme.onSurface.withValues(alpha: 0.2),
             ),
@@ -426,9 +429,7 @@ class NotificationBellButton extends ConsumerWidget {
       children: <Widget>[
         IconButton(
           icon: Icon(
-            count > 0
-                ? Icons.notifications_rounded
-                : Icons.notifications_none_rounded,
+            count > 0 ? AppIcons.notifications : AppIcons.notifications,
             size: 22.r,
           ),
           color: scheme.onSurface.withValues(alpha: 0.7),

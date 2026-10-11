@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../../core/router/zave_routes.dart';
+import '../../../../core/ui/app_icons.dart';
 import '../../../../core/ui/zave/zave_kit.dart';
 import '../../application/studio_controller.dart';
 import '../../domain/studio_design.dart';
@@ -207,7 +208,7 @@ class _StudioLibraryViewState extends ConsumerState<StudioLibraryView> {
       subtitle: 'Your creative engine',
       actions: <Widget>[
         ZaveIconButton(
-          icon: const Icon(Icons.add),
+          icon: const Icon(AppIcons.add),
           tooltip: 'New design',
           onPressed: _openNewDesignSheet,
         ),

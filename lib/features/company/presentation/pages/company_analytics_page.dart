@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../../core/router/zave_routes.dart';
+import '../../../../core/ui/app_icons.dart';
 import '../../../../core/ui/zave/zave_kit.dart';
 import '../../application/company_controllers.dart';
 import '../../domain/company_analytics.dart';
@@ -44,7 +45,7 @@ class CompanyAnalyticsPage extends ConsumerWidget {
         // bypassing the server's 24-hour cache — which is the only path that
         // does, and the reason it must stay an explicit gesture.
         ZaveIconButton(
-          icon: const Icon(Icons.refresh),
+          icon: const Icon(AppIcons.refresh),
           tooltip: refreshing ? 'Refreshing...' : 'Refresh Data',
           onPressed: refreshing ? null : () => _forceRefresh(ref),
         ),

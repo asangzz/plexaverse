@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../../../core/ui/app_icons.dart';
 import '../../../../core/ui/zave/zave_kit.dart';
 import '../../domain/post_schedule.dart';
 import 'time_slot_picker.dart';
@@ -87,7 +88,7 @@ class ScheduleCard extends StatelessWidget {
             alignment: Alignment.centerLeft,
             child: ZaveButton(
               label: 'Delete',
-              icon: const Icon(Icons.delete_outline),
+              icon: const Icon(AppIcons.delete),
               // `busy`, not a nulled handler: ZaveButton already refuses taps
               // while busy, and null would dim the button behind its own
               // spinner. Blocks the double-tap that would DELETE twice.

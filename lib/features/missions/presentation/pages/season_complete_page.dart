@@ -2,11 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../../core/ui/app_icons.dart';
 import '../../../../core/ui/zave/zave_kit.dart';
 import '../../application/missions_controllers.dart';
+import '../../application/season_controller.dart';
 import '../../domain/missions_repository.dart';
 import '../widgets/mission_chrome.dart';
-import '../../application/season_controller.dart';
 
 /// **Season 1 Complete** — the web's `/season-complete`.
 ///
@@ -41,7 +42,7 @@ class SeasonCompletePage extends ConsumerWidget {
     return ZaveScaffold(
       title: 'Season 1',
       leading: ZaveIconButton(
-        icon: const Icon(Icons.arrow_back),
+        icon: const Icon(AppIcons.back),
         tooltip: 'Back',
         onPressed: () => context.pop(),
       ),

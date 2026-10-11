@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 import '../../../../core/responsive/screen_util.dart';
+import '../../../../core/ui/app_icons.dart';
 import '../../../../core/ui/zave/zave_kit.dart';
 
 /// The dock — what the user can say next.
@@ -138,11 +139,7 @@ class _PrimaryChipState extends State<PrimaryChip> {
           SizedBox(width: 10.w),
           Opacity(
             opacity: _down ? 1 : 0.6,
-            child: Icon(
-              Icons.send_rounded,
-              size: 14.sp,
-              color: ZaveColors.white,
-            ),
+            child: Icon(AppIcons.send, size: 14.sp, color: ZaveColors.white),
           ),
         ],
       ],
@@ -168,6 +165,10 @@ class _PrimaryChipState extends State<PrimaryChip> {
         child: AnimatedContainer(
           duration: ZaveMotion.quick,
           curve: ZaveMotion.curve,
+          // 44pt floor. The padding above puts a one-line label in a ~38pt
+          // box, and these are the controls the whole conversation is driven
+          // from — every answer and every skip is one of them.
+          constraints: BoxConstraints(minHeight: ZaveSpace.minTapTarget),
           padding: widget.reply
               ? EdgeInsets.fromLTRB(15.w, 11.h, 13.w, 11.h)
               : EdgeInsets.symmetric(horizontal: 18.w, vertical: 10.h),
@@ -235,6 +236,9 @@ class SecondaryChip extends StatelessWidget {
       behavior: HitTestBehavior.opaque,
       onTap: onPressed,
       child: Container(
+        // See the sibling above: a one-line label at 10pt padding is ~38.
+        constraints: BoxConstraints(minHeight: ZaveSpace.minTapTarget),
+        alignment: Alignment.center,
         padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 10.h),
         decoration: BoxDecoration(
           color: const Color(0x0AFFFFFF),

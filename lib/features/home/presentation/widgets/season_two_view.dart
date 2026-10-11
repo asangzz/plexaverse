@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../../core/responsive/screen_util.dart';
+import '../../../../core/ui/app_icons.dart';
 import '../../../../core/ui/zave/zave_kit.dart';
 import '../../../plexa/presentation/plexa_day_sheet.dart';
 import '../../domain/roadmap_progress.dart';
@@ -288,10 +289,14 @@ class _Sheet extends StatelessWidget {
               ),
             SizedBox(height: ZaveSpace.md),
 
-            ZaveButton.primary(
+            // Ghost, not primary — Open Plexa below is the day's work and
+            // this is the cycle's shape, the same ranking Season 1 makes
+            // explicit on the roadmap. Both were violet and full-width, four
+            // rows apart in one card, so neither read as the thing to do.
+            ZaveButton(
               label: "View this cycle's plan",
               expand: true,
-              trailing: const Icon(Icons.chevron_right),
+              trailing: const Icon(AppIcons.chevronRight),
               onPressed: () => onStart('/planner'),
             ),
 
@@ -314,7 +319,7 @@ class _Sheet extends StatelessWidget {
             if (!allDone) ...<Widget>[
               ZaveButton.primary(
                 label: 'Open Plexa',
-                icon: const Icon(Icons.auto_awesome_outlined),
+                icon: const Icon(AppIcons.sparkle),
                 expand: true,
                 onPressed: () => showPlexaDay(context),
               ),
@@ -464,7 +469,7 @@ class _HabitRow extends StatelessWidget {
               ),
             ),
             Icon(
-              isDone ? Icons.check : Icons.play_arrow,
+              isDone ? AppIcons.check : AppIcons.play,
               size: 18.r,
               color: isDone ? ZaveColors.green : ZaveColors.amber,
             ),

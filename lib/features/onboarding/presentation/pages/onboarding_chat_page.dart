@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../../core/ui/app_icons.dart';
 import '../../../../core/ui/zave/zave_kit.dart';
 import '../../../auth/application/sign_out_controller.dart';
+import '../../../settings/domain/settings_repository.dart';
 import '../../application/onboarding_chat_controller.dart';
 import '../../application/onboarding_controller.dart';
 import '../../domain/onboarding_repository.dart';
@@ -11,7 +13,6 @@ import '../widgets/onboarding_chrome.dart';
 import '../widgets/reply_lane.dart';
 import '../widgets/role_picker.dart';
 import '../widgets/tone_panel.dart';
-import '../../../settings/domain/settings_repository.dart';
 
 /// `/onboarding` — Plexa Setup, the conversational flow that configures a new
 /// account.
@@ -162,7 +163,7 @@ class _OnboardingBodyState extends ConsumerState<_OnboardingBody> {
               ),
               SizedBox(width: ZaveSpace.md),
               ZaveIconButton(
-                icon: const Icon(Icons.logout),
+                icon: const Icon(AppIcons.logout),
                 tooltip: 'Log out',
                 onPressed: _confirmLogout,
               ),
@@ -360,8 +361,9 @@ class _CompanyPageChipsState extends ConsumerState<_CompanyPageChips> {
 
   @override
   Widget build(BuildContext context) {
-    final OnboardingChatController controller =
-        ref.read(onboardingChatControllerProvider.notifier);
+    final OnboardingChatController controller = ref.read(
+      onboardingChatControllerProvider.notifier,
+    );
 
     return FutureBuilder<CompanyPageOptions>(
       future: _pages,
@@ -412,7 +414,7 @@ class _CompanyDetailsPanel extends StatefulWidget {
 
   final OnboardingAnswers answers;
   final void Function({String? description, String? industry, String? tagline})
-      onChanged;
+  onChanged;
   final VoidCallback onSubmit;
 
   @override
@@ -422,12 +424,15 @@ class _CompanyDetailsPanel extends StatefulWidget {
 class _CompanyDetailsPanelState extends State<_CompanyDetailsPanel> {
   /// Seeded from the answers so a field survives a rebuild — the thread
   /// above this panel grows while the user is typing in it.
-  late final TextEditingController _description =
-      TextEditingController(text: widget.answers.companyDescription);
-  late final TextEditingController _industry =
-      TextEditingController(text: widget.answers.companyIndustry);
-  late final TextEditingController _tagline =
-      TextEditingController(text: widget.answers.companyTagline);
+  late final TextEditingController _description = TextEditingController(
+    text: widget.answers.companyDescription,
+  );
+  late final TextEditingController _industry = TextEditingController(
+    text: widget.answers.companyIndustry,
+  );
+  late final TextEditingController _tagline = TextEditingController(
+    text: widget.answers.companyTagline,
+  );
 
   @override
   void dispose() {

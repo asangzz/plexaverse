@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../../../core/ui/app_icons.dart';
 import '../../../../core/ui/zave/zave_kit.dart';
 import '../../domain/compose_context.dart';
 import '../../domain/compose_draft.dart';
@@ -269,7 +270,7 @@ class _Header extends StatelessWidget {
                     ),
                     const SizedBox(width: 4),
                     const Icon(
-                      Icons.public,
+                      AppIcons.public,
                       size: 12,
                       color: _LinkedInChrome.inkMuted,
                     ),
@@ -339,7 +340,7 @@ class _SocialBar extends StatelessWidget {
             ),
             alignment: Alignment.center,
             child: const Icon(
-              Icons.thumb_up,
+              AppIcons.like,
               size: 9,
               color: _LinkedInChrome.card,
             ),
@@ -371,8 +372,8 @@ class _ActionRow extends StatelessWidget {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceAround,
         children: const <Widget>[
-          _Action(icon: Icons.thumb_up_outlined, label: 'Like'),
-          _Action(icon: Icons.mode_comment_outlined, label: 'Comment'),
+          _Action(icon: AppIcons.like, label: 'Like'),
+          _Action(icon: AppIcons.comment, label: 'Comment'),
         ],
       ),
     );

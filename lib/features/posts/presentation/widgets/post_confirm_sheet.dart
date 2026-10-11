@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../../../core/ui/app_icons.dart';
 import '../../../../core/ui/zave/zave_kit.dart';
 
 /// A destructive confirmation, as a sheet.
@@ -94,7 +95,7 @@ class _ConfirmSheet extends StatelessWidget {
               SizedBox(height: ZaveSpace.xl),
               ZaveButton(
                 label: confirmLabel,
-                icon: const Icon(Icons.delete_outline),
+                icon: const Icon(AppIcons.delete),
                 expand: true,
                 onPressed: () => Navigator.of(context).pop(true),
               ),

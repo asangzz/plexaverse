@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/links/linkedin.dart';
+import '../../../../core/platform/image_picking.dart';
+import '../../../../core/ui/app_icons.dart';
 import '../../../../core/ui/widgets/open_link.dart';
 import '../../../../core/ui/zave/zave_kit.dart';
 import '../../application/headshot_save_controller.dart';
@@ -10,7 +12,6 @@ import '../../domain/headshot_session.dart';
 import '../widgets/ai_tool_image.dart';
 import '../widgets/ai_tool_note.dart';
 import '../widgets/headshot_stepper.dart';
-import '../../../../core/platform/image_picking.dart';
 
 /// **The Visual Persona** — the web's `/headshots`.
 ///
@@ -19,20 +20,19 @@ import '../../../../core/platform/image_picking.dart';
 /// which is why it has no nav entry on either platform: it is reached from the
 /// mission that asks for it.
 ///
-/// ## The one thing this build cannot do
+/// ## The deliberate departure: step 1 does not block step 2
 ///
-/// It cannot read the camera roll. The app ships no image-picker package and
-/// `pubspec.yaml` is not this slice's to change, so there is no way to put a
-/// photo into [HeadshotSession.photos]. Every other part of the flow is real
-/// and wired: the wizard, the looks, the backgrounds, the request, the
-/// failure branches, the roadmap completion.
+/// The web gates "Select Looks" on three photos; here the gate is on the
+/// generate button instead, so the looks and backgrounds can be seen and
+/// chosen before the photos are in. The button that actually spends XP still
+/// refuses, and says why.
 ///
-/// **The deliberate departure:** step 1 does not block step 2. The web gates
-/// "Select Looks" on three photos; here the gate is moved to the generate
-/// button instead, so the looks and backgrounds can be seen and chosen while
-/// the picker is missing. The button that actually spends XP still refuses,
-/// and says why. Gating the first step instead would leave three quarters of
-/// this screen unreachable for a reason that has nothing to do with the user.
+/// This began as a workaround — the app once shipped no image picker, so
+/// gating step 1 would have left three quarters of the screen unreachable
+/// for a reason that had nothing to do with the user. `image_picker` has
+/// since been wired (`core/platform/image_picking.dart`, used by the two
+/// buttons in step 1), and the departure is kept because browsing the looks
+/// first is the better order anyway.
 ///
 /// ## What the web gets wrong here, and this does not
 ///
@@ -147,7 +147,7 @@ class _UploadStep extends StatelessWidget {
                 Expanded(
                   child: ZaveButton(
                     label: 'Choose photos',
-                    icon: const Icon(Icons.photo_library_outlined),
+                    icon: const Icon(AppIcons.photoLibrary),
                     expand: true,
                     onPressed: () =>
                         _pick(context, controller, ImageSourceKind.gallery),
@@ -157,7 +157,7 @@ class _UploadStep extends StatelessWidget {
                 Expanded(
                   child: ZaveButton(
                     label: 'Take one',
-                    icon: const Icon(Icons.photo_camera_outlined),
+                    icon: const Icon(AppIcons.camera),
                     expand: true,
                     onPressed: () =>
                         _pick(context, controller, ImageSourceKind.camera),
@@ -193,7 +193,7 @@ class _UploadStep extends StatelessWidget {
       ZaveButton(
         label: 'Select looks',
         kind: ZaveButtonKind.primary,
-        trailing: const Icon(Icons.arrow_forward),
+        trailing: const Icon(AppIcons.forward),
         expand: true,
         onPressed: () => controller.goTo(HeadshotStep.style),
       ),
@@ -256,7 +256,7 @@ class _PhotoThumb extends StatelessWidget {
         top: 0,
         right: 0,
         child: ZaveIconButton(
-          icon: const Icon(Icons.close),
+          icon: const Icon(AppIcons.close),
           tooltip: 'Remove photo',
           onPressed: onRemove,
         ),
@@ -316,9 +316,9 @@ class _StyleStep extends StatelessWidget {
         const AiToolNoteRow(
           title: 'Nothing to generate from',
           message:
-              'Generating needs at least three reference photos, and this '
-              'build cannot reach your camera roll. The button stays off '
-              'rather than spending a request that would be refused.',
+              'Generating needs at least three reference photos. Add them '
+              'with the buttons above. The button stays off rather than '
+              'spending a request the server would refuse.',
         ),
       ],
 
@@ -333,7 +333,7 @@ class _StyleStep extends StatelessWidget {
       SizedBox(height: ZaveSpace.md),
       ZaveButton(
         label: 'Back',
-        icon: const Icon(Icons.arrow_back),
+        icon: const Icon(AppIcons.back),
         expand: true,
         onPressed: () => controller.goTo(HeadshotStep.upload),
       ),
@@ -472,7 +472,7 @@ class _ResultsStep extends ConsumerWidget {
       // once a headshot is downloaded.
       ZaveButton(
         label: 'Open my LinkedIn profile',
-        icon: const Icon(Icons.open_in_new_rounded),
+        icon: const Icon(AppIcons.openExternal),
         expand: true,
         onPressed: () => openLinkAndReport(context, ref, linkedInOwnProfileUrl),
       ),
@@ -488,7 +488,7 @@ class _ResultsStep extends ConsumerWidget {
       SizedBox(height: ZaveSpace.md),
       ZaveButton(
         label: 'Generate new',
-        icon: const Icon(Icons.refresh),
+        icon: const Icon(AppIcons.refresh),
         expand: true,
         onPressed: controller.restart,
       ),
@@ -552,7 +552,7 @@ class _SaveHeadshot extends ConsumerWidget {
 
     return ZaveButton(
       label: 'Save',
-      icon: const Icon(Icons.ios_share),
+      icon: const Icon(AppIcons.share),
       busy: busy,
       onPressed: busy ? null : () => _save(context, ref),
     );

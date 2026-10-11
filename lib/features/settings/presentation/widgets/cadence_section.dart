@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../../core/ui/app_icons.dart';
 import '../../../../core/ui/zave/zave_kit.dart';
-import '../../../preferences/domain/user_preferences.dart';
 import '../../../preferences/application/preferences_controller.dart';
+import '../../../preferences/domain/user_preferences.dart';
 import '../../application/settings_write_controller.dart';
 import 'settings_section.dart';
 
@@ -103,7 +104,7 @@ class _CadenceSectionState extends ConsumerState<CadenceSection> {
             alignment: Alignment.centerLeft,
             child: ZaveButton(
               label: _formatTime(_time),
-              icon: const Icon(Icons.schedule_outlined),
+              icon: const Icon(AppIcons.schedule),
               onPressed: _pickTime,
             ),
           ),
@@ -122,7 +123,7 @@ class _CadenceSectionState extends ConsumerState<CadenceSection> {
             child: ZavePill(
               label: widget.preferences.timezone,
               leading: const Icon(
-                Icons.public_outlined,
+                AppIcons.public,
                 size: 16,
                 color: ZaveColors.ink45,
               ),

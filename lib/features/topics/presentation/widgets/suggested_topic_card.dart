@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../../../core/ui/app_icons.dart';
 import '../../../../core/ui/zave/zave_kit.dart';
 import '../../domain/topic.dart';
 
@@ -62,7 +63,7 @@ class SuggestedTopicCard extends StatelessWidget {
           SizedBox(height: ZaveSpace.lg),
           ZaveButton(
             label: 'Add to My Topics',
-            icon: const Icon(Icons.add),
+            icon: const Icon(AppIcons.add),
             expand: true,
             busy: busy,
             onPressed: busy ? null : onAdd,

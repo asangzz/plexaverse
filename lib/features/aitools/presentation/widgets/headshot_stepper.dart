@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../../../core/ui/app_icons.dart';
 import '../../../../core/ui/zave/zave_kit.dart';
 import '../../domain/headshot_session.dart';
 
@@ -89,7 +90,11 @@ class _Node extends StatelessWidget {
             ),
             child: Center(
               child: done
-                  ? const Icon(Icons.check, size: 16, color: ZaveColors.green)
+                  ? const Icon(
+                      AppIcons.check,
+                      size: 16,
+                      color: ZaveColors.green,
+                    )
                   : Text(
                       '${index + 1}',
                       style: ZaveType.label.copyWith(color: fg),

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../../core/ui/app_icons.dart';
 import '../../../../core/ui/zave/zave_kit.dart';
 import '../../application/missions_controllers.dart';
 import '../../domain/missions_repository.dart';
@@ -127,7 +128,7 @@ class _HeadlineHookPageState extends ConsumerState<HeadlineHookPage> {
     return ZaveScaffold(
       largeTitle: 'The Headline Hook',
       leading: ZaveIconButton(
-        icon: const Icon(Icons.arrow_back),
+        icon: const Icon(AppIcons.back),
         tooltip: 'Back to roadmap',
         onPressed: () => context.pop(),
       ),
@@ -228,7 +229,7 @@ class _HeadlineHookPageState extends ConsumerState<HeadlineHookPage> {
               // would also dim it to 50% and hide its own spinner.
               ZaveButton(
                 label: form.suggesting ? 'Optimising…' : 'AI Spark',
-                icon: const Icon(Icons.auto_awesome),
+                icon: const Icon(AppIcons.sparkle),
                 onPressed: _suggest,
                 busy: form.suggesting,
                 expand: true,

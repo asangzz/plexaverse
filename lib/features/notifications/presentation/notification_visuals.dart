@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../core/theme/plexaverse_colors.dart';
+import '../../../core/ui/app_icons.dart';
 import '../domain/notification_models.dart';
 
 /// The leading badge icon for a notification `type` (the persisted Drift
@@ -8,13 +9,13 @@ import '../domain/notification_models.dart';
 /// carries the meaning for screen readers.
 IconData notificationIcon(String type) {
   return switch (NotificationCategoryX.fromWire(type)) {
-    NotificationCategory.postPublished => Icons.rocket_launch_rounded,
-    NotificationCategory.postScheduled => Icons.schedule_rounded,
-    NotificationCategory.postFailed => Icons.error_outline_rounded,
-    NotificationCategory.missionComplete => Icons.emoji_events_rounded,
-    NotificationCategory.xpEarned => Icons.bolt_rounded,
-    NotificationCategory.analytics => Icons.bar_chart_rounded,
-    NotificationCategory.system => Icons.notifications_rounded,
+    NotificationCategory.postPublished => AppIcons.odyssey,
+    NotificationCategory.postScheduled => AppIcons.schedule,
+    NotificationCategory.postFailed => AppIcons.error,
+    NotificationCategory.missionComplete => AppIcons.trophy,
+    NotificationCategory.xpEarned => AppIcons.bolt,
+    NotificationCategory.analytics => AppIcons.insights,
+    NotificationCategory.system => AppIcons.notifications,
   };
 }
 

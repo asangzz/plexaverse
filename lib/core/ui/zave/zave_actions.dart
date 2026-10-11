@@ -10,6 +10,7 @@ import 'dart:ui' show ImageFilter;
 import 'package:flutter/material.dart';
 
 import '../../theme/zave/zave.dart';
+import '../app_icons.dart';
 import 'zave_press.dart';
 
 /// The centre compose button — solid white, the one primary action in the app
@@ -85,7 +86,7 @@ class ZaveMoreButton extends StatelessWidget {
                     ],
                   ),
                   child: const Icon(
-                    Icons.more_horiz,
+                    AppIcons.more,
                     color: ZaveColors.white,
                     size: 24,
                   ),
@@ -133,7 +134,7 @@ class ZaveComposeButton extends StatelessWidget {
                 boxShadow: ZaveShadow.bloom,
               ),
               child: const Icon(
-                Icons.edit_outlined,
+                AppIcons.edit,
                 color: ZaveColors.white,
                 size: 24,
               ),

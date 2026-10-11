@@ -10,13 +10,18 @@ enum SocialButtonProvider { google, linkedIn }
 /// action on the screen (the email CTA is), and Zave allows exactly one solid
 /// white button per screen.
 ///
-/// **The brand marks are deliberately monochrome.** The pre-alignment button
-/// painted Google's four-colour "G" and LinkedIn's `#0077B5` tile. Zave's first
-/// rule is that colour only ever names a status, and a vendor logo is the one
-/// thing on the screen that names nothing — so the glyphs are drawn in the
-/// button's own foreground instead. If the official marks are required for
-/// vendor-branding compliance they have to ship as image assets, which is a
-/// change outside this feature (see the summary).
+/// **The marks are the real ones now.** This button used to draw the letter
+/// "G" and the letters "in" in Manrope, on the reading that Zave's colour rule
+/// forbids a vendor logo. That reading held up until you look at the screen: a
+/// letterform in the app's own typeface is not a logo, it is a one-character
+/// label, and a user scanning for the Google button looks for the Google mark.
+/// Google's sign-in branding guidance also requires their actual mark, which
+/// makes a substitute a compliance problem rather than a style choice.
+///
+/// See [ZaveBrandMark] for the bounded exception this creates. The marks are
+/// drawn with `onColor`, in the button's own foreground: every one of these
+/// brands publishes a monochrome treatment for dark surfaces, and a saturated
+/// brand blue on a dark ghost button fights the label beside it.
 class SocialAuthButton extends StatelessWidget {
   const SocialAuthButton({
     required this.provider,
@@ -47,35 +52,10 @@ class SocialAuthButton extends StatelessWidget {
       onPressed: onPressed,
       busy: isLoading,
       expand: true,
-      icon: _ProviderGlyph(provider: provider),
-    );
-  }
-}
-
-/// The 20-logical-pixel letterform that stands in for the vendor logo.
-///
-/// Manrope is the naming face in Zave ([ZaveType.button]), which is exactly
-/// what a wordmark is, so the glyphs use it at the icon size the button's own
-/// [IconTheme] would have given a real icon.
-class _ProviderGlyph extends StatelessWidget {
-  const _ProviderGlyph({required this.provider});
-
-  final SocialButtonProvider provider;
-
-  @override
-  Widget build(BuildContext context) {
-    final String glyph = switch (provider) {
-      SocialButtonProvider.google => 'G',
-      SocialButtonProvider.linkedIn => 'in',
-    };
-
-    return SizedBox(
-      width: ZaveSpace.xl,
-      child: Text(
-        glyph,
-        textAlign: TextAlign.center,
-        style: ZaveType.button.copyWith(color: ZaveColors.white),
-      ),
+      icon: ZaveBrandMark(switch (provider) {
+        SocialButtonProvider.google => ZaveBrand.google,
+        SocialButtonProvider.linkedIn => ZaveBrand.linkedIn,
+      }, onColor: true),
     );
   }
 }

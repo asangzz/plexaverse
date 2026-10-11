@@ -209,7 +209,7 @@ class ArticleCard extends StatelessWidget {
           ZaveButton(
             label: 'Copy & open editor',
             kind: ZaveButtonKind.primarySmall,
-            icon: const Icon(Icons.copy_all_outlined),
+            icon: const Icon(AppIcons.copy),
             expand: true,
             onPressed: onCopy,
           ),

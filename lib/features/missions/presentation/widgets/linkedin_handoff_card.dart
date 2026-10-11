@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../../core/ui/app_icons.dart';
 import '../../../../core/ui/widgets/open_link.dart';
 import '../../../../core/ui/zave/zave_kit.dart';
 
@@ -121,7 +122,7 @@ class LinkedInHandoffCard extends ConsumerWidget {
             // "copy" then "open" rather than "copy, then go and find it".
             ZaveButton(
               label: 'Open LinkedIn',
-              icon: const Icon(Icons.open_in_new_rounded),
+              icon: const Icon(AppIcons.openExternal),
               onPressed: () => _open(context, ref, url),
             ),
             SizedBox(height: ZaveSpace.lg),
@@ -187,7 +188,7 @@ class _CopyButtonState extends State<_CopyButton> {
   @override
   Widget build(BuildContext context) => ZaveButton(
     label: _copied ? 'Copied' : widget.label,
-    icon: Icon(_copied ? Icons.check_rounded : Icons.copy_rounded),
+    icon: Icon(_copied ? AppIcons.check : AppIcons.copy),
     onPressed: widget.payload.isEmpty ? null : _copy,
     expand: true,
   );

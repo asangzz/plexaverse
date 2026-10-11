@@ -5,17 +5,18 @@ import 'package:flutter/services.dart' show Clipboard, ClipboardData;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/links/linkedin.dart';
+import '../../../../core/ui/app_icons.dart';
 import '../../../../core/ui/widgets/open_link.dart';
 import '../../../../core/ui/zave/zave_kit.dart';
-import '../../application/planner_controller.dart';
 import '../../../posts/application/post_library_controllers.dart';
 import '../../../posts/domain/library_post.dart';
+import '../../application/planner_controller.dart';
 import '../../domain/plan_slot.dart';
+import '../../domain/planner_repository.dart';
 import '../../domain/video_script.dart';
 import '../../domain/weekly_article.dart';
 import '../widgets/article_card.dart';
 import '../widgets/slot_card.dart';
-import '../../domain/planner_repository.dart';
 
 /// **Plan** — the content planner. The web's `/planner`.
 ///
@@ -584,7 +585,7 @@ class _WeekHeader extends ConsumerWidget {
             ),
             SizedBox(width: ZaveSpace.sm),
             ZaveIconButton(
-              icon: const Icon(Icons.chevron_left),
+              icon: const Icon(AppIcons.chevronLeft),
               tooltip: 'Previous week',
               // Week 1 is the floor — there is no week 0 to fetch, and a
               // disabled control says that better than an error would.
@@ -596,7 +597,7 @@ class _WeekHeader extends ConsumerWidget {
             ),
             SizedBox(width: ZaveSpace.xs),
             ZaveIconButton(
-              icon: const Icon(Icons.chevron_right),
+              icon: const Icon(AppIcons.chevronRight),
               tooltip: 'Next week',
               onPressed: () =>
                   ref.read(plannerWeekProvider.notifier).show(week + 1, season),
@@ -641,7 +642,7 @@ class _WeekHeader extends ConsumerWidget {
             child: ZaveChip(
               label: 'Back to this week',
               selected: false,
-              icon: const Icon(Icons.refresh, size: 14),
+              icon: const Icon(AppIcons.refresh, size: 14),
               onTap: () => ref.read(plannerWeekProvider.notifier).showCurrent(),
             ),
           ),
@@ -1265,10 +1266,9 @@ class _SlotSheetState extends ConsumerState<_SlotSheet> {
               borderRadius: BorderRadius.circular(ZaveRadius.cardSm),
               child: AspectRatio(
                 aspectRatio: 16 / 9,
-                child: Image.network(
-                  src,
-                  fit: BoxFit.cover,
-                  errorBuilder: (_, _, _) => const SizedBox.shrink(),
+                child: ZaveImage(
+                  source: src,
+                  errorMessage: 'That poster could not be loaded.',
                 ),
               ),
             ),
@@ -1529,7 +1529,7 @@ class _WeekSetupState extends State<_WeekSetup> {
                       if (tab != _SetupTab.article) ...<Widget>[
                         SizedBox(width: ZaveSpace.xs),
                         Icon(
-                          Icons.chevron_right,
+                          AppIcons.chevronRight,
                           size: 16,
                           color: ZaveColors.ink35,
                         ),
@@ -1547,7 +1547,7 @@ class _WeekSetupState extends State<_WeekSetup> {
                         // and a half-written week is still a week with work
                         // left in it.
                         icon: _done(tab)
-                            ? const Icon(Icons.check, size: 14)
+                            ? const Icon(AppIcons.check, size: 14)
                             : null,
                         onTap: current == tab ? null : () => _tab.value = tab,
                       ),
@@ -1612,7 +1612,6 @@ class _WeekSetupState extends State<_WeekSetup> {
             title: 'The week',
             actionLabel:
                 '${widget.plan.publishedCount}/${widget.plan.liveSlotCount} published',
-            onTap: () {},
           ),
           SizedBox(height: ZaveSpace.lg),
           _DayStrip(

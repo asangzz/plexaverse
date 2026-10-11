@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../../../core/ui/app_icons.dart';
 import '../../../../core/ui/zave/zave_kit.dart';
 import '../../domain/onboarding_repository.dart';
 
@@ -112,7 +113,7 @@ class _TonePanelState extends State<TonePanel> {
             if (widget.onUseScreenshot != null)
               ZaveButton(
                 label: 'Use a screenshot',
-                icon: const Icon(Icons.image_outlined),
+                icon: const Icon(AppIcons.image),
                 onPressed: widget.onUseScreenshot,
               ),
             const Spacer(),

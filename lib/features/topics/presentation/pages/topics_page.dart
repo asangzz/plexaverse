@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../../core/ui/app_icons.dart';
 import '../../../../core/ui/zave/zave_kit.dart';
 import '../../application/topics_controller.dart';
 import '../../domain/topics_repository.dart';
@@ -136,7 +137,7 @@ class _TopicsPageState extends ConsumerState<TopicsPage> {
       leading: context.canPop()
           ? ZaveIconButton(
               tooltip: 'Back',
-              icon: const Icon(Icons.arrow_back),
+              icon: const Icon(AppIcons.back),
               onPressed: () => context.pop(),
             )
           : null,
@@ -170,7 +171,7 @@ class _TopicsPageState extends ConsumerState<TopicsPage> {
       ZaveButton(
         label: 'Add Topic',
         kind: ZaveButtonKind.primarySmall,
-        icon: const Icon(Icons.add),
+        icon: const Icon(AppIcons.add),
         expand: true,
         onPressed: _create,
       ),
@@ -179,7 +180,7 @@ class _TopicsPageState extends ConsumerState<TopicsPage> {
         // The price is in the label because the press spends it, and it spends
         // it whether or not the user keeps a single suggestion.
         label: 'Suggest Topics (50 XP)',
-        icon: const Icon(Icons.auto_awesome_outlined),
+        icon: const Icon(AppIcons.sparkle),
         expand: true,
         busy: suggestions.suggesting,
         onPressed: suggestions.suggesting ? null : _suggest,
@@ -211,7 +212,7 @@ class _TopicsPageState extends ConsumerState<TopicsPage> {
             // refetch here.
             ZaveIconButton(
               tooltip: 'Dismiss suggestions',
-              icon: const Icon(Icons.close),
+              icon: const Icon(AppIcons.close),
               onPressed: () =>
                   ref.read(topicSuggestionsProvider.notifier).clear(),
             ),

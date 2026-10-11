@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../../core/ui/app_icons.dart';
 import '../../../../core/ui/zave/zave_kit.dart';
 import '../../application/festive_controller.dart';
 import '../../domain/festive_template.dart';
@@ -257,7 +258,7 @@ class _FestiveCustomizerSheetState
         label: _date == null
             ? 'Pick a date'
             : _values.formattedDate ?? 'Pick a date',
-        icon: const Icon(Icons.calendar_today_outlined),
+        icon: const Icon(AppIcons.calendar),
         expand: true,
         onPressed: busy ? null : _pickDate,
       ),
@@ -382,7 +383,7 @@ class _Result extends StatelessWidget {
           ZaveButton(
             label: 'Copy link',
             kind: ZaveButtonKind.primary,
-            icon: const Icon(Icons.link),
+            icon: const Icon(AppIcons.link),
             expand: true,
             onPressed: () async {
               await Clipboard.setData(ClipboardData(text: savedUrl!));
@@ -412,7 +413,7 @@ class _Result extends StatelessWidget {
         ZaveButton(
           label: 'Save to my images',
           kind: ZaveButtonKind.primary,
-          icon: const Icon(Icons.cloud_upload_outlined),
+          icon: const Icon(AppIcons.upload),
           expand: true,
           busy: saving,
           onPressed: () => onSave(),
@@ -420,7 +421,7 @@ class _Result extends StatelessWidget {
         SizedBox(height: ZaveSpace.md),
         ZaveButton(
           label: 'Regenerate',
-          icon: const Icon(Icons.refresh),
+          icon: const Icon(AppIcons.refresh),
           expand: true,
           onPressed: saving ? null : onRegenerate,
         ),

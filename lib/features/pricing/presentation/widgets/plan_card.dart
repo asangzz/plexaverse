@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../../../core/ui/app_icons.dart';
 import '../../../../core/ui/zave/zave_kit.dart';
 import '../../domain/pricing.dart';
 
@@ -183,7 +184,7 @@ class _FeatureRow extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: <Widget>[
           Icon(
-            locked ? Icons.close_rounded : Icons.check_rounded,
+            locked ? AppIcons.close : AppIcons.check,
             // Green is "done / included"; a locked line is inert, so it takes
             // the faintest ink step rather than a warning colour.
             color: locked ? ZaveColors.ink35 : ZaveColors.green,

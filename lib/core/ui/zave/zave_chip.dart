@@ -99,7 +99,20 @@ class ZaveChip extends StatelessWidget {
                         ),
                         SizedBox(width: ZaveSpace.sm),
                       ],
-                      Text(label, style: ZaveType.label.copyWith(color: fg)),
+                      // Flexible + ellipsis, for the reason spelled out on
+                      // ZavePill below — and more so here, because a chip is
+                      // routinely handed free text: a topic, a filter name,
+                      // a company page. An unbounded Text inside a min-sized
+                      // Row does not shrink; it paints past the parent and
+                      // renders the overflow bars.
+                      Flexible(
+                        child: Text(
+                          label,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: ZaveType.label.copyWith(color: fg),
+                        ),
+                      ),
                       if (badge != null) ...<Widget>[
                         SizedBox(width: ZaveSpace.sm),
                         Text(
