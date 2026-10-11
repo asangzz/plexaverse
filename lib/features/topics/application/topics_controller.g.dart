@@ -111,29 +111,14 @@ abstract class _$TopicsController extends $AsyncNotifier<List<Topic>> {
 }
 
 /// The three AI suggestions, while the user is looking at them.
-///
-/// Held in a provider rather than in the page so a suggestion the user has
-/// already paid 50 XP for survives a rebuild. It does NOT survive leaving the
-/// screen, which matches the web — its `suggestedTopics` is component state and
-/// the endpoint is non-deterministic, so there is nothing to restore.
 
 @ProviderFor(TopicSuggestions)
 final topicSuggestionsProvider = TopicSuggestionsProvider._();
 
 /// The three AI suggestions, while the user is looking at them.
-///
-/// Held in a provider rather than in the page so a suggestion the user has
-/// already paid 50 XP for survives a rebuild. It does NOT survive leaving the
-/// screen, which matches the web — its `suggestedTopics` is component state and
-/// the endpoint is non-deterministic, so there is nothing to restore.
 final class TopicSuggestionsProvider
-    extends $NotifierProvider<TopicSuggestions, List<SuggestedTopic>> {
+    extends $NotifierProvider<TopicSuggestions, TopicSuggestionsState> {
   /// The three AI suggestions, while the user is looking at them.
-  ///
-  /// Held in a provider rather than in the page so a suggestion the user has
-  /// already paid 50 XP for survives a rebuild. It does NOT survive leaving the
-  /// screen, which matches the web — its `suggestedTopics` is component state and
-  /// the endpoint is non-deterministic, so there is nothing to restore.
   TopicSuggestionsProvider._()
     : super(
         from: null,
@@ -153,34 +138,29 @@ final class TopicSuggestionsProvider
   TopicSuggestions create() => TopicSuggestions();
 
   /// {@macro riverpod.override_with_value}
-  Override overrideWithValue(List<SuggestedTopic> value) {
+  Override overrideWithValue(TopicSuggestionsState value) {
     return $ProviderOverride(
       origin: this,
-      providerOverride: $SyncValueProvider<List<SuggestedTopic>>(value),
+      providerOverride: $SyncValueProvider<TopicSuggestionsState>(value),
     );
   }
 }
 
-String _$topicSuggestionsHash() => r'85dffb4751e8dbf61c7ca9e3dad7e335ce27abf3';
+String _$topicSuggestionsHash() => r'a6f3a9a7e7243a51bdecae5fbdf41ef70410a421';
 
 /// The three AI suggestions, while the user is looking at them.
-///
-/// Held in a provider rather than in the page so a suggestion the user has
-/// already paid 50 XP for survives a rebuild. It does NOT survive leaving the
-/// screen, which matches the web — its `suggestedTopics` is component state and
-/// the endpoint is non-deterministic, so there is nothing to restore.
 
-abstract class _$TopicSuggestions extends $Notifier<List<SuggestedTopic>> {
-  List<SuggestedTopic> build();
+abstract class _$TopicSuggestions extends $Notifier<TopicSuggestionsState> {
+  TopicSuggestionsState build();
   @$mustCallSuper
   @override
   void runBuild() {
-    final ref = this.ref as $Ref<List<SuggestedTopic>, List<SuggestedTopic>>;
+    final ref = this.ref as $Ref<TopicSuggestionsState, TopicSuggestionsState>;
     final element =
         ref.element
             as $ClassProviderElement<
-              AnyNotifier<List<SuggestedTopic>, List<SuggestedTopic>>,
-              List<SuggestedTopic>,
+              AnyNotifier<TopicSuggestionsState, TopicSuggestionsState>,
+              TopicSuggestionsState,
               Object?,
               Object?
             >;

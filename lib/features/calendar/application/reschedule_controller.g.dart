@@ -117,7 +117,7 @@ final class RescheduleControllerProvider
 }
 
 String _$rescheduleControllerHash() =>
-    r'c495d11cd102c2f855a833314289ce7988024858';
+    r'cc14c23c064dd79c3064289a6881e91c29f13cca';
 
 /// What a drag onto a new day is currently doing, and how it last went.
 ///

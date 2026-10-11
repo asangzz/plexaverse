@@ -9,7 +9,6 @@ import '../../application/missions_controllers.dart';
 import '../../domain/missions_repository.dart';
 import '../widgets/banner_preview.dart';
 import '../widgets/mission_chrome.dart';
-import '../../../../core/platform/image_sharing.dart';
 
 /// **Banner Blueprint** — the web's `/roadmap/banner-blueprint`.
 ///
@@ -56,13 +55,12 @@ class _BannerBlueprintPageState extends ConsumerState<BannerBlueprintPage> {
   final TextEditingController _position = TextEditingController();
   bool _seeded = false;
 
+  /// Which template the carousel is showing, and the boundary the export
+  /// renders. Both are this widget's by nature — a page index is a selection
+  /// inside one local control, and a `GlobalKey` identifies a render object
+  /// that only exists while this page is mounted.
   int _index = 0;
   final GlobalKey _bannerKey = GlobalKey();
-  bool _saving = false;
-  bool _finishing = false;
-
-  String? _message;
-  MissionTone _tone = MissionTone.success;
 
   @override
   void dispose() {
@@ -81,69 +79,15 @@ class _BannerBlueprintPageState extends ConsumerState<BannerBlueprintPage> {
         profile.preferences.headline ?? profile.preferences.profession ?? '';
   }
 
-  void _say(String text, MissionTone tone) {
-    if (!mounted) return;
-    setState(() {
-      _message = text;
-      _tone = tone;
-    });
-  }
+  BannerBlueprintController get _form =>
+      ref.read(bannerBlueprintControllerProvider.notifier);
 
   Future<void> _finish() async {
-    setState(() {
-      _finishing = true;
-      _message = null;
-    });
-    try {
-      await ref
-          .read(missionProfileControllerProvider.notifier)
-          .completeStep(
-            levelId: BannerBlueprintPage.levelId,
-            stepId: BannerBlueprintPage.stepId,
-          );
-      if (!mounted) return;
-      context.pop();
-    } on Object {
-      _say('Could not record that step.', MissionTone.warning);
-      if (mounted) setState(() => _finishing = false);
-    }
-  }
-
-  /// Renders the chosen banner at LinkedIn's cover width and hands it to the
-  /// share sheet, where iOS offers "Save Image".
-  ///
-  /// 1584 is LinkedIn's own cover width. Exporting the on-screen thumbnail
-  /// instead would give the user something that looks right in the app and
-  /// blurry on their profile — which is the only place it is going.
-  Future<void> _saveBanner() async {
-    setState(() => _saving = true);
-    try {
-      final ShareResult result = await ref
-          .read(imageSharingProvider)
-          .shareWidgetPng(
-            boundaryKey: _bannerKey,
-            fileName: 'plexaverse-linkedin-banner.png',
-            targetWidth: 1584,
-          );
-      if (!mounted) return;
-      switch (result) {
-        case ShareSucceeded():
-          setState(() {
-            _message = 'Saved. Set it as your cover photo on LinkedIn.';
-            _tone = MissionTone.success;
-          });
-        // Dismissing the sheet is a decision, not a failure.
-        case ShareDismissed():
-          break;
-        case ShareFailed(:final String? message):
-          setState(() {
-            _message = message ?? "Couldn't save the banner. Try again.";
-            _tone = MissionTone.warning;
-          });
-      }
-    } finally {
-      if (mounted) setState(() => _saving = false);
-    }
+    final bool done = await _form.finish(
+      levelId: BannerBlueprintPage.levelId,
+      stepId: BannerBlueprintPage.stepId,
+    );
+    if (done && mounted) context.pop();
   }
 
   @override
@@ -153,6 +97,9 @@ class _BannerBlueprintPageState extends ConsumerState<BannerBlueprintPage> {
     );
     final AsyncValue<List<BannerTemplate>> templates = ref.watch(
       bannerTemplatesProvider,
+    );
+    final BannerBlueprintState form = ref.watch(
+      bannerBlueprintControllerProvider,
     );
 
     return ZaveScaffold(
@@ -211,8 +158,8 @@ class _BannerBlueprintPageState extends ConsumerState<BannerBlueprintPage> {
 
           SizedBox(height: ZaveSpace.xl),
 
-          if (_message != null) ...<Widget>[
-            MissionMessage(text: _message!, tone: _tone),
+          if (form.notice case final MissionNotice notice) ...<Widget>[
+            MissionMessage(text: notice.text, tone: notice.tone),
             SizedBox(height: ZaveSpace.lg),
           ],
 
@@ -254,14 +201,16 @@ class _BannerBlueprintPageState extends ConsumerState<BannerBlueprintPage> {
                   label: 'Save this banner',
                   icon: const Icon(Icons.ios_share),
                   expand: true,
-                  busy: _saving,
-                  onPressed: _saving ? null : _saveBanner,
+                  busy: form.saving,
+                  onPressed: form.saving
+                      ? null
+                      : () => _form.saveBanner(_bannerKey),
                 ),
                 SizedBox(height: ZaveSpace.lg),
                 ZaveButton.primary(
                   label: 'Finish step',
                   onPressed: _finish,
-                  busy: _finishing,
+                  busy: form.finishing,
                   expand: true,
                 ),
               ],

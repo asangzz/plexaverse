@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/ui/zave/zave_kit.dart';
 import '../../application/settings_controllers.dart';
+import '../../application/settings_write_controller.dart';
 import '../../domain/settings_repository.dart';
 import 'settings_section.dart';
 
@@ -61,7 +62,7 @@ class ConnectionsSection extends ConsumerWidget {
   }
 }
 
-class _LinkedinRows extends ConsumerStatefulWidget {
+class _LinkedinRows extends ConsumerWidget {
   const _LinkedinRows({
     required this.personal,
     required this.company,
@@ -74,65 +75,71 @@ class _LinkedinRows extends ConsumerStatefulWidget {
   final bool showPersonal;
   final bool showCompany;
 
-  @override
-  ConsumerState<_LinkedinRows> createState() => _LinkedinRowsState();
-}
-
-class _LinkedinRowsState extends ConsumerState<_LinkedinRows> {
-  /// Which row is mid-hand-off, so only that row's button goes busy.
-  String? _connecting;
-
-  Future<void> _connect(String type) async {
-    setState(() => _connecting = type);
-    try {
-      final ConnectOutcome outcome = await ref
-          .read(linkedinAccountsControllerProvider.notifier)
-          .connect(type);
-      if (!mounted) return;
-      final String? note = switch (outcome) {
-        ConnectSucceeded() => 'LinkedIn connected.',
-        // Silent. The user closed the browser; they know they did, and a
-        // banner blaming the app for their own decision is noise.
-        ConnectCancelled() => null,
-        ConnectFailed(:final String? message) =>
-          message ?? 'Failed to connect LinkedIn account',
-      };
-      if (note != null) showSettingsMessage(context, note);
-    } finally {
-      if (mounted) setState(() => _connecting = null);
-    }
+  Future<void> _connect(
+    BuildContext context,
+    WidgetRef ref,
+    String type,
+  ) async {
+    final ConnectOutcome outcome = await ref
+        .read(settingsWriteControllerProvider.notifier)
+        .connectLinkedin(type);
+    if (!context.mounted) return;
+    final String? note = switch (outcome) {
+      ConnectSucceeded() => 'LinkedIn connected.',
+      // Silent. The user closed the browser; they know they did, and a
+      // banner blaming the app for their own decision is noise.
+      ConnectCancelled() => null,
+      ConnectFailed(:final String? message) =>
+        message ?? 'Failed to connect LinkedIn account',
+    };
+    if (note != null) showSettingsMessage(context, note);
   }
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    // Keyed per row, so a hand-off on one account leaves the other's button
+    // alone — a single flag here would grey out a row that is not working.
+    final bool connectingPersonal = ref.watch(
+      settingsWriteControllerProvider.select(
+        (Set<String> open) => open.contains(SettingsWrite.linkedin('personal')),
+      ),
+    );
+    final bool connectingCompany = ref.watch(
+      settingsWriteControllerProvider.select(
+        (Set<String> open) => open.contains(SettingsWrite.linkedin('company')),
+      ),
+    );
+    final bool connectingAny = connectingPersonal || connectingCompany;
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: <Widget>[
-        if (widget.showPersonal)
+        if (showPersonal)
           _LinkedinRow(
-            account: widget.personal,
+            account: personal,
             type: 'personal',
             badge: 'Personal',
             absentDetail: 'Post personal content to LinkedIn',
-            liveDetail: widget.personal == null
+            liveDetail: personal == null
                 ? ''
-                : 'Connected as ${widget.personal!.profileName}',
-            busy: _connecting == 'personal',
-            onConnect: _connecting == null
-                ? () => _connect('personal')
-                : null,
+                : 'Connected as ${personal!.profileName}',
+            busy: connectingPersonal,
+            onConnect: connectingAny
+                ? null
+                : () => _connect(context, ref, 'personal'),
           ),
-        if (widget.showPersonal && widget.showCompany)
-          const SettingsDivider(),
-        if (widget.showCompany)
+        if (showPersonal && showCompany) const SettingsDivider(),
+        if (showCompany)
           _LinkedinRow(
-            account: widget.company,
+            account: company,
             type: 'company',
             badge: 'Company',
             absentDetail: 'Publish to your LinkedIn Company Page',
             liveDetail: 'Company token connected — admin access granted',
-            busy: _connecting == 'company',
-            onConnect: _connecting == null ? () => _connect('company') : null,
+            busy: connectingCompany,
+            onConnect: connectingAny
+                ? null
+                : () => _connect(context, ref, 'company'),
           ),
       ],
     );
@@ -438,7 +445,6 @@ class CompanyPagePicker extends ConsumerStatefulWidget {
 
 class _CompanyPagePickerState extends ConsumerState<CompanyPagePicker> {
   final TextEditingController _manual = TextEditingController();
-  bool _busy = false;
 
   @override
   void dispose() {
@@ -447,36 +453,36 @@ class _CompanyPagePickerState extends ConsumerState<CompanyPagePicker> {
   }
 
   Future<void> _choose(String orgId) async {
-    setState(() => _busy = true);
-    try {
-      final String? failure = await ref
-          .read(companyPagesControllerProvider.notifier)
-          .choose(orgId);
-      if (!mounted) return;
-      showSettingsMessage(
-        context,
-        failure ?? 'Company page linked. Company posts will publish there.',
-      );
-    } finally {
-      if (mounted) setState(() => _busy = false);
-    }
+    final String? failure = await ref
+        .read(settingsWriteControllerProvider.notifier)
+        .chooseCompanyPage(orgId);
+    if (!mounted) return;
+    showSettingsMessage(
+      context,
+      failure ?? 'Company page linked. Company posts will publish there.',
+    );
   }
 
   Future<void> _lookup() async {
     final String value = _manual.text.trim();
     if (value.isEmpty) return;
-    setState(() => _busy = true);
-    try {
-      await ref.read(companyPagesControllerProvider.notifier).lookup(value);
-    } finally {
-      if (mounted) setState(() => _busy = false);
-    }
+    await ref
+        .read(settingsWriteControllerProvider.notifier)
+        .lookupCompanyPage(value);
   }
 
   @override
   Widget build(BuildContext context) {
     final AsyncValue<CompanyPageOptions> pages = ref.watch(
       companyPagesControllerProvider,
+    );
+    // One key for the whole picker, as before: choosing a page and looking one
+    // up both replace the same list, so a second tap while either is open has
+    // nothing coherent to land on.
+    final bool busy = ref.watch(
+      settingsWriteControllerProvider.select(
+        (Set<String> open) => open.contains(SettingsWrite.companyPage),
+      ),
     );
 
     return Column(
@@ -514,8 +520,8 @@ class _CompanyPagePickerState extends ConsumerState<CompanyPagePicker> {
                         SizedBox(width: ZaveSpace.md),
                         ZaveButton(
                           label: 'Use this page',
-                          busy: _busy,
-                          onPressed: _busy ? null : () => _choose(page.id),
+                          busy: busy,
+                          onPressed: busy ? null : () => _choose(page.id),
                         ),
                       ],
                     ),
@@ -546,8 +552,8 @@ class _CompanyPagePickerState extends ConsumerState<CompanyPagePicker> {
           alignment: Alignment.centerLeft,
           child: ZaveButton(
             label: 'Find page',
-            busy: _busy,
-            onPressed: _busy ? null : _lookup,
+            busy: busy,
+            onPressed: busy ? null : _lookup,
           ),
         ),
       ],

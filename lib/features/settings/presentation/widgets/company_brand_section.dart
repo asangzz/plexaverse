@@ -3,9 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/ui/zave/zave_kit.dart';
 import '../../../preferences/domain/user_preferences.dart';
-import '../../../preferences/application/preferences_controller.dart';
+import '../../application/settings_write_controller.dart';
 import 'settings_section.dart';
-import '../../../../core/platform/image_picking.dart';
 
 /// **Company Brand Details** — company-brand users only.
 ///
@@ -48,8 +47,6 @@ class _CompanyBrandSectionState extends ConsumerState<CompanyBrandSection> {
     text: widget.preferences.companyFeatures.join('\n'),
   );
 
-  bool _saving = false;
-
   @override
   void dispose() {
     _industry.dispose();
@@ -61,9 +58,6 @@ class _CompanyBrandSectionState extends ConsumerState<CompanyBrandSection> {
     _secondary.dispose();
     super.dispose();
   }
-
-  late String? _logoUrl = widget.preferences.companyLogoUrl;
-  bool _uploadingLogo = false;
 
   /// Seeded from what is saved, like every other field here — a style
   /// editor that opens blank reads as "nothing is set" rather than showing
@@ -91,72 +85,59 @@ class _CompanyBrandSectionState extends ConsumerState<CompanyBrandSection> {
   /// Saved on pick rather than folded into the Save button: the upload has
   /// already happened by then, and leaving the URL unsaved would mean a file
   /// sitting in storage that nothing references if the user backs out.
+  ///
+  /// The whole pick-upload-save sits on the controller. Half of it here was
+  /// what let the saved URL exist in two places at once — the preferences row
+  /// and a widget field — and the widget's copy is the one that can be stale.
   Future<void> _pickLogo() async {
-    setState(() => _uploadingLogo = true);
-    String? note;
-    try {
-      final ImagePickResult picked = await ref
-          .read(imagePickingProvider)
-          .pick(ImageSourceKind.gallery);
-      switch (picked) {
-        case PickedImage(:final String dataUri):
-          final String url = await ref
-              .read(preferencesControllerProvider.notifier)
-              .uploadCompanyLogo(dataUri);
-          if (!mounted) return;
-          setState(() => _logoUrl = url);
-          note = 'Logo saved.';
-        // Closing the picker is a decision.
-        case ImagePickCancelled():
-          break;
-        case ImagePickFailure(:final String? message):
-          note = message ?? 'Could not open your photos.';
-      }
-    } on Object {
-      note = "That logo didn't upload. Try again.";
-    } finally {
-      if (mounted) setState(() => _uploadingLogo = false);
-    }
+    final String? note = await ref
+        .read(settingsWriteControllerProvider.notifier)
+        .pickAndSaveCompanyLogo();
     if (note == null || !mounted) return;
     showSettingsMessage(context, note);
   }
 
   Future<void> _save() async {
-    setState(() => _saving = true);
-    try {
-      await ref
-          .read(preferencesControllerProvider.notifier)
-          .saveCompanyBrand(
-            companyIndustry: _industry.text.trim(),
-            companyWebsite: _website.text.trim(),
-            companyTagline: _tagline.text.trim(),
-            companyDescription: _description.text.trim(),
-            companyFeatures: _features.text
-                .split('\n')
-                .map((String line) => line.trim())
-                .where((String line) => line.isNotEmpty)
-                .toList(growable: false),
-            posterTheme: _posterTheme,
-            posterPrimaryColor: _hex(_primary.text),
-            posterSecondaryColor: _hex(_secondary.text),
-          );
-      if (mounted) {
-        showSettingsMessage(
-          context,
-          'Company brand details saved — your posts will use them.',
+    final String? failure = await ref
+        .read(settingsWriteControllerProvider.notifier)
+        .saveCompanyBrand(
+          companyIndustry: _industry.text.trim(),
+          companyWebsite: _website.text.trim(),
+          companyTagline: _tagline.text.trim(),
+          companyDescription: _description.text.trim(),
+          companyFeatures: _features.text
+              .split('\n')
+              .map((String line) => line.trim())
+              .where((String line) => line.isNotEmpty)
+              .toList(growable: false),
+          posterTheme: _posterTheme,
+          posterPrimaryColor: _hex(_primary.text),
+          posterSecondaryColor: _hex(_secondary.text),
         );
-      }
-    } on Object {
-      if (mounted) {
-        showSettingsMessage(context, 'Failed to save company brand details.');
-      }
-    } finally {
-      if (mounted) setState(() => _saving = false);
-    }
+    if (!mounted) return;
+    showSettingsMessage(
+      context,
+      failure ?? 'Company brand details saved — your posts will use them.',
+    );
   }
 
   @override
   Widget build(BuildContext context) {
+    // Read from the preferences row rather than mirrored onto this State: the
+    // upload saves it, which republishes the row the whole section renders
+    // from, so there is only ever one answer to "is there a logo".
+    final String? logoUrl = widget.preferences.companyLogoUrl;
+    final bool saving = ref.watch(
+      settingsWriteControllerProvider.select(
+        (Set<String> open) => open.contains(SettingsWrite.companyBrand),
+      ),
+    );
+    final bool uploadingLogo = ref.watch(
+      settingsWriteControllerProvider.select(
+        (Set<String> open) => open.contains(SettingsWrite.companyLogo),
+      ),
+    );
+
     return SettingsSection(
       title: 'Company Brand Details',
       lead:
@@ -208,9 +189,9 @@ class _CompanyBrandSectionState extends ConsumerState<CompanyBrandSection> {
           Align(
             alignment: Alignment.centerRight,
             child: ZaveButton(
-              label: _saving ? 'Saving...' : 'Save brand details',
-              busy: _saving,
-              onPressed: _saving ? null : _save,
+              label: saving ? 'Saving...' : 'Save brand details',
+              busy: saving,
+              onPressed: saving ? null : _save,
             ),
           ),
           const SettingsDivider(),
@@ -218,7 +199,7 @@ class _CompanyBrandSectionState extends ConsumerState<CompanyBrandSection> {
             children: <Widget>[
               Expanded(
                 child: Text(
-                  _logoUrl == null
+                  logoUrl == null
                       ? 'No brand logo yet — posters generate without one.'
                       : 'Brand logo set. Posters will use it.',
                   style: ZaveType.caption,
@@ -226,9 +207,9 @@ class _CompanyBrandSectionState extends ConsumerState<CompanyBrandSection> {
               ),
               SizedBox(width: ZaveSpace.md),
               ZaveButton(
-                label: _logoUrl == null ? 'Add logo' : 'Replace',
-                busy: _uploadingLogo,
-                onPressed: _uploadingLogo ? null : _pickLogo,
+                label: logoUrl == null ? 'Add logo' : 'Replace',
+                busy: uploadingLogo,
+                onPressed: uploadingLogo ? null : _pickLogo,
               ),
             ],
           ),

@@ -458,7 +458,9 @@ class _PlannerBody extends StatelessWidget {
     ArticleState a,
   ) async {
     if (a.article == null) return;
-    final String? body = await ref.read(articleControllerProvider.notifier).fetchArticleBody(a);
+    final String? body = await ref
+        .read(articleControllerProvider.notifier)
+        .fetchArticleBody(a);
     if (!context.mounted) return;
     if (body == null) {
       _say(context, "The article didn't load. Try again.");
@@ -479,7 +481,9 @@ class _PlannerBody extends StatelessWidget {
     ArticleState a,
   ) async {
     if (a.article == null) return;
-    final String? body = await ref.read(articleControllerProvider.notifier).fetchArticleBody(a);
+    final String? body = await ref
+        .read(articleControllerProvider.notifier)
+        .fetchArticleBody(a);
     if (!context.mounted) return;
     if (body == null || body.isEmpty) {
       _say(context, "The article didn't load, so there was nothing to copy.");
@@ -594,9 +598,8 @@ class _WeekHeader extends ConsumerWidget {
             ZaveIconButton(
               icon: const Icon(Icons.chevron_right),
               tooltip: 'Next week',
-              onPressed: () => ref
-                  .read(plannerWeekProvider.notifier)
-                  .show(week + 1, season),
+              onPressed: () =>
+                  ref.read(plannerWeekProvider.notifier).show(week + 1, season),
             ),
           ],
         ),
@@ -639,8 +642,7 @@ class _WeekHeader extends ConsumerWidget {
               label: 'Back to this week',
               selected: false,
               icon: const Icon(Icons.refresh, size: 14),
-              onTap: () =>
-                  ref.read(plannerWeekProvider.notifier).showCurrent(),
+              onTap: () => ref.read(plannerWeekProvider.notifier).showCurrent(),
             ),
           ),
         ],
@@ -847,11 +849,15 @@ class _SlotSheet extends ConsumerStatefulWidget {
 }
 
 class _SlotSheetState extends ConsumerState<_SlotSheet> {
-  bool _busy = false;
-  bool _titleBusy = false;
-  bool _scriptBusy = false;
-  bool _posterBusy = false;
-  bool _saving = false;
+  // The five in-flight flags this used to hold are on [PlannerBusy] now. The
+  // sheet is dismissible by a swipe while a model call is open, and four of
+  // the five operations cost XP, so a flag that died with the sheet was the
+  // only thing stopping a re-opened day from buying a second one.
+  //
+  // The DIRTY flags below stay. They are the text fields' own answer to "did a
+  // person type this, or did we put it there", which nothing outside this
+  // sheet can ask and nothing outside it needs: dispose the sheet and the
+  // controllers holding the typed text go with it.
 
   final TextEditingController _title = TextEditingController();
   final TextEditingController _body = TextEditingController();
@@ -886,29 +892,17 @@ class _SlotSheetState extends ConsumerState<_SlotSheet> {
   // ── Video-script day ──────────────────────────────────────────────────────
 
   Future<void> _generateScript() async {
-    setState(() => _scriptBusy = true);
-    String? failure;
-    try {
-      failure = await ref
-          .read(videoScriptsControllerProvider.notifier)
-          .generate(widget.slotIndex);
-    } finally {
-      if (mounted) setState(() => _scriptBusy = false);
-    }
+    final String? failure = await ref
+        .read(videoScriptsControllerProvider.notifier)
+        .generate(widget.slotIndex);
     if (!mounted || failure == null) return;
     _say(failure);
   }
 
   Future<void> _markScriptPosted() async {
-    setState(() => _scriptBusy = true);
-    bool saved = false;
-    try {
-      saved = await ref
-          .read(videoScriptsControllerProvider.notifier)
-          .markPosted(widget.slotIndex);
-    } finally {
-      if (mounted) setState(() => _scriptBusy = false);
-    }
+    final bool saved = await ref
+        .read(videoScriptsControllerProvider.notifier)
+        .markPosted(widget.slotIndex);
     if (!mounted) return;
     // Said out loud only on failure. On success the row behind the sheet turns
     // green and the button becomes a tick, which is the louder signal.
@@ -935,19 +929,13 @@ class _SlotSheetState extends ConsumerState<_SlotSheet> {
   /// Null means "untouched": the dirty flags stay here because only the field
   /// can tell a typed edit from a value the sheet filled in.
   Future<void> _save() async {
-    setState(() => _saving = true);
-    String? failure;
-    try {
-      failure = await ref
-          .read(plannerControllerProvider.notifier)
-          .saveSlotEdits(
-            widget.slotIndex,
-            title: _titleDirty ? _title.text : null,
-            body: _bodyDirty ? _body.text : null,
-          );
-    } finally {
-      if (mounted) setState(() => _saving = false);
-    }
+    final String? failure = await ref
+        .read(plannerControllerProvider.notifier)
+        .saveSlotEdits(
+          widget.slotIndex,
+          title: _titleDirty ? _title.text : null,
+          body: _bodyDirty ? _body.text : null,
+        );
     if (!mounted) return;
     if (failure != null) {
       _say(failure);
@@ -961,15 +949,9 @@ class _SlotSheetState extends ConsumerState<_SlotSheet> {
   }
 
   Future<void> _rewriteTitle() async {
-    setState(() => _titleBusy = true);
-    String? failure;
-    try {
-      failure = await ref
-          .read(plannerControllerProvider.notifier)
-          .regenerateTitle(widget.slotIndex);
-    } finally {
-      if (mounted) setState(() => _titleBusy = false);
-    }
+    final String? failure = await ref
+        .read(plannerControllerProvider.notifier)
+        .regenerateTitle(widget.slotIndex);
     if (!mounted) return;
     if (failure != null) {
       _say(failure);
@@ -1045,7 +1027,6 @@ class _SlotSheetState extends ConsumerState<_SlotSheet> {
       if (confirmed != true) return;
     }
 
-    setState(() => _busy = true);
     // Empty means "nothing to say", which no path currently produces —
     // but a future branch that stays silent should not have to reach for a
     // nullable just to do so.
@@ -1061,9 +1042,17 @@ class _SlotSheetState extends ConsumerState<_SlotSheet> {
       };
       // The new post is a different row, so the field must refill from it
       // rather than keep the replaced draft's words.
-      if (result != null && !result.alreadyGenerated) {
-        _bodyLoadedFor = null;
-        _bodyDirty = false;
+      //
+      // In a `setState` now that the busy flag's own rebuild no longer trails
+      // this: clearing the marker happens one frame EARLIER than these two
+      // lines — it runs in the controller's `finally`, before this method
+      // resumes — so without this the Save button would keep offering to write
+      // back a draft that has just been replaced.
+      if (result != null && !result.alreadyGenerated && mounted) {
+        setState(() {
+          _bodyLoadedFor = null;
+          _bodyDirty = false;
+        });
       }
     } on PlannerGenerateFailure catch (e) {
       note = switch (e.kind) {
@@ -1080,8 +1069,6 @@ class _SlotSheetState extends ConsumerState<_SlotSheet> {
         PlannerGenerateFailureKind.failed =>
           e.message ?? "That didn't go through. Try again.",
       };
-    } finally {
-      if (mounted) setState(() => _busy = false);
     }
 
     if (!mounted || note.isEmpty) return;
@@ -1095,7 +1082,6 @@ class _SlotSheetState extends ConsumerState<_SlotSheet> {
   /// picture without touching a word. Collapsing them into one "regenerate"
   /// is what made the old flow charge for artwork nobody asked to change.
   Future<void> _newPoster(PlanSlot slot) async {
-    setState(() => _posterBusy = true);
     String note;
     try {
       final bool ok = await ref
@@ -1106,8 +1092,6 @@ class _SlotSheetState extends ConsumerState<_SlotSheet> {
           : 'The image did not come back. Your post is unchanged.';
     } on Object {
       note = 'The image did not come back. Your post is unchanged.';
-    } finally {
-      if (mounted) setState(() => _posterBusy = false);
     }
     if (mounted) _say(note);
   }
@@ -1127,12 +1111,20 @@ class _SlotSheetState extends ConsumerState<_SlotSheet> {
     // is no longer on screen.
     if (widget.slotIndex >= posts.length) {
       return const _Sheet(
-        children: <Widget>[
-          Text('That day is no longer in this week.'),
-        ],
+        children: <Widget>[Text('That day is no longer in this week.')],
       );
     }
     final PlanSlot slot = posts[widget.slotIndex];
+
+    // What this day has open, from the controller rather than from five fields
+    // that died with the last dismissal of this sheet.
+    final Set<SlotWork> working =
+        ref.watch(plannerBusyProvider)[widget.slotIndex] ?? const <SlotWork>{};
+    final bool busy = working.contains(SlotWork.writing);
+    final bool titleBusy = working.contains(SlotWork.title);
+    final bool posterBusy = working.contains(SlotWork.poster);
+    final bool saving = working.contains(SlotWork.saving);
+    final bool scriptBusy = working.contains(SlotWork.script);
 
     // Refill the title field whenever the server's title changes and the user
     // has not typed over it.
@@ -1216,8 +1208,8 @@ class _SlotSheetState extends ConsumerState<_SlotSheet> {
             // from quietly overwriting a title someone typed by hand.
             child: ZaveButton(
               label: 'Rewrite the title',
-              busy: _titleBusy,
-              onPressed: _titleBusy ? null : _rewriteTitle,
+              busy: titleBusy,
+              onPressed: titleBusy ? null : _rewriteTitle,
             ),
           ),
         ],
@@ -1266,17 +1258,18 @@ class _SlotSheetState extends ConsumerState<_SlotSheet> {
         if (post != null) ...<Widget>[
           SizedBox(height: ZaveSpace.xl),
           switch (post) {
-            AsyncValue<LibraryPost>(hasValue: true) => editable
-                ? ZaveField(
-                    controller: _body,
-                    label: 'POST',
-                    maxLines: 14,
-                    minLines: 6,
-                    onChanged: (_) {
-                      if (!_bodyDirty) setState(() => _bodyDirty = true);
-                    },
-                  )
-                : Text(post.value!.content, style: ZaveType.body),
+            AsyncValue<LibraryPost>(hasValue: true) =>
+              editable
+                  ? ZaveField(
+                      controller: _body,
+                      label: 'POST',
+                      maxLines: 14,
+                      minLines: 6,
+                      onChanged: (_) {
+                        if (!_bodyDirty) setState(() => _bodyDirty = true);
+                      },
+                    )
+                  : Text(post.value!.content, style: ZaveType.body),
             AsyncValue<LibraryPost>(hasError: true) => Text(
               'The post could not be loaded.',
               style: ZaveType.bodyMuted,
@@ -1293,11 +1286,11 @@ class _SlotSheetState extends ConsumerState<_SlotSheet> {
           if (scripts.isLoading && scripts.value == null)
             Text('Loading the script…', style: ZaveType.bodyMuted)
           else if (script == null)
-            _ScriptMissing(busy: _scriptBusy, onGenerate: _generateScript)
+            _ScriptMissing(busy: scriptBusy, onGenerate: _generateScript)
           else
             _ScriptBody(
               script: script,
-              busy: _scriptBusy,
+              busy: scriptBusy,
               onCopyCaption: () => _copyCaption(script),
               onPosted: script.isPosted ? null : _markScriptPosted,
             ),
@@ -1309,8 +1302,8 @@ class _SlotSheetState extends ConsumerState<_SlotSheet> {
           ZaveButton.primary(
             label: 'Save changes',
             expand: true,
-            busy: _saving,
-            onPressed: _saving ? null : _save,
+            busy: saving,
+            onPressed: saving ? null : _save,
           ),
         ],
         if (_canGenerate(slot) || _canRegenerate(slot)) ...<Widget>[
@@ -1321,8 +1314,8 @@ class _SlotSheetState extends ConsumerState<_SlotSheet> {
                   ? 'Build this carousel'
                   : 'Write this post',
               expand: true,
-              busy: _busy,
-              onPressed: _busy ? null : () => _run(slot, force: false),
+              busy: busy,
+              onPressed: busy ? null : () => _run(slot, force: false),
             )
           else ...<Widget>[
             ZaveButton(
@@ -1330,8 +1323,8 @@ class _SlotSheetState extends ConsumerState<_SlotSheet> {
                   ? 'Build it again'
                   : 'Write it again',
               expand: true,
-              busy: _busy,
-              onPressed: _busy ? null : () => _run(slot, force: true),
+              busy: busy,
+              onPressed: busy ? null : () => _run(slot, force: true),
             ),
             // Only where the day actually carries one. Offering new artwork
             // on a text-only day would charge for an image nothing shows.
@@ -1340,8 +1333,8 @@ class _SlotSheetState extends ConsumerState<_SlotSheet> {
               ZaveButton(
                 label: poster == null ? 'Add an image' : 'New image',
                 expand: true,
-                busy: _posterBusy,
-                onPressed: _posterBusy ? null : () => _newPoster(slot),
+                busy: posterBusy,
+                onPressed: posterBusy ? null : () => _newPoster(slot),
               ),
             ],
           ],
@@ -1436,9 +1429,7 @@ class _WeekSetupState extends State<_WeekSetup> {
     if (written == null) return false;
     final List<int> days = _scriptDays;
     return days.isNotEmpty &&
-        days.every(
-          (int i) => written.any((VideoScript v) => v.dayIndex == i),
-        );
+        days.every((int i) => written.any((VideoScript v) => v.dayIndex == i));
   }
 
   bool _done(_SetupTab tab) => switch (tab) {
@@ -1483,11 +1474,7 @@ class _WeekSetupState extends State<_WeekSetup> {
                 // between two of them is a mis-tap waiting to happen.
                 if (tab != _SetupTab.article) ...<Widget>[
                   SizedBox(width: ZaveSpace.xs),
-                  Icon(
-                    Icons.chevron_right,
-                    size: 16,
-                    color: ZaveColors.ink35,
-                  ),
+                  Icon(Icons.chevron_right, size: 16, color: ZaveColors.ink35),
                   SizedBox(width: ZaveSpace.xs),
                 ],
                 ZaveChip(
@@ -1500,9 +1487,7 @@ class _WeekSetupState extends State<_WeekSetup> {
                   selected: _tab == tab,
                   // A tick, not a count: the step is done or it is not, and a
                   // half-written week is still a week with work left in it.
-                  icon: _done(tab)
-                      ? const Icon(Icons.check, size: 14)
-                      : null,
+                  icon: _done(tab) ? const Icon(Icons.check, size: 14) : null,
                   onTap: _tab == tab ? null : () => setState(() => _tab = tab),
                 ),
               ],
@@ -1590,10 +1575,7 @@ class _StepDays extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (days.isEmpty) {
-      return Text(
-        'This week has none of these.',
-        style: ZaveType.bodyMuted,
-      );
+      return Text('This week has none of these.', style: ZaveType.bodyMuted);
     }
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,

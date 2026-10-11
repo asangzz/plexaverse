@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/ui/zave/zave_kit.dart';
 import '../../../preferences/domain/user_preferences.dart';
 import '../../../preferences/application/preferences_controller.dart';
+import '../../application/settings_write_controller.dart';
 import 'settings_section.dart';
 
 /// **Mission Schedule** — when the daily mission arrives, and in which zone.
@@ -43,8 +44,10 @@ class CadenceSection extends ConsumerStatefulWidget {
 }
 
 class _CadenceSectionState extends ConsumerState<CadenceSection> {
+  /// The picked time, unsaved. A form draft like the text fields in the
+  /// sections either side of this one — it means nothing until Save, and
+  /// backing out is how you discard it.
   late TimeOfDay _time = _parseTime(widget.preferences.preferredTime);
-  bool _saving = false;
 
   static TimeOfDay _parseTime(String raw) {
     final List<String> parts = raw.split(':');
@@ -74,23 +77,21 @@ class _CadenceSectionState extends ConsumerState<CadenceSection> {
   }
 
   Future<void> _save() async {
-    setState(() => _saving = true);
-    try {
-      await ref
-          .read(preferencesControllerProvider.notifier)
-          .saveMissionTime(_formatTime(_time));
-      if (mounted) {
-        showSettingsMessage(context, 'Schedule updated.');
-      }
-    } on Object {
-      if (mounted) showSettingsMessage(context, 'Failed to update profile.');
-    } finally {
-      if (mounted) setState(() => _saving = false);
-    }
+    final String? failure = await ref
+        .read(settingsWriteControllerProvider.notifier)
+        .saveMissionTime(_formatTime(_time));
+    if (!mounted) return;
+    showSettingsMessage(context, failure ?? 'Schedule updated.');
   }
 
   @override
   Widget build(BuildContext context) {
+    final bool saving = ref.watch(
+      settingsWriteControllerProvider.select(
+        (Set<String> open) => open.contains(SettingsWrite.missionTime),
+      ),
+    );
+
     return SettingsSection(
       title: 'Mission Schedule',
       child: Column(
@@ -146,9 +147,9 @@ class _CadenceSectionState extends ConsumerState<CadenceSection> {
             // The screen's ONE white button — the web reserves its `.zv-cta`
             // for exactly this control too.
             child: ZaveButton.primary(
-              label: _saving ? 'Saving...' : 'Save Schedule',
-              busy: _saving,
-              onPressed: _saving ? null : _save,
+              label: saving ? 'Saving...' : 'Save Schedule',
+              busy: saving,
+              onPressed: saving ? null : _save,
             ),
           ),
         ],

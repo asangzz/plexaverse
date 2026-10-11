@@ -82,33 +82,152 @@ class TopicsController extends _$TopicsController {
   }
 }
 
-/// The three AI suggestions, while the user is looking at them.
+/// The suggestions panel: the three results, and what the panel is doing.
 ///
-/// Held in a provider rather than in the page so a suggestion the user has
-/// already paid 50 XP for survives a rebuild. It does NOT survive leaving the
-/// screen, which matches the web — its `suggestedTopics` is component state and
-/// the endpoint is non-deterministic, so there is nothing to restore.
+/// ## Why the two flags are here and not on the page
+///
+/// They were `_suggesting` and `_addingName` on `_TopicsPageState`, and both
+/// guard something that outlives the widget holding them:
+///
+///  * **`suggesting` guards 50 XP.** The suggest call is charged per press.
+///    The page's `if (_suggesting) return` evaporated the moment the widget
+///    was disposed, so leaving the screen mid-call and coming straight back
+///    gave a live button over a call that was still running — a second 50 XP
+///    for one user intent, and the screen is reached from a roadmap task, so
+///    bouncing in and out of it is the normal way to use it.
+///  * **`addingName` guards a write that finishes after the widget.** The add
+///    was `create()` on the page, then `dismiss()` after the await; a dispose
+///    in between left the topic created on the server and still sitting in the
+///    suggestions panel, because `ref` throws once the widget is gone and the
+///    dismiss never ran.
+///
+/// Both operations now run here end to end, and hold the notifier open for
+/// their own duration rather than borrowing the page's lifetime.
+class TopicSuggestionsState {
+  const TopicSuggestionsState({
+    this.items = const <SuggestedTopic>[],
+    this.suggesting = false,
+    this.addingName,
+  });
+
+  /// The suggestions the user is looking at. They survive a rebuild — the user
+  /// has paid for them — but NOT leaving the screen, which matches the web:
+  /// its `suggestedTopics` is component state and the endpoint is
+  /// non-deterministic, so there is nothing to restore.
+  final List<SuggestedTopic> items;
+
+  /// True while the 50-XP suggest call is in flight.
+  final bool suggesting;
+
+  /// The name of the suggestion currently being added, so only that card's
+  /// button spins. Null when none is.
+  final String? addingName;
+
+  bool isAdding(String name) => addingName == name;
+
+  TopicSuggestionsState copyWith({
+    List<SuggestedTopic>? items,
+    bool? suggesting,
+    String? addingName,
+    bool clearAddingName = false,
+  }) => TopicSuggestionsState(
+    items: items ?? this.items,
+    suggesting: suggesting ?? this.suggesting,
+    addingName: clearAddingName ? null : (addingName ?? this.addingName),
+  );
+}
+
+/// The three AI suggestions, while the user is looking at them.
 @riverpod
 class TopicSuggestions extends _$TopicSuggestions {
   @override
-  List<SuggestedTopic> build() => const <SuggestedTopic>[];
+  TopicSuggestionsState build() {
+    // A listen, not a watch. [add] writes through [TopicsController], and both
+    // notifiers are autoDispose with the topics page as their only listener —
+    // so without this, leaving the screen mid-add tears TopicsController down
+    // before its `state = ...` lands and the write throws into nothing. A
+    // watch would instead rebuild this state every time the topic list
+    // changed, clearing `addingName` in the middle of the very add that set
+    // it.
+    ref.listen(topicsControllerProvider, (_, _) {});
+    return const TopicSuggestionsState();
+  }
 
   /// `POST /ai/suggest-topics`. Costs 50 XP per call.
   ///
-  /// Rethrows [TopicsUnavailable] so the page can tell an XP shortfall from a
-  /// thin profile from a model failure — three states with three different
-  /// next actions, which a swallowed error would flatten into "try again".
-  Future<void> suggest() async {
-    state = await ref.read(topicsRepositoryProvider).suggestTopics();
+  /// `ran` is false when a call was already in flight and this press was
+  /// refused rather than charged — which the caller must be able to tell from
+  /// a success, or it would announce a result nobody asked for.
+  ///
+  /// `error` is the failure itself, not a sentence. [TopicsUnavailable] keeps
+  /// an XP shortfall, a thin profile and a model failure apart, which is a
+  /// distinction the screen needs; turning it into copy is the screen's job,
+  /// not this one's.
+  Future<({bool ran, Object? error})> suggest() async {
+    if (state.suggesting) return (ran: false, error: null);
+
+    // Held for the length of the call. This provider is autoDispose and the
+    // topics page is normally its only listener, so leaving the screen
+    // mid-request would otherwise tear the notifier down before the results —
+    // which the user has already been charged for — could be written back.
+    // Type inferred: `KeepAliveLink` is not exported from riverpod_annotation.
+    final link = ref.keepAlive();
+    state = state.copyWith(suggesting: true);
+    try {
+      final List<SuggestedTopic> next = await ref
+          .read(topicsRepositoryProvider)
+          .suggestTopics();
+      state = state.copyWith(items: next, suggesting: false);
+      return (ran: true, error: null);
+    } on Object catch (error) {
+      state = state.copyWith(suggesting: false);
+      return (ran: true, error: error);
+    } finally {
+      link.close();
+    }
+  }
+
+  /// Adds one suggestion to the real list and takes it out of the panel.
+  ///
+  /// Both halves are here on purpose: the dismiss is what makes the add
+  /// complete, and splitting it across the await boundary in a widget is what
+  /// used to lose it.
+  ///
+  /// Reads like [suggest]: `ran` false means another add was already going and
+  /// this one was dropped, exactly as the page's old guard dropped it.
+  Future<({bool ran, Object? error})> add(SuggestedTopic topic) async {
+    if (state.addingName != null) return (ran: false, error: null);
+
+    final link = ref.keepAlive();
+    state = state.copyWith(addingName: topic.name);
+    try {
+      await ref
+          .read(topicsControllerProvider.notifier)
+          .create(
+            name: topic.name,
+            keywords: topic.keywords,
+            description: topic.description.isEmpty ? null : topic.description,
+          );
+      dismiss(topic.name);
+      state = state.copyWith(clearAddingName: true);
+      return (ran: true, error: null);
+    } on Object catch (error) {
+      state = state.copyWith(clearAddingName: true);
+      return (ran: true, error: error);
+    } finally {
+      link.close();
+    }
   }
 
   /// Drops one suggestion once it has been added to the real list, which is
   /// what the web does (`filter(t => t.name !== topic.name)`). Name is the key
   /// because a suggestion has no id — it has never been stored.
-  void dismiss(String name) => state = state
-      .where((SuggestedTopic t) => t.name != name)
-      .toList(growable: false);
+  void dismiss(String name) => state = state.copyWith(
+    items: state.items
+        .where((SuggestedTopic t) => t.name != name)
+        .toList(growable: false),
+  );
 
   /// Clears the whole panel.
-  void clear() => state = const <SuggestedTopic>[];
+  void clear() => state = state.copyWith(items: const <SuggestedTopic>[]);
 }

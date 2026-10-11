@@ -91,6 +91,181 @@ abstract class _$PlannerWeek extends $Notifier<({int? season, int? week})> {
   }
 }
 
+/// What the planner has in flight, per day.
+///
+/// ## Why this is not five `bool`s on the slot sheet
+///
+/// It was, until this change. The sheet is a modal bottom sheet, every one of
+/// these operations is a model call that takes seconds, and four of the five
+/// cost XP — so the ordinary gesture of swiping the sheet away while one is
+/// running destroyed the only record that it was running. Re-opening the day
+/// then showed "Write this post", "New image" or "Write the script" fully
+/// live, and a second tap bought a second one.
+///
+/// The slot's own `status` covers exactly one of the five: [SlotWork.writing]
+/// is also guarded by `SlotStatus.generating`, which the server sets under a
+/// row lock. The other four have no server-side marker at all —
+/// `regeneratePoster` draws an image without touching the slot's status, and
+/// `VideoScriptsController.generate` is deliberately not optimistic — so for
+/// those the widget's flag was the ONLY thing standing between a dismissed
+/// sheet and a duplicate charge.
+///
+/// ## Why keepAlive, and why per-slot
+///
+/// `keepAlive` because the point is to outlive the sheet: an autoDispose
+/// provider whose only watcher is that sheet would be torn down by the same
+/// swipe, which is the defect rather than the fix. Nothing accumulates — every
+/// entry is cleared in a `finally` and a day with no work open is removed from
+/// the map, so the steady state is empty.
+///
+/// Per-slot rather than one screen-wide flag for the reason the schedules list
+/// learned the hard way: one boolean cannot say WHICH day is working, and the
+/// week strip behind the sheet shows all seven.
+
+@ProviderFor(PlannerBusy)
+final plannerBusyProvider = PlannerBusyProvider._();
+
+/// What the planner has in flight, per day.
+///
+/// ## Why this is not five `bool`s on the slot sheet
+///
+/// It was, until this change. The sheet is a modal bottom sheet, every one of
+/// these operations is a model call that takes seconds, and four of the five
+/// cost XP — so the ordinary gesture of swiping the sheet away while one is
+/// running destroyed the only record that it was running. Re-opening the day
+/// then showed "Write this post", "New image" or "Write the script" fully
+/// live, and a second tap bought a second one.
+///
+/// The slot's own `status` covers exactly one of the five: [SlotWork.writing]
+/// is also guarded by `SlotStatus.generating`, which the server sets under a
+/// row lock. The other four have no server-side marker at all —
+/// `regeneratePoster` draws an image without touching the slot's status, and
+/// `VideoScriptsController.generate` is deliberately not optimistic — so for
+/// those the widget's flag was the ONLY thing standing between a dismissed
+/// sheet and a duplicate charge.
+///
+/// ## Why keepAlive, and why per-slot
+///
+/// `keepAlive` because the point is to outlive the sheet: an autoDispose
+/// provider whose only watcher is that sheet would be torn down by the same
+/// swipe, which is the defect rather than the fix. Nothing accumulates — every
+/// entry is cleared in a `finally` and a day with no work open is removed from
+/// the map, so the steady state is empty.
+///
+/// Per-slot rather than one screen-wide flag for the reason the schedules list
+/// learned the hard way: one boolean cannot say WHICH day is working, and the
+/// week strip behind the sheet shows all seven.
+final class PlannerBusyProvider
+    extends $NotifierProvider<PlannerBusy, Map<int, Set<SlotWork>>> {
+  /// What the planner has in flight, per day.
+  ///
+  /// ## Why this is not five `bool`s on the slot sheet
+  ///
+  /// It was, until this change. The sheet is a modal bottom sheet, every one of
+  /// these operations is a model call that takes seconds, and four of the five
+  /// cost XP — so the ordinary gesture of swiping the sheet away while one is
+  /// running destroyed the only record that it was running. Re-opening the day
+  /// then showed "Write this post", "New image" or "Write the script" fully
+  /// live, and a second tap bought a second one.
+  ///
+  /// The slot's own `status` covers exactly one of the five: [SlotWork.writing]
+  /// is also guarded by `SlotStatus.generating`, which the server sets under a
+  /// row lock. The other four have no server-side marker at all —
+  /// `regeneratePoster` draws an image without touching the slot's status, and
+  /// `VideoScriptsController.generate` is deliberately not optimistic — so for
+  /// those the widget's flag was the ONLY thing standing between a dismissed
+  /// sheet and a duplicate charge.
+  ///
+  /// ## Why keepAlive, and why per-slot
+  ///
+  /// `keepAlive` because the point is to outlive the sheet: an autoDispose
+  /// provider whose only watcher is that sheet would be torn down by the same
+  /// swipe, which is the defect rather than the fix. Nothing accumulates — every
+  /// entry is cleared in a `finally` and a day with no work open is removed from
+  /// the map, so the steady state is empty.
+  ///
+  /// Per-slot rather than one screen-wide flag for the reason the schedules list
+  /// learned the hard way: one boolean cannot say WHICH day is working, and the
+  /// week strip behind the sheet shows all seven.
+  PlannerBusyProvider._()
+    : super(
+        from: null,
+        argument: null,
+        retry: null,
+        name: r'plannerBusyProvider',
+        isAutoDispose: false,
+        dependencies: null,
+        $allTransitiveDependencies: null,
+      );
+
+  @override
+  String debugGetCreateSourceHash() => _$plannerBusyHash();
+
+  @$internal
+  @override
+  PlannerBusy create() => PlannerBusy();
+
+  /// {@macro riverpod.override_with_value}
+  Override overrideWithValue(Map<int, Set<SlotWork>> value) {
+    return $ProviderOverride(
+      origin: this,
+      providerOverride: $SyncValueProvider<Map<int, Set<SlotWork>>>(value),
+    );
+  }
+}
+
+String _$plannerBusyHash() => r'2495daf62a21de9703ac5aad5fd4c2bb949020d7';
+
+/// What the planner has in flight, per day.
+///
+/// ## Why this is not five `bool`s on the slot sheet
+///
+/// It was, until this change. The sheet is a modal bottom sheet, every one of
+/// these operations is a model call that takes seconds, and four of the five
+/// cost XP — so the ordinary gesture of swiping the sheet away while one is
+/// running destroyed the only record that it was running. Re-opening the day
+/// then showed "Write this post", "New image" or "Write the script" fully
+/// live, and a second tap bought a second one.
+///
+/// The slot's own `status` covers exactly one of the five: [SlotWork.writing]
+/// is also guarded by `SlotStatus.generating`, which the server sets under a
+/// row lock. The other four have no server-side marker at all —
+/// `regeneratePoster` draws an image without touching the slot's status, and
+/// `VideoScriptsController.generate` is deliberately not optimistic — so for
+/// those the widget's flag was the ONLY thing standing between a dismissed
+/// sheet and a duplicate charge.
+///
+/// ## Why keepAlive, and why per-slot
+///
+/// `keepAlive` because the point is to outlive the sheet: an autoDispose
+/// provider whose only watcher is that sheet would be torn down by the same
+/// swipe, which is the defect rather than the fix. Nothing accumulates — every
+/// entry is cleared in a `finally` and a day with no work open is removed from
+/// the map, so the steady state is empty.
+///
+/// Per-slot rather than one screen-wide flag for the reason the schedules list
+/// learned the hard way: one boolean cannot say WHICH day is working, and the
+/// week strip behind the sheet shows all seven.
+
+abstract class _$PlannerBusy extends $Notifier<Map<int, Set<SlotWork>>> {
+  Map<int, Set<SlotWork>> build();
+  @$mustCallSuper
+  @override
+  void runBuild() {
+    final ref =
+        this.ref as $Ref<Map<int, Set<SlotWork>>, Map<int, Set<SlotWork>>>;
+    final element =
+        ref.element
+            as $ClassProviderElement<
+              AnyNotifier<Map<int, Set<SlotWork>>, Map<int, Set<SlotWork>>>,
+              Map<int, Set<SlotWork>>,
+              Object?,
+              Object?
+            >;
+    element.handleCreate(ref, build);
+  }
+}
+
 /// The week plan.
 
 @ProviderFor(PlannerController)
@@ -119,7 +294,7 @@ final class PlannerControllerProvider
   PlannerController create() => PlannerController();
 }
 
-String _$plannerControllerHash() => r'66f6ed037d646be0e85c415c46b2ea07887a96f6';
+String _$plannerControllerHash() => r'093a3ab1bfb12689a2dfae7f2b6d99ddca3370f0';
 
 /// The week plan.
 
@@ -206,7 +381,7 @@ final class VideoScriptsControllerProvider
 }
 
 String _$videoScriptsControllerHash() =>
-    r'bdf4bec643ba0f834bafad45fe22bb4d76f2a93b';
+    r'994bdd62225725adfea87a6ff3a4a0350bc83ac3';
 
 /// The week's video scripts, keyed to the week on screen.
 ///

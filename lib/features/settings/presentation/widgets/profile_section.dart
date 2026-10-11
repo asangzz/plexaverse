@@ -3,7 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/ui/zave/zave_kit.dart';
 import '../../../preferences/domain/user_preferences.dart';
-import '../../../preferences/application/preferences_controller.dart';
+import '../../application/settings_write_controller.dart';
 import 'settings_section.dart';
 
 /// **Profile Details** — the web's first Settings section.
@@ -27,7 +27,6 @@ class _ProfileSectionState extends ConsumerState<ProfileSection> {
   late final TextEditingController _headline = TextEditingController(
     text: widget.preferences.headline ?? '',
   );
-  bool _saving = false;
 
   @override
   void dispose() {
@@ -37,24 +36,24 @@ class _ProfileSectionState extends ConsumerState<ProfileSection> {
   }
 
   Future<void> _save() async {
-    setState(() => _saving = true);
-    try {
-      await ref
-          .read(preferencesControllerProvider.notifier)
-          .saveProfile(
-            profession: _profession.text.trim(),
-            headline: _headline.text.trim(),
-          );
-      if (mounted) showSettingsMessage(context, 'Profile updated successfully!');
-    } on Object {
-      if (mounted) showSettingsMessage(context, 'Failed to update profile.');
-    } finally {
-      if (mounted) setState(() => _saving = false);
-    }
+    final String? failure = await ref
+        .read(settingsWriteControllerProvider.notifier)
+        .saveProfile(
+          profession: _profession.text.trim(),
+          headline: _headline.text.trim(),
+        );
+    if (!mounted) return;
+    showSettingsMessage(context, failure ?? 'Profile updated successfully!');
   }
 
   @override
   Widget build(BuildContext context) {
+    final bool saving = ref.watch(
+      settingsWriteControllerProvider.select(
+        (Set<String> open) => open.contains(SettingsWrite.profile),
+      ),
+    );
+
     return SettingsSection(
       title: 'Profile Details',
       child: Column(
@@ -77,9 +76,9 @@ class _ProfileSectionState extends ConsumerState<ProfileSection> {
           Align(
             alignment: Alignment.centerRight,
             child: ZaveButton(
-              label: _saving ? 'Saving...' : 'Save Changes',
-              busy: _saving,
-              onPressed: _saving ? null : _save,
+              label: saving ? 'Saving...' : 'Save Changes',
+              busy: saving,
+              onPressed: saving ? null : _save,
             ),
           ),
         ],
@@ -95,43 +94,42 @@ class _ProfileSectionState extends ConsumerState<ProfileSection> {
 /// PATCH against a field the mobile API already accepts, and it decides which
 /// navigation, which compose screen and which half of this page the user sees —
 /// which makes hiding it the expensive choice, not the safe one.
-class BrandTypeSection extends ConsumerStatefulWidget {
+class BrandTypeSection extends ConsumerWidget {
   const BrandTypeSection({required this.preferences, super.key});
 
   final UserPreferences preferences;
 
-  @override
-  ConsumerState<BrandTypeSection> createState() => _BrandTypeSectionState();
-}
-
-class _BrandTypeSectionState extends ConsumerState<BrandTypeSection> {
-  bool _saving = false;
-
-  Future<void> _select(String brandType) async {
-    if (_saving || brandType == widget.preferences.brandType) return;
-    setState(() => _saving = true);
-    try {
-      await ref
-          .read(preferencesControllerProvider.notifier)
-          .saveBrandType(brandType);
-      if (mounted) {
-        showSettingsMessage(
-          context,
-          brandType == 'company'
+  Future<void> _select(
+    BuildContext context,
+    WidgetRef ref,
+    String brandType,
+  ) async {
+    final SettingsWriteController writes = ref.read(
+      settingsWriteControllerProvider.notifier,
+    );
+    // The chips are already nulled while a save is open; this is the second
+    // belt the original carried, kept because a chip tap is the save here.
+    if (writes.isBusy(SettingsWrite.brandType)) return;
+    if (brandType == preferences.brandType) return;
+    final String? failure = await writes.saveBrandType(brandType);
+    if (!context.mounted) return;
+    showSettingsMessage(
+      context,
+      failure ??
+          (brandType == 'company'
               ? 'Switched to your company brand.'
-              : 'Switched to your personal brand.',
-        );
-      }
-    } on Object {
-      if (mounted) showSettingsMessage(context, 'Failed to update profile.');
-    } finally {
-      if (mounted) setState(() => _saving = false);
-    }
+              : 'Switched to your personal brand.'),
+    );
   }
 
   @override
-  Widget build(BuildContext context) {
-    final String? current = widget.preferences.brandType;
+  Widget build(BuildContext context, WidgetRef ref) {
+    final String? current = preferences.brandType;
+    final bool saving = ref.watch(
+      settingsWriteControllerProvider.select(
+        (Set<String> open) => open.contains(SettingsWrite.brandType),
+      ),
+    );
 
     return SettingsSection(
       title: 'Brand',
@@ -145,12 +143,12 @@ class _BrandTypeSectionState extends ConsumerState<BrandTypeSection> {
           ZaveChip(
             label: 'Personal',
             selected: current == 'personal',
-            onTap: _saving ? null : () => _select('personal'),
+            onTap: saving ? null : () => _select(context, ref, 'personal'),
           ),
           ZaveChip(
             label: 'Company',
             selected: current == 'company',
-            onTap: _saving ? null : () => _select('company'),
+            onTap: saving ? null : () => _select(context, ref, 'company'),
           ),
         ],
       ),

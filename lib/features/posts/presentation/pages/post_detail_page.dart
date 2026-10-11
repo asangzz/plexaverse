@@ -66,8 +66,10 @@ class _PostDetailPageState extends ConsumerState<PostDetailPage> {
   final TextEditingController _title = TextEditingController();
   final TextEditingController _content = TextEditingController();
 
+  /// View mode vs edit mode. Genuinely this widget's: it is which face of one
+  /// screen is showing, it means nothing to anyone else, and a screen that is
+  /// gone is not in edit mode.
   bool _editing = false;
-  bool _busy = false;
 
   /// True once the controllers have been seeded from the loaded post, so a
   /// rebuild (a refetch, an optimistic patch) never overwrites what the user is
@@ -103,24 +105,20 @@ class _PostDetailPageState extends ConsumerState<PostDetailPage> {
       );
   }
 
-  PostDetail get _controller =>
-      ref.read(postDetailProvider(widget.postId).notifier);
+  /// Every write this screen can make. The in-flight flag that used to be
+  /// `_busy` here lives on it — see [PostDetailAction]: these are writes the
+  /// server performs whether or not this page is still on screen.
+  PostDetailAction get _actions =>
+      ref.read(postDetailActionProvider(widget.postId).notifier);
 
-  Future<void> _run(Future<void> Function() action, String failure) async {
-    setState(() => _busy = true);
-    try {
-      await action();
-    } on Object {
-      _notify(failure);
-    } finally {
-      if (mounted) setState(() => _busy = false);
-    }
+  Future<void> _approve() async {
+    final Object? problem = await _actions.approve();
+    _notify(
+      problem == null
+          ? 'Post approved. It will go out on schedule.'
+          : 'Could not approve that post.',
+    );
   }
-
-  Future<void> _approve() => _run(() async {
-    await _controller.approve();
-    _notify('Post approved. It will go out on schedule.');
-  }, 'Could not approve that post.');
 
   /// Publish, then open the post — the web does both
   /// (`window.open(data.linkedinUrl, '_blank')` in its `handlePublish`).
@@ -129,27 +127,38 @@ class _PostDetailPageState extends ConsumerState<PostDetailPage> {
   /// failure to open never becomes a failure to publish: the success notice
   /// is replaced by the fallback's message, and the post stays published
   /// either way.
-  Future<void> _publish() => _run(() async {
-    final String? url = await _controller.publish();
-    if (url == null) {
+  Future<void> _publish() async {
+    final ({String? url, Object? error}) result = await _actions.publish();
+    if (result.error != null) {
+      _notify('Could not publish that post.');
+      return;
+    }
+    final String? url = result.url;
+    // The courtesy half, and only this half, needs the page: `ref` is how the
+    // link is opened, and the publish has already landed regardless.
+    if (url == null || !mounted) {
       _notify('Published to LinkedIn.');
       return;
     }
     final String? problem = await openLinkOrCopy(ref, url);
     _notify(problem ?? 'Published to LinkedIn.');
-  }, 'Could not publish that post.');
+  }
 
-  Future<void> _save({required bool asDraft}) => _run(() async {
-    await _controller.save(
+  Future<void> _save({required bool asDraft}) async {
+    final Object? problem = await _actions.save(
       title: _title.text.trim().isEmpty ? null : _title.text.trim(),
       content: _content.text,
       // The web's `handleSave('draft')` — one PATCH that carries the body AND
       // the status, rather than two round-trips the user can land between.
       status: asDraft ? PostLibraryStatus.draft : null,
     );
+    if (problem != null) {
+      _notify('Could not save that post.');
+      return;
+    }
     if (mounted) setState(() => _editing = false);
     _notify(asDraft ? 'Saved as a draft.' : 'Post updated.');
-  }, 'Could not save that post.');
+  }
 
   Future<void> _schedule(LibraryPost post) async {
     final ScheduleChoice? choice = await pickSchedule(
@@ -157,10 +166,14 @@ class _PostDetailPageState extends ConsumerState<PostDetailPage> {
       initial: post.scheduledFor,
     );
     if (choice == null) return;
-    await _run(() async {
-      await _controller.setSchedule(choice.cleared ? null : choice.when);
-      _notify(choice.cleared ? 'Schedule removed.' : 'Post rescheduled.');
-    }, 'Could not change the schedule.');
+    final Object? problem = await _actions.setSchedule(
+      choice.cleared ? null : choice.when,
+    );
+    if (problem != null) {
+      _notify('Could not change the schedule.');
+      return;
+    }
+    _notify(choice.cleared ? 'Schedule removed.' : 'Post rescheduled.');
   }
 
   Future<void> _delete() async {
@@ -174,15 +187,13 @@ class _PostDetailPageState extends ConsumerState<PostDetailPage> {
     );
     if (!confirmed) return;
 
-    setState(() => _busy = true);
-    try {
-      await _controller.delete();
-      if (!mounted) return;
-      context.pop();
-    } on Object {
+    final Object? problem = await _actions.delete();
+    if (problem != null) {
       _notify('Could not delete that post.');
-      if (mounted) setState(() => _busy = false);
+      return;
     }
+    if (!mounted) return;
+    context.pop();
   }
 
   /// Opens the published post in the LinkedIn app, the way the web's
@@ -204,6 +215,10 @@ class _PostDetailPageState extends ConsumerState<PostDetailPage> {
     final AsyncValue<LibraryPost> detail = ref.watch(
       postDetailProvider(widget.postId),
     );
+    // One answer for the whole screen, and it is the post's, not this
+    // widget's — so re-entering mid-publish finds the button still disabled.
+    final bool busy =
+        ref.watch(postDetailActionProvider(widget.postId)) != null;
 
     return ZaveScaffold(
       title: _editing ? 'Edit post' : 'Post',
@@ -227,7 +242,7 @@ class _PostDetailPageState extends ConsumerState<PostDetailPage> {
         ),
         data: (LibraryPost post) {
           _seed(post);
-          return _editing ? _editBody(post) : _viewBody(post);
+          return _editing ? _editBody(post, busy) : _viewBody(post, busy);
         },
       ),
     );
@@ -235,7 +250,7 @@ class _PostDetailPageState extends ConsumerState<PostDetailPage> {
 
   // ── View mode ────────────────────────────────────────────────────────────
 
-  Widget _viewBody(LibraryPost post) {
+  Widget _viewBody(LibraryPost post, bool busy) {
     final ({Color color, String label}) signal = postSignal(post.status);
 
     return ZaveScrollView(
@@ -299,7 +314,7 @@ class _PostDetailPageState extends ConsumerState<PostDetailPage> {
         SizedBox(height: ZaveSpace.xl),
         _ActionBar(
           post: post,
-          busy: _busy,
+          busy: busy,
           onPublish: _publish,
           onApprove: _approve,
           onEdit: () => setState(() => _editing = true),
@@ -326,7 +341,7 @@ class _PostDetailPageState extends ConsumerState<PostDetailPage> {
 
   // ── Edit mode ────────────────────────────────────────────────────────────
 
-  Widget _editBody(LibraryPost post) {
+  Widget _editBody(LibraryPost post, bool busy) {
     final int length = _content.text.characters.length;
     final bool empty = _content.text.trim().isEmpty;
 
@@ -436,20 +451,20 @@ class _PostDetailPageState extends ConsumerState<PostDetailPage> {
         ZaveButton.primary(
           label: 'Save changes',
           expand: true,
-          busy: _busy,
+          busy: busy,
           onPressed: empty ? null : () => _save(asDraft: false),
         ),
         SizedBox(height: ZaveSpace.md),
         ZaveButton(
           label: 'Save as draft',
           expand: true,
-          onPressed: empty || _busy ? null : () => _save(asDraft: true),
+          onPressed: empty || busy ? null : () => _save(asDraft: true),
         ),
         SizedBox(height: ZaveSpace.md),
         ZaveButton(
           label: 'Cancel',
           expand: true,
-          onPressed: _busy
+          onPressed: busy
               ? null
               : () {
                   // Throw the edits away and re-seed from the server's copy.

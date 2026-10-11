@@ -29,6 +29,94 @@ class PlannerWeek extends _$PlannerWeek {
   void showCurrent() => state = (week: null, season: null);
 }
 
+/// One unit of work the planner can have open on a day.
+enum SlotWork {
+  /// Writing, or rewriting, the day's post.
+  writing,
+
+  /// Drawing a new poster for the post the day already has.
+  poster,
+
+  /// Rewriting the day's title.
+  title,
+
+  /// Saving the sheet's edits to the title and the body.
+  saving,
+
+  /// Writing the day's video script, or recording that it went out.
+  script,
+}
+
+/// What the planner has in flight, per day.
+///
+/// ## Why this is not five `bool`s on the slot sheet
+///
+/// It was, until this change. The sheet is a modal bottom sheet, every one of
+/// these operations is a model call that takes seconds, and four of the five
+/// cost XP — so the ordinary gesture of swiping the sheet away while one is
+/// running destroyed the only record that it was running. Re-opening the day
+/// then showed "Write this post", "New image" or "Write the script" fully
+/// live, and a second tap bought a second one.
+///
+/// The slot's own `status` covers exactly one of the five: [SlotWork.writing]
+/// is also guarded by `SlotStatus.generating`, which the server sets under a
+/// row lock. The other four have no server-side marker at all —
+/// `regeneratePoster` draws an image without touching the slot's status, and
+/// `VideoScriptsController.generate` is deliberately not optimistic — so for
+/// those the widget's flag was the ONLY thing standing between a dismissed
+/// sheet and a duplicate charge.
+///
+/// ## Why keepAlive, and why per-slot
+///
+/// `keepAlive` because the point is to outlive the sheet: an autoDispose
+/// provider whose only watcher is that sheet would be torn down by the same
+/// swipe, which is the defect rather than the fix. Nothing accumulates — every
+/// entry is cleared in a `finally` and a day with no work open is removed from
+/// the map, so the steady state is empty.
+///
+/// Per-slot rather than one screen-wide flag for the reason the schedules list
+/// learned the hard way: one boolean cannot say WHICH day is working, and the
+/// week strip behind the sheet shows all seven.
+@Riverpod(keepAlive: true)
+class PlannerBusy extends _$PlannerBusy {
+  @override
+  Map<int, Set<SlotWork>> build() => const <int, Set<SlotWork>>{};
+
+  /// Runs [action] with [work] marked open on [slotIndex].
+  ///
+  /// The marker is cleared in a `finally`, so a throwing use case — and
+  /// [PlannerController.generate] rethrows [PlannerGenerateFailure] on purpose
+  /// — leaves no day stuck spinning.
+  Future<T> run<T>(
+    int slotIndex,
+    SlotWork work,
+    Future<T> Function() action,
+  ) async {
+    _mark(slotIndex, work, open: true);
+    try {
+      return await action();
+    } finally {
+      _mark(slotIndex, work, open: false);
+    }
+  }
+
+  void _mark(int slotIndex, SlotWork work, {required bool open}) {
+    final Map<int, Set<SlotWork>> next = <int, Set<SlotWork>>{...state};
+    final Set<SlotWork> running = <SlotWork>{...?next[slotIndex]};
+    if (open) {
+      running.add(work);
+    } else {
+      running.remove(work);
+    }
+    if (running.isEmpty) {
+      next.remove(slotIndex);
+    } else {
+      next[slotIndex] = running;
+    }
+    state = next;
+  }
+}
+
 /// The week plan.
 @riverpod
 class PlannerController extends _$PlannerController {
@@ -55,7 +143,20 @@ class PlannerController extends _$PlannerController {
   ///
   /// Rethrows [PlannerGenerateFailure] so the caller can say which of the
   /// three things the user has to do.
-  Future<GeneratedSlot?> generate(int slotIndex, {bool force = false}) async {
+  ///
+  /// In-flight on [PlannerBusy] rather than on the sheet that started it: the
+  /// optimistic `generating` status below covers the row behind the sheet, but
+  /// not the sheet's own button once the sheet has been dismissed and
+  /// re-opened.
+  Future<GeneratedSlot?> generate(int slotIndex, {bool force = false}) => ref
+      .read(plannerBusyProvider.notifier)
+      .run(
+        slotIndex,
+        SlotWork.writing,
+        () => _generate(slotIndex, force: force),
+      );
+
+  Future<GeneratedSlot?> _generate(int slotIndex, {bool force = false}) async {
     final PlannerState? current = state.value;
     final WeekPlan? plan = current?.plan;
     if (plan == null) return null;
@@ -183,7 +284,15 @@ class PlannerController extends _$PlannerController {
   /// picture is supposed to illustrate.
   ///
   /// Returns whether a new image landed.
-  Future<bool> regeneratePoster(int slotIndex) async {
+  ///
+  /// The one use case with NO server-side marker: nothing about the slot
+  /// changes while the image is being drawn, so [PlannerBusy] is the only
+  /// record that a paid-for poster is already on its way.
+  Future<bool> regeneratePoster(int slotIndex) => ref
+      .read(plannerBusyProvider.notifier)
+      .run(slotIndex, SlotWork.poster, () => _regeneratePoster(slotIndex));
+
+  Future<bool> _regeneratePoster(int slotIndex) async {
     final PlannerState? current = state.value;
     final WeekPlan? plan = current?.plan;
     if (plan == null || slotIndex >= plan.posts.length) return false;
@@ -266,7 +375,11 @@ class PlannerController extends _$PlannerController {
   }
 
   /// Rewrites one day's title. Returns the failure message, or null.
-  Future<String?> regenerateTitle(int slotIndex) async {
+  Future<String?> regenerateTitle(int slotIndex) => ref
+      .read(plannerBusyProvider.notifier)
+      .run(slotIndex, SlotWork.title, () => _regenerateTitle(slotIndex));
+
+  Future<String?> _regenerateTitle(int slotIndex) async {
     final WeekPlan? plan = state.value?.plan;
     if (plan == null) return null;
     try {
@@ -342,7 +455,16 @@ class PlannerController extends _$PlannerController {
   ///
   /// Returns an error sentence, or null when everything the user changed
   /// landed.
-  Future<String?> saveSlotEdits(
+  Future<String?> saveSlotEdits(int slotIndex, {String? title, String? body}) =>
+      ref
+          .read(plannerBusyProvider.notifier)
+          .run(
+            slotIndex,
+            SlotWork.saving,
+            () => _saveSlotEdits(slotIndex, title: title, body: body),
+          );
+
+  Future<String?> _saveSlotEdits(
     int slotIndex, {
     String? title,
     String? body,
@@ -479,7 +601,11 @@ class VideoScriptsController extends _$VideoScriptsController {
   /// The only way a script is ever closed out — see [VideoScript]. Optimistic,
   /// because the user is telling US what they did and the server stores
   /// exactly that; the only failure is a tick that comes back.
-  Future<bool> markPosted(int dayIndex) async {
+  Future<bool> markPosted(int dayIndex) => ref
+      .read(plannerBusyProvider.notifier)
+      .run(dayIndex, SlotWork.script, () => _markPosted(dayIndex));
+
+  Future<bool> _markPosted(int dayIndex) async {
     final List<VideoScript>? current = state.value;
     if (current == null) return false;
     final int i = current.indexWhere((VideoScript v) => v.dayIndex == dayIndex);
@@ -519,7 +645,16 @@ class VideoScriptsController extends _$VideoScriptsController {
   /// Returns an error sentence, or null on success. Not optimistic — there is
   /// nothing to show until the model answers, and a spinner that resolves into
   /// real content is the honest shape for a call that takes seconds.
-  Future<String?> generate(int dayIndex, {bool force = false}) async {
+  ///
+  /// Being non-optimistic is exactly why the in-flight marker has to be on
+  /// [PlannerBusy]: nothing anywhere says a script is being written until one
+  /// arrives, so a sheet dismissed mid-call and re-opened offered "Write the
+  /// script" again.
+  Future<String?> generate(int dayIndex, {bool force = false}) => ref
+      .read(plannerBusyProvider.notifier)
+      .run(dayIndex, SlotWork.script, () => _generate(dayIndex, force: force));
+
+  Future<String?> _generate(int dayIndex, {bool force = false}) async {
     final PlannerState? planner = ref.read(plannerControllerProvider).value;
     final WeekPlan? plan = planner?.plan;
     if (plan == null) return 'The week has not loaded yet.';

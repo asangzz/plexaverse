@@ -49,18 +49,16 @@ class _HeadlineHookPageState extends ConsumerState<HeadlineHookPage> {
   final TextEditingController _headline = TextEditingController();
   bool _seeded = false;
 
-  bool _suggesting = false;
-  bool _saving = false;
-  bool _finishing = false;
-
   // The three manual steps the user does on LinkedIn itself. The first two
   // gate completion, exactly as on the web; the third is advice.
+  //
+  // These stay here on purpose. Nothing is sent from them, nothing persists
+  // them, and no second screen asks — three switches whose whole life is this
+  // one card. What they ADD UP TO is a different question, and that one the
+  // controller answers: `finish(checklistDone: …)`.
   bool _urlCleanup = false;
   bool _featuredAdded = false;
   bool _keywordsAdded = false;
-
-  String? _message;
-  MissionTone _tone = MissionTone.success;
 
   @override
   void dispose() {
@@ -76,85 +74,28 @@ class _HeadlineHookPageState extends ConsumerState<HeadlineHookPage> {
     _headline.text = profile.preferences.headline ?? '';
   }
 
-  void _say(String text, MissionTone tone) {
-    if (!mounted) return;
-    setState(() {
-      _message = text;
-      _tone = tone;
-    });
-  }
+  HeadlineHookController get _form =>
+      ref.read(headlineHookControllerProvider.notifier);
 
   Future<void> _suggest() async {
-    final String current = _headline.text.trim();
-    if (current.length < 5) {
-      _say(
-        'Write a basic headline first so the model has something to optimise.',
-        MissionTone.warning,
-      );
-      return;
-    }
-
-    setState(() {
-      _suggesting = true;
-      _message = null;
-    });
-    try {
-      final String suggested = await ref
-          .read(missionProfileControllerProvider.notifier)
-          .suggestHeadline(current);
-      _headline.text = suggested;
-      _say('Headline optimised.', MissionTone.success);
-    } on Object {
-      _say(
-        'That did not generate. Try again in a moment.',
-        MissionTone.warning,
-      );
-    } finally {
-      if (mounted) setState(() => _suggesting = false);
-    }
+    final String? suggested = await _form.suggest(_headline.text);
+    // Guarded because the field is this widget's: writing to a disposed
+    // TextEditingController throws, and the round-trip outlives the page.
+    if (suggested != null && mounted) _headline.text = suggested;
   }
 
-  Future<void> _saveDraft() async {
-    setState(() {
-      _saving = true;
-      _message = null;
-    });
-    try {
-      await ref.read(missionProfileControllerProvider.notifier).save(
-        <String, dynamic>{'headline': _headline.text.trim()},
-      );
-      _say('Headline saved.', MissionTone.success);
-    } on Object {
-      _say('Could not save that headline.', MissionTone.warning);
-    } finally {
-      if (mounted) setState(() => _saving = false);
-    }
-  }
+  Future<void> _saveDraft() => _form.saveDraft(_headline.text);
 
   Future<void> _finish() async {
-    if (!_urlCleanup || !_featuredAdded) {
-      _say('Finish the checklist first.', MissionTone.warning);
-      return;
-    }
-
-    setState(() {
-      _finishing = true;
-      _message = null;
-    });
-    try {
-      await ref
-          .read(missionProfileControllerProvider.notifier)
-          .completeStep(
-            levelId: HeadlineHookPage.levelId,
-            stepId: HeadlineHookPage.stepId,
-          );
-      if (!mounted) return;
-      // Back to the roadmap, which re-reads its own progress on the way in.
-      context.pop();
-    } on Object {
-      _say('Could not record that step.', MissionTone.warning);
-      if (mounted) setState(() => _finishing = false);
-    }
+    final bool done = await _form.finish(
+      levelId: HeadlineHookPage.levelId,
+      stepId: HeadlineHookPage.stepId,
+      checklistDone: _urlCleanup && _featuredAdded,
+    );
+    // Back to the roadmap, which re-reads its own progress on the way in.
+    // The failure path has already been recorded on the controller, so
+    // leaving mid-call no longer loses it.
+    if (done && mounted) context.pop();
   }
 
   @override
@@ -162,6 +103,7 @@ class _HeadlineHookPageState extends ConsumerState<HeadlineHookPage> {
     final AsyncValue<MissionProfile> profile = ref.watch(
       missionProfileControllerProvider,
     );
+    final HeadlineHookState form = ref.watch(headlineHookControllerProvider);
 
     return ZaveScaffold(
       largeTitle: 'The Headline Hook',
@@ -193,13 +135,13 @@ class _HeadlineHookPageState extends ConsumerState<HeadlineHookPage> {
         ),
         data: (MissionProfile p) {
           _seed(p);
-          return _body(p);
+          return _body(p, form);
         },
       ),
     );
   }
 
-  Widget _body(MissionProfile profile) {
+  Widget _body(MissionProfile profile, HeadlineHookState form) {
     return ZaveScrollView(
       children: <Widget>[
         const MissionHeader(
@@ -266,17 +208,17 @@ class _HeadlineHookPageState extends ConsumerState<HeadlineHookPage> {
               // as disabled), so `onPressed` stays non-null — passing null
               // would also dim it to 50% and hide its own spinner.
               ZaveButton(
-                label: _suggesting ? 'Optimising…' : 'AI Spark',
+                label: form.suggesting ? 'Optimising…' : 'AI Spark',
                 icon: const Icon(Icons.auto_awesome),
                 onPressed: _suggest,
-                busy: _suggesting,
+                busy: form.suggesting,
                 expand: true,
               ),
               SizedBox(height: ZaveSpace.md),
               ZaveButton(
                 label: 'Save as draft',
                 onPressed: _saveDraft,
-                busy: _saving,
+                busy: form.saving,
                 expand: true,
               ),
             ],
@@ -364,9 +306,9 @@ class _HeadlineHookPageState extends ConsumerState<HeadlineHookPage> {
                 onChanged: (bool v) => setState(() => _keywordsAdded = v),
               ),
 
-              if (_message != null) ...<Widget>[
+              if (form.notice case final MissionNotice notice) ...<Widget>[
                 SizedBox(height: ZaveSpace.lg),
-                MissionMessage(text: _message!, tone: _tone),
+                MissionMessage(text: notice.text, tone: notice.tone),
               ],
 
               SizedBox(height: ZaveSpace.lg),
@@ -375,7 +317,7 @@ class _HeadlineHookPageState extends ConsumerState<HeadlineHookPage> {
                 // The first two are the gate the web enforces; SEO boost is
                 // advice, so it does not block.
                 onPressed: (_urlCleanup && _featuredAdded) ? _finish : null,
-                busy: _finishing,
+                busy: form.finishing,
                 expand: true,
               ),
             ],

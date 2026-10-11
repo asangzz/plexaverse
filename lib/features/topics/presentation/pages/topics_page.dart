@@ -50,13 +50,6 @@ class _TopicsPageState extends ConsumerState<TopicsPage> {
   bool _bannerIsError = false;
   Timer? _bannerTimer;
 
-  /// True while the 50-XP suggest call is in flight.
-  bool _suggesting = false;
-
-  /// The name of the suggestion currently being added, so only that card's
-  /// button spins.
-  String? _addingName;
-
   @override
   void dispose() {
     _bannerTimer?.cancel();
@@ -92,47 +85,44 @@ class _TopicsPageState extends ConsumerState<TopicsPage> {
     }
   }
 
+  /// The 50-XP press. The guard and the in-flight flag are on
+  /// [TopicSuggestions], not here — see its doc: a flag on this widget stopped
+  /// guarding the moment the widget went away, and the thing it guards is
+  /// money.
   Future<void> _suggest() async {
-    if (_suggesting) return;
-    setState(() => _suggesting = true);
-    try {
-      await ref.read(topicSuggestionsProvider.notifier).suggest();
-    } on TopicsUnavailable catch (e) {
-      // The server's own sentence is more specific than anything we could
-      // compose — a thin profile, an XP shortfall and a model failure each
-      // come back with their own message and their own real remedy.
-      _say(e.message ?? 'Failed to suggest topics', isError: true);
-    } on Object {
-      _say('An unexpected error occurred.', isError: true);
-    } finally {
-      if (mounted) setState(() => _suggesting = false);
-    }
+    final ({bool ran, Object? error}) result = await ref
+        .read(topicSuggestionsProvider.notifier)
+        .suggest();
+    final Object? problem = result.error;
+    if (!result.ran || problem == null) return;
+    // The server's own sentence is more specific than anything we could
+    // compose — a thin profile, an XP shortfall and a model failure each come
+    // back with their own message and their own real remedy.
+    _say(
+      problem is TopicsUnavailable
+          ? (problem.message ?? 'Failed to suggest topics')
+          : 'An unexpected error occurred.',
+      isError: true,
+    );
   }
 
   Future<void> _addSuggested(SuggestedTopic topic) async {
-    if (_addingName != null) return;
-    setState(() => _addingName = topic.name);
-    try {
-      await ref
-          .read(topicsControllerProvider.notifier)
-          .create(
-            name: topic.name,
-            keywords: topic.keywords,
-            description: topic.description.isEmpty ? null : topic.description,
-          );
-      ref.read(topicSuggestionsProvider.notifier).dismiss(topic.name);
-      _say('Topic "${topic.name}" added!');
-    } on Object {
-      _say('Failed to add topic.', isError: true);
-    } finally {
-      if (mounted) setState(() => _addingName = null);
-    }
+    final ({bool ran, Object? error}) result = await ref
+        .read(topicSuggestionsProvider.notifier)
+        .add(topic);
+    if (!result.ran) return;
+    _say(
+      result.error == null
+          ? 'Topic "${topic.name}" added!'
+          : 'Failed to add topic.',
+      isError: result.error != null,
+    );
   }
 
   @override
   Widget build(BuildContext context) {
     final AsyncValue<List<Topic>> topics = ref.watch(topicsControllerProvider);
-    final List<SuggestedTopic> suggestions = ref.watch(
+    final TopicSuggestionsState suggestions = ref.watch(
       topicSuggestionsProvider,
     );
 
@@ -168,7 +158,7 @@ class _TopicsPageState extends ConsumerState<TopicsPage> {
 
   List<Widget> _body(
     AsyncValue<List<Topic>> topics,
-    List<SuggestedTopic> suggestions,
+    TopicSuggestionsState suggestions,
   ) {
     final int count = topics.value?.length ?? 0;
 
@@ -191,8 +181,8 @@ class _TopicsPageState extends ConsumerState<TopicsPage> {
         label: 'Suggest Topics (50 XP)',
         icon: const Icon(Icons.auto_awesome_outlined),
         expand: true,
-        busy: _suggesting,
-        onPressed: _suggesting ? null : _suggest,
+        busy: suggestions.suggesting,
+        onPressed: suggestions.suggesting ? null : _suggest,
       ),
 
       if (_banner != null) ...<Widget>[
@@ -208,7 +198,7 @@ class _TopicsPageState extends ConsumerState<TopicsPage> {
         TopicsGoalCard(count: count, target: _goal),
       ],
 
-      if (suggestions.isNotEmpty) ...<Widget>[
+      if (suggestions.items.isNotEmpty) ...<Widget>[
         SizedBox(height: ZaveSpace.xxl),
         Row(
           children: <Widget>[
@@ -228,10 +218,10 @@ class _TopicsPageState extends ConsumerState<TopicsPage> {
           ],
         ),
         SizedBox(height: ZaveSpace.lg),
-        for (final SuggestedTopic suggestion in suggestions) ...<Widget>[
+        for (final SuggestedTopic suggestion in suggestions.items) ...<Widget>[
           SuggestedTopicCard(
             topic: suggestion,
-            busy: _addingName == suggestion.name,
+            busy: suggestions.isAdding(suggestion.name),
             onAdd: () => _addSuggested(suggestion),
           ),
           SizedBox(height: ZaveSpace.md),

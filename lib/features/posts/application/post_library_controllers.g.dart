@@ -267,3 +267,188 @@ abstract class _$PostDetail extends $AsyncNotifier<LibraryPost> {
     element.handleCreate(ref, () => build(_$args));
   }
 }
+
+/// Which action a post currently has running — null when none does.
+///
+/// ## Why this is not `_busy` on the page
+///
+/// It was, and the state said nothing true once the page went away. Every
+/// action here is a write the server performs whether or not anyone is still
+/// looking: publish reaches LinkedIn, delete removes the row, schedule
+/// re-queues a Cloud Task. A user who taps Publish, backs out and comes
+/// straight back in found a page rebuilt with `_busy = false` — a live Publish
+/// button over a publish that had not come back yet, which is one post sent to
+/// LinkedIn twice.
+///
+/// Keyed by the same server id as [PostDetail], so the answer to "is this post
+/// busy?" is one answer and not one per widget that asks.
+
+@ProviderFor(PostDetailAction)
+final postDetailActionProvider = PostDetailActionFamily._();
+
+/// Which action a post currently has running — null when none does.
+///
+/// ## Why this is not `_busy` on the page
+///
+/// It was, and the state said nothing true once the page went away. Every
+/// action here is a write the server performs whether or not anyone is still
+/// looking: publish reaches LinkedIn, delete removes the row, schedule
+/// re-queues a Cloud Task. A user who taps Publish, backs out and comes
+/// straight back in found a page rebuilt with `_busy = false` — a live Publish
+/// button over a publish that had not come back yet, which is one post sent to
+/// LinkedIn twice.
+///
+/// Keyed by the same server id as [PostDetail], so the answer to "is this post
+/// busy?" is one answer and not one per widget that asks.
+final class PostDetailActionProvider
+    extends $NotifierProvider<PostDetailAction, PostDetailOp?> {
+  /// Which action a post currently has running — null when none does.
+  ///
+  /// ## Why this is not `_busy` on the page
+  ///
+  /// It was, and the state said nothing true once the page went away. Every
+  /// action here is a write the server performs whether or not anyone is still
+  /// looking: publish reaches LinkedIn, delete removes the row, schedule
+  /// re-queues a Cloud Task. A user who taps Publish, backs out and comes
+  /// straight back in found a page rebuilt with `_busy = false` — a live Publish
+  /// button over a publish that had not come back yet, which is one post sent to
+  /// LinkedIn twice.
+  ///
+  /// Keyed by the same server id as [PostDetail], so the answer to "is this post
+  /// busy?" is one answer and not one per widget that asks.
+  PostDetailActionProvider._({
+    required PostDetailActionFamily super.from,
+    required String super.argument,
+  }) : super(
+         retry: null,
+         name: r'postDetailActionProvider',
+         isAutoDispose: true,
+         dependencies: null,
+         $allTransitiveDependencies: null,
+       );
+
+  @override
+  String debugGetCreateSourceHash() => _$postDetailActionHash();
+
+  @override
+  String toString() {
+    return r'postDetailActionProvider'
+        ''
+        '($argument)';
+  }
+
+  @$internal
+  @override
+  PostDetailAction create() => PostDetailAction();
+
+  /// {@macro riverpod.override_with_value}
+  Override overrideWithValue(PostDetailOp? value) {
+    return $ProviderOverride(
+      origin: this,
+      providerOverride: $SyncValueProvider<PostDetailOp?>(value),
+    );
+  }
+
+  @override
+  bool operator ==(Object other) {
+    return other is PostDetailActionProvider && other.argument == argument;
+  }
+
+  @override
+  int get hashCode {
+    return argument.hashCode;
+  }
+}
+
+String _$postDetailActionHash() => r'97ad8b9b3dda9735159064bb4dbe38cdd8a4d97a';
+
+/// Which action a post currently has running — null when none does.
+///
+/// ## Why this is not `_busy` on the page
+///
+/// It was, and the state said nothing true once the page went away. Every
+/// action here is a write the server performs whether or not anyone is still
+/// looking: publish reaches LinkedIn, delete removes the row, schedule
+/// re-queues a Cloud Task. A user who taps Publish, backs out and comes
+/// straight back in found a page rebuilt with `_busy = false` — a live Publish
+/// button over a publish that had not come back yet, which is one post sent to
+/// LinkedIn twice.
+///
+/// Keyed by the same server id as [PostDetail], so the answer to "is this post
+/// busy?" is one answer and not one per widget that asks.
+
+final class PostDetailActionFamily extends $Family
+    with
+        $ClassFamilyOverride<
+          PostDetailAction,
+          PostDetailOp?,
+          PostDetailOp?,
+          PostDetailOp?,
+          String
+        > {
+  PostDetailActionFamily._()
+    : super(
+        retry: null,
+        name: r'postDetailActionProvider',
+        dependencies: null,
+        $allTransitiveDependencies: null,
+        isAutoDispose: true,
+      );
+
+  /// Which action a post currently has running — null when none does.
+  ///
+  /// ## Why this is not `_busy` on the page
+  ///
+  /// It was, and the state said nothing true once the page went away. Every
+  /// action here is a write the server performs whether or not anyone is still
+  /// looking: publish reaches LinkedIn, delete removes the row, schedule
+  /// re-queues a Cloud Task. A user who taps Publish, backs out and comes
+  /// straight back in found a page rebuilt with `_busy = false` — a live Publish
+  /// button over a publish that had not come back yet, which is one post sent to
+  /// LinkedIn twice.
+  ///
+  /// Keyed by the same server id as [PostDetail], so the answer to "is this post
+  /// busy?" is one answer and not one per widget that asks.
+
+  PostDetailActionProvider call(String postId) =>
+      PostDetailActionProvider._(argument: postId, from: this);
+
+  @override
+  String toString() => r'postDetailActionProvider';
+}
+
+/// Which action a post currently has running — null when none does.
+///
+/// ## Why this is not `_busy` on the page
+///
+/// It was, and the state said nothing true once the page went away. Every
+/// action here is a write the server performs whether or not anyone is still
+/// looking: publish reaches LinkedIn, delete removes the row, schedule
+/// re-queues a Cloud Task. A user who taps Publish, backs out and comes
+/// straight back in found a page rebuilt with `_busy = false` — a live Publish
+/// button over a publish that had not come back yet, which is one post sent to
+/// LinkedIn twice.
+///
+/// Keyed by the same server id as [PostDetail], so the answer to "is this post
+/// busy?" is one answer and not one per widget that asks.
+
+abstract class _$PostDetailAction extends $Notifier<PostDetailOp?> {
+  late final _$args = ref.$arg as String;
+  String get postId => _$args;
+
+  PostDetailOp? build(String postId);
+  @$mustCallSuper
+  @override
+  void runBuild() {
+    final ref = this.ref as $Ref<PostDetailOp?, PostDetailOp?>;
+    final element =
+        ref.element
+            as $ClassProviderElement<
+              AnyNotifier<PostDetailOp?, PostDetailOp?>,
+              PostDetailOp?,
+              Object?,
+              Object?
+            >;
+    element.handleCreate(ref, () => build(_$args));
+  }
+}

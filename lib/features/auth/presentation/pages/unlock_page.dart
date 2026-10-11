@@ -5,8 +5,7 @@ import '../../../../core/responsive/screen_util.dart';
 import '../../../../core/security/biometric_auth_service.dart';
 import '../../../../core/theme/app_spacing.dart';
 import '../../../../core/ui/app_icons.dart';
-import '../../application/app_lock_controller.dart';
-import '../../application/sign_out_controller.dart';
+import '../../application/unlock_controller.dart';
 
 /// The biometric / device-credential unlock gate (root navigator), shown over
 /// everything when a signed-in session is locked — on resume from background or
@@ -20,6 +19,13 @@ import '../../application/sign_out_controller.dart';
 /// Migrated to ProHealth's unlock-gate structure (RULINGS ruling 12), rendered
 /// with Plexaverse product conventions: theme-driven colours (no expressive_m3),
 /// [ScreenUtil] responsive scaling, and the shared [AppIcons] indirection.
+///
+/// **Both operations live on [UnlockController], not here.** `_inProgress`,
+/// `_loggingOut` and `_message` were fields on this State, read after an
+/// `if (!mounted) return;` — which lost a failure the user never got to see
+/// and, worse, could drop a SUCCESSFUL unlock, since clearing the lock sat on
+/// the far side of the same guard. What is left on the page is the copy for
+/// each outcome, which is the layer that owns user-facing text.
 class UnlockPage extends ConsumerStatefulWidget {
   const UnlockPage({super.key});
 
@@ -28,58 +34,38 @@ class UnlockPage extends ConsumerStatefulWidget {
 }
 
 class _UnlockPageState extends ConsumerState<UnlockPage> {
-  bool _inProgress = false;
-  bool _loggingOut = false;
-  String? _message;
-
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) => _authenticate());
-  }
-
-  Future<void> _authenticate() async {
-    if (_inProgress || _loggingOut) return;
-    setState(() {
-      _inProgress = true;
-      _message = null;
+    // Auto-prompt from the first frame. The controller's own guard is what
+    // keeps a rebuild from stacking a second prompt on the first.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      ref.read(unlockControllerProvider.notifier).authenticate();
     });
-    final outcome = await ref
-        .read(biometricAuthServiceProvider)
-        .authenticate(reason: 'Unlock Plexaverse to continue.');
-    if (!mounted) return;
-    switch (outcome) {
-      case BiometricOutcome.success:
-        // Clearing the lock lets the router redirect back into the app.
-        ref.read(appLockProvider.notifier).unlock();
-      case BiometricOutcome.lockedOut:
-        setState(() {
-          _inProgress = false;
-          _message =
-              'Too many attempts. Try again later or log out to sign in with '
-              'your password.';
-        });
-      case BiometricOutcome.unavailable:
-      case BiometricOutcome.failed:
-      case BiometricOutcome.canceled:
-        setState(() {
-          _inProgress = false;
-          _message = 'Unlock failed. Try again or log out instead.';
-        });
-    }
   }
 
-  Future<void> _logOut() async {
-    if (_loggingOut) return;
-    setState(() => _loggingOut = true);
-    // Signs out; the router redirects to /login once the gate re-resolves.
-    await ref.read(signOutControllerProvider.notifier).signOut();
-  }
+  /// The sentence for each outcome.
+  ///
+  /// Null is "nothing to report" — a fresh gate, or a success on its way to a
+  /// redirect — and renders the standing prompt instead.
+  static String? _messageFor(BiometricOutcome? outcome) => switch (outcome) {
+    null || BiometricOutcome.success => null,
+    BiometricOutcome.lockedOut =>
+      'Too many attempts. Try again later or log out to sign in with '
+          'your password.',
+    BiometricOutcome.unavailable ||
+    BiometricOutcome.failed ||
+    BiometricOutcome.canceled => 'Unlock failed. Try again or log out instead.',
+  };
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final scheme = theme.colorScheme;
+
+    final UnlockState unlock = ref.watch(unlockControllerProvider);
+    final String? message = _messageFor(unlock.lastFailure);
 
     return Scaffold(
       body: SafeArea(
@@ -111,20 +97,22 @@ class _UnlockPageState extends ConsumerState<UnlockPage> {
                 ),
                 SizedBox(height: AppSpacing.sm.h),
                 Text(
-                  _message ??
-                      'Confirm it\'s you to get back into Plexaverse.',
+                  message ?? 'Confirm it\'s you to get back into Plexaverse.',
                   textAlign: TextAlign.center,
                   style: theme.textTheme.bodyLarge?.copyWith(
-                    color: _message != null ? scheme.error : null,
+                    color: message != null ? scheme.error : null,
                   ),
                 ),
                 SizedBox(height: AppSpacing.xl.h),
                 SizedBox(
                   width: double.infinity,
                   child: FilledButton.icon(
-                    onPressed:
-                        _inProgress || _loggingOut ? null : _authenticate,
-                    icon: _inProgress
+                    onPressed: unlock.busy
+                        ? null
+                        : () => ref
+                              .read(unlockControllerProvider.notifier)
+                              .authenticate(),
+                    icon: unlock.authenticating
                         ? SizedBox(
                             width: 18.r,
                             height: 18.r,
@@ -139,7 +127,11 @@ class _UnlockPageState extends ConsumerState<UnlockPage> {
                 ),
                 SizedBox(height: AppSpacing.sm.h),
                 TextButton(
-                  onPressed: _loggingOut ? null : _logOut,
+                  onPressed: unlock.signingOut
+                      ? null
+                      : () => ref
+                            .read(unlockControllerProvider.notifier)
+                            .signOut(),
                   child: const Text('Log out instead'),
                 ),
               ],

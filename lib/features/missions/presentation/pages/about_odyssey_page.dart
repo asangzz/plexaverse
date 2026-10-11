@@ -32,13 +32,6 @@ class AboutOdysseyPage extends ConsumerStatefulWidget {
   /// LinkedIn's own About editor.
   static const String editPath = 'edit/forms/summary/new/';
 
-  /// The web refuses to complete the step below this. It is a floor, not a
-  /// target: three real paragraphs are far longer.
-  static const int minSummaryLength = 50;
-
-  /// LinkedIn's own ceiling on the skill list the profile shows.
-  static const int maxSkills = 10;
-
   @override
   ConsumerState<AboutOdysseyPage> createState() => _AboutOdysseyPageState();
 }
@@ -47,14 +40,6 @@ class _AboutOdysseyPageState extends ConsumerState<AboutOdysseyPage> {
   final TextEditingController _summary = TextEditingController();
   final TextEditingController _newSkill = TextEditingController();
   bool _seeded = false;
-
-  List<String> _skills = <String>[];
-
-  bool _generating = false;
-  bool _finishing = false;
-
-  String? _message;
-  MissionTone _tone = MissionTone.success;
 
   @override
   void dispose() {
@@ -67,16 +52,13 @@ class _AboutOdysseyPageState extends ConsumerState<AboutOdysseyPage> {
     if (_seeded) return;
     _seeded = true;
     _summary.text = profile.preferences.summary ?? '';
-    _skills = List<String>.of(profile.preferences.skills);
+    // The skill list is NOT seeded here. It is what gets posted, so it lives
+    // on the controller, which reads straight through to the preferences row
+    // until the user edits it — see [AboutOdysseyState.skills].
   }
 
-  void _say(String text, MissionTone tone) {
-    if (!mounted) return;
-    setState(() {
-      _message = text;
-      _tone = tone;
-    });
-  }
+  AboutOdysseyController get _form =>
+      ref.read(aboutOdysseyControllerProvider.notifier);
 
   /// The web's paragraph rule, ported verbatim: split on a blank line, drop
   /// whatever is only whitespace.
@@ -86,97 +68,25 @@ class _AboutOdysseyPageState extends ConsumerState<AboutOdysseyPage> {
       .length;
 
   Future<void> _generate() async {
-    final MissionProfile? profile = ref
-        .read(missionProfileControllerProvider)
-        .value;
-    final String profession = profile?.preferences.profession ?? '';
-    if (profession.isEmpty) {
-      _say(
-        'Set your profession in Settings first — the draft is built around it.',
-        MissionTone.warning,
-      );
-      return;
-    }
-
-    setState(() {
-      _generating = true;
-      _message = null;
-    });
-    try {
-      final String about = await ref
-          .read(missionProfileControllerProvider.notifier)
-          .generateAbout();
-      _summary.text = about;
-      _say('About section drafted.', MissionTone.success);
-    } on Object {
-      _say(
-        'That did not generate. Try again in a moment.',
-        MissionTone.warning,
-      );
-    } finally {
-      if (mounted) setState(() => _generating = false);
-    }
+    final String? about = await _form.generate();
+    // Guarded: the field is this widget's, and writing to a disposed
+    // TextEditingController throws.
+    if (about != null && mounted) _summary.text = about;
   }
 
   void _addSkill() {
-    final String skill = _newSkill.text.trim();
-    if (skill.isEmpty) return;
-    if (_skills.contains(skill)) {
-      _say('That skill is already on the list.', MissionTone.warning);
-      return;
-    }
-    if (_skills.length >= AboutOdysseyPage.maxSkills) {
-      _say(
-        'LinkedIn shows ${AboutOdysseyPage.maxSkills} skills — remove one '
-        'first.',
-        MissionTone.warning,
-      );
-      return;
-    }
-    setState(() {
-      _skills = <String>[..._skills, skill];
-      _newSkill.clear();
-    });
+    // Clearing the field is the only part of this the widget owns — the
+    // duplicate and ten-skill rules are decisions about the payload.
+    if (_form.addSkill(_newSkill.text)) _newSkill.clear();
   }
 
-  void _removeSkill(String skill) => setState(() {
-    _skills = _skills.where((String s) => s != skill).toList(growable: false);
-  });
-
   Future<void> _finish() async {
-    final String summary = _summary.text.trim();
-    if (summary.length < AboutOdysseyPage.minSummaryLength) {
-      _say(
-        'Write a more substantial About section before finishing.',
-        MissionTone.warning,
-      );
-      return;
-    }
-
-    setState(() {
-      _finishing = true;
-      _message = null;
-    });
-    try {
-      final MissionProfileController controller = ref.read(
-        missionProfileControllerProvider.notifier,
-      );
-      // Save BEFORE completing: if the save fails, the step must not be
-      // recorded against work that was never persisted.
-      await controller.save(<String, dynamic>{
-        'summary': summary,
-        'skills': _skills,
-      });
-      await controller.completeStep(
-        levelId: AboutOdysseyPage.levelId,
-        stepId: AboutOdysseyPage.stepId,
-      );
-      if (!mounted) return;
-      context.pop();
-    } on Object {
-      _say('Could not save those changes.', MissionTone.warning);
-      if (mounted) setState(() => _finishing = false);
-    }
+    final bool done = await _form.finish(
+      levelId: AboutOdysseyPage.levelId,
+      stepId: AboutOdysseyPage.stepId,
+      summaryText: _summary.text,
+    );
+    if (done && mounted) context.pop();
   }
 
   @override
@@ -184,6 +94,7 @@ class _AboutOdysseyPageState extends ConsumerState<AboutOdysseyPage> {
     final AsyncValue<MissionProfile> profile = ref.watch(
       missionProfileControllerProvider,
     );
+    final AboutOdysseyState form = ref.watch(aboutOdysseyControllerProvider);
 
     return ZaveScaffold(
       largeTitle: 'The About Odyssey',
@@ -215,13 +126,16 @@ class _AboutOdysseyPageState extends ConsumerState<AboutOdysseyPage> {
         ),
         data: (MissionProfile p) {
           _seed(p);
-          return _body(p);
+          return _body(p, form);
         },
       ),
     );
   }
 
-  Widget _body(MissionProfile profile) {
+  Widget _body(MissionProfile profile, AboutOdysseyState form) {
+    // The edited list, or the server's own until the user touches it.
+    final List<String> skills = form.skills ?? profile.preferences.skills;
+
     return ZaveScrollView(
       children: <Widget>[
         const MissionHeader(
@@ -303,10 +217,10 @@ class _AboutOdysseyPageState extends ConsumerState<AboutOdysseyPage> {
               // `busy` blocks the tap on its own; passing null as well would
               // dim the button and hide its spinner.
               ZaveButton(
-                label: _generating ? 'Drafting…' : 'AI Spark',
+                label: form.generating ? 'Drafting…' : 'AI Spark',
                 icon: const Icon(Icons.auto_awesome),
                 onPressed: _generate,
-                busy: _generating,
+                busy: form.generating,
                 expand: true,
               ),
             ],
@@ -343,8 +257,8 @@ class _AboutOdysseyPageState extends ConsumerState<AboutOdysseyPage> {
               Text('SKILL STACK', style: ZaveType.kicker),
               SizedBox(height: ZaveSpace.sm),
               Text(
-                'Add up to ${AboutOdysseyPage.maxSkills} professional skills '
-                'to your profile.',
+                'Add up to ${AboutOdysseyController.maxSkills} professional '
+                'skills to your profile.',
                 style: ZaveType.bodyMuted,
               ),
               SizedBox(height: ZaveSpace.lg),
@@ -365,7 +279,7 @@ class _AboutOdysseyPageState extends ConsumerState<AboutOdysseyPage> {
                   ZaveIconButton(
                     icon: const Icon(Icons.add_rounded),
                     tooltip: 'Add skill',
-                    onPressed: _skills.length >= AboutOdysseyPage.maxSkills
+                    onPressed: skills.length >= AboutOdysseyController.maxSkills
                         ? null
                         : _addSkill,
                   ),
@@ -374,7 +288,7 @@ class _AboutOdysseyPageState extends ConsumerState<AboutOdysseyPage> {
 
               SizedBox(height: ZaveSpace.lg),
 
-              if (_skills.isEmpty)
+              if (skills.isEmpty)
                 Container(
                   width: double.infinity,
                   decoration: ZaveSurface.row,
@@ -390,7 +304,7 @@ class _AboutOdysseyPageState extends ConsumerState<AboutOdysseyPage> {
                   spacing: ZaveSpace.sm,
                   runSpacing: ZaveSpace.sm,
                   children: <Widget>[
-                    for (final String skill in _skills)
+                    for (final String skill in skills)
                       // A chip whose tap REMOVES it. The web puts a small × on
                       // the trailing edge; ZaveChip has one icon slot and it
                       // leads, so the × leads here rather than being drawn by
@@ -399,21 +313,21 @@ class _AboutOdysseyPageState extends ConsumerState<AboutOdysseyPage> {
                         label: skill,
                         selected: false,
                         icon: const Icon(Icons.close_rounded),
-                        onTap: () => _removeSkill(skill),
+                        onTap: () => _form.removeSkill(skill),
                       ),
                   ],
                 ),
 
-              if (_message != null) ...<Widget>[
+              if (form.notice case final MissionNotice notice) ...<Widget>[
                 SizedBox(height: ZaveSpace.lg),
-                MissionMessage(text: _message!, tone: _tone),
+                MissionMessage(text: notice.text, tone: notice.tone),
               ],
 
               SizedBox(height: ZaveSpace.lg),
               ZaveButton.primary(
                 label: 'Finish step',
                 onPressed: _finish,
-                busy: _finishing,
+                busy: form.finishing,
                 expand: true,
               ),
             ],

@@ -4,13 +4,13 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/links/linkedin.dart';
 import '../../../../core/ui/widgets/open_link.dart';
 import '../../../../core/ui/zave/zave_kit.dart';
+import '../../application/headshot_save_controller.dart';
 import '../../application/headshots_controller.dart';
 import '../../domain/headshot_session.dart';
 import '../widgets/ai_tool_image.dart';
 import '../widgets/ai_tool_note.dart';
 import '../widgets/headshot_stepper.dart';
 import '../../../../core/platform/image_picking.dart';
-import '../../../../core/platform/image_sharing.dart';
 
 /// **The Visual Persona** — the web's `/headshots`.
 ///
@@ -456,7 +456,7 @@ class _ResultsStep extends ConsumerWidget {
         SizedBox(height: ZaveSpace.sm),
         Align(
           alignment: Alignment.centerLeft,
-          child: _SaveHeadshot(url: session.results[i], index: i),
+          child: _SaveHeadshot(index: i),
         ),
         SizedBox(height: ZaveSpace.md),
       ],
@@ -521,50 +521,40 @@ Future<void> _pick(
 /// ship" — true when written, and false since `share_plus` landed for the
 /// banner mission. iOS's sheet carries "Save Image", so the portrait reaches
 /// the camera roll without a photo-library write permission.
-class _SaveHeadshot extends ConsumerStatefulWidget {
-  const _SaveHeadshot({required this.url, required this.index});
+class _SaveHeadshot extends ConsumerWidget {
+  const _SaveHeadshot({required this.index});
 
-  final String url;
   final int index;
 
-  @override
-  ConsumerState<_SaveHeadshot> createState() => _SaveHeadshotState();
-}
-
-class _SaveHeadshotState extends ConsumerState<_SaveHeadshot> {
-  bool _busy = false;
-
-  Future<void> _save() async {
-    setState(() => _busy = true);
-    try {
-      final ShareResult result = await ref
-          .read(imageSharingProvider)
-          .shareImageUrl(
-            url: widget.url,
-            fileName: 'plexaverse-headshot-${widget.index + 1}.png',
-          );
-      if (!mounted) return;
-      // A dismissed sheet says nothing — the user closed it on purpose.
-      final String? note = switch (result) {
-        ShareSucceeded() => 'Saved.',
-        ShareDismissed() => null,
-        ShareFailed(:final String? message) =>
-          message ?? "Couldn't save that one. Try again.",
-      };
-      if (note == null) return;
-      ScaffoldMessenger.of(context)
-        ..hideCurrentSnackBar()
-        ..showSnackBar(SnackBar(content: Text(note, style: ZaveType.body)));
-    } finally {
-      if (mounted) setState(() => _busy = false);
-    }
+  /// The download and the flag that disables the button are
+  /// [HeadshotSaveController]'s — the download outlives this button, which is
+  /// rebuilt every time the session is published. Only the snackbar is left
+  /// here, because a [ScaffoldMessenger] needs a [BuildContext] and that is
+  /// the one thing application/ cannot hold. A dismissed sheet says nothing —
+  /// the user closed it on purpose — which is what a null note means.
+  Future<void> _save(BuildContext context, WidgetRef ref) async {
+    final String? note = await ref
+        .read(headshotSaveControllerProvider.notifier)
+        .save(index);
+    if (note == null || !context.mounted) return;
+    ScaffoldMessenger.of(context)
+      ..hideCurrentSnackBar()
+      ..showSnackBar(SnackBar(content: Text(note, style: ZaveType.body)));
   }
 
   @override
-  Widget build(BuildContext context) => ZaveButton(
-    label: 'Save',
-    icon: const Icon(Icons.ios_share),
-    busy: _busy,
-    onPressed: _busy ? null : _save,
-  );
+  Widget build(BuildContext context, WidgetRef ref) {
+    final bool busy = ref.watch(
+      headshotSaveControllerProvider.select(
+        (Set<int> open) => open.contains(index),
+      ),
+    );
+
+    return ZaveButton(
+      label: 'Save',
+      icon: const Icon(Icons.ios_share),
+      busy: busy,
+      onPressed: busy ? null : () => _save(context, ref),
+    );
+  }
 }

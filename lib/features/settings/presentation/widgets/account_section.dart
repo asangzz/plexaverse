@@ -7,6 +7,7 @@ import '../../../auth/application/sign_out_controller.dart';
 import '../../../auth/domain/auth_repository.dart';
 import '../../application/privacy_controller.dart';
 import '../../application/settings_controllers.dart';
+import '../../application/settings_write_controller.dart';
 import '../../domain/settings_repository.dart';
 import 'settings_section.dart';
 import 'dart:convert';
@@ -156,31 +157,24 @@ class _GoogleSignInRow extends ConsumerStatefulWidget {
 }
 
 class _GoogleSignInRowState extends ConsumerState<_GoogleSignInRow> {
-  bool _busy = false;
-
   Future<void> _act(
     Future<GoogleLinkResult> Function() action,
     String succeeded,
   ) async {
-    setState(() => _busy = true);
-    try {
-      final GoogleLinkResult result = await action();
-      if (!mounted) return;
-      final String? note = switch (result) {
-        GoogleLinkSucceeded(alreadyLinked: true) =>
-          'That Google account was already linked.',
-        GoogleLinkSucceeded() => succeeded,
-        // Silent. The user closed the browser; they know they did.
-        GoogleLinkCancelled() => null,
-        // The server's own copy where it sent some — its refusals name the one
-        // thing the user has to do next, which a generic message would lose.
-        GoogleLinkFailed(:final String? message) =>
-          message ?? "We couldn't change your Google sign-in.",
-      };
-      if (note != null) showSettingsMessage(context, note);
-    } finally {
-      if (mounted) setState(() => _busy = false);
-    }
+    final GoogleLinkResult result = await action();
+    if (!mounted) return;
+    final String? note = switch (result) {
+      GoogleLinkSucceeded(alreadyLinked: true) =>
+        'That Google account was already linked.',
+      GoogleLinkSucceeded() => succeeded,
+      // Silent. The user closed the browser; they know they did.
+      GoogleLinkCancelled() => null,
+      // The server's own copy where it sent some — its refusals name the one
+      // thing the user has to do next, which a generic message would lose.
+      GoogleLinkFailed(:final String? message) =>
+        message ?? "We couldn't change your Google sign-in.",
+    };
+    if (note != null) showSettingsMessage(context, note);
   }
 
   Future<void> _confirmUnlink() async {
@@ -213,7 +207,7 @@ class _GoogleSignInRowState extends ConsumerState<_GoogleSignInRow> {
     );
     if (confirmed != true) return;
     await _act(
-      () => ref.read(googleLinkControllerProvider.notifier).unlink(),
+      () => ref.read(settingsWriteControllerProvider.notifier).unlinkGoogle(),
       'Google unlinked.',
     );
   }
@@ -222,6 +216,13 @@ class _GoogleSignInRowState extends ConsumerState<_GoogleSignInRow> {
   Widget build(BuildContext context) {
     final AsyncValue<GoogleLinkStatus?> status = ref.watch(
       googleLinkControllerProvider,
+    );
+    // The browser hand-off outlives this row — it leaves the app entirely —
+    // so the flag that says it is open cannot live on the row.
+    final bool busy = ref.watch(
+      settingsWriteControllerProvider.select(
+        (Set<String> open) => open.contains(SettingsWrite.googleLink),
+      ),
     );
 
     return switch (status) {
@@ -250,19 +251,21 @@ class _GoogleSignInRowState extends ConsumerState<_GoogleSignInRow> {
                   ? (value.canUnlink
                         ? ZaveButton(
                             label: 'Unlink',
-                            busy: _busy,
-                            onPressed: _busy ? null : _confirmUnlink,
+                            busy: busy,
+                            onPressed: busy ? null : _confirmUnlink,
                           )
                         : null)
                   : ZaveButton(
                       label: 'Link',
-                      busy: _busy,
-                      onPressed: _busy
+                      busy: busy,
+                      onPressed: busy
                           ? null
                           : () => _act(
                               () => ref
-                                  .read(googleLinkControllerProvider.notifier)
-                                  .link(),
+                                  .read(
+                                    settingsWriteControllerProvider.notifier,
+                                  )
+                                  .linkGoogle(),
                               'Google linked.',
                             ),
                     ),

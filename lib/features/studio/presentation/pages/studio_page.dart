@@ -187,10 +187,6 @@ enum _LibraryTab { designs, templates }
 class _StudioLibraryViewState extends ConsumerState<StudioLibraryView> {
   _LibraryTab _tab = _LibraryTab.designs;
 
-  /// The row currently being opened or copied. Held here, not in a provider:
-  /// it is per-view ephemeral UI state and dies with the screen.
-  String? _busyId;
-
   @override
   Widget build(BuildContext context) {
     final AsyncValue<List<StudioDesign>> designs = ref.watch(
@@ -199,6 +195,9 @@ class _StudioLibraryViewState extends ConsumerState<StudioLibraryView> {
     final AsyncValue<List<StudioDesign>> templates = ref.watch(
       studioTemplatesControllerProvider,
     );
+    // The copy in flight, if any. Watched rather than held, so the flag
+    // outlives this view and one copy cannot start while another is open.
+    final String? busyId = ref.watch(templateUseControllerProvider);
     final AsyncValue<List<StudioDesign>> shown = _tab == _LibraryTab.designs
         ? designs
         : templates;
@@ -264,7 +263,7 @@ class _StudioLibraryViewState extends ConsumerState<StudioLibraryView> {
                       for (final StudioDesign row in rows) ...<Widget>[
                         DesignTile(
                           design: row,
-                          busy: _busyId == row.id,
+                          busy: busyId == row.id,
                           onOpen: () => _tab == _LibraryTab.designs
                               ? _open(row.id)
                               : _useTemplate(row),
@@ -313,21 +312,27 @@ class _StudioLibraryViewState extends ConsumerState<StudioLibraryView> {
   /// link means the same thing on both platforms.
   void _open(String id) => context.push('${ZaveRoutes.studio}?project=$id');
 
+  /// Copies a template and opens the copy.
+  ///
+  /// The copy itself — including whether one is already running — belongs to
+  /// [TemplateUseController]; what is left here is the part that genuinely
+  /// needs this widget: switching the visible tab and pushing the route.
   Future<void> _useTemplate(StudioDesign template) async {
-    setState(() => _busyId = template.id);
-    try {
-      final StudioDesign copy = await ref
-          .read(studioTemplatesControllerProvider.notifier)
-          .use(template.id, name: template.name);
-      if (!mounted) return;
-      setState(() => _tab = _LibraryTab.designs);
-      _open(copy.id);
-    } on Object {
-      if (!mounted) return;
+    // Another row's copy is still open. Only the tapped row is closed while
+    // one runs, so a second row remains tappable — and a second copy is
+    // exactly what must not start. Silently, because nothing failed.
+    if (ref.read(templateUseControllerProvider) != null) return;
+
+    final StudioDesign? copy = await ref
+        .read(templateUseControllerProvider.notifier)
+        .use(template);
+    if (!mounted) return;
+    if (copy == null) {
       _toast('Could not copy that template.');
-    } finally {
-      if (mounted) setState(() => _busyId = null);
+      return;
     }
+    setState(() => _tab = _LibraryTab.designs);
+    _open(copy.id);
   }
 
   void _toast(String message) {

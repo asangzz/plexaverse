@@ -461,8 +461,19 @@ class _ImageSwapSheet extends ConsumerStatefulWidget {
 class _ImageSwapSheetState extends ConsumerState<_ImageSwapSheet> {
   final TextEditingController _url = TextEditingController();
   final TextEditingController _prompt = TextEditingController();
-  bool _generating = false;
-  String? _error;
+
+  @override
+  void initState() {
+    super.initState();
+    // A failure from the last time this sheet was open would otherwise be
+    // sitting under an empty prompt. The flag and the message live on the
+    // editor now, so clearing them is an explicit act rather than a side
+    // effect of the widget being rebuilt.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      ref.read(studioEditorProvider(widget.designId).notifier).clearSwapError();
+    });
+  }
 
   @override
   void dispose() {
@@ -501,6 +512,12 @@ class _ImageSwapSheetState extends ConsumerState<_ImageSwapSheet> {
 
   @override
   Widget build(BuildContext context) {
+    final StudioEditorState? editor = ref
+        .watch(studioEditorProvider(widget.designId))
+        .value;
+    final bool generating = editor?.isSwapping(widget.element.id) ?? false;
+    final String? error = editor?.swapError;
+
     return StudioSheet(
       padBottomInset: true,
       children: <Widget>[
@@ -521,8 +538,8 @@ class _ImageSwapSheetState extends ConsumerState<_ImageSwapSheet> {
         ZaveButton.primary(
           label: 'Generate',
           expand: true,
-          busy: _generating,
-          onPressed: _generating ? null : _generate,
+          busy: generating,
+          onPressed: generating ? null : _generate,
         ),
 
         SizedBox(height: ZaveSpace.xxl),
@@ -537,11 +554,11 @@ class _ImageSwapSheetState extends ConsumerState<_ImageSwapSheet> {
         SizedBox(height: ZaveSpace.lg),
         ZaveButton(label: 'Use this URL', expand: true, onPressed: _useUrl),
 
-        if (_error != null) ...<Widget>[
+        if (error != null) ...<Widget>[
           SizedBox(height: ZaveSpace.lg),
           Text(
             // Amber: Zave has no red.
-            _error!,
+            error,
             style: ZaveType.caption.copyWith(color: ZaveColors.amber),
           ),
         ],
@@ -562,42 +579,26 @@ class _ImageSwapSheetState extends ConsumerState<_ImageSwapSheet> {
   }
 
   void _useUrl() {
-    final String url = _url.text.trim();
-    if (!url.startsWith('http://') && !url.startsWith('https://')) {
-      setState(() => _error = 'That does not look like an image URL.');
-      return;
-    }
-    ref
+    final bool swapped = ref
         .read(studioEditorProvider(widget.designId).notifier)
-        .swapImage(widget.element.id, url);
-    Navigator.of(context).pop();
+        .swapImageFromUrl(widget.element.id, _url.text);
+    if (swapped) Navigator.of(context).pop();
   }
 
+  /// Fires the generation and closes on success.
+  ///
+  /// Nothing is held here while it runs: the editor owns the in-flight flag
+  /// and applies the image itself, so dismissing this sheet mid-call no
+  /// longer throws away a generation the user has already been billed for.
   Future<void> _generate() async {
-    final String prompt = _prompt.text.trim();
-    if (prompt.isEmpty) {
-      setState(() => _error = 'Say what the image should be.');
-      return;
-    }
-    setState(() {
-      _generating = true;
-      _error = null;
-    });
-    try {
-      final String uri = await ref
-          .read(studioEditorProvider(widget.designId).notifier)
-          .generateImageFor(prompt: prompt, aspectRatio: _aspectRatio);
-      if (!mounted) return;
-      ref
-          .read(studioEditorProvider(widget.designId).notifier)
-          .swapImage(widget.element.id, uri);
-      Navigator.of(context).pop();
-    } on Object {
-      if (!mounted) return;
-      setState(() {
-        _generating = false;
-        _error = 'That image did not come back. It may be an XP balance.';
-      });
-    }
+    final bool swapped = await ref
+        .read(studioEditorProvider(widget.designId).notifier)
+        .generateImageInto(
+          elementId: widget.element.id,
+          prompt: _prompt.text,
+          aspectRatio: _aspectRatio,
+        );
+    if (!swapped || !mounted) return;
+    Navigator.of(context).pop();
   }
 }

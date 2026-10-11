@@ -5,11 +5,11 @@ import '../../../../core/links/linkedin.dart';
 import '../../../../core/ui/widgets/open_link.dart';
 import '../../../../core/ui/zave/zave_kit.dart';
 import '../../application/persona_controller.dart';
+import '../../application/persona_write_controller.dart';
 import '../../domain/persona_repository.dart';
 import '../widgets/audience_section.dart';
 import '../widgets/identity_section.dart';
 import '../widgets/persona_chrome.dart';
-import '../../../../core/platform/file_picking.dart';
 
 /// **Your Persona** — the web's `/persona`.
 ///
@@ -490,71 +490,59 @@ class _PersonaSkeletonBody extends StatelessWidget {
 /// a member downloads is the only route to this data, which is why the
 /// screen explains the numbers before it has any. It needed a DOCUMENT
 /// picker rather than a photo one, which is the whole reason it waited.
-class _ImportReachButton extends ConsumerStatefulWidget {
+class _ImportReachButton extends ConsumerWidget {
   const _ImportReachButton();
 
-  @override
-  ConsumerState<_ImportReachButton> createState() => _ImportReachButtonState();
-}
-
-class _ImportReachButtonState extends ConsumerState<_ImportReachButton> {
-  bool _busy = false;
-
-  Future<void> _import() async {
-    setState(() => _busy = true);
-    String? note;
-    try {
-      final FilePickResult picked = await ref
-          .read(filePickingProvider)
-          .pick(extensions: <String>['xlsx']);
-      switch (picked) {
-        case PickedFile():
-          note = await ref
-              .read(personaControllerProvider.notifier)
-              .importReach(picked);
-        // Closing the picker is a decision.
-        case FilePickCancelled():
-          break;
-        case FilePickFailure(:final String? message):
-          note = message ?? 'Could not open your files.';
-      }
-    } finally {
-      if (mounted) setState(() => _busy = false);
-    }
-    if (note == null || !mounted) return;
+  /// The pick, the upload and the flag that disables the button are
+  /// [PersonaWriteController]'s — see [PersonaWriteController.importReach].
+  /// Only the snackbar is left here, because a [ScaffoldMessenger] needs a
+  /// [BuildContext] and that is the one thing application/ cannot hold.
+  Future<void> _import(BuildContext context, WidgetRef ref) async {
+    final String? note = await ref
+        .read(personaWriteControllerProvider.notifier)
+        .importReach();
+    if (note == null || !context.mounted) return;
     ScaffoldMessenger.of(context)
       ..hideCurrentSnackBar()
       ..showSnackBar(SnackBar(content: Text(note, style: ZaveType.body)));
   }
 
   @override
-  Widget build(BuildContext context) => Column(
-    crossAxisAlignment: CrossAxisAlignment.start,
-    children: <Widget>[
-      // The old text sent the user down Settings › Data privacy › Get a copy
-      // of your data — a slower route than the web's, which links straight to
-      // creator analytics where the download button lives. The app was
-      // describing a longer journey AND not linking to it.
-      Text(
-        'Open your LinkedIn analytics, tap the download button at the top '
-        'right, then pick the .xlsx here.',
-        style: ZaveType.caption,
+  Widget build(BuildContext context, WidgetRef ref) {
+    final bool busy = ref.watch(
+      personaWriteControllerProvider.select(
+        (Set<String> open) => open.contains(PersonaWrite.reach),
       ),
-      SizedBox(height: ZaveSpace.md),
-      ZaveButton(
-        label: 'Open LinkedIn analytics',
-        icon: const Icon(Icons.open_in_new_rounded),
-        expand: true,
-        onPressed: () =>
-            openLinkAndReport(context, ref, linkedInCreatorAnalyticsUrl),
-      ),
-      SizedBox(height: ZaveSpace.md),
-      ZaveButton(
-        label: 'Import my LinkedIn export',
-        icon: const Icon(Icons.upload_file_outlined),
-        busy: _busy,
-        onPressed: _busy ? null : _import,
-      ),
-    ],
-  );
+    );
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: <Widget>[
+        // The old text sent the user down Settings › Data privacy › Get a copy
+        // of your data — a slower route than the web's, which links straight
+        // to creator analytics where the download button lives. The app was
+        // describing a longer journey AND not linking to it.
+        Text(
+          'Open your LinkedIn analytics, tap the download button at the top '
+          'right, then pick the .xlsx here.',
+          style: ZaveType.caption,
+        ),
+        SizedBox(height: ZaveSpace.md),
+        ZaveButton(
+          label: 'Open LinkedIn analytics',
+          icon: const Icon(Icons.open_in_new_rounded),
+          expand: true,
+          onPressed: () =>
+              openLinkAndReport(context, ref, linkedInCreatorAnalyticsUrl),
+        ),
+        SizedBox(height: ZaveSpace.md),
+        ZaveButton(
+          label: 'Import my LinkedIn export',
+          icon: const Icon(Icons.upload_file_outlined),
+          busy: busy,
+          onPressed: busy ? null : () => _import(context, ref),
+        ),
+      ],
+    );
+  }
 }

@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/ui/zave/zave_kit.dart';
-import '../../application/persona_controller.dart';
+import '../../application/persona_write_controller.dart';
 import '../../domain/persona_repository.dart';
 import 'persona_chrome.dart';
 
@@ -42,7 +42,6 @@ class _AudienceSectionState extends ConsumerState<AudienceSection> {
   /// web does the same, because the value of this block once filled is that you
   /// can read it at a glance.
   late bool _editing = !widget.audience.isSet;
-  bool _saving = false;
 
   @override
   void dispose() {
@@ -52,37 +51,40 @@ class _AudienceSectionState extends ConsumerState<AudienceSection> {
     super.dispose();
   }
 
+  /// The PATCH is [PersonaWriteController]'s — it outlives this card, which is
+  /// torn down and rebuilt every time the snapshot above it changes. Only the
+  /// two things that have no meaning off this card are left here: the snackbar,
+  /// which needs a [BuildContext] application/ cannot hold, and the collapse
+  /// back to the summary.
   Future<void> _save() async {
-    setState(() => _saving = true);
-    try {
-      await ref
-          .read(personaControllerProvider.notifier)
-          .saveAudience(
-            role: _role.text.trim(),
-            industry: _industry.text.trim(),
-            problem: _problem.text.trim(),
-          );
-      if (mounted) setState(() => _editing = false);
-    } on Object {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context)
-        ..hideCurrentSnackBar()
-        ..showSnackBar(
-          SnackBar(
-            content: Text(
-              "We couldn't save that. Nothing of yours has been lost.",
-              style: ZaveType.body,
-            ),
-          ),
+    final String? failure = await ref
+        .read(personaWriteControllerProvider.notifier)
+        .saveAudience(
+          role: _role.text.trim(),
+          industry: _industry.text.trim(),
+          problem: _problem.text.trim(),
         );
-    } finally {
-      if (mounted) setState(() => _saving = false);
+    if (!mounted) return;
+
+    if (failure == null) {
+      setState(() => _editing = false);
+      return;
     }
+    ScaffoldMessenger.of(context)
+      ..hideCurrentSnackBar()
+      ..showSnackBar(SnackBar(content: Text(failure, style: ZaveType.body)));
   }
 
   @override
   Widget build(BuildContext context) {
     final PersonaAudience audience = widget.audience;
+    // `.select` so this card rebuilds for its own save and not for the reach
+    // import running three sections below it.
+    final bool saving = ref.watch(
+      personaWriteControllerProvider.select(
+        (Set<String> open) => open.contains(PersonaWrite.audience),
+      ),
+    );
 
     return PersonaSection(
       title: "Who you're writing for",
@@ -95,7 +97,7 @@ class _AudienceSectionState extends ConsumerState<AudienceSection> {
                 'work changes.'
           : 'Until this is set, posts are written for people in your own job — '
                 'who enjoy them and cannot hire you.',
-      child: _editing ? _form() : _summary(audience),
+      child: _editing ? _form(saving) : _summary(audience),
     );
   }
 
@@ -123,7 +125,7 @@ class _AudienceSectionState extends ConsumerState<AudienceSection> {
     );
   }
 
-  Widget _form() {
+  Widget _form(bool saving) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: <Widget>[
@@ -159,14 +161,14 @@ class _AudienceSectionState extends ConsumerState<AudienceSection> {
             // The one white button on this screen: the audience is the field
             // the whole page is arguing for.
             ZaveButton.primary(
-              label: _saving ? 'Saving…' : 'Save',
-              busy: _saving,
-              onPressed: _saving ? null : _save,
+              label: saving ? 'Saving…' : 'Save',
+              busy: saving,
+              onPressed: saving ? null : _save,
             ),
             if (widget.audience.isSet)
               ZaveButton(
                 label: 'Cancel',
-                onPressed: _saving
+                onPressed: saving
                     ? null
                     : () => setState(() => _editing = false),
               ),

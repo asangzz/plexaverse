@@ -337,3 +337,95 @@ class PostDetail extends _$PostDetail {
     ref.read(postLibraryProvider.notifier).mergeUpdated(updated);
   }
 }
+
+/// What the detail screen can have in flight. One at a time, which is what the
+/// screen already enforced by disabling its whole action bar.
+enum PostDetailOp { approve, publish, save, schedule, delete }
+
+/// Which action a post currently has running — null when none does.
+///
+/// ## Why this is not `_busy` on the page
+///
+/// It was, and the state said nothing true once the page went away. Every
+/// action here is a write the server performs whether or not anyone is still
+/// looking: publish reaches LinkedIn, delete removes the row, schedule
+/// re-queues a Cloud Task. A user who taps Publish, backs out and comes
+/// straight back in found a page rebuilt with `_busy = false` — a live Publish
+/// button over a publish that had not come back yet, which is one post sent to
+/// LinkedIn twice.
+///
+/// Keyed by the same server id as [PostDetail], so the answer to "is this post
+/// busy?" is one answer and not one per widget that asks.
+@riverpod
+class PostDetailAction extends _$PostDetailAction {
+  @override
+  PostDetailOp? build(String postId) {
+    // A listen, not a watch. It holds [PostDetail] open for as long as THIS
+    // notifier lives — including the stretch after the page is gone, held by
+    // the keepAlive in [_run] — without rebuilding this state every time the
+    // post changes, which would wipe the op mid-flight. Without it, popping
+    // during a publish disposes [PostDetail] before its `state = ...` lands,
+    // and writing to a disposed notifier throws: the refreshed post and the
+    // outcome are both lost, inside a `catch` that reports it as a failure
+    // after the publish actually succeeded.
+    ref.listen(postDetailProvider(postId), (_, _) {});
+    return null;
+  }
+
+  Future<Object?> approve() =>
+      _run(PostDetailOp.approve, (PostDetail d) => d.approve());
+
+  /// The edited body, and optionally a move to another status — see
+  /// [PostDetail.save].
+  Future<Object?> save({
+    String? title,
+    required String content,
+    PostLibraryStatus? status,
+  }) => _run(
+    PostDetailOp.save,
+    (PostDetail d) => d.save(title: title, content: content, status: status),
+  );
+
+  Future<Object?> setSchedule(DateTime? at) =>
+      _run(PostDetailOp.schedule, (PostDetail d) => d.setSchedule(at));
+
+  Future<Object?> delete() =>
+      _run(PostDetailOp.delete, (PostDetail d) => d.delete());
+
+  /// Publish, and hand back the share URL the caller needs to open the post.
+  ///
+  /// A record rather than a throw, so a caller that has been disposed cannot
+  /// turn an unhandled exception into a publish nobody was told about: the
+  /// outcome is returned AND the in-flight flag is cleared here either way.
+  Future<({String? url, Object? error})> publish() async {
+    String? url;
+    final Object? error = await _run(PostDetailOp.publish, (
+      PostDetail d,
+    ) async {
+      url = await d.publish();
+    });
+    return (url: url, error: error);
+  }
+
+  /// Returns null on success, the failure otherwise. The copy belongs to the
+  /// screen; which action failed is all this layer knows and all it says.
+  Future<Object?> _run(
+    PostDetailOp op,
+    Future<void> Function(PostDetail detail) action,
+  ) async {
+    // Held for the length of the round-trip, for the reason in [build].
+    // Type inferred: `KeepAliveLink` is not exported from riverpod_annotation.
+    final link = ref.keepAlive();
+    state = op;
+    try {
+      await action(ref.read(postDetailProvider(postId).notifier));
+      state = null;
+      return null;
+    } on Object catch (error) {
+      state = null;
+      return error;
+    } finally {
+      link.close();
+    }
+  }
+}

@@ -110,3 +110,43 @@ class StudioTemplatesController extends _$StudioTemplatesController {
     return copy;
   }
 }
+
+/// The id of the template currently being copied, or null.
+///
+/// **This is the in-flight flag for a write, so it is not the library view's
+/// to hold.** The view kept a single `_busyId`, and `DesignTile` closes a row
+/// only while that id matches it: tapping a second template mid-copy moved
+/// the id onto the second row and RE-OPENED the first, so a third tap bought
+/// a third copy of a design the user had asked for once. Guarded here, one
+/// copy runs at a time and the row that started it stays closed until it ends.
+///
+/// Watching it from the view is also what keeps this autoDispose provider
+/// alive for the length of the copy.
+@riverpod
+class TemplateUseController extends _$TemplateUseController {
+  @override
+  String? build() => null;
+
+  /// Copies [template] and returns the new design, or null when a copy was
+  /// already running or the call failed.
+  ///
+  /// Returns rather than throws because the only caller is a tap handler
+  /// whose whole response to a failure is to say so.
+  Future<StudioDesign?> use(StudioDesign template) async {
+    if (state != null) return null;
+    state = template.id;
+    final StudioTemplatesController templates = ref.read(
+      studioTemplatesControllerProvider.notifier,
+    );
+    try {
+      return await templates.use(template.id, name: template.name);
+    } on Object {
+      return null;
+    } finally {
+      // The user can leave the library mid-copy, which disposes this
+      // autoDispose provider; writing `state` afterwards throws out of the
+      // `finally` and would turn a copy that DID land into a crash.
+      if (ref.mounted) state = null;
+    }
+  }
+}

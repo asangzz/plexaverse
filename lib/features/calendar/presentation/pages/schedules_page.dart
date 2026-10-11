@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/ui/zave/zave_kit.dart';
+import '../../application/schedule_write_controller.dart';
 import '../../application/schedules_controller.dart';
 import '../../domain/post_schedule.dart';
 import '../widgets/calendar_sheet.dart';
@@ -30,23 +31,13 @@ class SchedulesPage extends ConsumerStatefulWidget {
   ConsumerState<SchedulesPage> createState() => _SchedulesPageState();
 }
 
+/// Holds no write state of its own. Which row is mutating, whether a create is
+/// in flight and how the last write went all live on [ScheduleWriteController]
+/// — they are in-flight flags for an async use case and the result of a
+/// repository call, and a page the user is free to leave mid-round-trip cannot
+/// be their owner. See that controller for the failure this page used to
+/// discard.
 class _SchedulesPageState extends ConsumerState<SchedulesPage> {
-  /// Ids of the rows with a write in flight, NOT one screen-wide flag.
-  ///
-  /// A single boolean cannot say WHICH row is mutating, so pausing one
-  /// schedule used to disable and spin every other row for the whole
-  /// round-trip. Per-id, the same way `PostLibraryState.busyIds` solves it in
-  /// the posts slice. Held in the State rather than a provider: it is
-  /// ephemeral per-view UI state and dies with the screen.
-  final Set<String> _busyIds = <String>{};
-
-  /// A create is in flight. Separate from [_busyIds] because the row being
-  /// created has no id yet.
-  bool _creating = false;
-
-  /// The last write failed. Shown inline — Zave has no snackbar.
-  String? _error;
-
   @override
   Widget build(BuildContext context) {
     final AsyncValue<List<PostSchedule>> schedules = ref.watch(
@@ -92,11 +83,15 @@ class _SchedulesPageState extends ConsumerState<SchedulesPage> {
     AsyncValue<List<CalendarAccount>> accounts,
     AsyncValue<List<ScheduleTopic>> topics,
   ) {
+    // Which row is writing, whether a create is in flight, and the last
+    // failure. On the controller so none of the three dies with this screen.
+    final ScheduleWriteState write = ref.watch(scheduleWriteControllerProvider);
+
     // The CTA stays disabled until the account list has actually arrived —
     // enabling it and then failing on submit is worse than a moment of
-    // patience. `_creating` is deliberately NOT folded in here: ZaveButton
-    // already refuses taps while busy, and passing null would dim the button
-    // behind its own spinner.
+    // patience. `write.creating` is deliberately NOT folded in here:
+    // ZaveButton already refuses taps while busy, and passing null would dim
+    // the button behind its own spinner.
     final bool accountsLoaded = accounts.hasValue;
     final List<CalendarAccount> connected =
         accounts.value ?? const <CalendarAccount>[];
@@ -112,10 +107,12 @@ class _SchedulesPageState extends ConsumerState<SchedulesPage> {
           SizedBox(height: ZaveSpace.lg),
         ],
 
-        if (_error != null) ...<Widget>[
+        if (write.error case final String message) ...<Widget>[
           _ErrorNotice(
-            message: _error!,
-            onDismiss: () => setState(() => _error = null),
+            message: message,
+            onDismiss: () => ref
+                .read(scheduleWriteControllerProvider.notifier)
+                .acknowledge(),
           ),
           SizedBox(height: ZaveSpace.lg),
         ],
@@ -125,7 +122,7 @@ class _SchedulesPageState extends ConsumerState<SchedulesPage> {
           kind: ZaveButtonKind.primarySmall,
           icon: const Icon(Icons.add),
           expand: true,
-          busy: _creating,
+          busy: write.creating,
           onPressed: canCreate
               ? () => _openForm(
                   connected,
@@ -142,13 +139,10 @@ class _SchedulesPageState extends ConsumerState<SchedulesPage> {
             if (i > 0) SizedBox(height: ZaveSpace.lg),
             ScheduleCard(
               schedule: rows[i],
-              busy: _busyIds.contains(rows[i].id),
-              onToggle: (bool isActive) => _run(
-                () => ref
-                    .read(schedulesControllerProvider.notifier)
-                    .setActive(rows[i].id, isActive: isActive),
-                rowId: rows[i].id,
-              ),
+              busy: write.isBusy(rows[i].id),
+              onToggle: (bool isActive) => ref
+                  .read(scheduleWriteControllerProvider.notifier)
+                  .setActive(rows[i].id, isActive: isActive),
               onDelete: () => _confirmDelete(rows[i]),
             ),
           ],
@@ -165,18 +159,19 @@ class _SchedulesPageState extends ConsumerState<SchedulesPage> {
       accounts: accounts,
       topics: topics,
     );
+    // `mounted` still guards the START of the write — `ref.read` on a disposed
+    // ConsumerState throws — but no longer its OUTCOME: that is the
+    // controller's now, and survives the user leaving mid-round-trip.
     if (draft == null || !mounted) return;
 
-    await _run(
-      () => ref
-          .read(schedulesControllerProvider.notifier)
-          .create(
-            linkedinAccountId: draft.linkedinAccountId,
-            dayOfWeek: draft.dayOfWeek,
-            timeOfDay: draft.timeOfDay,
-            topicId: draft.topicId,
-          ),
-    );
+    await ref
+        .read(scheduleWriteControllerProvider.notifier)
+        .create(
+          linkedinAccountId: draft.linkedinAccountId,
+          dayOfWeek: draft.dayOfWeek,
+          timeOfDay: draft.timeOfDay,
+          topicId: draft.topicId,
+        );
   }
 
   Future<void> _confirmDelete(PostSchedule schedule) async {
@@ -222,45 +217,12 @@ class _SchedulesPageState extends ConsumerState<SchedulesPage> {
     );
     if (confirmed != true || !mounted) return;
 
-    await _run(
-      () => ref.read(schedulesControllerProvider.notifier).remove(schedule.id),
-      rowId: schedule.id,
-    );
-  }
-
-  /// Runs a write behind one busy marker and one error surface, so every
-  /// mutation on this page fails the same visible way.
-  ///
-  /// [rowId] scopes the busy marker to the schedule being written; omitting it
-  /// means the create, which has no row yet. Nothing here may raise a
-  /// screen-wide flag — that is what made one tap freeze the whole list.
-  Future<void> _run(Future<void> Function() action, {String? rowId}) async {
-    setState(() {
-      _setBusy(rowId, busy: true);
-      _error = null;
-    });
-    try {
-      await action();
-      if (!mounted) return;
-      setState(() => _setBusy(rowId, busy: false));
-    } on Object catch (error) {
-      if (!mounted) return;
-      setState(() {
-        _setBusy(rowId, busy: false);
-        _error = '$error';
-      });
-    }
-  }
-
-  /// Call inside a [setState]; mutates in place rather than returning state.
-  void _setBusy(String? rowId, {required bool busy}) {
-    if (rowId == null) {
-      _creating = busy;
-    } else if (busy) {
-      _busyIds.add(rowId);
-    } else {
-      _busyIds.remove(rowId);
-    }
+    // The round-trip's state is the controller's. Deleting a schedule and
+    // leaving the screen used to discard the outcome entirely — no notice, no
+    // log, and a rule that may or may not still be posting for the user.
+    await ref
+        .read(scheduleWriteControllerProvider.notifier)
+        .remove(schedule.id);
   }
 }
 

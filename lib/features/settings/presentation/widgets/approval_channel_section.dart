@@ -3,7 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/ui/zave/zave_kit.dart';
 import '../../../preferences/domain/user_preferences.dart';
-import '../../../preferences/application/preferences_controller.dart';
+import '../../application/settings_write_controller.dart';
 import 'settings_section.dart';
 
 /// **Approval Channel** — where the daily post goes for your sign-off.
@@ -17,38 +17,36 @@ import 'settings_section.dart';
 /// `slack | whatsapp | email` and nothing delivers to WhatsApp yet. It is kept
 /// because removing it would silently change a stored value users have already
 /// chosen.
-class ApprovalChannelSection extends ConsumerStatefulWidget {
+class ApprovalChannelSection extends ConsumerWidget {
   const ApprovalChannelSection({required this.preferences, super.key});
 
   final UserPreferences preferences;
 
-  @override
-  ConsumerState<ApprovalChannelSection> createState() =>
-      _ApprovalChannelSectionState();
-}
-
-class _ApprovalChannelSectionState
-    extends ConsumerState<ApprovalChannelSection> {
-  bool _saving = false;
-
-  Future<void> _select(String channel) async {
-    if (_saving || channel == widget.preferences.approvalChannel) return;
-    setState(() => _saving = true);
-    try {
-      await ref
-          .read(preferencesControllerProvider.notifier)
-          .saveApprovalChannel(channel);
-      if (mounted) showSettingsMessage(context, 'Profile updated successfully!');
-    } on Object {
-      if (mounted) showSettingsMessage(context, 'Failed to update profile.');
-    } finally {
-      if (mounted) setState(() => _saving = false);
-    }
+  Future<void> _select(
+    BuildContext context,
+    WidgetRef ref,
+    String channel,
+  ) async {
+    final SettingsWriteController writes = ref.read(
+      settingsWriteControllerProvider.notifier,
+    );
+    // Same second belt the original carried: a chip tap IS the save, so a
+    // double tap must not become two writes.
+    if (writes.isBusy(SettingsWrite.approvalChannel)) return;
+    if (channel == preferences.approvalChannel) return;
+    final String? failure = await writes.saveApprovalChannel(channel);
+    if (!context.mounted) return;
+    showSettingsMessage(context, failure ?? 'Profile updated successfully!');
   }
 
   @override
-  Widget build(BuildContext context) {
-    final String current = widget.preferences.approvalChannel;
+  Widget build(BuildContext context, WidgetRef ref) {
+    final String current = preferences.approvalChannel;
+    final bool saving = ref.watch(
+      settingsWriteControllerProvider.select(
+        (Set<String> open) => open.contains(SettingsWrite.approvalChannel),
+      ),
+    );
 
     return SettingsSection(
       title: 'Approval Channel',
@@ -64,19 +62,19 @@ class _ApprovalChannelSectionState
                 label: 'Slack',
                 icon: const Icon(Icons.tag),
                 selected: current == 'slack',
-                onTap: _saving ? null : () => _select('slack'),
+                onTap: saving ? null : () => _select(context, ref, 'slack'),
               ),
               ZaveChip(
                 label: 'WhatsApp',
                 icon: const Icon(Icons.chat_bubble_outline),
                 selected: current == 'whatsapp',
-                onTap: _saving ? null : () => _select('whatsapp'),
+                onTap: saving ? null : () => _select(context, ref, 'whatsapp'),
               ),
               ZaveChip(
                 label: 'Email',
                 icon: const Icon(Icons.mail_outline),
                 selected: current == 'email',
-                onTap: _saving ? null : () => _select('email'),
+                onTap: saving ? null : () => _select(context, ref, 'email'),
               ),
             ],
           ),

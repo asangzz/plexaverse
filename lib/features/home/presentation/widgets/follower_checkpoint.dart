@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/ui/zave/zave_kit.dart';
 import '../../../persona/application/persona_controller.dart';
+import '../../../persona/application/persona_write_controller.dart';
 import '../../../persona/domain/persona_entities.dart';
 import '../../domain/roadmap_planets.dart';
 import 'follower_series_chart.dart';
@@ -53,7 +54,6 @@ class FollowerCheckpoint extends ConsumerStatefulWidget {
 
 class _FollowerCheckpointState extends ConsumerState<FollowerCheckpoint> {
   final TextEditingController _controller = TextEditingController();
-  bool _busy = false;
 
   /// Editing an answer that already exists.
   ///
@@ -67,25 +67,27 @@ class _FollowerCheckpointState extends ConsumerState<FollowerCheckpoint> {
     super.dispose();
   }
 
+  /// The write is [PersonaWriteController]'s, flag included: this strip sits on
+  /// the ROADMAP while the persona screen owns the same number, so "is an
+  /// answer being saved" is a question two screens ask. Left here is only what
+  /// the strip alone knows — whether it is showing the field or the bar, and
+  /// the snackbar, which needs a [BuildContext].
   Future<void> _save() async {
     final int? count = int.tryParse(_controller.text.trim());
     if (count == null) return;
 
-    setState(() => _busy = true);
     final String? failure = await ref
-        .read(personaControllerProvider.notifier)
+        .read(personaWriteControllerProvider.notifier)
         .recordFollowers(count);
     if (!mounted) return;
-    setState(() {
-      _busy = false;
-      if (failure == null) _editing = false;
-    });
 
-    if (failure != null) {
-      ScaffoldMessenger.of(context)
-        ..hideCurrentSnackBar()
-        ..showSnackBar(SnackBar(content: Text(failure, style: ZaveType.body)));
+    if (failure == null) {
+      setState(() => _editing = false);
+      return;
     }
+    ScaffoldMessenger.of(context)
+      ..hideCurrentSnackBar()
+      ..showSnackBar(SnackBar(content: Text(failure, style: ZaveType.body)));
   }
 
   @override
@@ -104,13 +106,18 @@ class _FollowerCheckpointState extends ConsumerState<FollowerCheckpoint> {
     final FollowerReading? reading = snapshot.followers;
     final RoadmapPhase phase = phaseForDay(widget.currentDay);
     final bool asking = _editing || reading == null || reading.isStale();
+    final bool busy = ref.watch(
+      personaWriteControllerProvider.select(
+        (Set<String> open) => open.contains(PersonaWrite.followers),
+      ),
+    );
 
     return ZaveCard(
       child: asking
           ? _Ask(
               phase: phase,
               controller: _controller,
-              busy: _busy,
+              busy: busy,
               // Said only when there IS a previous answer. "Last answered 40
               // days ago" to someone who has never answered is nonsense.
               stale: reading != null,

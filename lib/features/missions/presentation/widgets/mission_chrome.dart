@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../../core/ui/zave/zave_kit.dart';
+import '../../application/mission_form_state.dart';
 
 /// The header every `/roadmap/*` mission shares.
 ///
@@ -70,19 +71,6 @@ class MissionHeader extends StatelessWidget {
       ],
     );
   }
-}
-
-/// Which way a [MissionMessage] reads.
-enum MissionTone {
-  /// Something landed. Green is "done" in this system.
-  success,
-
-  /// Something needs attention, or did not go through.
-  ///
-  /// **Amber, not red.** Zave has no red at all, and none of the things this
-  /// screen reports — an empty checklist, a short About section, a generation
-  /// that failed — is destructive.
-  warning,
 }
 
 /// The inline banner the mission pages use instead of a snack bar.

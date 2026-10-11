@@ -206,3 +206,102 @@ abstract class _$StudioTemplatesController
     element.handleCreate(ref, build);
   }
 }
+
+/// The id of the template currently being copied, or null.
+///
+/// **This is the in-flight flag for a write, so it is not the library view's
+/// to hold.** The view kept a single `_busyId`, and `DesignTile` closes a row
+/// only while that id matches it: tapping a second template mid-copy moved
+/// the id onto the second row and RE-OPENED the first, so a third tap bought
+/// a third copy of a design the user had asked for once. Guarded here, one
+/// copy runs at a time and the row that started it stays closed until it ends.
+///
+/// Watching it from the view is also what keeps this autoDispose provider
+/// alive for the length of the copy.
+
+@ProviderFor(TemplateUseController)
+final templateUseControllerProvider = TemplateUseControllerProvider._();
+
+/// The id of the template currently being copied, or null.
+///
+/// **This is the in-flight flag for a write, so it is not the library view's
+/// to hold.** The view kept a single `_busyId`, and `DesignTile` closes a row
+/// only while that id matches it: tapping a second template mid-copy moved
+/// the id onto the second row and RE-OPENED the first, so a third tap bought
+/// a third copy of a design the user had asked for once. Guarded here, one
+/// copy runs at a time and the row that started it stays closed until it ends.
+///
+/// Watching it from the view is also what keeps this autoDispose provider
+/// alive for the length of the copy.
+final class TemplateUseControllerProvider
+    extends $NotifierProvider<TemplateUseController, String?> {
+  /// The id of the template currently being copied, or null.
+  ///
+  /// **This is the in-flight flag for a write, so it is not the library view's
+  /// to hold.** The view kept a single `_busyId`, and `DesignTile` closes a row
+  /// only while that id matches it: tapping a second template mid-copy moved
+  /// the id onto the second row and RE-OPENED the first, so a third tap bought
+  /// a third copy of a design the user had asked for once. Guarded here, one
+  /// copy runs at a time and the row that started it stays closed until it ends.
+  ///
+  /// Watching it from the view is also what keeps this autoDispose provider
+  /// alive for the length of the copy.
+  TemplateUseControllerProvider._()
+    : super(
+        from: null,
+        argument: null,
+        retry: null,
+        name: r'templateUseControllerProvider',
+        isAutoDispose: true,
+        dependencies: null,
+        $allTransitiveDependencies: null,
+      );
+
+  @override
+  String debugGetCreateSourceHash() => _$templateUseControllerHash();
+
+  @$internal
+  @override
+  TemplateUseController create() => TemplateUseController();
+
+  /// {@macro riverpod.override_with_value}
+  Override overrideWithValue(String? value) {
+    return $ProviderOverride(
+      origin: this,
+      providerOverride: $SyncValueProvider<String?>(value),
+    );
+  }
+}
+
+String _$templateUseControllerHash() =>
+    r'3500b7cb2e28f3f94eea7e74a061982915a3c54c';
+
+/// The id of the template currently being copied, or null.
+///
+/// **This is the in-flight flag for a write, so it is not the library view's
+/// to hold.** The view kept a single `_busyId`, and `DesignTile` closes a row
+/// only while that id matches it: tapping a second template mid-copy moved
+/// the id onto the second row and RE-OPENED the first, so a third tap bought
+/// a third copy of a design the user had asked for once. Guarded here, one
+/// copy runs at a time and the row that started it stays closed until it ends.
+///
+/// Watching it from the view is also what keeps this autoDispose provider
+/// alive for the length of the copy.
+
+abstract class _$TemplateUseController extends $Notifier<String?> {
+  String? build();
+  @$mustCallSuper
+  @override
+  void runBuild() {
+    final ref = this.ref as $Ref<String?, String?>;
+    final element =
+        ref.element
+            as $ClassProviderElement<
+              AnyNotifier<String?, String?>,
+              String?,
+              Object?,
+              Object?
+            >;
+    element.handleCreate(ref, build);
+  }
+}

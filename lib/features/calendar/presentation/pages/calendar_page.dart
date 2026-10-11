@@ -51,12 +51,12 @@ class _CalendarPageState extends ConsumerState<CalendarPage> {
   DateTime? _selectedDay;
 
   /// The post waiting for a day. Non-null puts the grid into pick-a-day mode.
+  ///
+  /// A selection with no destination yet, not an operation: nothing has been
+  /// sent, and a page that goes away cancels the pick along with the grid it
+  /// was asking you to choose from. The reschedule it leads to is the part
+  /// that outlives this screen, and that lives on [RescheduleController].
   CalendarPost? _moving;
-
-  /// A reschedule is in flight — the grid is not lying to the user while the
-  /// server re-queues the Cloud Task.
-
-  /// The last reschedule failed. Surfaced inline rather than as a snackbar:
 
   static DateTime _currentMonth() {
     final DateTime now = DateTime.now();
@@ -137,9 +137,8 @@ class _CalendarPageState extends ConsumerState<CalendarPage> {
             body: '$err',
             action: ZaveButton(
               label: 'Dismiss',
-              onPressed: () => ref
-                  .read(rescheduleControllerProvider.notifier)
-                  .acknowledge(),
+              onPressed: () =>
+                  ref.read(rescheduleControllerProvider.notifier).acknowledge(),
             ),
           ),
         ],

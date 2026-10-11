@@ -51,18 +51,98 @@ class StudioEditor extends _$StudioEditor {
     );
   }
 
-  /// Generates a replacement image and returns its `data:` URI.
+  /// Points an image layer at a pasted URL, rejecting anything that is not
+  /// one. Returns false when the URL was refused.
   ///
-  /// Exposed on the editor rather than as its own provider because the caller
-  /// hands the result straight to [swapImage], and a cached provider keyed by
-  /// a free-text prompt would hold an AI image in memory for the life of the
-  /// screen for no benefit.
-  Future<String> generateImageFor({
+  /// The check is here rather than in the sheet because "is this a thing we
+  /// can send" is a decision about the edit, not about the box it was typed
+  /// into — the same reason `TemplateCreatorController` validates its
+  /// reference URL on the controller and refuses it with this same sentence.
+  bool swapImageFromUrl(String elementId, String url) {
+    final String trimmed = url.trim();
+    if (!trimmed.startsWith('http://') && !trimmed.startsWith('https://')) {
+      _setSwapError('That does not look like an image URL.');
+      return false;
+    }
+    swapImage(elementId, trimmed);
+    return true;
+  }
+
+  /// Generates a replacement image for [elementId] and applies it. Returns
+  /// false when nothing was swapped.
+  ///
+  /// **The in-flight flag and the failure both live in [state], not in the
+  /// swap sheet.** `POST /ai/image` costs XP and takes tens of seconds, and
+  /// the sheet is dismissible throughout; when the sheet owned this, leaving
+  /// it mid-call discarded an image the user had already paid for and left
+  /// the design untouched. Here the image lands on the design whether or not
+  /// anyone is still looking at the sheet.
+  Future<bool> generateImageInto({
+    required String elementId,
     required String prompt,
     required String aspectRatio,
-  }) => ref
-      .read(studioRepositoryProvider)
-      .generateImage(prompt: prompt, aspectRatio: aspectRatio);
+  }) async {
+    final StudioEditorState? current = state.value;
+    if (current == null) return false;
+
+    final String trimmed = prompt.trim();
+    if (trimmed.isEmpty) {
+      _setSwapError('Say what the image should be.');
+      return false;
+    }
+    // One generation at a time across the whole design. The tapped layer's
+    // own button is already closed by [StudioEditorState.isSwapping]; this
+    // catches the other way in — dismissing a sheet mid-call and opening a
+    // second layer's — and says so rather than doing nothing visible.
+    if (current.swappingElementId != null) {
+      _setSwapError('An image is still being generated. Give it a moment.');
+      return false;
+    }
+
+    state = AsyncData<StudioEditorState>(
+      current.copyWith(swappingElementId: elementId, clearSwapError: true),
+    );
+    try {
+      final String uri = await ref
+          .read(studioRepositoryProvider)
+          .generateImage(prompt: trimmed, aspectRatio: aspectRatio);
+      if (!ref.mounted) return false;
+      swapImage(elementId, uri);
+      return true;
+    } on Object {
+      _setSwapError('That image did not come back. It may be an XP balance.');
+      return false;
+    } finally {
+      // The user can pop the design page mid-call, which disposes this
+      // autoDispose provider; writing `state` afterwards throws out of the
+      // `finally`.
+      if (ref.mounted) {
+        final StudioEditorState? latest = state.value;
+        if (latest != null) {
+          state = AsyncData<StudioEditorState>(
+            latest.copyWith(clearSwapping: true),
+          );
+        }
+      }
+    }
+  }
+
+  /// Drops the last swap failure — called when the sheet reopens, so a stale
+  /// sentence does not sit under a fresh prompt.
+  void clearSwapError() {
+    final StudioEditorState? current = state.value;
+    if (current == null || current.swapError == null) return;
+    state = AsyncData<StudioEditorState>(
+      current.copyWith(clearSwapError: true),
+    );
+  }
+
+  void _setSwapError(String message) {
+    if (!ref.mounted) return;
+    final StudioEditorState? current = state.value;
+    if (current == null) return;
+    state = AsyncData<StudioEditorState>(current.copyWith(swapError: message));
+  }
 
   /// Adopts a design the AI Designer proposed, wholesale.
   ///
