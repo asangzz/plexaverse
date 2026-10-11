@@ -83,12 +83,10 @@ class BillingSection extends ConsumerWidget {
                     // the panel opens in — and `—` set in h3 reads as a
                     // price of nothing rather than as a price on its way.
                     if (prices == null)
-                      Container(
-                        height: ZaveSpace.lg,
-                        width: 110,
-                        decoration: BoxDecoration(
-                          color: ZaveGlass.hover,
-                          borderRadius: ZaveRadius.pillBr,
+                      ZaveShimmer(
+                        child: ZaveSkeleton.bar(
+                          height: ZaveSpace.lg,
+                          width: 110,
                         ),
                       )
                     else
