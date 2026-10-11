@@ -7,6 +7,12 @@ import '../../theme/app_spacing.dart';
 /// Centred loading indicator with an optional caption. Defaults the caption
 /// to the localized "Loading…" string.
 ///
+/// **A spinner is rarely the right answer in this app.** Where the shape of
+/// what is coming is known — a list, a card, a form — `ZaveSkeleton` under a
+/// `ZaveShimmer` says what is coming as well as that something is; a spinner
+/// says only how long to wait. Reach for this one where the shape genuinely
+/// is not known. Its only remaining caller is the old style guide page.
+///
 /// Ported from `lib/presentation/common/widgets/loading_view.dart`; rewired
 /// to `AppL10n.of(context)` (the finalized gen class) and the core theme /
 /// responsive layer.

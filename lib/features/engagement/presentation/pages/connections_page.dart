@@ -305,27 +305,8 @@ class _NothingGenerated extends StatelessWidget {
   const _NothingGenerated();
 
   @override
-  Widget build(BuildContext context) {
-    return ZaveCard(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: <Widget>[
-          Row(
-            children: <Widget>[
-              const ZaveDot(ZaveColors.ink35),
-              SizedBox(width: ZaveSpace.sm),
-              Text('NOTHING HERE', style: ZaveType.kicker),
-            ],
-          ),
-          SizedBox(height: ZaveSpace.md),
-          Text('No targets came back', style: ZaveType.h3),
-          SizedBox(height: ZaveSpace.md),
-          Text(
-            'Pull down to ask again. Nothing was charged.',
-            style: ZaveType.bodyMuted,
-          ),
-        ],
-      ),
-    );
-  }
+  Widget build(BuildContext context) => const ZaveEmptyState(
+    title: 'No targets came back',
+    body: 'Pull down to ask again. Nothing was charged.',
+  );
 }

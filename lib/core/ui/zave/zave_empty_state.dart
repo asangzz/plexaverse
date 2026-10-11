@@ -52,8 +52,11 @@ class ZaveEmptyState extends StatelessWidget {
     this.body,
     this.action,
     this.icon,
+    this.dotColor = ZaveColors.ink35,
     this.layout = ZaveEmptyLayout.card,
     this.boxed = true,
+    this.size = ZaveCardSize.medium,
+    this.padding,
     super.key,
   });
 
@@ -64,8 +67,14 @@ class ZaveEmptyState extends StatelessWidget {
   /// and "NOTHING HERE" are not the same news, and the difference between an
   /// inbox you have cleared and a list you have never filled is worth a word.
   ///
+  /// **Null omits the dot and the kicker row entirely.** For a tight sheet
+  /// that already carries a kicker of its own: the calendar day sheet opens
+  /// with `CalendarSheetTitle(kicker: 'Pick a post')`, and a second uppercase
+  /// label four rows under the first reads as a nested section rather than as
+  /// one empty list.
+  ///
   /// Ignored by [ZaveEmptyLayout.pane], which leads with [icon] instead.
-  final String kicker;
+  final String? kicker;
 
   /// The muted line under the title, where there is more to say.
   final String? body;
@@ -78,10 +87,27 @@ class ZaveEmptyState extends StatelessWidget {
   /// Leads [ZaveEmptyLayout.pane]. Defaults to [AppIcons.empty].
   final IconData? icon;
 
+  /// The dot's colour. [ZaveColors.ink35] — inert — for almost every caller,
+  /// and the default for the reason in the class doc.
+  ///
+  /// [ZaveColors.green] is the one other defensible value: a list that is
+  /// empty because the user CLEARED it is a success, not an absence. "All
+  /// caught up, no drafts or missed approvals" is news worth a green dot.
+  /// Amber still never belongs here — an empty state that looks like a
+  /// warning teaches the user to distrust the warnings.
+  final Color dotColor;
+
   final ZaveEmptyLayout layout;
 
   /// Draw the surrounding [ZaveCard]. See the class doc.
   final bool boxed;
+
+  /// Forwarded to the [ZaveCard] when [boxed]. A gallery's empty state sits
+  /// where a large card was and keeps its radius.
+  final ZaveCardSize size;
+
+  /// Forwarded to the [ZaveCard] when [boxed]. Null keeps the card's own.
+  final EdgeInsets? padding;
 
   @override
   Widget build(BuildContext context) => switch (layout) {
@@ -95,22 +121,24 @@ class ZaveEmptyState extends StatelessWidget {
     crossAxisAlignment: CrossAxisAlignment.start,
     mainAxisSize: MainAxisSize.min,
     children: <Widget>[
-      Row(
-        children: <Widget>[
-          // Inert, not waiting. See the class doc.
-          const ZaveDot(ZaveColors.ink35),
-          SizedBox(width: ZaveSpace.sm),
-          Expanded(
-            child: Text(
-              kicker,
-              style: ZaveType.kicker,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
+      if (kicker case final String label) ...<Widget>[
+        Row(
+          children: <Widget>[
+            // Inert, not waiting. See [dotColor].
+            ZaveDot(dotColor),
+            SizedBox(width: ZaveSpace.sm),
+            Expanded(
+              child: Text(
+                label,
+                style: ZaveType.kicker,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
             ),
-          ),
-        ],
-      ),
-      SizedBox(height: ZaveSpace.md),
+          ],
+        ),
+        SizedBox(height: ZaveSpace.md),
+      ],
       Text(title, style: ZaveType.h3),
       if (body case final String text) ...<Widget>[
         SizedBox(height: ZaveSpace.md),

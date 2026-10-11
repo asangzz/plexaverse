@@ -73,23 +73,10 @@ class ArticleCard extends StatelessWidget {
       // been generated yet, or article generation degraded — which is
       // deliberately non-fatal: a model hiccup must never cost the user their
       // week, so the plan is written regardless.
-      return ZaveCard(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: <Widget>[
-            Text('NEWSLETTER', style: ZaveType.kicker),
-            SizedBox(height: ZaveSpace.md),
-            Text(
-              'No article for this week yet',
-              style: ZaveType.h3.copyWith(color: ZaveColors.ink62),
-            ),
-            SizedBox(height: ZaveSpace.sm),
-            Text(
-              'It is written with the week plan, on Saturday.',
-              style: ZaveType.caption,
-            ),
-          ],
-        ),
+      return const ZaveEmptyState(
+        kicker: 'NEWSLETTER',
+        title: 'No article for this week yet',
+        body: 'It is written with the week plan, on Saturday.',
       );
     }
 

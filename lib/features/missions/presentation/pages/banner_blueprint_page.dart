@@ -358,23 +358,9 @@ class _NoTemplates extends StatelessWidget {
   const _NoTemplates();
 
   @override
-  Widget build(BuildContext context) => ZaveCard(
-    child: Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: <Widget>[
-        Row(
-          children: <Widget>[
-            const ZaveDot(ZaveColors.ink35),
-            SizedBox(width: ZaveSpace.sm),
-            Text('NO TEMPLATES YET', style: ZaveType.kicker),
-          ],
-        ),
-        SizedBox(height: ZaveSpace.md),
-        Text(
-          'There are no banner templates in the Studio library right now.',
-          style: ZaveType.bodyMuted,
-        ),
-      ],
-    ),
+  Widget build(BuildContext context) => const ZaveEmptyState(
+    kicker: 'NO TEMPLATES YET',
+    title: 'Nothing to start from',
+    body: 'There are no banner templates in the Studio library right now.',
   );
 }

@@ -8,6 +8,13 @@ import '../app_icons.dart';
 /// optional action button. Copy is passed in by the caller (feature-agnostic
 /// — no hardcoded strings), the icon defaults to the [AppIcons.empty] glyph.
 ///
+/// **Superseded by `ZaveEmptyState`.** This is the pre-Zave widget and it
+/// is drawn in Material tokens — `scheme.onSurface.withValues(alpha: 0.3)`,
+/// `textTheme.titleMedium`, a `FilledButton.tonal` — none of which exist in
+/// the kit. Its only remaining caller is the old style guide page. Reach for
+/// `ZaveEmptyState` instead; it has the same two shapes and the kit's own
+/// type and colour.
+///
 /// Ported from `lib/presentation/common/widgets/empty_view.dart`; icon
 /// swapped to [AppIcons], rewired to the core theme / responsive layer.
 class EmptyView extends StatelessWidget {

@@ -8,6 +8,13 @@ import '../../theme/app_radius.dart';
 /// widgets so the loaded layout doesn't shift. Width-less boxes fill their
 /// row.
 ///
+/// **Superseded by `ZaveSkeleton` + `ZaveShimmer`.** This pulses its own
+/// opacity, on its own controller, in Material's
+/// `colorScheme.surfaceContainerHighest` — so a card of five of these is
+/// five animations and five pulses that drift apart. The kit draws one
+/// sweep across the group instead. Its only remaining caller is the old
+/// style guide page.
+///
 /// Ported from the ProHealth reference (`core/ui/widgets/skeleton_box.dart`).
 class SkeletonBox extends StatefulWidget {
   const SkeletonBox({

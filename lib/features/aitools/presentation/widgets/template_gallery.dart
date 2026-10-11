@@ -273,27 +273,14 @@ class GalleryEmpty extends StatelessWidget {
   final Widget? action;
 
   @override
-  Widget build(BuildContext context) => ZaveCard(
+  Widget build(BuildContext context) => ZaveEmptyState(
+    // large, as before: this stands where a gallery of large cards was, and
+    // a medium radius here is visibly a different card from the ones it
+    // replaced.
     size: ZaveCardSize.large,
-    child: Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: <Widget>[
-        Row(
-          children: <Widget>[
-            const ZaveDot(ZaveColors.ink35),
-            SizedBox(width: ZaveSpace.sm),
-            Text('NOTHING HERE YET', style: ZaveType.kicker),
-          ],
-        ),
-        SizedBox(height: ZaveSpace.md),
-        Text(title, style: ZaveType.h3),
-        SizedBox(height: ZaveSpace.md),
-        Text(message, style: ZaveType.bodyMuted),
-        if (action != null) ...<Widget>[
-          SizedBox(height: ZaveSpace.lg),
-          action!,
-        ],
-      ],
-    ),
+    kicker: 'NOTHING HERE YET',
+    title: title,
+    body: message,
+    action: action,
   );
 }

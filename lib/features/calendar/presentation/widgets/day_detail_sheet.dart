@@ -93,13 +93,13 @@ class _DayDetailSheetState extends State<DayDetailSheet> {
     ),
     SizedBox(height: ZaveSpace.xl),
     if (widget.scheduled.isEmpty)
-      ZaveCard(
-        size: ZaveCardSize.small,
-        padding: ZaveSpace.rowPad,
-        child: Text(
-          'Nothing scheduled for this day yet.',
-          style: ZaveType.bodyMuted,
-        ),
+      // No kicker: CalendarSheetTitle above already carries one, and two
+      // uppercase labels four rows apart read as a nested section rather
+      // than as one empty day.
+      const ZaveEmptyState(
+        kicker: null,
+        title: 'Nothing scheduled yet',
+        body: 'Posts you place on this day will show here.',
       )
     else
       for (int i = 0; i < widget.scheduled.length; i++) ...<Widget>[
@@ -122,10 +122,10 @@ class _DayDetailSheetState extends State<DayDetailSheet> {
     CalendarSheetTitle(kicker: 'Pick a post', title: 'Schedule here'),
     SizedBox(height: ZaveSpace.xl),
     if (widget.pending.isEmpty)
-      ZaveCard(
-        size: ZaveCardSize.small,
-        padding: ZaveSpace.rowPad,
-        child: Text('No pending posts to schedule.', style: ZaveType.bodyMuted),
+      const ZaveEmptyState(
+        kicker: null,
+        title: 'Nothing to place',
+        body: 'Every post you have is already scheduled or published.',
       )
     else
       for (int i = 0; i < widget.pending.length; i++) ...<Widget>[

@@ -10,6 +10,7 @@ import '../../../core/theme/app_radius.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/plexaverse_colors.dart';
 import '../../../core/ui/app_icons.dart';
+import '../../../core/ui/zave/zave_kit.dart';
 import '../application/notification_controllers.dart';
 import 'notification_visuals.dart';
 
@@ -63,7 +64,32 @@ class NotificationDrawer extends ConsumerWidget {
           ),
           Expanded(
             child: notificationsAsync.when(
-              loading: () => const Center(child: CircularProgressIndicator()),
+              loading: () => ZaveShimmer(
+                child: ListView.separated(
+                  padding: EdgeInsets.symmetric(vertical: AppSpacing.sm.h),
+                  itemCount: 5,
+                  separatorBuilder: (_, _) => SizedBox(height: AppSpacing.sm.h),
+                  itemBuilder: (_, _) => Padding(
+                    padding: EdgeInsets.symmetric(horizontal: AppSpacing.md.w),
+                    child: Row(
+                      children: <Widget>[
+                        const ZaveSkeleton.circle(),
+                        SizedBox(width: ZaveSpace.md),
+                        const Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: <Widget>[
+                              ZaveSkeleton.bar(widthFactor: 0.7),
+                              SizedBox(height: 8),
+                              ZaveSkeleton.bar(widthFactor: 0.45),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
               error: (_, _) => Center(
                 child: Text(
                   'Failed to load',
@@ -370,44 +396,16 @@ class _EmptyState extends StatelessWidget {
   const _EmptyState();
 
   @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final scheme = theme.colorScheme;
-
-    return Center(
-      child: Padding(
-        padding: EdgeInsets.all(AppSpacing.xxl.r),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: <Widget>[
-            Icon(
-              AppIcons.notifications,
-              size: 48.r,
-              color: scheme.onSurface.withValues(alpha: 0.2),
-            ),
-            SizedBox(height: AppSpacing.lg.h),
-            Text(
-              'All caught up!',
-              style: theme.textTheme.titleMedium?.copyWith(
-                fontWeight: FontWeight.w700,
-                color: scheme.onSurface.withValues(alpha: 0.45),
-              ),
-            ),
-            SizedBox(height: AppSpacing.xs.h + 2),
-            Text(
-              'Notifications will appear here when your posts go live '
-              'or missions complete.',
-              style: theme.textTheme.bodySmall?.copyWith(
-                color: scheme.onSurface.withValues(alpha: 0.35),
-                height: 1.5,
-              ),
-              textAlign: TextAlign.center,
-            ),
-          ],
-        ),
-      ),
-    );
-  }
+  Widget build(BuildContext context) => const ZaveEmptyState(
+    title: 'All caught up',
+    body:
+        'Notifications will appear here when your posts go live or '
+        'missions complete.',
+    icon: AppIcons.notifications,
+    // A whole drawer with nothing in it. A card marooned at the top of it
+    // would read as a failed render rather than as an empty inbox.
+    layout: ZaveEmptyLayout.pane,
+  );
 }
 
 // ── Bell icon with badge ────────────────────────────────────────────────────

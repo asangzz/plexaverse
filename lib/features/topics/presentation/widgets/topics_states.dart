@@ -154,12 +154,6 @@ class TopicsError extends StatelessWidget {
 
 /// The loading list.
 ///
-/// Deliberately not a shimmer. Zave's motion rule is "short and physical;
-/// nothing bounces", and a looping sweep is neither — the cards simply occupy
-/// the space their content will, so the layout does not jump.
-
-/// The loading list.
-///
 /// The cards occupy the space their content will, so the layout does not
 /// jump, under one [ZaveShimmer] sweep for the whole list.
 class TopicsSkeleton extends StatelessWidget {

@@ -5,6 +5,7 @@ import 'package:flutter/widgets.dart';
 
 import '../../theme/zave/zave.dart';
 import '../app_icons.dart';
+import 'zave_skeleton.dart';
 
 /// Decoded `data:` payloads, held so a rebuild does not decode them again.
 ///
@@ -168,11 +169,22 @@ class ZaveImage extends StatelessWidget {
 
 /// What fills the frame when there is no picture in it.
 ///
-/// A fill and a glyph, not a spinner: Zave builds depth out of fills, and a
-/// spinner inside a box that is already the right size adds motion for its own
-/// sake. These used to be a bare `ColoredBox` — the right SIZE, and nothing in
-/// it, so a slow image and a missing one looked identical and neither looked
-/// deliberate.
+/// A fill and a glyph, not a spinner: a spinner inside a box that is already
+/// the right size adds motion for its own sake. These used to be a bare
+/// `ColoredBox` — the right SIZE, and nothing in it, so a slow image and a
+/// missing one looked identical and neither looked deliberate.
+///
+/// ## The sweep runs only while [loading]
+///
+/// This one widget is BOTH states, and in the quiet tone it used to return
+/// before `loading` was read at all — so a shimmer added naively here would
+/// have run forever on a permanently broken image, which is the most
+/// misleading thing a loading indicator can do. The sweep is gated on the
+/// flag, and in the quiet tone the flag is now read.
+///
+/// The glyph and the caption sit OUTSIDE the sweep, on top of it. A caption
+/// under a travelling highlight strobes, and this one is text the user is
+/// meant to read.
 class _ZaveImageState extends StatelessWidget {
   const _ZaveImageState({
     required this.tone,
@@ -184,45 +196,51 @@ class _ZaveImageState extends StatelessWidget {
   final String? message;
   final bool loading;
 
+  /// The block behind everything — swept while loading, at rest otherwise.
+  Widget get _ground => loading
+      ? const ZaveShimmer(child: ZaveSkeleton.block())
+      : const ColoredBox(color: ZaveGlass.rest);
+
   @override
   Widget build(BuildContext context) {
-    if (tone == ZaveImageTone.quiet) {
-      return const ColoredBox(color: ZaveGlass.rest);
-    }
+    if (tone == ZaveImageTone.quiet) return _ground;
 
     // Amber, because Zave has no red — and only for a real failure. A frame
     // still loading gets the neutral picture glyph, so "wait" and "gone" are
     // not the same colour.
     final Color tint = loading ? ZaveColors.ink35 : ZaveColors.amber;
 
-    return ColoredBox(
-      color: ZaveGlass.rest,
-      child: Center(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: <Widget>[
-            Icon(
-              loading ? AppIcons.image : AppIcons.warning,
-              size: 24,
-              color: tint,
-            ),
-            if (message case final String text
-                when text.isNotEmpty) ...<Widget>[
-              SizedBox(height: ZaveSpace.xs),
-              Padding(
-                padding: EdgeInsets.symmetric(horizontal: ZaveSpace.md),
-                child: Text(
-                  text,
-                  textAlign: TextAlign.center,
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                  style: ZaveType.caption.copyWith(color: ZaveColors.ink45),
-                ),
+    return Stack(
+      fit: StackFit.expand,
+      children: <Widget>[
+        _ground,
+        Center(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: <Widget>[
+              Icon(
+                loading ? AppIcons.image : AppIcons.warning,
+                size: 24,
+                color: tint,
               ),
+              if (message case final String text
+                  when text.isNotEmpty) ...<Widget>[
+                SizedBox(height: ZaveSpace.xs),
+                Padding(
+                  padding: EdgeInsets.symmetric(horizontal: ZaveSpace.md),
+                  child: Text(
+                    text,
+                    textAlign: TextAlign.center,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: ZaveType.caption.copyWith(color: ZaveColors.ink45),
+                  ),
+                ),
+              ],
             ],
-          ],
+          ),
         ),
-      ),
+      ],
     );
   }
 }

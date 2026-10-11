@@ -185,24 +185,13 @@ class _PendingEmpty extends StatelessWidget {
   const _PendingEmpty();
 
   @override
-  Widget build(BuildContext context) => ZaveCard(
+  Widget build(BuildContext context) => const ZaveEmptyState(
+    // Green, not ink: this list is empty because the user CLEARED it, which
+    // is the one empty state in the app that is good news.
+    dotColor: ZaveColors.green,
+    kicker: 'ALL CAUGHT UP',
+    title: 'Nothing waiting',
+    body: 'No drafts or missed approvals.',
     size: ZaveCardSize.small,
-    padding: ZaveSpace.rowPad,
-    child: Row(
-      children: <Widget>[
-        const ZaveDot(ZaveColors.green),
-        SizedBox(width: ZaveSpace.md),
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: <Widget>[
-              Text('All caught up', style: ZaveType.label),
-              SizedBox(height: ZaveSpace.xs),
-              Text('No drafts or missed approvals.', style: ZaveType.caption),
-            ],
-          ),
-        ),
-      ],
-    ),
   );
 }
