@@ -415,13 +415,27 @@ class _AuthPageState extends ConsumerState<AuthPage>
         behavior: HitTestBehavior.translucent,
         child: ZaveScrollView(
           children: <Widget>[
-            Align(
-              alignment: Alignment.centerRight,
-              child: Opacity(
-                opacity: 0.3,
-                child: Text(
-                  isSignIn ? 'Sign in' : 'Create an account',
-                  style: ZaveType.hero,
+            // Two lines' worth of room, always.
+            //
+            // The watermark is one line as 'Sign in' and two as 'Create an
+            // account', so flipping the toggle moved it, the toggle, and
+            // every field below it down by a full hero line — a jolt on the
+            // control that caused it, which is the worst place for one.
+            // `height: 1.0` on ZaveType.hero means two lines are exactly
+            // twice the font size — read off the style so a change there
+            // cannot leave this reserving the wrong amount.
+            SizedBox(
+              height: (ZaveType.hero.fontSize ?? 52) * 2,
+              width: double.infinity,
+              child: Align(
+                alignment: Alignment.bottomRight,
+                child: Opacity(
+                  opacity: 0.3,
+                  child: Text(
+                    isSignIn ? 'Sign in' : 'Create an account',
+                    textAlign: TextAlign.right,
+                    style: ZaveType.hero,
+                  ),
                 ),
               ),
             ),

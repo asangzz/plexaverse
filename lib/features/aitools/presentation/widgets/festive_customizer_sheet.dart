@@ -344,7 +344,7 @@ class _FestiveCustomizerSheetState
 ///
 /// One white button, and it is "Save to my images" rather than "Download":
 /// saving is the action that produces something the user can actually use.
-class _Result extends StatelessWidget {
+class _Result extends StatefulWidget {
   const _Result({
     required this.savedUrl,
     required this.saving,
@@ -358,7 +358,36 @@ class _Result extends StatelessWidget {
   final VoidCallback onRegenerate;
 
   @override
+  State<_Result> createState() => _ResultState();
+}
+
+class _ResultState extends State<_Result> {
+  /// Two seconds of "Copied", the same window the engagement cards use.
+  ///
+  /// A ValueNotifier rather than setState: this swaps one label, and
+  /// ARCHITECTURE.md asks for the narrower rebuild. Nothing else on this
+  /// sheet should repaint because the clipboard changed.
+  final ValueNotifier<bool> _copied = ValueNotifier<bool>(false);
+
+  @override
+  void dispose() {
+    _copied.dispose();
+    super.dispose();
+  }
+
+  Future<void> _copy(String url) async {
+    await Clipboard.setData(ClipboardData(text: url));
+    if (!mounted) return;
+    _copied.value = true;
+    await Future<void>.delayed(const Duration(seconds: 2));
+    if (!mounted) return;
+    _copied.value = false;
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final String? savedUrl = widget.savedUrl;
+    final bool saving = widget.saving;
     if (savedUrl != null) {
       return Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -377,23 +406,28 @@ class _Result extends StatelessWidget {
           Container(
             padding: ZaveSpace.rowPad,
             decoration: ZaveSurface.codeBlock,
-            child: Text(savedUrl!, style: ZaveType.mono),
+            child: Text(savedUrl, style: ZaveType.mono),
           ),
           SizedBox(height: ZaveSpace.lg),
-          ZaveButton(
-            label: 'Copy link',
-            kind: ZaveButtonKind.primary,
-            icon: const Icon(AppIcons.link),
-            expand: true,
-            onPressed: () async {
-              await Clipboard.setData(ClipboardData(text: savedUrl!));
-            },
+          // Say something. Copying is invisible — the clipboard gives no
+          // sign — so a button that silently succeeds is indistinguishable
+          // from one that did nothing, and the natural response is to press
+          // it again.
+          ValueListenableBuilder<bool>(
+            valueListenable: _copied,
+            builder: (_, bool copied, _) => ZaveButton(
+              label: copied ? 'Copied' : 'Copy link',
+              kind: ZaveButtonKind.primary,
+              icon: Icon(copied ? AppIcons.check : AppIcons.link),
+              expand: true,
+              onPressed: () => _copy(savedUrl),
+            ),
           ),
           SizedBox(height: ZaveSpace.md),
           ZaveButton(
             label: 'Start over',
             expand: true,
-            onPressed: onRegenerate,
+            onPressed: widget.onRegenerate,
           ),
           SizedBox(height: ZaveSpace.lg),
           const AiToolNoteRow(
@@ -416,14 +450,14 @@ class _Result extends StatelessWidget {
           icon: const Icon(AppIcons.upload),
           expand: true,
           busy: saving,
-          onPressed: () => onSave(),
+          onPressed: () => widget.onSave(),
         ),
         SizedBox(height: ZaveSpace.md),
         ZaveButton(
           label: 'Regenerate',
           icon: const Icon(AppIcons.refresh),
           expand: true,
-          onPressed: saving ? null : onRegenerate,
+          onPressed: saving ? null : widget.onRegenerate,
         ),
         SizedBox(height: ZaveSpace.lg),
         const AiToolNoteRow(

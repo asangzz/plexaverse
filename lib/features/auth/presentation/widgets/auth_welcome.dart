@@ -46,8 +46,26 @@ class AuthWelcome extends StatelessWidget {
         // than left to the layout: the whole effect is one plain line above
         // one coloured line, and a heading that rewrapped on a narrow phone
         // would put half the colour on the wrong row.
-        Text('Automate your', textAlign: TextAlign.center, style: ZaveType.h2),
-        ZaveGradientText('LinkedIn presence', style: ZaveType.h2),
+        //
+        // Scaled down together rather than allowed to clip. ZaveGradientText
+        // is maxLines: 1 with no overflow, so its default is a hard cut with
+        // no ellipsis — and `LinkedIn presence` at h2 sits within a few
+        // points of a 375pt screen's gutters at default size. Any text
+        // enlargement sliced the second line of the first screen's headline
+        // mid-letter while the plain line above it wrapped. A FittedBox keeps
+        // the hard break the comment above depends on.
+        FittedBox(
+          fit: BoxFit.scaleDown,
+          child: Text(
+            'Automate your',
+            textAlign: TextAlign.center,
+            style: ZaveType.h2,
+          ),
+        ),
+        FittedBox(
+          fit: BoxFit.scaleDown,
+          child: ZaveGradientText('LinkedIn presence', style: ZaveType.h2),
+        ),
 
         const Spacer(),
         // Flexible, not a fixed height: this is the one element that should
@@ -71,7 +89,7 @@ class AuthWelcome extends StatelessWidget {
         const Spacer(flex: 3),
 
         _AuthChoice(
-          icon: const _ProviderLetter('G'),
+          icon: const ZaveBrandMark(ZaveBrand.google, size: 20, onColor: true),
           label: 'Sign in with Google',
           primary: true,
           busy: googleBusy,
@@ -213,28 +231,4 @@ class _AuthChoice extends StatelessWidget {
       ),
     );
   }
-}
-
-/// The letterform that stands in for a vendor logo.
-///
-/// The same decision `SocialAuthButton` already made and documented: this app
-/// ships no vendor logo assets, and a hand-drawn approximation of Google's
-/// mark is worse than a letter on both counts — it looked wrong, and their
-/// brand guidelines require the real asset rather than a redraw.
-///
-/// Manrope is Zave's naming face, which is what a wordmark is.
-class _ProviderLetter extends StatelessWidget {
-  const _ProviderLetter(this.glyph);
-
-  final String glyph;
-
-  @override
-  Widget build(BuildContext context) => SizedBox(
-    width: 20,
-    child: Text(
-      glyph,
-      textAlign: TextAlign.center,
-      style: ZaveType.button.copyWith(color: ZaveColors.white),
-    ),
-  );
 }

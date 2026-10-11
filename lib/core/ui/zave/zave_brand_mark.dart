@@ -63,7 +63,11 @@ class ZaveBrandMark extends StatelessWidget {
   };
 
   /// Each brand's published primary, used only where the mark identifies.
-  Color get _brandColor => switch (brand) {
+  ///
+  /// Static so a caller that draws the mark itself — a row that takes a bare
+  /// [IconData] rather than a widget — can take the colour from here instead
+  /// of pasting the hex. Three rows in Settings had pasted it.
+  static Color colorOf(ZaveBrand brand) => switch (brand) {
     // Google's multi-colour G cannot be a font glyph — one codepoint carries
     // one colour. Their guidance covers this: on a dark surface the mark is
     // drawn in white, which is what [onColor] gives. Blue is the fallback for
@@ -79,7 +83,7 @@ class ZaveBrandMark extends StatelessWidget {
     return Icon(
       _glyph,
       size: size ?? theme.size,
-      color: onColor ? (theme.color ?? ZaveColors.white) : _brandColor,
+      color: onColor ? (theme.color ?? ZaveColors.white) : colorOf(brand),
       // The mark is decorative wherever it appears: every call site puts the
       // brand's name in text beside it, so announcing it again is noise.
       semanticLabel: null,

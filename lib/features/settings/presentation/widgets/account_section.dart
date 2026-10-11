@@ -248,7 +248,10 @@ class _GoogleSignInRowState extends ConsumerState<_GoogleSignInRow> {
               detail: value.linked
                   ? 'You can sign in with Google'
                   : 'Sign in with Google instead of your password',
-              icon: AppIcons.person,
+              // The row IS Google. A generic person glyph here was the one
+              // vendor row in Settings still wearing one of ours.
+              icon: AppIcons.google,
+              iconColor: ZaveBrandMark.colorOf(ZaveBrand.google),
               trailing: value.linked
                   ? (value.canUnlink
                         ? ZaveButton(

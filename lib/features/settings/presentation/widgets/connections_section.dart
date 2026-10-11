@@ -210,7 +210,7 @@ class _LinkedinRow extends ConsumerWidget {
           status: status,
           detail: detail,
           icon: AppIcons.linkedInIn,
-          iconColor: const Color(0xFF0A66C2),
+          iconColor: ZaveBrandMark.colorOf(ZaveBrand.linkedIn),
           trailing: control,
         ),
         if (acct != null) ...<Widget>[
@@ -266,7 +266,7 @@ class _SlackRow extends ConsumerWidget {
                 ? 'Connected to ${value.teamName ?? 'your workspace'}'
                 : 'Receive approval requests',
             icon: AppIcons.slack,
-            iconColor: const Color(0xFF611F69),
+            iconColor: ZaveBrandMark.colorOf(ZaveBrand.slack),
             trailing: value.isConnected
                 ? ZaveButton(
                     label: 'Disconnect',
@@ -361,7 +361,7 @@ class _CalendarRow extends ConsumerWidget {
                       ? 'Calendar synced'
                       : 'Sync published posts'),
             icon: AppIcons.google,
-            iconColor: const Color(0xFF4285F4),
+            iconColor: ZaveBrandMark.colorOf(ZaveBrand.google),
             trailing: value.isConnected
                 ? ZaveButton(
                     label: 'Disconnect',

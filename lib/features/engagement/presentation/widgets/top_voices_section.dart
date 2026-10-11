@@ -460,16 +460,41 @@ class _CuratedSkeleton extends StatelessWidget {
     children: <Widget>[
       Text('TODAY’S TOP VOICES', style: ZaveType.kicker),
       SizedBox(height: ZaveSpace.lg),
+      // Bars in the shape of the cards that are coming, not a spinner in a
+      // fixed box. Zave builds depth out of fills, and a spinner centred in
+      // a 150pt hole tells the user how long to wait and nothing about what
+      // for. No shimmer: "short and physical; nothing bounces".
       ZaveCard(
-        child: SizedBox(
-          height: 150.h,
-          child: Center(
-            child: SizedBox(
-              height: 18.r,
-              width: 18.r,
-              child: const CircularProgressIndicator(strokeWidth: 2),
-            ),
-          ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: <Widget>[
+            for (int i = 0; i < 3; i++) ...<Widget>[
+              if (i > 0) SizedBox(height: ZaveSpace.md),
+              Row(
+                children: <Widget>[
+                  Container(
+                    height: ZaveRowCircle.size,
+                    width: ZaveRowCircle.size,
+                    decoration: const BoxDecoration(
+                      color: ZaveGlass.hover,
+                      shape: BoxShape.circle,
+                    ),
+                  ),
+                  SizedBox(width: ZaveSpace.md),
+                  Expanded(
+                    child: Container(
+                      height: ZaveSpace.lg,
+                      margin: EdgeInsets.only(right: i * ZaveSpace.xxl),
+                      decoration: BoxDecoration(
+                        color: ZaveGlass.hover,
+                        borderRadius: ZaveRadius.pillBr,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ],
         ),
       ),
     ],
