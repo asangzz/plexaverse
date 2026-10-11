@@ -256,6 +256,31 @@ left alone on those grounds.
 **Every `ValueNotifier` a `State` owns must be disposed in `dispose()`.** It is
 a `ChangeNotifier`; an undisposed one keeps its listeners alive and leaks.
 
+### This is enforced, not just written down
+
+Three tests in `test/architecture/` hold the rules above, because each of them
+was first enforced by hand across the whole codebase and that does not survive
+the next contributor:
+
+| test | holds |
+|---|---|
+| `layering_test.dart` | no `presentation/` file imports `data/` |
+| `no_async_state_in_widgets_test.dart` | no widget declares `_busy` / `_error`-shaped async state |
+| `notifier_disposal_test.dart` | every `ValueNotifier` a widget owns is disposed |
+
+Each carries a short allowlist that asserts its own entries still describe
+real code, so an exemption cannot outlive its reason. They are tripwires on
+the common shapes, not proofs — the real check is still the question above.
+
+### `lib/core/` is held to the same rule
+
+The UI primitives in `core/ui/` keep `setState`, and correctly: `ZaveCard`'s
+press highlight, `ZaveField`'s focus flag, `AppTextField`'s visibility toggle,
+the privacy mask and the offline pill are each a small widget whose state IS
+the whole widget, so there is nothing to narrow and nothing that outlives it.
+`ScreenUtilInit`'s bare `setState(() {})` on a metrics change is the entire
+point of that widget.
+
 ---
 
 ## Mock Backend
