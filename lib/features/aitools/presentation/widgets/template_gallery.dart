@@ -193,10 +193,8 @@ class TemplateTile extends StatelessWidget {
 
 /// The gallery's loading state.
 ///
-/// Rest-fill blocks at the tile's own proportions, so the page does not jump
-/// when the real tiles land. No shimmer: Zave's motion rule is "short and
-/// physical; nothing bounces", and a looping sweep across half the screen is
-/// the opposite of that.
+/// Blocks at the tile's own proportions, so the page does not jump when the
+/// real tiles land, under one [ZaveShimmer] sweep for the whole gallery.
 class GallerySkeleton extends StatelessWidget {
   const GallerySkeleton({this.count = 3, this.aspectRatio = 1, super.key});
 
@@ -204,50 +202,28 @@ class GallerySkeleton extends StatelessWidget {
   final double aspectRatio;
 
   @override
-  Widget build(BuildContext context) => Column(
-    children: <Widget>[
-      for (int i = 0; i < count; i++) ...<Widget>[
-        ZaveCard(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: <Widget>[
-              AspectRatio(
-                aspectRatio: aspectRatio,
-                child: DecoratedBox(
-                  decoration: BoxDecoration(
-                    color: ZaveGlass.hover,
-                    borderRadius: ZaveRadius.cardSmBr,
-                  ),
+  Widget build(BuildContext context) => ZaveShimmer(
+    child: Column(
+      children: <Widget>[
+        for (int i = 0; i < count; i++) ...<Widget>[
+          ZaveCard(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: <Widget>[
+                AspectRatio(
+                  aspectRatio: aspectRatio,
+                  child: const ZaveSkeleton.block(),
                 ),
-              ),
-              SizedBox(height: ZaveSpace.lg),
-              const _Bar(widthFactor: 0.7),
-              SizedBox(height: ZaveSpace.sm),
-              const _Bar(widthFactor: 0.45),
-            ],
+                SizedBox(height: ZaveSpace.lg),
+                const ZaveSkeleton.bar(widthFactor: 0.7),
+                SizedBox(height: ZaveSpace.sm),
+                const ZaveSkeleton.bar(widthFactor: 0.45),
+              ],
+            ),
           ),
-        ),
-        SizedBox(height: ZaveSpace.md),
+          SizedBox(height: ZaveSpace.md),
+        ],
       ],
-    ],
-  );
-}
-
-class _Bar extends StatelessWidget {
-  const _Bar({required this.widthFactor});
-
-  final double widthFactor;
-
-  @override
-  Widget build(BuildContext context) => FractionallySizedBox(
-    alignment: Alignment.centerLeft,
-    widthFactor: widthFactor,
-    child: Container(
-      height: ZaveSpace.md,
-      decoration: BoxDecoration(
-        color: ZaveGlass.rest,
-        borderRadius: ZaveRadius.pillBr,
-      ),
     ),
   );
 }

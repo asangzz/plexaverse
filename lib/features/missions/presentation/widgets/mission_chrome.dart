@@ -170,10 +170,7 @@ class MissionErrorCard extends StatelessWidget {
   }
 }
 
-/// A resting glass block, used while a section loads.
-///
-/// No shimmer: depth in Zave is the fill step, and a sweeping highlight is a
-/// second visual language on top of it.
+/// A block used while a section loads, under a [ZaveShimmer] sweep.
 class MissionSkeleton extends StatelessWidget {
   const MissionSkeleton({required this.height, super.key});
 
@@ -181,5 +178,5 @@ class MissionSkeleton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) =>
-      Container(height: height, decoration: ZaveSurface.card);
+      ZaveShimmer(child: ZaveSkeleton.block(height: height));
 }

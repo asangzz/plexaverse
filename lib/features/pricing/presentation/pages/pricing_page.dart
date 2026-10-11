@@ -139,7 +139,8 @@ class PricingPage extends ConsumerWidget {
 
             SizedBox(height: ZaveSpace.xl),
             referral.when(
-              loading: () => const _CardSkeleton(height: 200),
+              loading: () =>
+                  const ZaveShimmer(child: ZaveSkeleton.block(height: 200)),
               error: (Object e, StackTrace _) => _ReferralError(
                 onRetry: () => ref.invalidate(referralControllerProvider),
               ),
@@ -257,12 +258,40 @@ class _PlansSkeleton extends StatelessWidget {
   const _PlansSkeleton();
 
   @override
-  Widget build(BuildContext context) => Column(
-    children: <Widget>[
-      const _CardSkeleton(height: 420),
-      SizedBox(height: ZaveSpace.lg),
-      const _CardSkeleton(height: 420),
-    ],
+  Widget build(BuildContext context) => const ZaveShimmer(
+    child: Column(
+      children: <Widget>[
+        // A plan card, in outline: the name, the price, and the four lines
+        // of what you get. It was a featureless 420pt slab, which at this
+        // height reads as a failed render rather than as a card coming.
+        _PlanCardSkeleton(),
+        SizedBox(height: 16),
+        _PlanCardSkeleton(),
+      ],
+    ),
+  );
+}
+
+class _PlanCardSkeleton extends StatelessWidget {
+  const _PlanCardSkeleton();
+
+  @override
+  Widget build(BuildContext context) => ZaveCard(
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: <Widget>[
+        const ZaveSkeleton.bar(width: 90),
+        SizedBox(height: ZaveSpace.lg),
+        const ZaveSkeleton.bar(widthFactor: 0.5, height: 34),
+        SizedBox(height: ZaveSpace.xl),
+        for (int i = 0; i < 5; i++) ...<Widget>[
+          if (i > 0) SizedBox(height: ZaveSpace.md),
+          ZaveSkeleton.bar(widthFactor: 0.9 - i * 0.08),
+        ],
+        SizedBox(height: ZaveSpace.xl),
+        const ZaveSkeleton.bar(height: 44),
+      ],
+    ),
   );
 }
 
@@ -270,18 +299,10 @@ class _PillSkeleton extends StatelessWidget {
   const _PillSkeleton();
 
   @override
-  Widget build(BuildContext context) => Align(
-    alignment: Alignment.centerLeft,
-    child: Container(height: 40, width: 200, decoration: ZaveSurface.pill),
+  Widget build(BuildContext context) => const ZaveShimmer(
+    child: Align(
+      alignment: Alignment.centerLeft,
+      child: ZaveSkeleton.bar(width: 200, height: 40),
+    ),
   );
-}
-
-class _CardSkeleton extends StatelessWidget {
-  const _CardSkeleton({required this.height});
-
-  final double height;
-
-  @override
-  Widget build(BuildContext context) =>
-      Container(height: height, decoration: ZaveSurface.card);
 }

@@ -458,25 +458,24 @@ class _CalendarSkeleton extends StatelessWidget {
   const _CalendarSkeleton();
 
   @override
-  Widget build(BuildContext context) => ZaveScrollView(
-    children: <Widget>[
-      _SkeletonBlock(height: ZaveSpace.section),
-      SizedBox(height: ZaveSpace.xl),
-      _SkeletonBlock(height: ZaveSpace.section * 1.6),
-      SizedBox(height: ZaveSpace.xxl),
-      _SkeletonBlock(height: MediaQuery.sizeOf(context).width),
-    ],
+  Widget build(BuildContext context) => ZaveShimmer(
+    child: ZaveScrollView(
+      children: <Widget>[
+        // The two stat tiles, side by side as they land.
+        Row(
+          children: <Widget>[
+            Expanded(child: ZaveSkeleton.block(height: ZaveSpace.section)),
+            SizedBox(width: ZaveSpace.md),
+            Expanded(child: ZaveSkeleton.block(height: ZaveSpace.section)),
+          ],
+        ),
+        SizedBox(height: ZaveSpace.xl),
+        ZaveSkeleton.block(height: ZaveSpace.section * 1.6),
+        SizedBox(height: ZaveSpace.xxl),
+        ZaveSkeleton.block(height: MediaQuery.sizeOf(context).width),
+      ],
+    ),
   );
-}
-
-class _SkeletonBlock extends StatelessWidget {
-  const _SkeletonBlock({required this.height});
-
-  final double height;
-
-  @override
-  Widget build(BuildContext context) =>
-      Container(height: height, decoration: ZaveSurface.card);
 }
 
 class _CalendarError extends StatelessWidget {

@@ -75,11 +75,8 @@ class _Grabber extends StatelessWidget {
   );
 }
 
-/// A resting glass block used while something loads.
-///
-/// Zave has no shimmer: depth is a fill step and nothing in this system
-/// animates for decoration. A skeleton is simply the surface the content will
-/// arrive on, at the size it will take.
+/// A block used while something loads — the surface the content will arrive
+/// on, at the size it will take, with a [ZaveShimmer] sweep over it.
 class StudioSkeleton extends StatelessWidget {
   const StudioSkeleton({required this.height, super.key});
 
@@ -87,7 +84,7 @@ class StudioSkeleton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) =>
-      Container(height: height, decoration: ZaveSurface.card);
+      ZaveShimmer(child: ZaveSkeleton.block(height: height));
 }
 
 /// The one card this slice uses for every "nothing here / it failed / it is

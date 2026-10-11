@@ -6,10 +6,10 @@ import '../../domain/engagement_repository.dart';
 
 /// The loading list for either habit screen.
 ///
-/// Deliberately NOT a shimmer. Zave's motion rule is "short and physical;
-/// nothing bounces", and a looping gradient sweep is neither: the cards occupy
-/// the space their content will, at the rest fill step, so nothing jumps when
-/// the batch lands.
+/// The cards occupy the space their content will, so nothing jumps when the
+/// batch lands, and one [ZaveShimmer] sweep crosses the heading and all three
+/// cards together — the wrapper sits here rather than on each card, so the
+/// screen reads as one thing arriving.
 class EngagementSkeleton extends StatelessWidget {
   const EngagementSkeleton({this.rows = 3, super.key});
 
@@ -17,18 +17,20 @@ class EngagementSkeleton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: <Widget>[
-        const _Bar(width: 120),
-        SizedBox(height: ZaveSpace.md),
-        const _Bar(widthFactor: 0.8, height: 30),
-        SizedBox(height: ZaveSpace.xl),
-        for (int i = 0; i < rows; i++) ...<Widget>[
-          const _CardSkeleton(),
+    return ZaveShimmer(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: <Widget>[
+          const ZaveSkeleton.bar(width: 120),
           SizedBox(height: ZaveSpace.md),
+          const ZaveSkeleton.bar(widthFactor: 0.8, height: 30),
+          SizedBox(height: ZaveSpace.xl),
+          for (int i = 0; i < rows; i++) ...<Widget>[
+            const _CardSkeleton(),
+            SizedBox(height: ZaveSpace.md),
+          ],
         ],
-      ],
+      ),
     );
   }
 }
@@ -42,45 +44,16 @@ class _CardSkeleton extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: <Widget>[
-          const _Bar(widthFactor: 0.55),
+          const ZaveSkeleton.bar(widthFactor: 0.55),
           SizedBox(height: ZaveSpace.md),
-          const _Bar(widthFactor: 1),
+          const ZaveSkeleton.bar(widthFactor: 1),
           SizedBox(height: ZaveSpace.sm),
-          const _Bar(widthFactor: 0.9),
+          const ZaveSkeleton.bar(widthFactor: 0.9),
           SizedBox(height: ZaveSpace.sm),
-          const _Bar(widthFactor: 0.4),
+          const ZaveSkeleton.bar(widthFactor: 0.4),
         ],
       ),
     );
-  }
-}
-
-/// One placeholder bar, one fill step above the card it sits on — which is how
-/// depth is expressed in this system. There is no shadow and no shimmer.
-class _Bar extends StatelessWidget {
-  const _Bar({this.width, this.widthFactor, this.height = 12});
-
-  final double? width;
-  final double? widthFactor;
-  final double height;
-
-  @override
-  Widget build(BuildContext context) {
-    final Widget bar = Container(
-      height: height,
-      width: width,
-      decoration: BoxDecoration(
-        color: ZaveGlass.hover,
-        borderRadius: ZaveRadius.pillBr,
-      ),
-    );
-    return widthFactor == null
-        ? bar
-        : FractionallySizedBox(
-            alignment: Alignment.centerLeft,
-            widthFactor: widthFactor,
-            child: bar,
-          );
   }
 }
 

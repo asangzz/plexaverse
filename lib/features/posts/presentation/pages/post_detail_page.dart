@@ -783,25 +783,27 @@ class _Share extends StatelessWidget {
   }
 }
 
-/// The loading state — the same shapes the loaded screen occupies, at the rest
-/// fill step. No shimmer: Zave's motion rule forbids anything that loops.
+/// The loading state — the same shapes the loaded screen occupies, under one
+/// [ZaveShimmer] sweep.
 class _DetailSkeleton extends StatelessWidget {
   const _DetailSkeleton();
 
   @override
   Widget build(BuildContext context) {
-    return ZaveScrollView(
-      children: <Widget>[
-        Container(height: 20, decoration: ZaveSurface.card),
-        SizedBox(height: ZaveSpace.lg),
-        Container(height: 64, decoration: ZaveSurface.card),
-        SizedBox(height: ZaveSpace.xl),
-        Container(height: 56, decoration: ZaveSurface.card),
-        SizedBox(height: ZaveSpace.md),
-        Container(height: 56, decoration: ZaveSurface.card),
-        SizedBox(height: ZaveSpace.xxl),
-        Container(height: 320, decoration: ZaveSurface.card),
-      ],
+    return ZaveShimmer(
+      child: ZaveScrollView(
+        children: <Widget>[
+          const ZaveSkeleton.bar(height: 20, widthFactor: 0.45),
+          SizedBox(height: ZaveSpace.lg),
+          const ZaveSkeleton.block(height: 64),
+          SizedBox(height: ZaveSpace.xl),
+          const ZaveSkeleton.block(height: 56),
+          SizedBox(height: ZaveSpace.md),
+          const ZaveSkeleton.block(height: 56),
+          SizedBox(height: ZaveSpace.xxl),
+          const ZaveSkeleton.block(height: 320),
+        ],
+      ),
     );
   }
 }

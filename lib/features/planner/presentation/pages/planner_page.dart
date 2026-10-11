@@ -154,7 +154,8 @@ class _PlannerBody extends StatelessWidget {
           article: article,
           scripts: scripts,
           articleCard: article.when(
-            loading: () => const _CardSkeleton(height: 180),
+            loading: () =>
+                const ZaveShimmer(child: ZaveSkeleton.block(height: 180)),
             error: (Object e, StackTrace _) => const SizedBox.shrink(),
             data: (ArticleState a) => ArticleCard(
               state: a,
@@ -1860,28 +1861,20 @@ class _PlannerSkeleton extends StatelessWidget {
   const _PlannerSkeleton();
 
   @override
-  Widget build(BuildContext context) => ZaveScrollView(
-    children: <Widget>[
-      const _CardSkeleton(height: 92),
-      SizedBox(height: ZaveSpace.xl),
-      const _CardSkeleton(height: 180),
-      SizedBox(height: ZaveSpace.xxl),
-      for (int i = 0; i < 4; i++) ...<Widget>[
-        const _CardSkeleton(height: 120),
-        SizedBox(height: ZaveSpace.md),
+  Widget build(BuildContext context) => ZaveShimmer(
+    child: ZaveScrollView(
+      children: <Widget>[
+        const ZaveSkeleton.block(height: 92),
+        SizedBox(height: ZaveSpace.xl),
+        const ZaveSkeleton.block(height: 180),
+        SizedBox(height: ZaveSpace.xxl),
+        for (int i = 0; i < 4; i++) ...<Widget>[
+          const ZaveSkeleton.block(height: 120),
+          SizedBox(height: ZaveSpace.md),
+        ],
       ],
-    ],
+    ),
   );
-}
-
-class _CardSkeleton extends StatelessWidget {
-  const _CardSkeleton({required this.height});
-
-  final double height;
-
-  @override
-  Widget build(BuildContext context) =>
-      Container(height: height, decoration: ZaveSurface.card);
 }
 
 class _PlannerError extends StatelessWidget {

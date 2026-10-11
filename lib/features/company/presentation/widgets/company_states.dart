@@ -5,19 +5,16 @@ import '../../domain/company_repository.dart';
 
 /// The one skeleton block every company screen builds its loading state from.
 ///
-/// A plain rest-fill card at the height of the thing it stands in for. There
-/// is no shimmer: Zave's motion rule is "short and physical, nothing bounces",
-/// and a looping gradient sweep across six cards is neither.
+/// A block at the height of the thing it stands in for. The sweep comes from
+/// the [ZaveShimmer] that [CompanySkeletonList] puts above it, so a column of
+/// six is crossed once rather than six times.
 class CompanySkeleton extends StatelessWidget {
   const CompanySkeleton({required this.height, super.key});
 
   final double height;
 
   @override
-  Widget build(BuildContext context) => SizedBox(
-    height: height,
-    child: DecoratedBox(decoration: ZaveSurface.card),
-  );
+  Widget build(BuildContext context) => ZaveSkeleton.block(height: height);
 }
 
 /// A column of [CompanySkeleton]s at one height.
@@ -32,13 +29,15 @@ class CompanySkeletonList extends StatelessWidget {
   final double height;
 
   @override
-  Widget build(BuildContext context) => Column(
-    children: <Widget>[
-      for (int i = 0; i < count; i++) ...<Widget>[
-        CompanySkeleton(height: height),
-        if (i != count - 1) SizedBox(height: ZaveSpace.md),
+  Widget build(BuildContext context) => ZaveShimmer(
+    child: Column(
+      children: <Widget>[
+        for (int i = 0; i < count; i++) ...<Widget>[
+          CompanySkeleton(height: height),
+          if (i != count - 1) SizedBox(height: ZaveSpace.md),
+        ],
       ],
-    ],
+    ),
   );
 }
 
@@ -193,32 +192,16 @@ class CompanyEmptyCard extends StatelessWidget {
   final VoidCallback? onAction;
 
   @override
-  Widget build(BuildContext context) => ZaveCard(
-    child: Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: <Widget>[
-        Row(
-          children: <Widget>[
-            // Inert, not waiting: nothing is wrong, there is simply nothing
-            // here yet.
-            const ZaveDot(ZaveColors.ink35),
-            SizedBox(width: ZaveSpace.sm),
-            Text('NOTHING HERE YET', style: ZaveType.kicker),
-          ],
-        ),
-        SizedBox(height: ZaveSpace.md),
-        Text(title, style: ZaveType.h3),
-        SizedBox(height: ZaveSpace.md),
-        Text(body, style: ZaveType.bodyMuted),
-        if (actionLabel != null && onAction != null) ...<Widget>[
-          SizedBox(height: ZaveSpace.lg),
-          ZaveButton(
+  Widget build(BuildContext context) => ZaveEmptyState(
+    kicker: 'NOTHING HERE YET',
+    title: title,
+    body: body,
+    action: actionLabel != null && onAction != null
+        ? ZaveButton(
             label: actionLabel!,
             kind: ZaveButtonKind.primarySmall,
             onPressed: onAction,
-          ),
-        ],
-      ],
-    ),
+          )
+        : null,
   );
 }

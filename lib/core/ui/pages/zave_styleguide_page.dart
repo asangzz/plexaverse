@@ -233,6 +233,69 @@ class _ZaveStyleguidePageState extends State<ZaveStyleguidePage> {
               Text('Auto-post', style: ZaveType.body),
             ],
           ),
+
+          _section('11', 'Loading'),
+          Text(
+            'One sweep per group, not one per bar — these five shapes are '
+            'crossed by a single band. Stops entirely under Reduce Motion.',
+            style: ZaveType.bodyMuted,
+          ),
+          SizedBox(height: ZaveSpace.lg),
+          ZaveCard(
+            child: ZaveShimmer(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: <Widget>[
+                  Row(
+                    children: <Widget>[
+                      const ZaveSkeleton.circle(),
+                      SizedBox(width: ZaveSpace.md),
+                      const Expanded(child: ZaveSkeleton.bar(widthFactor: 0.6)),
+                    ],
+                  ),
+                  SizedBox(height: ZaveSpace.lg),
+                  const ZaveSkeleton.bar(widthFactor: 0.9, height: 18),
+                  SizedBox(height: ZaveSpace.md),
+                  const ZaveSkeleton.bar(),
+                  SizedBox(height: ZaveSpace.sm),
+                  const ZaveSkeleton.bar(widthFactor: 0.55),
+                  SizedBox(height: ZaveSpace.lg),
+                  const ZaveSkeleton.block(height: 96),
+                ],
+              ),
+            ),
+          ),
+
+          _section('12', 'Nothing here'),
+          Text(
+            'One component, two layouts. Ten screens each had their own '
+            'before it.',
+            style: ZaveType.bodyMuted,
+          ),
+          SizedBox(height: ZaveSpace.lg),
+          ZaveEmptyState(
+            title: 'No topics yet',
+            body: 'Create your first topic to start generating content.',
+            action: ZaveButton(
+              label: 'Create topic',
+              icon: const Icon(AppIcons.add),
+              onPressed: () {},
+            ),
+          ),
+          SizedBox(height: ZaveSpace.lg),
+          ZaveCard(
+            child: SizedBox(
+              height: 260,
+              child: const ZaveEmptyState(
+                title: 'All caught up',
+                body:
+                    'Notifications will appear here when your posts go '
+                    'live or missions complete.',
+                icon: AppIcons.notifications,
+                layout: ZaveEmptyLayout.pane,
+              ),
+            ),
+          ),
         ],
       ),
     );

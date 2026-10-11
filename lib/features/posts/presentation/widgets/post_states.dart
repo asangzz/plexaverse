@@ -5,10 +5,10 @@ import '../../../../core/ui/zave/zave_kit.dart';
 /// The loading list — five card-shaped placeholders, the same count the web
 /// renders (`[...Array(5)]` in `app/(dashboard)/posts/page.tsx`).
 ///
-/// Deliberately NOT a shimmer. Zave's motion rule is "short and physical;
-/// nothing bounces", and a looping gradient sweep is neither: the cards simply
-/// occupy the space their content will, at the rest fill step, so the layout
-/// does not jump when the data lands.
+/// The cards occupy the space their content will, so the layout does not
+/// jump when the data lands, and one [ZaveShimmer] sweep crosses all five —
+/// the wrapper is here, at the list, rather than on each card, so the five
+/// read as one thing arriving.
 class PostListSkeleton extends StatelessWidget {
   const PostListSkeleton({this.rows = 5, super.key});
 
@@ -16,13 +16,15 @@ class PostListSkeleton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      children: <Widget>[
-        for (int i = 0; i < rows; i++) ...<Widget>[
-          const PostCardSkeleton(),
-          SizedBox(height: ZaveSpace.md),
+    return ZaveShimmer(
+      child: Column(
+        children: <Widget>[
+          for (int i = 0; i < rows; i++) ...<Widget>[
+            const PostCardSkeleton(),
+            SizedBox(height: ZaveSpace.md),
+          ],
         ],
-      ],
+      ),
     );
   }
 }
@@ -40,49 +42,20 @@ class PostCardSkeleton extends StatelessWidget {
         children: <Widget>[
           Row(
             children: <Widget>[
-              const _Bar(width: 90),
+              const ZaveSkeleton.bar(width: 90),
               SizedBox(width: ZaveSpace.md),
-              const _Bar(width: 70),
+              const ZaveSkeleton.bar(width: 70),
             ],
           ),
           SizedBox(height: ZaveSpace.md),
-          const _Bar(widthFactor: 0.75, height: 18),
+          const ZaveSkeleton.bar(widthFactor: 0.75, height: 18),
           SizedBox(height: ZaveSpace.md),
-          const _Bar(widthFactor: 1),
+          const ZaveSkeleton.bar(widthFactor: 1),
           SizedBox(height: ZaveSpace.sm),
-          const _Bar(widthFactor: 0.6),
+          const ZaveSkeleton.bar(widthFactor: 0.6),
         ],
       ),
     );
-  }
-}
-
-/// A single placeholder bar. One fill step above the card it sits on, which is
-/// how depth is expressed in this system — there is no shadow and no shimmer.
-class _Bar extends StatelessWidget {
-  const _Bar({this.width, this.widthFactor, this.height = 12});
-
-  final double? width;
-  final double? widthFactor;
-  final double height;
-
-  @override
-  Widget build(BuildContext context) {
-    final Widget bar = Container(
-      height: height,
-      width: width,
-      decoration: BoxDecoration(
-        color: ZaveGlass.hover,
-        borderRadius: ZaveRadius.pillBr,
-      ),
-    );
-    return widthFactor == null
-        ? bar
-        : FractionallySizedBox(
-            alignment: Alignment.centerLeft,
-            widthFactor: widthFactor,
-            child: bar,
-          );
   }
 }
 
@@ -98,28 +71,8 @@ class PostsEmpty extends StatelessWidget {
   final Widget? action;
 
   @override
-  Widget build(BuildContext context) {
-    return ZaveCard(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: <Widget>[
-          Row(
-            children: <Widget>[
-              const ZaveDot(ZaveColors.ink35),
-              SizedBox(width: ZaveSpace.sm),
-              Text('NOTHING HERE', style: ZaveType.kicker),
-            ],
-          ),
-          SizedBox(height: ZaveSpace.md),
-          Text(message, style: ZaveType.h3),
-          if (action != null) ...<Widget>[
-            SizedBox(height: ZaveSpace.lg),
-            action!,
-          ],
-        ],
-      ),
-    );
-  }
+  Widget build(BuildContext context) =>
+      ZaveEmptyState(title: message, action: action);
 }
 
 /// The load-failed state.

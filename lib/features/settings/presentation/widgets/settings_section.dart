@@ -278,9 +278,7 @@ Widget _maybeBoxed({required bool boxed, required Widget child}) =>
 
 /// The loading placeholder for one section.
 ///
-/// Two dim bars at rest. No shimmer: Zave's motion rule is "short and
-/// physical; nothing bounces", and a looping sweep on half the screen is the
-/// opposite of that.
+/// Dim bars under one [ZaveShimmer] sweep.
 ///
 /// **No card of its own by default.** [SettingsSection] already puts its
 /// child in a [ZaveCard], and sixteen of this widget's eighteen call sites
@@ -300,24 +298,18 @@ class SectionSkeleton extends StatelessWidget {
   Widget build(BuildContext context) {
     return _maybeBoxed(
       boxed: boxed,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: <Widget>[
-          for (int i = 0; i < lines; i++) ...<Widget>[
-            if (i > 0) SizedBox(height: ZaveSpace.md),
-            Container(
-              height: ZaveSpace.lg,
-              // Each bar is a little shorter than the last, so the block reads
-              // as text rather than as a table.
-              width: double.infinity,
-              margin: EdgeInsets.only(right: i * ZaveSpace.xxl),
-              decoration: BoxDecoration(
-                color: ZaveGlass.hover,
-                borderRadius: ZaveRadius.pillBr,
-              ),
-            ),
+      child: ZaveShimmer(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: <Widget>[
+            for (int i = 0; i < lines; i++) ...<Widget>[
+              if (i > 0) SizedBox(height: ZaveSpace.md),
+              // Each bar is a little shorter than the last, so the block
+              // reads as text rather than as a table.
+              ZaveSkeleton.bar(height: ZaveSpace.lg, widthFactor: 1 - i * 0.12),
+            ],
           ],
-        ],
+        ),
       ),
     );
   }

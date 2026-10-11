@@ -522,9 +522,9 @@ class _ProblemCard extends StatelessWidget {
   }
 }
 
-/// The rest-fill block shown while the accounts call is in flight. A fill step
-/// rather than a spinner — Zave builds depth out of fills, and the panel is
-/// already the right size.
+/// The block shown while the accounts call is in flight. A block under a
+/// sweep rather than a spinner — the panel is already the right size, so
+/// there is nothing a spinner would tell the user that this does not.
 class _PanelSkeleton extends StatelessWidget {
   const _PanelSkeleton({required this.height});
 
@@ -532,7 +532,7 @@ class _PanelSkeleton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) =>
-      Container(height: height, decoration: ZaveSurface.card);
+      ZaveShimmer(child: ZaveSkeleton.block(height: height));
 }
 
 /// The accounts / preferences call failed. The editor below still works —

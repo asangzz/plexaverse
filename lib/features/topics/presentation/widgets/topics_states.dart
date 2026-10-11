@@ -101,39 +101,18 @@ class TopicsEmpty extends StatelessWidget {
   final VoidCallback onCreate;
 
   @override
-  Widget build(BuildContext context) {
-    return ZaveCard(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: <Widget>[
-          Row(
-            children: <Widget>[
-              const ZaveDot(ZaveColors.ink35),
-              SizedBox(width: ZaveSpace.sm),
-              Text('NOTHING HERE', style: ZaveType.kicker),
-            ],
-          ),
-          SizedBox(height: ZaveSpace.md),
-          Text('No topics yet', style: ZaveType.h3),
-          SizedBox(height: ZaveSpace.md),
-          Text(
-            'Create your first topic to start generating content',
-            style: ZaveType.bodyMuted,
-          ),
-          SizedBox(height: ZaveSpace.lg),
-          // Ghost, not white: the screen's one white button is "Add Topic" at
-          // the top, and this is the same action. Two white pills for one
-          // action would break the one-primary-per-screen rule to say nothing
-          // new.
-          ZaveButton(
-            label: 'Create Topic',
-            icon: const Icon(AppIcons.add),
-            onPressed: onCreate,
-          ),
-        ],
-      ),
-    );
-  }
+  Widget build(BuildContext context) => ZaveEmptyState(
+    title: 'No topics yet',
+    body: 'Create your first topic to start generating content',
+    // Ghost, not white: the screen's one white button is "Add Topic" at the
+    // top, and this is the same action. Two white pills for one action would
+    // break the one-primary-per-screen rule to say nothing new.
+    action: ZaveButton(
+      label: 'Create Topic',
+      icon: const Icon(AppIcons.add),
+      onPressed: onCreate,
+    ),
+  );
 }
 
 /// The load-failed state.
@@ -178,6 +157,11 @@ class TopicsError extends StatelessWidget {
 /// Deliberately not a shimmer. Zave's motion rule is "short and physical;
 /// nothing bounces", and a looping sweep is neither — the cards simply occupy
 /// the space their content will, so the layout does not jump.
+
+/// The loading list.
+///
+/// The cards occupy the space their content will, so the layout does not
+/// jump, under one [ZaveShimmer] sweep for the whole list.
 class TopicsSkeleton extends StatelessWidget {
   const TopicsSkeleton({this.rows = 3, super.key});
 
@@ -185,13 +169,15 @@ class TopicsSkeleton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      children: <Widget>[
-        for (int i = 0; i < rows; i++) ...<Widget>[
-          const _SkeletonCard(),
-          SizedBox(height: ZaveSpace.md),
+    return ZaveShimmer(
+      child: Column(
+        children: <Widget>[
+          for (int i = 0; i < rows; i++) ...<Widget>[
+            const _SkeletonCard(),
+            SizedBox(height: ZaveSpace.md),
+          ],
         ],
-      ],
+      ),
     );
   }
 }
@@ -205,50 +191,21 @@ class _SkeletonCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: <Widget>[
-          const _Bar(widthFactor: 0.55, height: 18),
+          const ZaveSkeleton.bar(widthFactor: 0.55, height: 18),
           SizedBox(height: ZaveSpace.md),
-          const _Bar(widthFactor: 0.9),
+          const ZaveSkeleton.bar(widthFactor: 0.9),
           SizedBox(height: ZaveSpace.sm),
-          const _Bar(widthFactor: 0.7),
+          const ZaveSkeleton.bar(widthFactor: 0.7),
           SizedBox(height: ZaveSpace.lg),
           Row(
             children: <Widget>[
-              const _Bar(width: 72, height: 22),
+              const ZaveSkeleton.bar(width: 72, height: 22),
               SizedBox(width: ZaveSpace.sm),
-              const _Bar(width: 56, height: 22),
+              const ZaveSkeleton.bar(width: 56, height: 22),
             ],
           ),
         ],
       ),
     );
-  }
-}
-
-class _Bar extends StatelessWidget {
-  const _Bar({this.width, this.widthFactor, this.height = 12});
-
-  final double? width;
-  final double? widthFactor;
-  final double height;
-
-  @override
-  Widget build(BuildContext context) {
-    // One fill step above the card it sits on — which is how depth is
-    // expressed in this system. There is no shadow anywhere.
-    final Widget bar = Container(
-      height: height,
-      width: width,
-      decoration: BoxDecoration(
-        color: ZaveGlass.hover,
-        borderRadius: ZaveRadius.pillBr,
-      ),
-    );
-    return widthFactor == null
-        ? bar
-        : FractionallySizedBox(
-            alignment: Alignment.centerLeft,
-            widthFactor: widthFactor,
-            child: bar,
-          );
   }
 }

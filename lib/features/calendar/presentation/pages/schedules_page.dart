@@ -293,26 +293,10 @@ class _SchedulesEmpty extends StatelessWidget {
   const _SchedulesEmpty();
 
   @override
-  Widget build(BuildContext context) => ZaveCard(
-    child: Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: <Widget>[
-        Row(
-          children: <Widget>[
-            const ZaveDot(ZaveColors.ink35),
-            SizedBox(width: ZaveSpace.sm),
-            Text('NOTHING AUTOMATED YET', style: ZaveType.kicker),
-          ],
-        ),
-        SizedBox(height: ZaveSpace.md),
-        Text('No schedules yet', style: ZaveType.h3),
-        SizedBox(height: ZaveSpace.md),
-        Text(
-          'Create a schedule to automate your LinkedIn posting.',
-          style: ZaveType.bodyMuted,
-        ),
-      ],
-    ),
+  Widget build(BuildContext context) => const ZaveEmptyState(
+    kicker: 'NOTHING AUTOMATED YET',
+    title: 'No schedules yet',
+    body: 'Create a schedule to automate your LinkedIn posting.',
   );
 }
 
@@ -320,26 +304,18 @@ class _SchedulesSkeleton extends StatelessWidget {
   const _SchedulesSkeleton();
 
   @override
-  Widget build(BuildContext context) => ZaveScrollView(
-    children: <Widget>[
-      _SkeletonBlock(height: ZaveSpace.section * 0.6),
-      SizedBox(height: ZaveSpace.xl),
-      for (int i = 0; i < 3; i++) ...<Widget>[
-        if (i > 0) SizedBox(height: ZaveSpace.lg),
-        _SkeletonBlock(height: ZaveSpace.section * 2.4),
+  Widget build(BuildContext context) => ZaveShimmer(
+    child: ZaveScrollView(
+      children: <Widget>[
+        ZaveSkeleton.block(height: ZaveSpace.section * 0.6),
+        SizedBox(height: ZaveSpace.xl),
+        for (int i = 0; i < 3; i++) ...<Widget>[
+          if (i > 0) SizedBox(height: ZaveSpace.lg),
+          ZaveSkeleton.block(height: ZaveSpace.section * 2.4),
+        ],
       ],
-    ],
+    ),
   );
-}
-
-class _SkeletonBlock extends StatelessWidget {
-  const _SkeletonBlock({required this.height});
-
-  final double height;
-
-  @override
-  Widget build(BuildContext context) =>
-      Container(height: height, decoration: ZaveSurface.card);
 }
 
 class _SchedulesError extends StatelessWidget {

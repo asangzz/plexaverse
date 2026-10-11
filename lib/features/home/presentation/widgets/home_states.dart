@@ -24,18 +24,17 @@ class HomeSkeleton extends StatelessWidget {
         ZaveSpace.gutter,
         ZaveSpace.section,
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: <Widget>[
-          Expanded(child: DecoratedBox(decoration: ZaveSurface.card)),
-          SizedBox(height: ZaveSpace.lg),
-          SizedBox(
+      child: ZaveShimmer(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: <Widget>[
+            const Expanded(child: ZaveSkeleton.block()),
+            SizedBox(height: ZaveSpace.lg),
             // The collapsed mission sheet is 40% of the screen; the skeleton
             // stands in at the same height so nothing jumps when data lands.
-            height: MediaQuery.sizeOf(context).height * 0.4,
-            child: DecoratedBox(decoration: ZaveSurface.listRow),
-          ),
-        ],
+            ZaveSkeleton.block(height: MediaQuery.sizeOf(context).height * 0.4),
+          ],
+        ),
       ),
     );
   }

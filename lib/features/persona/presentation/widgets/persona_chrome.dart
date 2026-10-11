@@ -203,8 +203,7 @@ class PersonaUnavailableNote extends StatelessWidget {
   }
 }
 
-/// The loading placeholder for one persona block. No shimmer — Zave's motion
-/// rule is "short and physical; nothing bounces".
+/// The loading placeholder for one persona block.
 class PersonaSkeleton extends StatelessWidget {
   const PersonaSkeleton({this.lines = 3, super.key});
 
@@ -213,22 +212,16 @@ class PersonaSkeleton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return ZaveCard(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: <Widget>[
-          for (int i = 0; i < lines; i++) ...<Widget>[
-            if (i > 0) SizedBox(height: ZaveSpace.md),
-            Container(
-              height: ZaveSpace.lg,
-              width: double.infinity,
-              margin: EdgeInsets.only(right: i * ZaveSpace.xxl),
-              decoration: BoxDecoration(
-                color: ZaveGlass.hover,
-                borderRadius: ZaveRadius.pillBr,
-              ),
-            ),
+      child: ZaveShimmer(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: <Widget>[
+            for (int i = 0; i < lines; i++) ...<Widget>[
+              if (i > 0) SizedBox(height: ZaveSpace.md),
+              ZaveSkeleton.bar(height: ZaveSpace.lg, widthFactor: 1 - i * 0.12),
+            ],
           ],
-        ],
+        ),
       ),
     );
   }
