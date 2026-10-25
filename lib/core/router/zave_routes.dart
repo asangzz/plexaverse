@@ -25,7 +25,8 @@ class ZaveRoutes {
   /// Biometric / device-credential re-auth gate. Mobile-only.
   static const String unlock = '/unlock';
 
-  /// The onboarding chat. Held ahead of the dashboard until completed.
+  /// Onboarding — Plexa's intro, then the chat. Held ahead of the dashboard
+  /// until completed.
   static const String onboarding = '/onboarding';
 
   // ── Overview ──────────────────────────────────────────────────────────────
@@ -96,7 +97,13 @@ class ZaveRoutes {
 
   // Open Plexa has no entry here, and that is deliberate: it has no URL on
   // the web either. It is a modal over whatever screen you are standing on —
-  // see `showPlexaDay` in features/plexa.
+  // see `showPlexaDay` in features/plexa. [plexa] below is a different thing.
+
+  /// Plexa's journey again, for an account that has already onboarded —
+  /// Settings' "Meet Plexa". The web keeps `/plexa` only as a redirect to
+  /// `/onboarding`; the app's onboarding gate sends a finished account away
+  /// from `/onboarding`, so the same page is mounted here instead.
+  static const String plexa = '/plexa';
 
   /// Opened from the "comment on posts" daily habit.
   static const String comments = '/comments';

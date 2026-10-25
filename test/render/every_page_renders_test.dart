@@ -26,6 +26,7 @@ import 'package:plexaverse/features/missions/presentation/pages/headline_hook_pa
 import 'package:plexaverse/features/missions/presentation/pages/season_complete_page.dart';
 import 'package:plexaverse/features/persona/presentation/pages/persona_page.dart';
 import 'package:plexaverse/features/planner/presentation/pages/planner_page.dart';
+import 'package:plexaverse/features/plexa/presentation/pages/plexa_journey_page.dart';
 import 'package:plexaverse/features/posts/presentation/pages/post_detail_page.dart';
 import 'package:plexaverse/features/posts/presentation/pages/posts_page.dart';
 import 'package:plexaverse/features/pricing/presentation/pages/pricing_page.dart';
@@ -79,6 +80,7 @@ void main() {
     'Post detail': () => const PostDetailPage(postId: 'mock-post-1'),
     'Persona': () => const PersonaPage(),
     'Settings': () => const SettingsPage(),
+    'Plexa journey': () => const PlexaJourneyPage(),
     'Accounts': () => const AccountsPage(),
     'Schedules': () => const SchedulesPage(),
     'Topics': () => const TopicsPage(),

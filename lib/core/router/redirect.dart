@@ -46,8 +46,8 @@ enum RedirectTarget { stay, splash, onboarding, login, home, unlock }
 /// **The onboarding gate sits BELOW the auth gate, and that ordering is the
 /// whole point of it.** It used to sit above every auth rule, on the
 /// inherited assumption that `/onboarding` was a pre-auth carousel a fresh
-/// install should see before anything else. It is not: `OnboardingChatPage`
-/// is the authenticated "Plexa setup" chat. It opens by calling `/auth/me`
+/// install should see before anything else. It is not: `PlexaJourneyPage` runs
+/// the authenticated "Plexa setup" chat. It opens by calling `/auth/me`
 /// for the user's name and it finishes by PATCHing `/user/preferences`.
 ///
 /// With the gate on top, a signed-out fresh install was sent into that chat,

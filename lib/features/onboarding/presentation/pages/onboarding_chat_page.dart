@@ -4,7 +4,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/ui/app_icons.dart';
 import '../../../../core/ui/zave/zave_kit.dart';
 import '../../../auth/application/sign_out_controller.dart';
-import '../../../settings/domain/settings_repository.dart';
 import '../../application/onboarding_chat_controller.dart';
 import '../../application/onboarding_controller.dart';
 import '../../domain/onboarding_repository.dart';
@@ -13,58 +12,53 @@ import '../widgets/onboarding_chrome.dart';
 import '../widgets/reply_lane.dart';
 import '../widgets/role_picker.dart';
 import '../widgets/tone_panel.dart';
+import '../widgets/upload_panels.dart';
 
-/// `/onboarding` — Plexa Setup, the conversational flow that configures a new
-/// account.
+/// The onboarding chat — progress row, thread and dock — the conversational
+/// setup every new account goes through. The web counterpart is
+/// `components/onboarding/OnboardingChat.tsx`.
 ///
-/// The web counterpart is `components/onboarding/OnboardingChat.tsx`, rendered
-/// full-screen by `app/(dashboard)/onboarding/page.tsx` — no sidebar, no mobile
-/// header, no guides, because the one thing to do on this screen is answer the
-/// question on it.
+/// It has no page of its own: `PlexaJourneyPage` runs it under the mascot, at
+/// `/onboarding` and at `/plexa`, as the web's `PlexaJourney` does. `lead` and
+/// [showBotAvatar] are that page's hooks — the web's props of the same names.
 ///
 /// ## The two lanes
 ///
-/// A step is answered either with a tap or by typing, and the control lives in
-/// a different place for each — see [OnboardingStep.lane]. A tap-answer is
-/// rendered in the USER's lane as the message it is about to become; a typed
-/// answer is a panel pinned in the bottom band. Panels never go inline: a tall
-/// form at the end of a scrolling thread gets its submit button auto-scrolled
-/// into view and its first field pushed off the top.
+/// A step is answered either with a tap, or with a picker or a form, and the
+/// control lives in a different place for each — see [OnboardingStep.lane]. A
+/// tap-answer is rendered in the USER's lane as the message it is about to
+/// become; a panel is pinned in the bottom band. Panels never go inline: a
+/// tall form at the end of a scrolling thread gets its submit button
+/// auto-scrolled into view and its first field pushed off the top.
 ///
-/// ## What this screen is NOT
-///
-/// It is not the app's old first-run carousel (`onboarding_page.dart`), which
-/// has no web counterpart at all. The two currently coexist because the router
-/// — which this slice does not own — still points `/onboarding` at the
-/// carousel and gates it on a local SharedPreferences flag AHEAD of auth,
-/// whereas this screen is post-auth and gated on
-/// `UserPreferences.onboardingCompleted`, exactly as the web is. Repointing the
-/// route and moving the gate is an orchestrator change, and it is reported
-/// rather than made here.
-class OnboardingChatPage extends StatelessWidget {
-  const OnboardingChatPage({super.key});
+/// Must sit inside a [ZaveScaffold]: it clears the scaffold's header with
+/// [ZaveScaffold.contentTop].
+class OnboardingChatBody extends ConsumerStatefulWidget {
+  const OnboardingChatBody({
+    this.lead,
+    this.showBotAvatar = true,
+    this.onCompleted,
+    super.key,
+  });
+
+  /// Placed at the start of the progress row. `/plexa` puts an empty, measured
+  /// box here and flies the mascot into it.
+  final Widget? lead;
+
+  /// Plexa's avatar beside her messages. Off when the mascot is on screen.
+  final bool showBotAvatar;
+
+  /// Called once the chat has finished, after the onboarding gate has been
+  /// released. `/onboarding` leaves this null: releasing the gate is what moves
+  /// it on. Anywhere else the gate does not apply, so the host has to leave by
+  /// itself.
+  final VoidCallback? onCompleted;
 
   @override
-  Widget build(BuildContext context) {
-    return const ZaveScaffold(
-      title: 'Plexa setup',
-      // The body is a separate widget so it is built BELOW the scaffold, where
-      // ZaveScaffold.contentTop resolves to the real header height. Read from
-      // this build's context it would silently return the status-bar inset and
-      // the first line of the thread would render under the header.
-      body: _OnboardingBody(),
-    );
-  }
+  ConsumerState<OnboardingChatBody> createState() => _OnboardingChatBodyState();
 }
 
-class _OnboardingBody extends ConsumerStatefulWidget {
-  const _OnboardingBody();
-
-  @override
-  ConsumerState<_OnboardingBody> createState() => _OnboardingBodyState();
-}
-
-class _OnboardingBodyState extends ConsumerState<_OnboardingBody> {
+class _OnboardingChatBodyState extends ConsumerState<OnboardingChatBody> {
   final ScrollController _thread = ScrollController();
 
   @override
@@ -140,6 +134,7 @@ class _OnboardingBodyState extends ConsumerState<_OnboardingBody> {
       // navigates itself is how two sources of truth for "where am I" start.
       if (next.completed && previous?.completed != true) {
         ref.read(onboardingControllerProvider.notifier).complete();
+        widget.onCompleted?.call();
       }
     });
 
@@ -154,6 +149,10 @@ class _OnboardingBodyState extends ConsumerState<_OnboardingBody> {
           ),
           child: Row(
             children: <Widget>[
+              if (widget.lead != null) ...<Widget>[
+                widget.lead!,
+                SizedBox(width: ZaveSpace.md),
+              ],
               Expanded(
                 child: OnboardingProgress(
                   percent: chat.step.progressPercent(
@@ -171,7 +170,11 @@ class _OnboardingBodyState extends ConsumerState<_OnboardingBody> {
           ),
         ),
         Expanded(
-          child: _Thread(controller: _thread, chat: chat),
+          child: _Thread(
+            controller: _thread,
+            chat: chat,
+            showBotAvatar: widget.showBotAvatar,
+          ),
         ),
         OnboardingDock(child: _DockControl(chat: chat)),
       ],
@@ -181,10 +184,15 @@ class _OnboardingBodyState extends ConsumerState<_OnboardingBody> {
 
 /// The conversation.
 class _Thread extends StatelessWidget {
-  const _Thread({required this.controller, required this.chat});
+  const _Thread({
+    required this.controller,
+    required this.chat,
+    required this.showBotAvatar,
+  });
 
   final ScrollController controller;
   final OnboardingChatState chat;
+  final bool showBotAvatar;
 
   @override
   Widget build(BuildContext context) {
@@ -206,6 +214,7 @@ class _Thread extends StatelessWidget {
         if (index >= messages.length) {
           return TypingRow(
             grouped: messages.isNotEmpty && messages.last.role == ChatRole.bot,
+            showBotAvatar: showBotAvatar,
           );
         }
         final ChatMessage message = messages[index];
@@ -213,13 +222,18 @@ class _Thread extends StatelessWidget {
         // so a two-line answer reads as one turn.
         final bool grouped =
             index > 0 && messages[index - 1].role == message.role;
-        return ChatMessageRow(message: message, grouped: grouped);
+        return ChatMessageRow(
+          message: message,
+          grouped: grouped,
+          showBotAvatar: showBotAvatar,
+        );
       },
     );
   }
 }
 
-/// Whichever control this step is answered with.
+/// Whichever control this step is answered with — the web's `StepInputArea`,
+/// step for step.
 class _DockControl extends ConsumerWidget {
   const _DockControl({required this.chat});
 
@@ -246,12 +260,9 @@ class _DockControl extends ConsumerWidget {
       OnboardingStep.welcome => ReplyLane(
         hint: hint,
         chips: <Widget>[
-          ReplyChip(
-            // First person, because it answers the greeting's "Ready?" — and
-            // because it is echoed verbatim as the user's own bubble.
-            label: "I'm ready",
-            onTap: controller().acknowledgeWelcome,
-          ),
+          // First person, because it answers the greeting's "Ready?" — and
+          // because it is echoed verbatim as the user's own bubble.
+          ReplyChip(label: "I'm ready", onTap: controller().acknowledgeWelcome),
         ],
       ),
       OnboardingStep.brand => ReplyLane(
@@ -264,52 +275,98 @@ class _DockControl extends ConsumerWidget {
             ),
         ],
       ),
-      OnboardingStep.role => RolePicker(
-        hint: hint,
-        onPick: (String role) => controller().pickRole(role),
-      ),
-      OnboardingStep.goal => ReplyLane(
-        hint: hint,
-        chips: <Widget>[
-          for (final OnboardingGoal goal in OnboardingGoal.values)
-            ReplyChip(
-              label: goal.label,
-              onTap: () => controller().pickGoal(goal),
-            ),
-        ],
-      ),
       OnboardingStep.connect => ReplyLane(
         hint: hint,
         chips: <Widget>[
           ReplyChip(
-            label: chat.connectFailed ? 'Try again' : 'Connect LinkedIn',
+            label: 'Connect LinkedIn',
             onTap: () => controller().connectLinkedin(),
           ),
           // Only after an attempt has actually failed — see
           // OnboardingChatState.connectFailed.
           if (chat.connectFailed)
-            ReplyChip(
+            ReplySkipChip(
               label: "I'll connect later",
               onTap: () => controller().skipConnect(),
             ),
         ],
       ),
-      // The pages come from the connected account, so they are fetched when
-      // the step is reached rather than held in chat state — a list that can
-      // fail needs somewhere to show the failure.
-      OnboardingStep.companyPage => _CompanyPageChips(hint: hint),
-      OnboardingStep.companyDetails => _CompanyDetailsPanel(
-        answers: chat.answers,
-        onChanged: controller().setCompanyDraft,
+      OnboardingStep.companyPage => CompanyPagePanel(
+        load: controller().companyPages,
+        onPick: (String id, String name) =>
+            controller().pickCompanyPage(id, name),
+        onReconnect: () => controller().reconnectCompany(),
+        onSwitchToPersonal: () => controller().switchToPersonal(),
+      ),
+      OnboardingStep.companyLogo => UploadPanel(
+        icon: AppIcons.upload,
+        title: 'Choose your logo',
+        hint: 'Transparent PNG works best · PNG / JPG · required',
+        onPick: () => controller().uploadLogo(),
+      ),
+      OnboardingStep.posterStyle => UploadPanel(
+        icon: AppIcons.image,
+        title: 'Choose an existing poster to match',
+        hint: "PNG / JPG · I'll match its theme & colors",
+        onPick: () => controller().uploadPosterStyle(),
+        skipLabel: 'Skip — use a default style',
+        onSkip: () => controller().skipPosterStyle(),
+      ),
+      OnboardingStep.cvUpload => UploadPanel(
+        icon: AppIcons.attach,
+        title: 'Choose your LinkedIn PDF',
+        hint: 'PDF only · max 5 MB',
+        onPick: () => controller().uploadCv(),
+        skipLabel: 'Skip for now',
+        onSkip: () => controller().skipCv(),
+      ),
+      OnboardingStep.currentRole => RolePicker(
+        hint: hint,
+        onPick: (String role) => controller().pickRole(role),
+      ),
+      OnboardingStep.companyDoc => UploadPanel(
+        icon: AppIcons.attach,
+        title: 'Choose your company document',
+        hint: 'Deck · one-pager · About page · PDF only · max 5 MB',
+        onPick: () => controller().uploadCompanyDoc(),
+        skipLabel: "Skip — I'll tell you directly",
+        onSkip: () => controller().skipCompanyDoc(),
+      ),
+      OnboardingStep.companyDetails => CompanyDetailsPanel(
+        doc: chat.answers.companyDoc,
         onSubmit: controller().submitCompanyDetails,
       ),
-      OnboardingStep.voice => TonePanel(
+      OnboardingStep.styleChoice => ReplyLane(
+        hint: hint,
+        chips: <Widget>[
+          ReplyChip(
+            label: 'Upload screenshots',
+            onTap: () => controller().chooseScreenshots(),
+          ),
+          ReplyChip(
+            label: 'Write a sample',
+            onTap: () => controller().chooseWrite(),
+          ),
+          ReplySkipChip(
+            label: 'No screenshots handy',
+            onTap: () => controller().skipScreenshots(),
+          ),
+        ],
+      ),
+      OnboardingStep.styleScreenshots => UploadPanel(
+        icon: AppIcons.image,
+        title: 'Choose screenshots',
+        hint: 'PNG / JPG · up to 5 images',
+        onPick: () => controller().uploadScreenshots(),
+        skipLabel: 'Skip',
+        onSkip: () => controller().skipScreenshots(),
+      ),
+      // Still no skip — deliberate. This is the last place the user's own
+      // voice can be captured.
+      OnboardingStep.styleWrite => TonePanel(
         value: chat.voiceDraft,
         onChanged: controller().setVoiceDraft,
         onSubmit: (String text) => controller().submitVoiceSample(text),
-        // The web's other branch: read the voice out of a screenshot rather
-        // than have the user type one.
-        onUseScreenshot: controller().useStyleScreenshots,
       ),
       OnboardingStep.finish =>
         chat.finaliseError
@@ -327,152 +384,5 @@ class _DockControl extends ConsumerWidget {
               )
             : const DockHint(text: 'Setting things up…'),
     };
-  }
-}
-
-/// The company pages the connected account administers, as reply chips.
-///
-/// Fetched here rather than held in chat state: the list comes from LinkedIn
-/// through the connected account, so it can be slow, empty, or refused — and
-/// a control that can fail needs somewhere of its own to say so.
-///
-/// The server answers three ways and all three are reachable. A live list, a
-/// single already-saved page, or nothing at all with `needsManualInput` when
-/// `rw_organization_admin` was never granted. For that last group there is
-/// no chip to tap, so the escape is the only way through and is always
-/// offered rather than being revealed after a failure.
-class _CompanyPageChips extends ConsumerStatefulWidget {
-  const _CompanyPageChips({required this.hint});
-
-  final String? hint;
-
-  @override
-  ConsumerState<_CompanyPageChips> createState() => _CompanyPageChipsState();
-}
-
-class _CompanyPageChipsState extends ConsumerState<_CompanyPageChips> {
-  late Future<CompanyPageOptions> _pages;
-
-  @override
-  void initState() {
-    super.initState();
-    _pages = ref.read(onboardingChatControllerProvider.notifier).companyPages();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final OnboardingChatController controller = ref.read(
-      onboardingChatControllerProvider.notifier,
-    );
-
-    return FutureBuilder<CompanyPageOptions>(
-      future: _pages,
-      builder: (BuildContext context, AsyncSnapshot<CompanyPageOptions> snap) {
-        final List<CompanyPage> pages =
-            snap.data?.pages ?? const <CompanyPage>[];
-        return ReplyLane(
-          hint: widget.hint,
-          chips: <Widget>[
-            if (snap.connectionState == ConnectionState.waiting)
-              const ReplyChip(label: 'Looking…', onTap: null)
-            else ...<Widget>[
-              for (final CompanyPage page in pages)
-                ReplyChip(
-                  label: page.name,
-                  onTap: () => controller.pickCompanyPage(page.id, page.name),
-                ),
-              // Always present: for an account that administers no pages it
-              // is the only way forward, and for one that does it is still a
-              // legitimate "not now".
-              ReplyChip(
-                label: "I'll pick it later",
-                onTap: controller.skipCompanyPage,
-              ),
-            ],
-          ],
-        );
-      },
-    );
-  }
-}
-
-/// The company document — what the company does, its industry, its tagline.
-///
-/// A panel rather than chips because it is three fields, and the dock's
-/// panel lane exists precisely so a tall form does not get auto-scrolled
-/// into a thread.
-///
-/// Only the description is required. Industry and tagline sharpen what gets
-/// written but a company without a tagline should not be blocked from
-/// finishing setup over one.
-class _CompanyDetailsPanel extends StatefulWidget {
-  const _CompanyDetailsPanel({
-    required this.answers,
-    required this.onChanged,
-    required this.onSubmit,
-  });
-
-  final OnboardingAnswers answers;
-  final void Function({String? description, String? industry, String? tagline})
-  onChanged;
-  final VoidCallback onSubmit;
-
-  @override
-  State<_CompanyDetailsPanel> createState() => _CompanyDetailsPanelState();
-}
-
-class _CompanyDetailsPanelState extends State<_CompanyDetailsPanel> {
-  /// Seeded from the answers so a field survives a rebuild — the thread
-  /// above this panel grows while the user is typing in it.
-  late final TextEditingController _description = TextEditingController(
-    text: widget.answers.companyDescription,
-  );
-  late final TextEditingController _industry = TextEditingController(
-    text: widget.answers.companyIndustry,
-  );
-  late final TextEditingController _tagline = TextEditingController(
-    text: widget.answers.companyTagline,
-  );
-
-  @override
-  void dispose() {
-    _description.dispose();
-    _industry.dispose();
-    _tagline.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      mainAxisSize: MainAxisSize.min,
-      children: <Widget>[
-        ZaveField(
-          controller: _description,
-          hint: 'What the company does, in two sentences',
-          maxLines: 3,
-          onChanged: (String v) => widget.onChanged(description: v),
-        ),
-        SizedBox(height: ZaveSpace.md),
-        ZaveField(
-          controller: _industry,
-          hint: 'Industry (optional)',
-          onChanged: (String v) => widget.onChanged(industry: v),
-        ),
-        SizedBox(height: ZaveSpace.md),
-        ZaveField(
-          controller: _tagline,
-          hint: 'Tagline (optional)',
-          onChanged: (String v) => widget.onChanged(tagline: v),
-        ),
-        SizedBox(height: ZaveSpace.lg),
-        ZaveButton.primary(
-          label: 'That is us',
-          expand: true,
-          onPressed: widget.onSubmit,
-        ),
-      ],
-    );
   }
 }

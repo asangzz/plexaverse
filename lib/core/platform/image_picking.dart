@@ -1,4 +1,3 @@
-
 import 'dart:convert' show base64Encode;
 import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
@@ -59,6 +58,11 @@ enum ImageSourceKind { gallery, camera }
 /// The seam. Injected so a screen can be tested without a platform channel.
 abstract class ImagePickingService {
   Future<ImagePickResult> pick(ImageSourceKind source);
+
+  /// Several images from the gallery, at most [limit]. Empty when the picker
+  /// was dismissed or failed — the callers have nothing different to say about
+  /// the two, so they are not told apart.
+  Future<List<PickedImage>> pickMany({required int limit});
 }
 
 /// `image_picker`-backed implementation.
@@ -91,6 +95,24 @@ class PluginImagePickingService implements ImagePickingService {
       return ImagePickFailure(message: e.message);
     } on Object {
       return const ImagePickFailure();
+    }
+  }
+
+  @override
+  Future<List<PickedImage>> pickMany({required int limit}) async {
+    try {
+      final List<XFile> files = await ImagePicker().pickMultiImage(
+        maxWidth: _maxEdge,
+        maxHeight: _maxEdge,
+        imageQuality: _quality,
+        limit: limit,
+      );
+      return <PickedImage>[
+        for (final XFile file in files.take(limit))
+          PickedImage(bytes: await file.readAsBytes(), name: file.name),
+      ];
+    } on Object {
+      return const <PickedImage>[];
     }
   }
 }

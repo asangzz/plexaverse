@@ -47,6 +47,7 @@ class ChatMessageRow extends StatelessWidget {
   const ChatMessageRow({
     required this.message,
     required this.grouped,
+    this.showBotAvatar = true,
     super.key,
   });
 
@@ -55,6 +56,11 @@ class ChatMessageRow extends StatelessWidget {
   /// The previous line was from the same speaker. Hides the avatar (replaced by
   /// a spacer so the column does not jump) and drops the eyebrow.
   final bool grouped;
+
+  /// Plexa's avatar beside her lines. Off on `/plexa`, where she is already on
+  /// screen as the mascot — and the spacer goes with it, because there is no
+  /// avatar column left to line up with. Mirrors the web's `showBotAvatar`.
+  final bool showBotAvatar;
 
   bool get _isBot => message.role == ChatRole.bot;
 
@@ -100,7 +106,7 @@ class ChatMessageRow extends StatelessWidget {
             : MainAxisAlignment.end,
         crossAxisAlignment: CrossAxisAlignment.end,
         children: <Widget>[
-          if (_isBot) ...<Widget>[
+          if (_isBot && showBotAvatar) ...<Widget>[
             grouped ? const _AvatarSpacer() : const PlexaAvatar(),
             SizedBox(width: ZaveSpace.md),
           ],
@@ -199,9 +205,16 @@ class _AvatarSpacer extends StatelessWidget {
 /// cycle. The stagger is kept, because three dots pulsing in unison is a
 /// loading spinner and three dots pulsing in sequence is someone typing.
 class TypingRow extends StatefulWidget {
-  const TypingRow({required this.grouped, super.key});
+  const TypingRow({
+    required this.grouped,
+    this.showBotAvatar = true,
+    super.key,
+  });
 
   final bool grouped;
+
+  /// See [ChatMessageRow.showBotAvatar].
+  final bool showBotAvatar;
 
   @override
   State<TypingRow> createState() => _TypingRowState();
@@ -229,8 +242,10 @@ class _TypingRowState extends State<TypingRow>
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.end,
         children: <Widget>[
-          widget.grouped ? const _AvatarSpacer() : const PlexaAvatar(),
-          SizedBox(width: ZaveSpace.md),
+          if (widget.showBotAvatar) ...<Widget>[
+            widget.grouped ? const _AvatarSpacer() : const PlexaAvatar(),
+            SizedBox(width: ZaveSpace.md),
+          ],
           Container(
             padding: ZaveSpace.rowPad,
             decoration: ZaveSurface.row,

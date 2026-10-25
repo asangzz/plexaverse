@@ -1,5 +1,6 @@
 import 'dart:async';
-import 'package:dio/dio.dart' show DioException, FormData, MultipartFile;
+import 'package:dio/dio.dart'
+    show DioException, DioMediaType, FormData, MultipartFile;
 import 'package:flutter/foundation.dart' show kReleaseMode;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -8,6 +9,7 @@ import '../../../core/network/api_paths.dart';
 import '../../../core/network/dio_client.dart';
 import '../../../core/network/failure.dart';
 import '../domain/onboarding_repository.dart';
+import '../../../core/platform/file_picking.dart';
 import '../../../core/platform/image_picking.dart';
 
 /// Dio-backed [OnboardingRepository].
@@ -41,21 +43,97 @@ class ApiOnboardingRepository implements OnboardingRepository {
   }
 
   @override
-  Future<ProfessionAnalysis?> analyzeProfession(String headline) async {
-    // The server rejects anything under three characters with a 400. Not worth
-    // the round-trip, and the caller treats null as "no analysis" either way.
-    if (headline.trim().length < 3) return null;
-    try {
-      final response = await _client.post<Map<String, dynamic>>(
-        ApiPaths.aiAnalyzeProfession,
-        data: <String, dynamic>{'headline': headline.trim()},
-      );
-      final Map<String, dynamic>? data = response.data;
-      return data == null ? null : ProfessionAnalysis.fromJson(data);
-    } on Object {
-      // Best-effort by contract — see OnboardingRepository.
-      return null;
+  Future<ParsedCv> parseCv(PickedFile pdf) async {
+    final Map<String, dynamic> body = await _upload(
+      ApiPaths.aiParseCv,
+      pdf,
+      DioMediaType('application', 'pdf'),
+    );
+    // `{ success, data: {...} }` — the route keeps the web's inner wrapper.
+    final Object? data = body['data'];
+    if (data is! Map<String, dynamic>) {
+      throw const OnboardingUnavailable('The server sent nothing back');
     }
+    return ParsedCv.fromJson(data);
+  }
+
+  @override
+  Future<CompanyDoc> parseCompanyDoc(PickedFile pdf) async {
+    final Map<String, dynamic> body = await _upload(
+      ApiPaths.aiParseCompanyDoc,
+      pdf,
+      DioMediaType('application', 'pdf'),
+    );
+    final Object? data = body['data'];
+    if (data is! Map<String, dynamic>) {
+      throw const OnboardingUnavailable('The server sent nothing back');
+    }
+    return CompanyDoc.fromJson(data);
+  }
+
+  @override
+  Future<String> uploadLogo(PickedFile image) async {
+    final Map<String, dynamic> body = await _upload(
+      ApiPaths.uploadAsset,
+      image,
+      _imageType(image.name),
+      fields: const <String, String>{'kind': 'logo'},
+    );
+    final Object? url = body['url'];
+    if (url is! String || url.isEmpty) {
+      throw const OnboardingUnavailable('The upload returned no address');
+    }
+    return url;
+  }
+
+  @override
+  Future<PosterStyle> analyzePosterStyle(PickedFile image) async {
+    final Map<String, dynamic> body = await _upload(
+      ApiPaths.aiAnalyzePosterStyle,
+      image,
+      _imageType(image.name),
+    );
+    return PosterStyle.fromJson(body);
+  }
+
+  /// One file, multipart, under `file` — the shape every upload route here
+  /// reads. The content type is set rather than left to Dio: the parsers check
+  /// it, and an `application/octet-stream` PDF is rejected as not a PDF.
+  Future<Map<String, dynamic>> _upload(
+    String path,
+    PickedFile file,
+    DioMediaType type, {
+    Map<String, String> fields = const <String, String>{},
+  }) async {
+    try {
+      final FormData form = FormData.fromMap(<String, dynamic>{
+        ...fields,
+        'file': MultipartFile.fromBytes(
+          file.bytes,
+          filename: file.name,
+          contentType: type,
+        ),
+      });
+      final response = await _client.sendMultipart<Map<String, dynamic>>(
+        path,
+        form,
+      );
+      return response.data ?? const <String, dynamic>{};
+    } on DioException catch (e) {
+      throw OnboardingUnavailable(_reasonFrom(e));
+    } on OnboardingUnavailable {
+      rethrow;
+    } on Object {
+      throw const OnboardingUnavailable();
+    }
+  }
+
+  static DioMediaType _imageType(String name) {
+    final String n = name.toLowerCase();
+    if (n.endsWith('.png')) return DioMediaType('image', 'png');
+    if (n.endsWith('.webp')) return DioMediaType('image', 'webp');
+    if (n.endsWith('.gif')) return DioMediaType('image', 'gif');
+    return DioMediaType('image', 'jpeg');
   }
 
   @override
@@ -92,9 +170,9 @@ class ApiOnboardingRepository implements OnboardingRepository {
     try {
       await _client.post<Map<String, dynamic>>(
         ApiPaths.aiStyleMemory,
-        // `topic` defaults to 'general' server-side; an onboarding sample has
-        // no topic of its own, so it is left to that default.
-        data: <String, dynamic>{'text': text},
+        // `baseline`, as the web sends it: this is the voice everything else
+        // is measured against, not a sample about one topic.
+        data: <String, dynamic>{'text': text, 'topic': 'baseline'},
       );
       return null;
     } on DioException catch (e) {
@@ -102,6 +180,37 @@ class ApiOnboardingRepository implements OnboardingRepository {
     } on Object {
       // A parse failure on a call whose body we ignore. Nothing to quote.
       return null;
+    }
+  }
+
+  @override
+  Future<bool> hasFreshWelcomeBonus() async {
+    try {
+      final response = await _client.get<Map<String, dynamic>>(
+        ApiPaths.userXp,
+        queryParameters: const <String, dynamic>{'include': 'history'},
+      );
+      final List<Object?> history =
+          (response.data?['transactions'] as List<Object?>?) ??
+          const <Object?>[];
+      final Iterable<Map<String, dynamic>> registrations = history
+          .whereType<Map<String, dynamic>>()
+          .where((Map<String, dynamic> t) => t['action'] == 'registration');
+      // The web's two checks, kept apart as it keeps them: the bonus was
+      // earned, and it landed within the last two minutes.
+      final bool earned = registrations.any(
+        (Map<String, dynamic> t) => t['type'] == 'earn',
+      );
+      final DateTime cutoff = DateTime.now().subtract(
+        const Duration(minutes: 2),
+      );
+      final bool recent = registrations.any((Map<String, dynamic> t) {
+        final DateTime? at = DateTime.tryParse('${t['createdAt']}');
+        return at != null && at.isAfter(cutoff);
+      });
+      return earned && recent;
+    } on Object {
+      return false;
     }
   }
 
@@ -120,12 +229,7 @@ class ApiOnboardingRepository implements OnboardingRepository {
   }
 
   @override
-  Future<void> seedAfterOnboarding({
-    String? profession,
-    String? industry,
-    String? brandType,
-    bool usedCvUpload = false,
-  }) async {
+  Future<void> seedAfterOnboarding(OnboardingAnswers answers) async {
     // Each step swallows its own failure — none may block the handover.
     Future<void> attempt(String path, [Object? body]) async {
       try {
@@ -134,6 +238,12 @@ class ApiOnboardingRepository implements OnboardingRepository {
         // Fire-and-forget, exactly like the web's post-finalise fan-out.
       }
     }
+
+    final bool company = answers.isCompany;
+    final ParsedCv? cv = answers.cv;
+    final CompanyDoc? doc = answers.companyDoc;
+
+    if (company) unawaited(attempt(ApiPaths.studioBrandTemplate));
 
     // Grounding first. Idempotent server-side.
     unawaited(attempt(ApiPaths.personaHarvest));
@@ -146,26 +256,21 @@ class ApiOnboardingRepository implements OnboardingRepository {
     unawaited(attempt(ApiPaths.aiInitWeekPlan));
     unawaited(
       attempt(ApiPaths.aiGenerateRoadmap, <String, dynamic>{
-        'profession': ?profession,
-        'industry': ?industry,
+        'profession': ?cv?.profession,
+        'industry': ?(company ? _orNull(doc?.industry) : cv?.industry),
         // The web sends the profession as expertise too.
-        'expertise': ?profession,
-        'goals': <String>[
-          brandType == 'company' ? 'brand_building' : 'thought_leadership',
-        ],
-        'usedCVUpload': usedCvUpload,
-        'brandType': ?brandType,
+        'expertise': ?cv?.profession,
+        'goals': <String>[company ? 'brand_building' : 'thought_leadership'],
+        'usedCVUpload': answers.usedCvUpload,
+        'cvData': ?cv?.toJson(),
+        'brandType': (answers.brand ?? BrandChoice.personal).id,
+        if (company) 'companyDescription': ?_orNull(doc?.description),
       }),
     );
-
-    // No body: the server reads profession / industry / headline / summary
-    // from the preferences row this flow has just written, which is why this
-    // runs AFTER completeOnboarding and not beside it.
-    unawaited(attempt(ApiPaths.aiSuggestTopics));
   }
 
-  /// The backend's own message when it sent one, so the chat can quote it the
-  /// way the web does (`I hit a snag saving your setup ({reason}).`).
+  static String? _orNull(String? v) => v == null || v.trim().isEmpty ? null : v;
+
   static String? _reasonFrom(DioException e) {
     final Object? failure = e.error;
     if (failure is Failure) {
@@ -192,18 +297,41 @@ class FakeOnboardingRepository implements OnboardingRepository {
   }
 
   @override
-  Future<ProfessionAnalysis?> analyzeProfession(String headline) async {
-    await Future<void>.delayed(const Duration(milliseconds: 400));
-    return ProfessionAnalysis(
-      profession: headline,
+  Future<ParsedCv> parseCv(PickedFile pdf) async {
+    await Future<void>.delayed(const Duration(milliseconds: 1200));
+    return const ParsedCv(
+      headline: 'Senior Software Engineer at Acme',
+      profession: 'Software Engineer',
       industry: 'Technology',
-      suggestedCategories: const <String>[
-        'thought_leadership',
-        'career_growth',
-      ],
-      expertise: headline,
-      roadmapTitle: 'Your Growth Roadmap',
+      summary: 'Builds the systems behind payments at scale.',
+      skills: <String>['Distributed systems', 'Go', 'Mentoring'],
     );
+  }
+
+  @override
+  Future<CompanyDoc> parseCompanyDoc(PickedFile pdf) async {
+    await Future<void>.delayed(const Duration(milliseconds: 1200));
+    // No website, so the mock walks through the details form too.
+    return const CompanyDoc(
+      description:
+          'Acme builds payment infrastructure for small online shops across '
+          'India.',
+      industry: 'FinTech',
+      tagline: 'Payments, minus the paperwork',
+      features: <String>['Checkout links', 'UPI collections'],
+    );
+  }
+
+  @override
+  Future<String> uploadLogo(PickedFile image) async {
+    await Future<void>.delayed(const Duration(milliseconds: 700));
+    return 'https://picsum.photos/seed/logo/256';
+  }
+
+  @override
+  Future<PosterStyle> analyzePosterStyle(PickedFile image) async {
+    await Future<void>.delayed(const Duration(milliseconds: 1000));
+    return const PosterStyle(theme: 'dark', primaryColor: '#5761EB');
   }
 
   @override
@@ -221,17 +349,15 @@ class FakeOnboardingRepository implements OnboardingRepository {
   }
 
   @override
+  Future<bool> hasFreshWelcomeBonus() async => false;
+
+  @override
   Future<void> completeOnboarding(Map<String, dynamic> patch) async {
     await Future<void>.delayed(const Duration(milliseconds: 500));
   }
 
   @override
-  Future<void> seedAfterOnboarding({
-    String? profession,
-    String? industry,
-    String? brandType,
-    bool usedCvUpload = false,
-  }) async {}
+  Future<void> seedAfterOnboarding(OnboardingAnswers answers) async {}
 }
 
 /// Mock ↔ real switch on `useFakeBackend`. A release build can never resolve

@@ -1,8 +1,11 @@
-import 'profession_analysis.dart';
+import '../../../core/platform/file_picking.dart';
 import '../../../core/platform/image_picking.dart';
+import 'onboarding_answers.dart';
+import 'onboarding_inputs.dart';
 
 export 'chat_message.dart';
 export 'onboarding_answers.dart';
+export 'onboarding_inputs.dart';
 export 'onboarding_step.dart';
 export 'profession_analysis.dart';
 
@@ -25,79 +28,73 @@ class OnboardingUnavailable implements Exception {
 
 /// Seam between the onboarding chat and the backend.
 ///
-/// Only [completeOnboarding] may throw. The other three are best-effort by
-/// design and swallow their own failures, because each one improves the result
-/// and none of them is worth stranding a user on a setup screen for:
+/// Every call is one the web's `OnboardingChat` makes, against the mobile
+/// twin of the same route.
 ///
-///  * a failed profession analysis costs a prefilled industry;
-///  * a failed style save costs the first few posts' voice, which the product
-///    then picks up from the user's real posts anyway (the web says exactly
-///    this to the user and advances regardless);
-///  * a failed topic seed costs nothing the user can see today.
+/// The uploads ([parseCv], [parseCompanyDoc], [uploadLogo],
+/// [analyzePosterStyle]) throw [OnboardingUnavailable] with the server's
+/// reason, because the chat quotes it — "I couldn't read that one — {reason}"
+/// — and offers another try. So does [completeOnboarding]. The rest are
+/// best-effort and swallow their own failures: each improves the result, and
+/// none is worth stranding a user on a setup screen for.
 abstract class OnboardingRepository {
-  /// `GET /auth/me` — the signed-in user's display name.
-  ///
-  /// The web reads this from the NextAuth session, which it already holds on
-  /// the client; this app has only tokens, so the name is fetched. It is used
-  /// for one thing — Plexa's greeting uses the user's first name — so a null
-  /// return is fine and the greeting falls back to "there", exactly as the web
-  /// does when the session carries no name.
+  /// `GET /auth/me` — the signed-in user's display name, for the greeting.
+  /// Null falls back to "there", as the web does with no session name.
   Future<String?> fetchDisplayName();
 
-  /// `POST /ai/analyze-profession` — the role answer in, a profession and
-  /// industry out. Returns null on any failure.
-  Future<ProfessionAnalysis?> analyzeProfession(String headline);
+  /// `POST /ai/parse-cv` — the LinkedIn profile PDF, read.
+  Future<ParsedCv> parseCv(PickedFile pdf);
 
-  /// `POST /ai/style-memory` — embeds the writing sample so generation can
-  /// retrieve it. Returns the failure reason, or null on success, so the caller
-  /// can quote it in the chat the way the web does.
+  /// `POST /ai/parse-company-doc` — a company document, read.
+  Future<CompanyDoc> parseCompanyDoc(PickedFile pdf);
+
+  /// `POST /upload/asset` with `kind=logo` — the company logo, stored without
+  /// the lossy re-encode `/upload/image` applies, so it keeps its
+  /// transparency. Returns the public URL.
+  Future<String> uploadLogo(PickedFile image);
+
+  /// `POST /ai/analyze-poster-style` — the theme and brand colours of a poster
+  /// the company already made.
+  Future<PosterStyle> analyzePosterStyle(PickedFile image);
+
+  /// `POST /ai/analyze-style-screenshot` — the writing voice, read out of
+  /// screenshots of the user's own posts. The server seeds the style memory
+  /// from them. Null when nothing usable came back — a screenshot of
+  /// something that is not a post is the ordinary case, not an error.
+  Future<String?> analyzeStyleScreenshots(List<PickedImage> images);
+
+  /// `POST /ai/style-memory` — the written sample, as the `baseline` voice.
+  /// Returns the failure reason, or null on success, so the chat can quote it.
   Future<String?> saveStyleSample(String text);
 
-  /// Reads the user's writing voice out of screenshots of posts they wrote
-  /// or admire, and seeds the style memory from it.
-  ///
-  /// The web's `style-choice` step offers this as the alternative to typing
-  /// a sample; mobile collapsed the two because there was no picker. There
-  /// is one now, so the choice is back.
-  ///
-  /// Returns the extracted sample, or null when nothing usable came back —
-  /// a screenshot of something that is not a post is the ordinary case, not
-  /// an error.
-  Future<String?> analyzeStyleScreenshots(List<PickedImage> images);
+  /// `GET /user/xp?include=history` — whether the one-time welcome bonus
+  /// landed in the last two minutes, which is when the onboarding celebrates
+  /// it. The server credits it on the first LinkedIn connect (a company
+  /// brand: when its page is saved), so the answer changes mid-chat. False on
+  /// any failure: a missed celebration costs nothing.
+  Future<bool> hasFreshWelcomeBonus();
 
   /// `PATCH /user/preferences` — the single write that ends onboarding.
   /// Throws [OnboardingUnavailable] on failure; this is the one call whose
   /// outcome the user has to see.
   Future<void> completeOnboarding(Map<String, dynamic> patch);
 
-  /// The post-finalise fan-out — everything the account needs before the
-  /// dashboard is worth looking at.
+  /// The post-finalise fan-out — the web's chain, in the web's order, because
+  /// the order is load-bearing:
   ///
-  /// Runs the web's chain, in the web's order, because the order is
-  /// load-bearing:
+  ///   1. `POST /studio/brand-template` — company brand only: a poster
+  ///      template built from the logo, theme and colours. Fire-and-forget.
+  ///   2. `POST /persona/harvest` — seeds the Substance Bank from the CV, so
+  ///      the first weeks are grounded in something real. Fire-and-forget.
+  ///   3. `POST /onboarding/derive-audience` — **AWAITED**. Nobody is asked
+  ///      who they want reading their posts, so the audience is inferred
+  ///      here, and the next call plans week one by reading it. Fired
+  ///      alongside init-week-plan instead, the race is lost about half the
+  ///      time and week one is aimed at nobody.
+  ///   4. `POST /ai/init-week-plan` — seeds week one.
+  ///   5. `POST /ai/generate-roadmap` — builds the roadmap, which IS the home
+  ///      screen.
   ///
-  ///   1. `POST /persona/harvest` — seeds the Substance Bank from the CV and
-  ///      past posts, so the first weeks are grounded in something real.
-  ///      Fire-and-forget.
-  ///   2. `POST /onboarding/derive-audience` — **AWAITED**, unlike everything
-  ///      around it. Nobody is asked who they want reading their posts any
-  ///      more, so the audience is inferred here, and the very next call plans
-  ///      their first week by reading that audience. Fired alongside
-  ///      init-week-plan instead, the race is lost about half the time and week
-  ///      one is aimed at nobody.
-  ///   3. `POST /ai/init-week-plan` — seeds week one.
-  ///   4. `POST /ai/generate-roadmap` — builds the Season 1 roadmap, which IS
-  ///      the home screen.
-  ///   5. `POST /ai/suggest-topics` — seeds topics from the new profile.
-  ///
-  /// Every step swallows its own failure: none of them may block the handover
-  /// to the dashboard. Until these routes existed on the mobile API this method
-  /// could only do step 5, which is why a mobile-onboarded user used to arrive
-  /// at an empty roadmap and an empty planner.
-  Future<void> seedAfterOnboarding({
-    String? profession,
-    String? industry,
-    String? brandType,
-    bool usedCvUpload = false,
-  });
+  /// Every step swallows its own failure: none may block the handover.
+  Future<void> seedAfterOnboarding(OnboardingAnswers answers);
 }

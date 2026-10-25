@@ -1,84 +1,72 @@
 /// The onboarding script — the steps, their lanes, and every line Plexa says.
 ///
-/// Ported from `components/onboarding/OnboardingChat.tsx` (the LIVE onboarding;
-/// `components/automate/PersonalizedOnboarding.tsx` and its two children are
-/// dead code with zero importers and are deliberately NOT ported — porting them
-/// would give the app a second, contradictory onboarding design).
+/// A port of `components/onboarding/OnboardingChat.tsx`, step for step. The
+/// web is the source of truth for the ORDER, the BRANCHES and the COPY; read
+/// that file before changing any of them here, and change both.
 ///
-/// ## Which of the web's steps are here
+/// ## The two paths
 ///
-/// The web runs two branches — personal and company — over eighteen declared
-/// steps, of which three are hidden behind two `false` feature flags. Of the
-/// rest, the ones that survive on mobile today are the ones the mobile API and
-/// this app's dependencies can actually serve:
+/// ```
+/// personal: welcome → brand → connect → cvUpload ─┬──────────────→ styleChoice ┬→ styleScreenshots ┬→ finish
+///                                                  └→ currentRole ─┘            └→ styleWrite ───────┘
+///                                                     (CV skipped)
 ///
-/// | Web step | Here | Why |
-/// |---|---|---|
-/// | `welcome` | [OnboardingStep.welcome] | — |
-/// | `brand` | [OnboardingStep.brand] | — |
-/// | `current-role` | [OnboardingStep.role] | The web reaches it only when the CV upload is SKIPPED. Here it is the primary profession capture, because the CV path needs a file picker this app does not depend on. |
-/// | `style-choice` / `style-write` | [OnboardingStep.voice] | Collapsed to one step: the screenshot branch needs an image picker. |
-/// | `finish` | [OnboardingStep.finish] | — |
-/// | — | [OnboardingStep.goal] | **Added.** See the note on [OnboardingStep.goal]. |
-/// | `connect-linkedin` | [OnboardingStep.connect] | Present. It was omitted on the grounds that OAuth "belongs to the accounts surface" — true in isolation, and wrong in consequence: a user who onboarded on their phone reached the dashboard with no LinkedIn account, so nothing could publish and the entire product was inert for them. |
-/// | `cv-upload`, `company-doc` | absent | Both take a PDF, which needs `file_picker`; `image_picker` cannot open documents. |
-/// | `style-screenshots` | folded into [OnboardingStep.voice] | Present as the second branch of the voice step rather than a step of its own — the web splits them only because its choice screen has to ask which one you want first, and a button beside the text box asks the same question in less space. |
-/// | `company-page` | [OnboardingStep.companyPage] | Present. |
-/// | `company-about`, `company-details` | [OnboardingStep.companyDetails] | Collapsed to one form. The web splits them because it parses an uploaded company document first and asks the user to confirm what it read; there is no document picker here yet, so there is nothing to confirm — only fields to fill. |
-/// | `company-logo`, `poster-style` | absent | Need an upload route (`/upload/asset`) and a poster-style analyser that the mobile API does not expose. |
-/// | `content-mode`, `target-role`, `who-you-serve` | absent | Hidden on the web too (`TRANSFORMATION_ONBOARDING_ENABLED` / `AUDIENCE_ONBOARDING_ENABLED` are both `false`), so their absence here MATCHES the web as it ships. |
+/// company:  welcome → brand → connect → companyPage → companyLogo → posterStyle → companyDoc ┬──────────────────→ styleChoice → …
+///                                                                                              └→ companyDetails ─┘
+///                                                                                       (doc skipped or too thin)
+/// ```
 ///
-/// Every omission is reported rather than faked: a step that cannot complete is
-/// worse than a step that is not offered.
+/// LinkedIn comes second, straight after the brand, on both paths: a company
+/// brand cannot pick a page before it, and every later step is worth less to a
+/// user who cannot publish.
+///
+/// ## What the web has that is not here
+///
+/// `company-about` (declared but unreachable on the web — nothing advances to
+/// it), and `content-mode`, `target-role` and `who-you-serve`, which the web
+/// hides behind `TRANSFORMATION_ONBOARDING_ENABLED` and
+/// `AUDIENCE_ONBOARDING_ENABLED`, both `false`. Their absence here matches the
+/// web as it ships; if either flag flips, port the step then.
 enum OnboardingStep {
   welcome,
   brand,
 
-  /// The web's `current-role`. Sets `profession`, which decides the plan.
-  role,
-
-  /// **Not a web step.** The web hard-codes the goal at finalise time
-  /// (`goals: [brandType === 'company' ? 'brand_building' : 'thought_leadership']`)
-  /// because its own roadmap generator only ever reads `goals[0]`. Asking for
-  /// it is a deliberate departure: `UserPreferences.goals` is a real column the
-  /// roadmap and the planner both read, and the five ids offered here are the
-  /// exact five the web's `getGoalLabel` and its milestone table understand —
-  /// so nothing downstream sees a value it cannot handle.
-  goal,
-
-  /// The web's `style-choice`, `style-write` AND `style-screenshots`,
-  /// collapsed into one panel: type a sample, or hand over a screenshot and
-  /// let `/ai/analyze-style-screenshot` read the voice out of it. Both
-  /// branches end in a real sample, so neither is a skip.
-  voice,
-
-  /// The web's `connect-linkedin`, and the one step whose absence broke the
-  /// product: without a connected account there is nothing to publish to, so
-  /// every downstream surface — planner, posts, auto-post — is inert.
-  ///
-  /// Runs the same browser hand-off the Settings screen uses
-  /// (`SettingsRepository.connectLinkedin`) rather than a second copy of it.
+  /// `connect-linkedin`. Required — there is no skip, on either platform: a
+  /// successful connect is the only way forward.
   connect,
 
-  /// **Company brand only.** Which LinkedIn page the account will publish to.
-  ///
-  /// Sits after [connect] because the list comes from the pages the connected
-  /// account administers — there is nothing to choose from before that.
-  ///
-  /// Skipping it is what made "Company brand" produce an account the web
-  /// flow cannot: `brandType: 'company'` with no page, so company posts had
-  /// nowhere to go and every company surface was inert.
+  /// Company only: which LinkedIn page to grow.
   companyPage,
 
-  /// **Company brand only.** The company document — what the company does,
-  /// its industry and its tagline — which anchors every generated post.
-  companyDetails,
-  finish;
+  /// Company only: the logo every generated poster carries. Required.
+  companyLogo,
 
-  /// True for the two steps only a company brand ever sees.
-  bool get isCompanyOnly =>
-      this == OnboardingStep.companyPage ||
-      this == OnboardingStep.companyDetails;
+  /// Company only: a poster the company already made, to match. Optional.
+  posterStyle,
+
+  /// Personal only: the LinkedIn profile PDF. Optional.
+  cvUpload,
+
+  /// Personal only, and only when the CV was skipped: without it the
+  /// profession silently defaulted to "Professional", which drove a wrong
+  /// roadmap and off-target posts.
+  currentRole,
+
+  /// Company only: a company document. Optional — skipping it, or uploading
+  /// one too thin to write from, leads to [companyDetails].
+  companyDoc,
+
+  /// Company only: the details the document did not supply.
+  companyDetails,
+
+  /// How the voice is captured: screenshots, or a written sample.
+  styleChoice,
+  styleScreenshots,
+
+  /// The written sample. No skip — it is the last place the voice can be
+  /// captured.
+  styleWrite,
+  finish;
 
   /// How this step is answered — with a tap, or by typing.
   ///
@@ -86,69 +74,75 @@ enum OnboardingStep {
   ///
   ///  * **reply** — a chip row in the USER's lane at the end of the thread. A
   ///    choice IS the user's next message, so the control lives where that
-  ///    message will appear. It stays live while Plexa is still typing, because
-  ///    the typing bubble directly above it already says what a second spinner
-  ///    would.
-  ///  * **panel** — a composer in the bottom band, full width, with its own
-  ///    scroll. Panels never go inline: a tall form at the end of a scrolling
-  ///    thread gets its submit button auto-scrolled into view and its first
-  ///    field pushed off the top.
+  ///    message will appear. It stays live while Plexa is still typing,
+  ///    because the typing bubble directly above it already says what a
+  ///    second spinner would.
+  ///  * **panel** — a picker or a form in the bottom band, full width, with
+  ///    its own scroll. Panels never go inline: a tall form at the end of a
+  ///    scrolling thread gets its submit button auto-scrolled into view and
+  ///    its first field pushed off the top.
   ///
   /// [finish] is the one step whose lane depends on state — the normal finish
   /// is a centred progress hint, and only a FAILED finalise offers chips.
   OnboardingLane lane({bool finaliseError = false}) => switch (this) {
     OnboardingStep.welcome ||
     OnboardingStep.brand ||
-    OnboardingStep.role ||
-    OnboardingStep.goal ||
     OnboardingStep.connect ||
-    OnboardingStep.companyPage => OnboardingLane.reply,
-    OnboardingStep.companyDetails => OnboardingLane.panel,
-    OnboardingStep.voice => OnboardingLane.panel,
+    OnboardingStep.currentRole ||
+    OnboardingStep.styleChoice => OnboardingLane.reply,
     OnboardingStep.finish =>
       finaliseError ? OnboardingLane.reply : OnboardingLane.panel,
+    _ => OnboardingLane.panel,
   };
 
-  /// The next step, or null at the end. Linear: unlike the web there is no
-  /// company branch here, because none of the company-only steps survived the
-  /// mobile cut (see the table above).
-  OnboardingStep? get next {
-    final int i = OnboardingStep.values.indexOf(this);
-    return i == OnboardingStep.values.length - 1
-        ? null
-        : OnboardingStep.values[i + 1];
-  }
-
-  /// `progressPct` from the web: the bar never reads below 5%, so step one
-  /// still looks like progress rather than like nothing has happened.
-  /// [company] must be passed so a PERSONAL user still reaches 100%.
+  /// The web's `progressPct`.
   ///
-  /// The two company steps are in the enum but not in a personal user's
-  /// path, and counting them would leave that user's bar stuck in the
-  /// eighties at the moment they finish — a progress bar that never fills
-  /// reads as something having gone wrong.
+  /// Each path counts only its own milestones; the branch steps report the
+  /// milestone they belong to, so the bar neither jumps nor stalls on them.
+  /// Never below 5%, so step one still looks like progress.
   int progressPercent({required bool company}) {
-    final List<OnboardingStep> path = company
-        ? OnboardingStep.values
-        : OnboardingStep.values
-              .where((OnboardingStep s) => !s.isCompanyOnly)
-              .toList(growable: false);
-    final int idx = path.indexOf(this);
-    // A company-only step on a personal path cannot happen, but if it ever
-    // did, reporting the last known position beats reporting -1.
-    if (idx < 0) return 100;
-    final double pct = (idx + 1) / path.length * 100;
-    final int rounded = pct.round();
-    return rounded < 5 ? 5 : rounded;
+    final List<OnboardingStep> order = company
+        ? const <OnboardingStep>[
+            OnboardingStep.welcome,
+            OnboardingStep.brand,
+            OnboardingStep.connect,
+            OnboardingStep.companyPage,
+            OnboardingStep.companyLogo,
+            OnboardingStep.posterStyle,
+            OnboardingStep.companyDoc,
+            OnboardingStep.styleChoice,
+            OnboardingStep.finish,
+          ]
+        : const <OnboardingStep>[
+            OnboardingStep.welcome,
+            OnboardingStep.brand,
+            OnboardingStep.connect,
+            OnboardingStep.cvUpload,
+            OnboardingStep.styleChoice,
+            OnboardingStep.finish,
+          ];
+    final OnboardingStep resolved = switch (this) {
+      OnboardingStep.styleScreenshots ||
+      OnboardingStep.styleWrite => OnboardingStep.styleChoice,
+      OnboardingStep.companyDetails => OnboardingStep.companyDoc,
+      OnboardingStep.currentRole => OnboardingStep.cvUpload,
+      _ => this,
+    };
+    final int idx = order.indexOf(resolved);
+    final int pct = ((idx + 1) / order.length * 100).round();
+    return pct < 5 ? 5 : pct;
   }
 
-  /// What Plexa says on entering this step.
+  /// What Plexa says on entering this step, verbatim from the web.
   ///
-  /// Verbatim from the web wherever a counterpart exists. The governing copy
-  /// rule, stated in the web source: *"the dock control below already says what
-  /// it is… Say only what the control cannot: why the ask exists, and what it
-  /// changes."*
-  List<String> botLines(String firstName) => switch (this) {
+  /// The web's copy rule: *"the dock control below already says what it is…
+  /// Say only what the control cannot: why the ask exists, and what it
+  /// changes."* [companyDetails] is absent: its line depends on which fields
+  /// are missing, so the controller writes it (see `companyDetailsAsk`).
+  List<String> botLines({
+    required String firstName,
+    required bool company,
+  }) => switch (this) {
     OnboardingStep.welcome => <String>[
       "Hey $firstName — I'm Plexa. A few questions, then I write and publish "
           'your LinkedIn posts. Ready?',
@@ -156,36 +150,55 @@ enum OnboardingStep {
     OnboardingStep.brand => <String>[
       'Personal brand, or a company page you manage?',
     ],
-    OnboardingStep.role => <String>[
+    // The XP figure survives HERE and nowhere else — this is the one screen
+    // where it can change what the user does next.
+    OnboardingStep.connect => <String>[
+      company
+          ? 'Connect LinkedIn so I can load the company pages you manage. '
+                '+$kRegistrationXpLabel XP on connect.'
+          : "I'll publish on your behalf and learn from your existing posts. "
+                '+$kRegistrationXpLabel XP on connect.',
+    ],
+    OnboardingStep.companyPage => <String>['Which page do you want to grow?'],
+    // The only step with two lines: the second is a procedure the user has to
+    // leave the app to follow, and nothing in the dock can carry it.
+    OnboardingStep.cvUpload => <String>[
+      'Your LinkedIn PDF gives me your headline, skills and experience — so '
+          'the posts sound like you.',
+      'On LinkedIn: your profile → "More" → "Save to PDF".',
+    ],
+    OnboardingStep.currentRole => <String>[
       "What's your current role? It sets the plan I build for you.",
     ],
-    // No web counterpart (the web never asks). Written to the same rule: it
-    // says why the ask exists and what it changes, and nothing about the chips.
-    OnboardingStep.goal => <String>[
-      'And what should these posts be doing for you? It picks the arc I plan.',
+    OnboardingStep.companyLogo => <String>[
+      'Your logo goes on every poster I generate.',
     ],
-    OnboardingStep.voice => <String>[
+    OnboardingStep.posterStyle => <String>[
+      "Made a poster before? I'll match its colors and layout.",
+    ],
+    OnboardingStep.companyDoc => <String>[
+      'A company document tells me what you actually sell, so posts stay '
+          'specific.',
+    ],
+    OnboardingStep.companyDetails => const <String>[],
+    OnboardingStep.styleChoice => <String>[
       'Now your voice — so posts read like you wrote them.',
     ],
-    // Same rule as the rest: the chip says "Connect LinkedIn", so the line
-    // says what the chip cannot — that this is the step which makes every
-    // other one mean something.
-    OnboardingStep.connect => <String>[
-      'Now connect LinkedIn. Until you do I can write your posts, but '
-          'nothing can publish.',
+    OnboardingStep.styleScreenshots => <String>[
+      "Posts you wrote yourself — I'll read the tone and rhythm.",
     ],
-    OnboardingStep.companyPage => <String>[
-      'Which company page am I posting to?',
-    ],
-    OnboardingStep.companyDetails => <String>[
-      'Tell me what the company does — this anchors every post I write, so '
-          'a couple of honest sentences beat a polished one.',
+    OnboardingStep.styleWrite => <String>[
+      "I do need this one — it's what makes every post sound like you.",
     ],
     OnboardingStep.finish => <String>[
       "That's everything, $firstName. Building your roadmap now…",
     ],
   };
 }
+
+/// The welcome bonus credited on the first LinkedIn connect — the web's
+/// `REGISTRATION_XP` (2500), formatted as `toLocaleString()` prints it.
+const String kRegistrationXpLabel = '2,500';
 
 /// Where this step's control lives. See [OnboardingStep.lane].
 enum OnboardingLane { reply, panel }
@@ -211,10 +224,7 @@ enum BrandChoice {
 
 /// The four highest-coverage roles, plus a free-text escape.
 ///
-/// `COMMON_ROLES` from the web, in its order and its wording. The web's comment
-/// explains why the list exists at all: without it the profession silently
-/// defaulted to "Professional", which drove a wrong roadmap and off-target
-/// posts.
+/// `COMMON_ROLES` from the web, in its order and its wording.
 const List<String> kCommonRoles = <String>[
   'Software Engineer',
   'Founder / Entrepreneur',
@@ -222,26 +232,7 @@ const List<String> kCommonRoles = <String>[
   'Marketing & Content',
 ];
 
-/// What the user wants the posts to do.
-///
-/// The ids are the web's — `getGoalLabel` in `app/api/ai/generate-roadmap` and
-/// `MILESTONE_DEFINITIONS` in `app/api/user/roadmap` both key off exactly these
-/// five strings, and the labels are that map's labels. Sending anything else
-/// would fall through to a generic milestone set.
-enum OnboardingGoal {
-  thoughtLeadership('thought_leadership', 'Thought Leadership'),
-  jobOpportunities('job_opportunities', 'Career Growth'),
-  networking('networking', 'Professional Networking'),
-  brandBuilding('brand_building', 'Personal Brand Building'),
-  learnShare('learn_share', 'Learning & Knowledge Sharing');
-
-  const OnboardingGoal(this.id, this.label);
-
-  final String id;
-  final String label;
-}
-
-/// The three tone samples offered above the voice composer.
+/// The three tone samples offered above the writing-sample composer.
 ///
 /// `TONE_PRESETS` from `components/chat/PlexaChatKit.tsx`, samples verbatim.
 /// Tapping one fills the composer with its sample, exactly as on the web — the

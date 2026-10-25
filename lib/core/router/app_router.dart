@@ -31,13 +31,13 @@ import '../../features/engagement/presentation/pages/comments_page.dart';
 import '../../features/engagement/presentation/pages/connections_page.dart';
 import '../../features/home/presentation/pages/home_page.dart';
 import '../../features/onboarding/application/onboarding_controller.dart';
-import '../../features/onboarding/presentation/pages/onboarding_chat_page.dart';
 import '../../features/missions/presentation/pages/about_odyssey_page.dart';
 import '../../features/missions/presentation/pages/banner_blueprint_page.dart';
 import '../../features/missions/presentation/pages/headline_hook_page.dart';
 import '../../features/missions/presentation/pages/season_complete_page.dart';
 import '../../features/persona/presentation/pages/persona_page.dart';
 import '../../features/planner/presentation/pages/planner_page.dart';
+import '../../features/plexa/presentation/pages/plexa_journey_page.dart';
 import '../../features/posts/presentation/pages/post_detail_page.dart';
 import '../../features/posts/presentation/pages/posts_page.dart';
 import '../../features/settings/presentation/pages/accounts_page.dart';
@@ -102,12 +102,13 @@ GoRouter appRouter(Ref ref) {
       // Cold-start splash. No page-level navigation — the redirect owns it.
       GoRoute(path: ZaveRoutes.splash, builder: (_, _) => const SplashPage()),
 
-      // The onboarding chat. Held ahead of the dashboard until completed.
+      // Onboarding: Plexa's intro, then the chat with her in the top row — the
+      // web's /onboarding. Held ahead of the dashboard until completed.
       GoRoute(
         path: ZaveRoutes.onboarding,
         pageBuilder: (context, state) => CustomTransitionPage<void>(
           key: state.pageKey,
-          child: const OnboardingChatPage(),
+          child: const PlexaJourneyPage(),
           transitionsBuilder: _fadeTransition,
         ),
       ),
@@ -237,6 +238,10 @@ GoRouter appRouter(Ref ref) {
       _fullScreen(ZaveRoutes.schedules, const SchedulesPage()),
       _fullScreen(ZaveRoutes.persona, const PersonaPage()),
       _fullScreen(ZaveRoutes.settings, const SettingsPage()),
+      _fullScreen(
+        ZaveRoutes.plexa,
+        const PlexaJourneyPage(exitToDashboard: true),
+      ),
       _fullScreen(ZaveRoutes.accounts, const AccountsPage()),
 
       // ── Reached from the roadmap's step rows, not from the nav ──────────

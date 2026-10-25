@@ -1,19 +1,11 @@
 import 'package:freezed_annotation/freezed_annotation.dart';
 
+import 'onboarding_inputs.dart';
 import 'onboarding_step.dart';
 
 part 'onboarding_answers.freezed.dart';
 
-/// Everything the conversation has collected so far.
-///
-/// Accumulated turn by turn and written ONCE, at [toPreferencesPatch], when the
-/// user reaches the finish step — the same shape as the web's finalise effect,
-/// which builds one `preferences` object and `await`s a single write.
-///
-/// Nothing is persisted mid-conversation on purpose. A partial preferences row
-/// reads as "onboarded" to some of the code that branches on it, and a user who
-/// abandons the chat halfway would land on a dashboard configured by half an
-/// answer.
+/// Everything the chat has collected, and the one write that ends onboarding.
 @freezed
 abstract class OnboardingAnswers with _$OnboardingAnswers {
   const OnboardingAnswers._();
@@ -21,76 +13,96 @@ abstract class OnboardingAnswers with _$OnboardingAnswers {
   const factory OnboardingAnswers({
     BrandChoice? brand,
 
-    /// The `current-role` answer. Becomes `preferences.profession`.
-    String? role,
-    OnboardingGoal? goal,
+    /// The LinkedIn profile PDF was imported. Sent as `cvUploaded`.
+    @Default(false) bool usedCvUpload,
 
-    /// The writing sample. Saved separately to the style memory (it is an
-    /// embedding, not a preferences column), and kept here only so a failed
-    /// save can be retried without re-asking.
-    String? voiceSample,
+    /// The parsed CV — or, when the CV was skipped, just the role the user
+    /// picked, as `profession`. The web keeps both in one `parsedCV`.
+    ParsedCv? cv,
 
-    /// **Company brand only.** The LinkedIn page company posts publish to.
-    /// Without it `brandType: 'company'` is a setting with nowhere to act.
     String? companyPageId,
     String? companyPageName,
 
-    /// **Company brand only.** The company document. These anchor every
-    /// generated company post, which is why the flow asks rather than
-    /// letting the model infer a company from its page name.
-    String? companyDescription,
-    String? companyIndustry,
-    String? companyTagline,
+    /// The parsed company document, merged with the details form.
+    CompanyDoc? companyDoc,
 
-    /// Filled from `POST /ai/analyze-profession`, which the web calls with the
-    /// user's headline. Best-effort: all three stay null when the call fails,
-    /// and the finalise simply sends less.
-    String? profession,
-    String? industry,
-    @Default(<String>[]) List<String> postCategories,
+    String? companyLogoUrl,
+    PosterStyle? posterStyle,
   }) = _OnboardingAnswers;
 
-  /// The PATCH body for `/user/preferences`.
+  bool get isCompany => brand == BrandChoice.company;
+
+  /// The body of `PATCH /user/preferences` — the web's finalise `preferences`
+  /// object, field for field.
   ///
-  /// **Partial by design.** The mobile endpoint is a partial upsert and strips
-  /// undefined fields server-side, so only answered questions are sent; a key
-  /// with a null value would overwrite a column the user never touched. This
-  /// mirrors the web's finalise, which spreads each optional field in only when
-  /// it has a value.
-  ///
-  /// `contentMode` is fixed to `'authority'` — the web's own fallback, and the
-  /// only value reachable there now that `TRANSFORMATION_ONBOARDING_ENABLED` is
-  /// false.
+  /// Values are capped to the server's validation limits so a long paste or a
+  /// verbose model answer cannot 400 the whole finalise. Absent and blank
+  /// answers are left OUT rather than sent empty, so a skipped step leaves its
+  /// columns as they were instead of writing blanks over them.
   Map<String, dynamic> toPreferencesPatch() {
     final BrandChoice brandType = brand ?? BrandChoice.personal;
+    final bool company = brandType == BrandChoice.company;
+    final ParsedCv? cv = this.cv;
+    final CompanyDoc? doc = companyDoc;
+    final PosterStyle? poster = posterStyle;
 
     return <String, dynamic>{
       'onboardingCompleted': true,
-      // The web sets this from whether the CV import was used. This flow has no
-      // CV import at all, so it is always false and is sent explicitly rather
-      // than left to whatever the column happened to hold.
-      'cvUploaded': false,
+      'cvUploaded': usedCvUpload,
       'brandType': brandType.id,
       'priority': brandType.priority,
+      // The career-transition choice is hidden on the web, so every account
+      // is created on the authority arc.
       'contentMode': 'authority',
-      if (goal != null) 'goals': <String>[goal!.id],
-      if (_nonEmpty(profession ?? role)) 'profession': profession ?? role,
-      if (_nonEmpty(industry)) 'industry': industry,
-      if (postCategories.isNotEmpty) 'postCategories': postCategories,
-      // Company fields only on the company path. Sending them empty on a
-      // personal account would write blank strings over columns the user may
-      // have filled in elsewhere.
-      if (brandType == BrandChoice.company) ...<String, dynamic>{
-        if (_nonEmpty(companyPageId)) 'companyPageId': companyPageId,
-        if (_nonEmpty(companyPageName)) 'companyPageName': companyPageName,
-        if (_nonEmpty(companyDescription))
-          'companyDescription': companyDescription,
-        if (_nonEmpty(companyIndustry)) 'companyIndustry': companyIndustry,
-        if (_nonEmpty(companyTagline)) 'companyTagline': companyTagline,
+      if (company && _nonEmpty(companyPageId)) ...<String, dynamic>{
+        'companyPageId': companyPageId,
+        'companyPageName': companyPageName,
+      },
+      if (cv != null) ...<String, dynamic>{
+        'headline': ?cv.headline,
+        'profession': ?cv.profession,
+        'industry': ?cv.industry,
+        'summary': ?cv.summary,
+        'skills': ?cv.skills,
+        'positions': ?cv.positions,
+        'education': ?cv.education,
+      },
+      if (company) ...<String, dynamic>{
+        if (doc != null) ...<String, dynamic>{
+          // Blank fields are left out rather than written as "" — which the
+          // web does — so a user who runs the chat again from /plexa does not
+          // lose a tagline they set in Settings to a document without one.
+          if (_nonEmpty(doc.description))
+            'companyDescription': _cap(doc.description.trim(), 2000),
+          if (_nonEmpty(doc.industry))
+            'companyIndustry': _cap(doc.industry.trim(), 200),
+          if (_nonEmpty(doc.tagline))
+            'companyTagline': _cap(doc.tagline.trim(), 300),
+          if (doc.features.isNotEmpty)
+            'companyFeatures': doc.features
+                .map((String f) => _cap(f.trim(), 300))
+                .where((String f) => f.isNotEmpty)
+                .take(40)
+                .toList(),
+          if (_nonEmpty(doc.website))
+            'companyWebsite': _cap(doc.website.trim(), 200),
+        },
+        'companyLogoUrl': ?companyLogoUrl,
+        if (poster != null) ...<String, dynamic>{
+          'posterTheme': ?poster.theme,
+          if (poster.primaryColor != null)
+            'posterPrimaryColor': _cap(poster.primaryColor!, 32),
+          if (poster.secondaryColor != null)
+            'posterSecondaryColor': _cap(poster.secondaryColor!, 32),
+          'posterLayout': ?poster.layout,
+        },
       },
     };
   }
 
   static bool _nonEmpty(String? value) =>
       value != null && value.trim().isNotEmpty;
+
+  static String _cap(String value, int max) =>
+      value.length <= max ? value : value.substring(0, max);
 }

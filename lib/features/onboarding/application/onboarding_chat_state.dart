@@ -37,13 +37,17 @@ abstract class OnboardingChatState with _$OnboardingChatState {
     /// state that changes the finish step's lane.
     /// True once a LinkedIn connect attempt has failed or been cancelled.
     ///
-    /// Gates the "I'll connect later" escape on the connect step. Web makes
-    /// connecting mandatory, and so does this — but only until the OAuth trip
-    /// has actually been tried and not worked. Requiring it unconditionally
-    /// would trap a user whose browser hand-off fails behind a step they
-    /// cannot pass and cannot leave, which is a worse bug than the one this
-    /// step exists to fix.
+    /// Gates the "I'll connect later" escape on the connect step — the ONE
+    /// place this flow knowingly differs from the web, which has no escape at
+    /// all. Connecting stays mandatory until the OAuth trip has actually been
+    /// tried and not worked: requiring it unconditionally would trap a user
+    /// whose browser hand-off fails (the app's LinkedIn redirect depends on a
+    /// portal setting the web does not) behind a step they cannot pass.
     @Default(false) bool connectFailed,
+
+    /// The connected LinkedIn profile's name, for the web's
+    /// "Connected as {name}" line.
+    String? linkedinName,
     @Default(false) bool finaliseError,
 
     /// The preferences write succeeded. The page watches this and hands over to

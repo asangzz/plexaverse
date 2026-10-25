@@ -84,6 +84,11 @@ dependencies:
   cached_network_image: ^3.4.1
   shimmer: ^3.0.0
   lottie: ^3.3.1
+  # Plexa the cockatiel (features/plexa/presentation/widgets/plexa_mascot.dart)
+  # plays the same MP4 the web ships. An animated WebP was tried first and is
+  # ~5x the size: WebP compresses each frame alone, and the bird never stops
+  # moving.
+  video_player: ^2.10.1
 
   # Choosing a photo from the device. Five screens are blocked on this and
   # nothing else — the avatar, the company logo, the composer's attach control,
@@ -215,6 +220,10 @@ flutter:
     - assets/images/
     - assets/icons/
     - assets/animations/
+    # Mascot clips. Same files as the web's public/videos/, minus the
+    # content hash in the name — that is for HTTP caching, which a bundled
+    # asset never goes through.
+    - assets/videos/
     - assets/tenants/
     # Per-tenant subfolders are added as tenants are onboarded:
     - assets/tenants/plexaverse/

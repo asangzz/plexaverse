@@ -304,6 +304,14 @@ class ApiPaths {
   static const String aiAnalyzeStyleScreenshot = '/ai/analyze-style-screenshot';
   static const String aiLinkedInProfile = '/ai/linkedin-profile';
   static const String aiParseCv = '/ai/parse-cv';
+
+  /// Company-brand onboarding: a company document (deck, one-pager, About
+  /// page) in, description / industry / tagline / features / website out.
+  static const String aiParseCompanyDoc = '/ai/parse-company-doc';
+
+  /// Company-brand onboarding: a poster the company already made in, the
+  /// theme and brand colours its generated posters should match out.
+  static const String aiAnalyzePosterStyle = '/ai/analyze-poster-style';
   static const String aiStyleMemory = '/ai/style-memory';
   static const String aiTrendingPosts = '/ai/trending-posts';
 
@@ -315,6 +323,10 @@ class ApiPaths {
   static const String studioDesigns = '/studio/designs';
   static String studioDesign(String id) => '/studio/designs/$id';
   static const String studioTemplates = '/studio/templates';
+
+  /// Builds the company's poster template from its brand inputs. Fired, not
+  /// awaited, at the end of company-brand onboarding.
+  static const String studioBrandTemplate = '/studio/brand-template';
   static const String studioAiDesigner = '/studio/ai-designer';
   static const String studioCopy = '/studio/copy';
 
@@ -355,4 +367,8 @@ class ApiPaths {
 
   // ── Media ───────────────────────────────────────────────────────────────
   static const String uploadImage = '/upload/image';
+
+  /// A brand asset (the company logo) uploaded without [uploadImage]'s lossy
+  /// re-encode, so a transparent PNG stays transparent.
+  static const String uploadAsset = '/upload/asset';
 }

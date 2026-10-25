@@ -27,13 +27,15 @@ mixin _$OnboardingChatState {
 /// state that changes the finish step's lane.
 /// True once a LinkedIn connect attempt has failed or been cancelled.
 ///
-/// Gates the "I'll connect later" escape on the connect step. Web makes
-/// connecting mandatory, and so does this — but only until the OAuth trip
-/// has actually been tried and not worked. Requiring it unconditionally
-/// would trap a user whose browser hand-off fails behind a step they
-/// cannot pass and cannot leave, which is a worse bug than the one this
-/// step exists to fix.
- bool get connectFailed; bool get finaliseError;/// The preferences write succeeded. The page watches this and hands over to
+/// Gates the "I'll connect later" escape on the connect step — the ONE
+/// place this flow knowingly differs from the web, which has no escape at
+/// all. Connecting stays mandatory until the OAuth trip has actually been
+/// tried and not worked: requiring it unconditionally would trap a user
+/// whose browser hand-off fails (the app's LinkedIn redirect depends on a
+/// portal setting the web does not) behind a step they cannot pass.
+ bool get connectFailed;/// The connected LinkedIn profile's name, for the web's
+/// "Connected as {name}" line.
+ String? get linkedinName; bool get finaliseError;/// The preferences write succeeded. The page watches this and hands over to
 /// the router; nothing else is allowed to navigate.
  bool get completed;/// The user has sent at least one message. Only used to drop the "Tap to
 /// send" hint above the first chip row, exactly as the web does.
@@ -50,16 +52,16 @@ $OnboardingChatStateCopyWith<OnboardingChatState> get copyWith => _$OnboardingCh
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is OnboardingChatState&&const DeepCollectionEquality().equals(other.messages, messages)&&(identical(other.step, step) || other.step == step)&&(identical(other.isBotTyping, isBotTyping) || other.isBotTyping == isBotTyping)&&(identical(other.answers, answers) || other.answers == answers)&&(identical(other.voiceDraft, voiceDraft) || other.voiceDraft == voiceDraft)&&(identical(other.isFinalising, isFinalising) || other.isFinalising == isFinalising)&&(identical(other.connectFailed, connectFailed) || other.connectFailed == connectFailed)&&(identical(other.finaliseError, finaliseError) || other.finaliseError == finaliseError)&&(identical(other.completed, completed) || other.completed == completed)&&(identical(other.hasUserSent, hasUserSent) || other.hasUserSent == hasUserSent)&&(identical(other.firstName, firstName) || other.firstName == firstName));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is OnboardingChatState&&const DeepCollectionEquality().equals(other.messages, messages)&&(identical(other.step, step) || other.step == step)&&(identical(other.isBotTyping, isBotTyping) || other.isBotTyping == isBotTyping)&&(identical(other.answers, answers) || other.answers == answers)&&(identical(other.voiceDraft, voiceDraft) || other.voiceDraft == voiceDraft)&&(identical(other.isFinalising, isFinalising) || other.isFinalising == isFinalising)&&(identical(other.connectFailed, connectFailed) || other.connectFailed == connectFailed)&&(identical(other.linkedinName, linkedinName) || other.linkedinName == linkedinName)&&(identical(other.finaliseError, finaliseError) || other.finaliseError == finaliseError)&&(identical(other.completed, completed) || other.completed == completed)&&(identical(other.hasUserSent, hasUserSent) || other.hasUserSent == hasUserSent)&&(identical(other.firstName, firstName) || other.firstName == firstName));
 }
 
 
 @override
-int get hashCode => Object.hash(runtimeType,const DeepCollectionEquality().hash(messages),step,isBotTyping,answers,voiceDraft,isFinalising,connectFailed,finaliseError,completed,hasUserSent,firstName);
+int get hashCode => Object.hash(runtimeType,const DeepCollectionEquality().hash(messages),step,isBotTyping,answers,voiceDraft,isFinalising,connectFailed,linkedinName,finaliseError,completed,hasUserSent,firstName);
 
 @override
 String toString() {
-  return 'OnboardingChatState(messages: $messages, step: $step, isBotTyping: $isBotTyping, answers: $answers, voiceDraft: $voiceDraft, isFinalising: $isFinalising, connectFailed: $connectFailed, finaliseError: $finaliseError, completed: $completed, hasUserSent: $hasUserSent, firstName: $firstName)';
+  return 'OnboardingChatState(messages: $messages, step: $step, isBotTyping: $isBotTyping, answers: $answers, voiceDraft: $voiceDraft, isFinalising: $isFinalising, connectFailed: $connectFailed, linkedinName: $linkedinName, finaliseError: $finaliseError, completed: $completed, hasUserSent: $hasUserSent, firstName: $firstName)';
 }
 
 
@@ -70,7 +72,7 @@ abstract mixin class $OnboardingChatStateCopyWith<$Res>  {
   factory $OnboardingChatStateCopyWith(OnboardingChatState value, $Res Function(OnboardingChatState) _then) = _$OnboardingChatStateCopyWithImpl;
 @useResult
 $Res call({
- List<ChatMessage> messages, OnboardingStep step, bool isBotTyping, OnboardingAnswers answers, String voiceDraft, bool isFinalising, bool connectFailed, bool finaliseError, bool completed, bool hasUserSent, String? firstName
+ List<ChatMessage> messages, OnboardingStep step, bool isBotTyping, OnboardingAnswers answers, String voiceDraft, bool isFinalising, bool connectFailed, String? linkedinName, bool finaliseError, bool completed, bool hasUserSent, String? firstName
 });
 
 
@@ -87,7 +89,7 @@ class _$OnboardingChatStateCopyWithImpl<$Res>
 
 /// Create a copy of OnboardingChatState
 /// with the given fields replaced by the non-null parameter values.
-@pragma('vm:prefer-inline') @override $Res call({Object? messages = null,Object? step = null,Object? isBotTyping = null,Object? answers = null,Object? voiceDraft = null,Object? isFinalising = null,Object? connectFailed = null,Object? finaliseError = null,Object? completed = null,Object? hasUserSent = null,Object? firstName = freezed,}) {
+@pragma('vm:prefer-inline') @override $Res call({Object? messages = null,Object? step = null,Object? isBotTyping = null,Object? answers = null,Object? voiceDraft = null,Object? isFinalising = null,Object? connectFailed = null,Object? linkedinName = freezed,Object? finaliseError = null,Object? completed = null,Object? hasUserSent = null,Object? firstName = freezed,}) {
   return _then(_self.copyWith(
 messages: null == messages ? _self.messages : messages // ignore: cast_nullable_to_non_nullable
 as List<ChatMessage>,step: null == step ? _self.step : step // ignore: cast_nullable_to_non_nullable
@@ -96,7 +98,8 @@ as bool,answers: null == answers ? _self.answers : answers // ignore: cast_nulla
 as OnboardingAnswers,voiceDraft: null == voiceDraft ? _self.voiceDraft : voiceDraft // ignore: cast_nullable_to_non_nullable
 as String,isFinalising: null == isFinalising ? _self.isFinalising : isFinalising // ignore: cast_nullable_to_non_nullable
 as bool,connectFailed: null == connectFailed ? _self.connectFailed : connectFailed // ignore: cast_nullable_to_non_nullable
-as bool,finaliseError: null == finaliseError ? _self.finaliseError : finaliseError // ignore: cast_nullable_to_non_nullable
+as bool,linkedinName: freezed == linkedinName ? _self.linkedinName : linkedinName // ignore: cast_nullable_to_non_nullable
+as String?,finaliseError: null == finaliseError ? _self.finaliseError : finaliseError // ignore: cast_nullable_to_non_nullable
 as bool,completed: null == completed ? _self.completed : completed // ignore: cast_nullable_to_non_nullable
 as bool,hasUserSent: null == hasUserSent ? _self.hasUserSent : hasUserSent // ignore: cast_nullable_to_non_nullable
 as bool,firstName: freezed == firstName ? _self.firstName : firstName // ignore: cast_nullable_to_non_nullable
@@ -194,10 +197,10 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( List<ChatMessage> messages,  OnboardingStep step,  bool isBotTyping,  OnboardingAnswers answers,  String voiceDraft,  bool isFinalising,  bool connectFailed,  bool finaliseError,  bool completed,  bool hasUserSent,  String? firstName)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( List<ChatMessage> messages,  OnboardingStep step,  bool isBotTyping,  OnboardingAnswers answers,  String voiceDraft,  bool isFinalising,  bool connectFailed,  String? linkedinName,  bool finaliseError,  bool completed,  bool hasUserSent,  String? firstName)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _OnboardingChatState() when $default != null:
-return $default(_that.messages,_that.step,_that.isBotTyping,_that.answers,_that.voiceDraft,_that.isFinalising,_that.connectFailed,_that.finaliseError,_that.completed,_that.hasUserSent,_that.firstName);case _:
+return $default(_that.messages,_that.step,_that.isBotTyping,_that.answers,_that.voiceDraft,_that.isFinalising,_that.connectFailed,_that.linkedinName,_that.finaliseError,_that.completed,_that.hasUserSent,_that.firstName);case _:
   return orElse();
 
 }
@@ -215,10 +218,10 @@ return $default(_that.messages,_that.step,_that.isBotTyping,_that.answers,_that.
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( List<ChatMessage> messages,  OnboardingStep step,  bool isBotTyping,  OnboardingAnswers answers,  String voiceDraft,  bool isFinalising,  bool connectFailed,  bool finaliseError,  bool completed,  bool hasUserSent,  String? firstName)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( List<ChatMessage> messages,  OnboardingStep step,  bool isBotTyping,  OnboardingAnswers answers,  String voiceDraft,  bool isFinalising,  bool connectFailed,  String? linkedinName,  bool finaliseError,  bool completed,  bool hasUserSent,  String? firstName)  $default,) {final _that = this;
 switch (_that) {
 case _OnboardingChatState():
-return $default(_that.messages,_that.step,_that.isBotTyping,_that.answers,_that.voiceDraft,_that.isFinalising,_that.connectFailed,_that.finaliseError,_that.completed,_that.hasUserSent,_that.firstName);case _:
+return $default(_that.messages,_that.step,_that.isBotTyping,_that.answers,_that.voiceDraft,_that.isFinalising,_that.connectFailed,_that.linkedinName,_that.finaliseError,_that.completed,_that.hasUserSent,_that.firstName);case _:
   throw StateError('Unexpected subclass');
 
 }
@@ -235,10 +238,10 @@ return $default(_that.messages,_that.step,_that.isBotTyping,_that.answers,_that.
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( List<ChatMessage> messages,  OnboardingStep step,  bool isBotTyping,  OnboardingAnswers answers,  String voiceDraft,  bool isFinalising,  bool connectFailed,  bool finaliseError,  bool completed,  bool hasUserSent,  String? firstName)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( List<ChatMessage> messages,  OnboardingStep step,  bool isBotTyping,  OnboardingAnswers answers,  String voiceDraft,  bool isFinalising,  bool connectFailed,  String? linkedinName,  bool finaliseError,  bool completed,  bool hasUserSent,  String? firstName)?  $default,) {final _that = this;
 switch (_that) {
 case _OnboardingChatState() when $default != null:
-return $default(_that.messages,_that.step,_that.isBotTyping,_that.answers,_that.voiceDraft,_that.isFinalising,_that.connectFailed,_that.finaliseError,_that.completed,_that.hasUserSent,_that.firstName);case _:
+return $default(_that.messages,_that.step,_that.isBotTyping,_that.answers,_that.voiceDraft,_that.isFinalising,_that.connectFailed,_that.linkedinName,_that.finaliseError,_that.completed,_that.hasUserSent,_that.firstName);case _:
   return null;
 
 }
@@ -250,7 +253,7 @@ return $default(_that.messages,_that.step,_that.isBotTyping,_that.answers,_that.
 
 
 class _OnboardingChatState extends OnboardingChatState {
-  const _OnboardingChatState({final  List<ChatMessage> messages = const <ChatMessage>[], this.step = OnboardingStep.welcome, this.isBotTyping = false, this.answers = const OnboardingAnswers(), this.voiceDraft = '', this.isFinalising = false, this.connectFailed = false, this.finaliseError = false, this.completed = false, this.hasUserSent = false, this.firstName}): _messages = messages,super._();
+  const _OnboardingChatState({final  List<ChatMessage> messages = const <ChatMessage>[], this.step = OnboardingStep.welcome, this.isBotTyping = false, this.answers = const OnboardingAnswers(), this.voiceDraft = '', this.isFinalising = false, this.connectFailed = false, this.linkedinName, this.finaliseError = false, this.completed = false, this.hasUserSent = false, this.firstName}): _messages = messages,super._();
   
 
  final  List<ChatMessage> _messages;
@@ -278,13 +281,16 @@ class _OnboardingChatState extends OnboardingChatState {
 /// state that changes the finish step's lane.
 /// True once a LinkedIn connect attempt has failed or been cancelled.
 ///
-/// Gates the "I'll connect later" escape on the connect step. Web makes
-/// connecting mandatory, and so does this — but only until the OAuth trip
-/// has actually been tried and not worked. Requiring it unconditionally
-/// would trap a user whose browser hand-off fails behind a step they
-/// cannot pass and cannot leave, which is a worse bug than the one this
-/// step exists to fix.
+/// Gates the "I'll connect later" escape on the connect step — the ONE
+/// place this flow knowingly differs from the web, which has no escape at
+/// all. Connecting stays mandatory until the OAuth trip has actually been
+/// tried and not worked: requiring it unconditionally would trap a user
+/// whose browser hand-off fails (the app's LinkedIn redirect depends on a
+/// portal setting the web does not) behind a step they cannot pass.
 @override@JsonKey() final  bool connectFailed;
+/// The connected LinkedIn profile's name, for the web's
+/// "Connected as {name}" line.
+@override final  String? linkedinName;
 @override@JsonKey() final  bool finaliseError;
 /// The preferences write succeeded. The page watches this and hands over to
 /// the router; nothing else is allowed to navigate.
@@ -306,16 +312,16 @@ _$OnboardingChatStateCopyWith<_OnboardingChatState> get copyWith => __$Onboardin
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is _OnboardingChatState&&const DeepCollectionEquality().equals(other._messages, _messages)&&(identical(other.step, step) || other.step == step)&&(identical(other.isBotTyping, isBotTyping) || other.isBotTyping == isBotTyping)&&(identical(other.answers, answers) || other.answers == answers)&&(identical(other.voiceDraft, voiceDraft) || other.voiceDraft == voiceDraft)&&(identical(other.isFinalising, isFinalising) || other.isFinalising == isFinalising)&&(identical(other.connectFailed, connectFailed) || other.connectFailed == connectFailed)&&(identical(other.finaliseError, finaliseError) || other.finaliseError == finaliseError)&&(identical(other.completed, completed) || other.completed == completed)&&(identical(other.hasUserSent, hasUserSent) || other.hasUserSent == hasUserSent)&&(identical(other.firstName, firstName) || other.firstName == firstName));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is _OnboardingChatState&&const DeepCollectionEquality().equals(other._messages, _messages)&&(identical(other.step, step) || other.step == step)&&(identical(other.isBotTyping, isBotTyping) || other.isBotTyping == isBotTyping)&&(identical(other.answers, answers) || other.answers == answers)&&(identical(other.voiceDraft, voiceDraft) || other.voiceDraft == voiceDraft)&&(identical(other.isFinalising, isFinalising) || other.isFinalising == isFinalising)&&(identical(other.connectFailed, connectFailed) || other.connectFailed == connectFailed)&&(identical(other.linkedinName, linkedinName) || other.linkedinName == linkedinName)&&(identical(other.finaliseError, finaliseError) || other.finaliseError == finaliseError)&&(identical(other.completed, completed) || other.completed == completed)&&(identical(other.hasUserSent, hasUserSent) || other.hasUserSent == hasUserSent)&&(identical(other.firstName, firstName) || other.firstName == firstName));
 }
 
 
 @override
-int get hashCode => Object.hash(runtimeType,const DeepCollectionEquality().hash(_messages),step,isBotTyping,answers,voiceDraft,isFinalising,connectFailed,finaliseError,completed,hasUserSent,firstName);
+int get hashCode => Object.hash(runtimeType,const DeepCollectionEquality().hash(_messages),step,isBotTyping,answers,voiceDraft,isFinalising,connectFailed,linkedinName,finaliseError,completed,hasUserSent,firstName);
 
 @override
 String toString() {
-  return 'OnboardingChatState(messages: $messages, step: $step, isBotTyping: $isBotTyping, answers: $answers, voiceDraft: $voiceDraft, isFinalising: $isFinalising, connectFailed: $connectFailed, finaliseError: $finaliseError, completed: $completed, hasUserSent: $hasUserSent, firstName: $firstName)';
+  return 'OnboardingChatState(messages: $messages, step: $step, isBotTyping: $isBotTyping, answers: $answers, voiceDraft: $voiceDraft, isFinalising: $isFinalising, connectFailed: $connectFailed, linkedinName: $linkedinName, finaliseError: $finaliseError, completed: $completed, hasUserSent: $hasUserSent, firstName: $firstName)';
 }
 
 
@@ -326,7 +332,7 @@ abstract mixin class _$OnboardingChatStateCopyWith<$Res> implements $OnboardingC
   factory _$OnboardingChatStateCopyWith(_OnboardingChatState value, $Res Function(_OnboardingChatState) _then) = __$OnboardingChatStateCopyWithImpl;
 @override @useResult
 $Res call({
- List<ChatMessage> messages, OnboardingStep step, bool isBotTyping, OnboardingAnswers answers, String voiceDraft, bool isFinalising, bool connectFailed, bool finaliseError, bool completed, bool hasUserSent, String? firstName
+ List<ChatMessage> messages, OnboardingStep step, bool isBotTyping, OnboardingAnswers answers, String voiceDraft, bool isFinalising, bool connectFailed, String? linkedinName, bool finaliseError, bool completed, bool hasUserSent, String? firstName
 });
 
 
@@ -343,7 +349,7 @@ class __$OnboardingChatStateCopyWithImpl<$Res>
 
 /// Create a copy of OnboardingChatState
 /// with the given fields replaced by the non-null parameter values.
-@override @pragma('vm:prefer-inline') $Res call({Object? messages = null,Object? step = null,Object? isBotTyping = null,Object? answers = null,Object? voiceDraft = null,Object? isFinalising = null,Object? connectFailed = null,Object? finaliseError = null,Object? completed = null,Object? hasUserSent = null,Object? firstName = freezed,}) {
+@override @pragma('vm:prefer-inline') $Res call({Object? messages = null,Object? step = null,Object? isBotTyping = null,Object? answers = null,Object? voiceDraft = null,Object? isFinalising = null,Object? connectFailed = null,Object? linkedinName = freezed,Object? finaliseError = null,Object? completed = null,Object? hasUserSent = null,Object? firstName = freezed,}) {
   return _then(_OnboardingChatState(
 messages: null == messages ? _self._messages : messages // ignore: cast_nullable_to_non_nullable
 as List<ChatMessage>,step: null == step ? _self.step : step // ignore: cast_nullable_to_non_nullable
@@ -352,7 +358,8 @@ as bool,answers: null == answers ? _self.answers : answers // ignore: cast_nulla
 as OnboardingAnswers,voiceDraft: null == voiceDraft ? _self.voiceDraft : voiceDraft // ignore: cast_nullable_to_non_nullable
 as String,isFinalising: null == isFinalising ? _self.isFinalising : isFinalising // ignore: cast_nullable_to_non_nullable
 as bool,connectFailed: null == connectFailed ? _self.connectFailed : connectFailed // ignore: cast_nullable_to_non_nullable
-as bool,finaliseError: null == finaliseError ? _self.finaliseError : finaliseError // ignore: cast_nullable_to_non_nullable
+as bool,linkedinName: freezed == linkedinName ? _self.linkedinName : linkedinName // ignore: cast_nullable_to_non_nullable
+as String?,finaliseError: null == finaliseError ? _self.finaliseError : finaliseError // ignore: cast_nullable_to_non_nullable
 as bool,completed: null == completed ? _self.completed : completed // ignore: cast_nullable_to_non_nullable
 as bool,hasUserSent: null == hasUserSent ? _self.hasUserSent : hasUserSent // ignore: cast_nullable_to_non_nullable
 as bool,firstName: freezed == firstName ? _self.firstName : firstName // ignore: cast_nullable_to_non_nullable

@@ -9,6 +9,8 @@ import '../../settings/domain/settings_repository.dart';
 import '../data/onboarding_repositories.dart';
 import '../domain/onboarding_repository.dart';
 import 'onboarding_chat_state.dart';
+import 'welcome_bonus.dart';
+import '../../../core/platform/file_picking.dart';
 import '../../../core/platform/image_picking.dart';
 
 export 'onboarding_chat_state.dart';
@@ -130,8 +132,56 @@ class OnboardingChatController extends _$OnboardingChatController {
   Future<void> _enter(OnboardingStep next) async {
     _generation += 1;
     state = state.copyWith(step: next, isBotTyping: false);
-    await _sendBotSequence(next.botLines(state.firstName ?? 'there'));
+    final List<String> lines = next == OnboardingStep.companyDetails
+        ? <String>[companyDetailsAsk(state.answers.companyDoc)]
+        : next.botLines(
+            firstName: state.firstName ?? 'there',
+            company: state.answers.isCompany,
+          );
+    await _sendBotSequence(lines);
     if (next == OnboardingStep.finish && !_disposed) await _finalise();
+  }
+
+  /// The company-details line, which names only what is missing — the web's
+  /// `company-details` entry message, verbatim.
+  ///
+  /// A different lead-in for "skipped the upload" and "uploaded but thin".
+  static String companyDetailsAsk(CompanyDoc? doc) {
+    final CompanyDocGaps gaps = CompanyDocGaps.of(doc);
+    final List<String> asks = <String>[
+      if (gaps.needDescription) 'what you do',
+      if (gaps.needIndustry) 'your industry',
+      if (gaps.needFeatures) 'your products',
+      if (gaps.needWebsite) 'your website',
+    ];
+    final String askLine = asks.isEmpty ? 'a few details' : asks.join(', ');
+    final String intro = doc != null
+        ? 'Your document was thin on'
+        : "Then I'll need";
+    return '$intro $askLine. These keep every post on your real products, '
+        'not generic filler.';
+  }
+
+  /// The step's real answer arrives as an uploaded file; bad picks are
+  /// answered by Plexa rather than by the upload failing.
+  bool _isPdf(PickedFile f) => f.extension == 'pdf';
+
+  bool _isImage(PickedFile f) => const <String>{
+    'png',
+    'jpg',
+    'jpeg',
+    'webp',
+    'gif',
+    'heic',
+  }.contains(f.extension);
+
+  Future<PickedFile?> _pick(List<String> extensions) async {
+    final FilePickResult picked = await ref
+        .read(filePickingProvider)
+        .pick(extensions: extensions);
+    // Cancelled, or the picker failed: backing out is a decision, and a real
+    // failure leaves the same control on screen to try again.
+    return picked is PickedFile ? picked : null;
   }
 
   // ── The script ────────────────────────────────────────────────────────────
@@ -147,119 +197,462 @@ class OnboardingChatController extends _$OnboardingChatController {
     if (state.step != OnboardingStep.brand) return;
     _echoUser(brand.label);
     state = state.copyWith(answers: state.answers.copyWith(brand: brand));
-    await _enter(OnboardingStep.role);
+    await _enter(OnboardingStep.connect);
   }
 
-  /// The four common roles and the free-text "Other…" answer both land here.
+  // ── Connect LinkedIn ──────────────────────────────────────────────────────
+
+  /// Runs the LinkedIn browser hand-off, then advances.
   ///
-  /// Seeding the profession matters more than it looks: without it the column
-  /// silently defaulted to "Professional" on the web, which drove a wrong
-  /// roadmap and off-target posts for every user who skipped the CV import.
-  Future<void> pickRole(String role) async {
-    if (state.step != OnboardingStep.role) return;
-    final String trimmed = role.trim();
-    if (trimmed.isEmpty) return;
-
-    _echoUser(trimmed, badge: 'Role set');
-    state = state.copyWith(answers: state.answers.copyWith(role: trimmed));
-
-    // Deliberately NOT awaited before advancing. The analysis only enriches the
-    // preferences write at the end, and making the user wait on a model call
-    // between two chip taps would be the slowest moment in the whole flow for
-    // something they never see.
-    unawaited(_analyseRole(trimmed));
-
-    await _enter(OnboardingStep.goal);
-  }
-
-  Future<void> _analyseRole(String role) async {
-    final ProfessionAnalysis? analysis = await _repo.analyzeProfession(role);
-    if (_disposed || analysis == null) return;
-    state = state.copyWith(
-      answers: state.answers.copyWith(
-        // The server falls back to the literal 'Professional' when it cannot
-        // read the headline. That is the exact value this step exists to avoid
-        // writing, so the user's own words win over it.
-        profession: analysis.profession.trim().isEmpty
-            ? role
-            : analysis.profession,
-        industry: analysis.industry,
-        // postCategories is deliberately NOT sent.
-        //
-        // The server now validates it against the forty Top Voice category
-        // ids (`isTopVoiceCategoryId`), and the suggestions this screen has
-        // come from `/ai/analyze-profession`, whose PROFILE_CATEGORIES is an
-        // older, private vocabulary of eight. Five of those eight — tech_ai,
-        // personal_growth, industry_news, startups, career_tips — are not
-        // category ids at all, so the whole preferences PATCH came back
-        // "Unknown category" and onboarding could not finish.
-        //
-        // Sending a mapped subset would be the wrong fix: the server already
-        // derives categories itself from `profession` whenever the user has
-        // none yet (`suggestCategoriesForProfession`), which is exactly why
-        // the web never sends them either. Omitting the field is what asks
-        // for that, and it keeps one vocabulary on the server rather than two
-        // that have to agree.
-      ),
-    );
-  }
-
-  Future<void> pickGoal(OnboardingGoal goal) async {
-    if (state.step != OnboardingStep.goal) return;
-    _echoUser(goal.label);
-    state = state.copyWith(answers: state.answers.copyWith(goal: goal));
-    await _enter(OnboardingStep.voice);
-  }
-
-  /// The web's `style-screenshots` branch: read the voice out of pictures
-  /// of posts instead of typing a sample.
+  /// Reuses `SettingsRepository.connectLinkedin` rather than a second copy:
+  /// the hand-off is an OAuth trip through the system browser with a
+  /// `plexaverse://` return, and two copies of that drift.
   ///
-  /// Restored because it was only ever missing for want of a picker. The
-  /// extracted text becomes the sample and goes through the SAME
-  /// [submitVoiceSample] path — it is saved, echoed and advanced from
-  /// identically, so the two branches cannot diverge on what happens after.
-  Future<void> useStyleScreenshots() async {
-    if (state.step != OnboardingStep.voice) return;
-    final ImagePickResult picked =
-        await ref.read(imagePickingProvider).pick(ImageSourceKind.gallery);
-    if (picked is! PickedImage) {
-      // Cancelled, or the picker failed. Backing out is a decision; a real
-      // failure still leaves the typing box, which is the other way through.
-      return;
-    }
-
-    _echoUser('A screenshot of how I write');
+  /// `type` is derived from the brand answer, so a company-brand user connects
+  /// the account that administers their pages.
+  Future<void> connectLinkedin() async {
+    if (state.step != OnboardingStep.connect) return;
+    _echoUser('Opening LinkedIn…');
     state = state.copyWith(isBotTyping: true);
-    final String? extracted = await _repo.analyzeStyleScreenshots(
-      <PickedImage>[picked],
-    );
+
+    final String type = state.answers.isCompany ? 'company' : 'personal';
+    final ConnectOutcome outcome = await _settings.connectLinkedin(type: type);
     if (_disposed) return;
     state = state.copyWith(isBotTyping: false);
 
-    if (extracted == null) {
+    switch (outcome) {
+      case ConnectSucceeded():
+        await _connected(type);
+      case ConnectCancelled():
+      case ConnectFailed():
+        state = state.copyWith(connectFailed: true);
+        await _sendBot(
+          "Hmm, that LinkedIn connection didn't complete. Let's try again — "
+          "tap Connect when you're ready.",
+        );
+    }
+  }
+
+  /// The web's `verifyLinkedInConnection`: the server is the source of truth
+  /// for who connected, so the name in "Connected as …" is read back from it.
+  Future<void> _connected(String type) async {
+    String? name;
+    try {
+      final List<LinkedinAccount> accounts = await _settings
+          .fetchLinkedinAccounts();
+      // The account this connect was for — the web asks the server for
+      // `?type=company` or `?type=personal`, so the name shown is the one
+      // just connected, not an older account of the other kind.
+      bool ofType(LinkedinAccount a) =>
+          (type == 'company') == (a.appType == 'company');
+      final LinkedinAccount? account =
+          accounts.where(ofType).firstOrNull ?? accounts.firstOrNull;
+      name = account?.profileName;
+    } on Object {
+      // The connect itself succeeded; a failed read only costs the name.
+    }
+    if (_disposed) return;
+    // The server credited the welcome bonus on this connect; the screen
+    // celebrates it once it sees the fresh transaction.
+    ref.invalidate(welcomeBonusProvider);
+    state = state.copyWith(connectFailed: false, linkedinName: name);
+    _echoUser(
+      name == null ? 'Connected' : 'Connected as $name',
+      badge: 'LinkedIn linked',
+    );
+    await _enter(
+      state.answers.isCompany
+          ? OnboardingStep.companyPage
+          : OnboardingStep.cvUpload,
+    );
+  }
+
+  /// "I'll connect later" — offered only after a failed attempt. The one
+  /// deliberate difference from the web; see
+  /// [OnboardingChatState.connectFailed].
+  Future<void> skipConnect() async {
+    if (state.step != OnboardingStep.connect || !state.connectFailed) return;
+    _echoUser("I'll connect later", badge: 'Skipped');
+    await _enter(
+      state.answers.isCompany
+          ? OnboardingStep.companyPage
+          : OnboardingStep.cvUpload,
+    );
+  }
+
+  // ── Company page ──────────────────────────────────────────────────────────
+
+  /// The pages the connected account administers.
+  Future<CompanyPageOptions> companyPages() => _settings.fetchCompanyPages();
+
+  Future<void> pickCompanyPage(String id, String name) async {
+    if (state.step != OnboardingStep.companyPage) return;
+    _echoUser(name, badge: 'Page selected');
+    state = state.copyWith(
+      answers: state.answers.copyWith(companyPageId: id, companyPageName: name),
+    );
+    // Persisting the page is what actually links a company brand — the
+    // server credits the welcome XP here. Not awaited, as on the web.
+    unawaited(_savePage(id));
+    await _enter(OnboardingStep.companyLogo);
+  }
+
+  Future<void> _savePage(String id) async {
+    try {
+      await _settings.setCompanyPage(id);
+      // A company brand's bonus is credited here, not on the connect.
+      if (!_disposed) ref.invalidate(welcomeBonusProvider);
+    } on Object {
+      // The finalise write carries the page id too.
+    }
+  }
+
+  /// No usable page on this account → connect a different company account.
+  Future<void> reconnectCompany() async {
+    if (state.step != OnboardingStep.companyPage) return;
+    _echoUser('Connect another company profile', badge: 'Reconnect');
+    state = state.copyWith(connectFailed: false, linkedinName: null);
+    await _enter(OnboardingStep.connect);
+  }
+
+  /// No usable page on this account → be a personal brand instead.
+  Future<void> switchToPersonal() async {
+    if (state.step != OnboardingStep.companyPage) return;
+    _echoUser('Switch to personal brand', badge: 'Switched');
+    state = state.copyWith(
+      connectFailed: false,
+      linkedinName: null,
+      answers: state.answers.copyWith(brand: BrandChoice.personal),
+    );
+    await _enter(OnboardingStep.connect);
+  }
+
+  // ── Company logo & poster style ───────────────────────────────────────────
+
+  /// Required. Stored without a re-encode, so a transparent PNG stays
+  /// transparent on every poster.
+  Future<void> uploadLogo() async {
+    if (state.step != OnboardingStep.companyLogo) return;
+    final PickedFile? file = await _pick(const <String>[
+      'png',
+      'jpg',
+      'jpeg',
+      'webp',
+    ]);
+    if (file == null || _disposed) return;
+    if (!_isImage(file)) {
       await _sendBot(
-        "I couldn't read a writing style out of that one. Try another "
-        'screenshot, or just type a couple of sentences.',
+        "That doesn't look like an image — upload a PNG or JPG logo.",
       );
       return;
     }
+    if (file.bytes.length > 8 * 1024 * 1024) {
+      await _sendBot('That file is over 8MB — try a smaller export.');
+      return;
+    }
+    _echoUser(file.name, badge: 'Logo uploaded');
+    state = state.copyWith(isBotTyping: true);
+    try {
+      final String url = await _repo.uploadLogo(file);
+      if (_disposed) return;
+      state = state.copyWith(
+        isBotTyping: false,
+        answers: state.answers.copyWith(companyLogoUrl: url),
+      );
+      await _sendBot(
+        "Perfect — your logo's locked in and I'll brand your posters with it.",
+      );
+      await _enter(OnboardingStep.posterStyle);
+    } on OnboardingUnavailable catch (e) {
+      if (_disposed) return;
+      state = state.copyWith(isBotTyping: false);
+      await _sendBot(
+        "I couldn't save that logo — ${e.reason ?? 'Upload failed'}. Try "
+        'another image.',
+      );
+    }
+  }
 
-    await _sendBot('Got it — this is what I picked up:\n\n$extracted');
-    await submitVoiceSample(extracted);
+  /// Optional — skipping it gets a strong default style at generation time.
+  Future<void> uploadPosterStyle() async {
+    if (state.step != OnboardingStep.posterStyle) return;
+    final PickedFile? file = await _pick(const <String>[
+      'png',
+      'jpg',
+      'jpeg',
+      'webp',
+    ]);
+    if (file == null || _disposed) return;
+    if (!_isImage(file)) {
+      await _sendBot(
+        "That doesn't look like an image — upload a PNG or JPG poster, or skip.",
+      );
+      return;
+    }
+    if (file.bytes.length > 8 * 1024 * 1024) {
+      await _sendBot('That file is over 8MB — try a smaller export, or skip.');
+      return;
+    }
+    _echoUser(file.name, badge: 'Poster uploaded');
+    state = state.copyWith(isBotTyping: true);
+    try {
+      final PosterStyle style = await _repo.analyzePosterStyle(file);
+      if (_disposed) return;
+      state = state.copyWith(
+        isBotTyping: false,
+        answers: state.answers.copyWith(posterStyle: style),
+      );
+      final String theme = style.theme == 'light' ? 'light' : 'dark';
+      final String accent = style.primaryColor == null
+          ? ''
+          : ' and ${style.primaryColor} accent';
+      await _sendBot(
+        "Nice — I'll match your $theme style$accent on the posters I create.",
+      );
+      await _enter(OnboardingStep.companyDoc);
+    } on OnboardingUnavailable catch (e) {
+      if (_disposed) return;
+      state = state.copyWith(isBotTyping: false);
+      await _sendBot(
+        "I couldn't read that poster — ${e.reason ?? 'Analysis failed'}. You "
+        "can try another, or skip and I'll use a strong default.",
+      );
+    }
+  }
+
+  Future<void> skipPosterStyle() async {
+    if (state.step != OnboardingStep.posterStyle) return;
+    _echoUser('Skip — use a default style', badge: 'Skipped');
+    await _enter(OnboardingStep.companyDoc);
+  }
+
+  // ── CV (personal) ─────────────────────────────────────────────────────────
+
+  Future<void> uploadCv() async {
+    if (state.step != OnboardingStep.cvUpload) return;
+    final PickedFile? file = await _pick(const <String>['pdf']);
+    if (file == null || _disposed) return;
+    if (!_isPdf(file)) {
+      await _sendBot(
+        "That doesn't look like a PDF — try saving your LinkedIn profile to "
+        'PDF first.',
+      );
+      return;
+    }
+    if (file.bytes.length > 5 * 1024 * 1024) {
+      await _sendBot('That file is over 5MB — could you try a smaller export?');
+      return;
+    }
+    _echoUser(file.name, badge: 'Uploaded');
+    state = state.copyWith(isBotTyping: true);
+    try {
+      final ParsedCv cv = await _repo.parseCv(file);
+      if (_disposed) return;
+      state = state.copyWith(
+        isBotTyping: false,
+        answers: state.answers.copyWith(cv: cv, usedCvUpload: true),
+      );
+      final String? headline = cv.headline;
+      await _sendBot(
+        headline != null
+            ? 'Got it — I can see you\'re "$headline". I\'ll use this to make '
+                  'sure everything sounds like you.'
+            : "All read — I've absorbed your background and experience.",
+      );
+      await _enter(OnboardingStep.styleChoice);
+    } on OnboardingUnavailable catch (e) {
+      if (_disposed) return;
+      state = state.copyWith(isBotTyping: false);
+      await _sendBot(
+        "I couldn't read that one — ${e.reason ?? 'Upload failed'}. Try "
+        'another PDF, or skip below to keep moving.',
+      );
+    }
+  }
+
+  /// No CV means no profession, so the current role is asked for instead of
+  /// silently defaulting to "Professional".
+  Future<void> skipCv() async {
+    if (state.step != OnboardingStep.cvUpload) return;
+    _echoUser('Skip for now', badge: 'Skipped');
+    await _enter(OnboardingStep.currentRole);
+  }
+
+  /// The four common roles and the free-text "Other…" answer both land here.
+  Future<void> pickRole(String role) async {
+    if (state.step != OnboardingStep.currentRole) return;
+    final String trimmed = role.trim();
+    if (trimmed.isEmpty) return;
+    _echoUser(trimmed, badge: 'Role set');
+    // The web seeds `parsedCV = { profession }`, so the finalise write cannot
+    // tell — and does not need to — which way the profession arrived.
+    state = state.copyWith(
+      answers: state.answers.copyWith(
+        cv: ParsedCv(
+          headline: state.answers.cv?.headline,
+          profession: trimmed,
+          industry: state.answers.cv?.industry,
+          summary: state.answers.cv?.summary,
+          skills: state.answers.cv?.skills,
+          positions: state.answers.cv?.positions,
+          education: state.answers.cv?.education,
+        ),
+      ),
+    );
+    await _enter(OnboardingStep.styleChoice);
+  }
+
+  // ── Company document & details ────────────────────────────────────────────
+
+  Future<void> uploadCompanyDoc() async {
+    if (state.step != OnboardingStep.companyDoc) return;
+    final PickedFile? file = await _pick(const <String>['pdf']);
+    if (file == null || _disposed) return;
+    if (!_isPdf(file)) {
+      await _sendBot(
+        "That doesn't look like a PDF — export your doc to PDF and try again, "
+        'or skip below.',
+      );
+      return;
+    }
+    if (file.bytes.length > 5 * 1024 * 1024) {
+      await _sendBot('That file is over 5MB — could you try a smaller export?');
+      return;
+    }
+    _echoUser(file.name, badge: 'Uploaded');
+    state = state.copyWith(isBotTyping: true);
+    try {
+      final CompanyDoc doc = await _repo.parseCompanyDoc(file);
+      if (_disposed) return;
+      state = state.copyWith(
+        isBotTyping: false,
+        answers: state.answers.copyWith(companyDoc: doc),
+      );
+      if (CompanyDocGaps.of(doc).sufficient) {
+        await _sendBot(
+          'Got it — "${doc.description}". I\'ll use this to keep every post '
+          'on-brand.',
+        );
+        await _enter(OnboardingStep.styleChoice);
+      } else {
+        // Not enough to write from — ask for the gaps rather than fall back to
+        // generic content.
+        await _enter(OnboardingStep.companyDetails);
+      }
+    } on OnboardingUnavailable catch (e) {
+      if (_disposed) return;
+      state = state.copyWith(isBotTyping: false);
+      await _sendBot(
+        "I couldn't read that one — ${e.reason ?? 'Upload failed'}. Try "
+        'another PDF, or skip and tell me about your company instead.',
+      );
+    }
+  }
+
+  Future<void> skipCompanyDoc() async {
+    if (state.step != OnboardingStep.companyDoc) return;
+    _echoUser("Skip — I'll tell you directly", badge: 'Skipped');
+    await _enter(OnboardingStep.companyDetails);
+  }
+
+  /// The details form, merged over whatever the document did say. The web's
+  /// `handleCompanyDetailsSubmit`: features the user typed come first, then
+  /// any the document had, deduplicated, at most twenty.
+  Future<void> submitCompanyDetails({
+    required String description,
+    required String industry,
+    required String tagline,
+    required List<String> features,
+    required String website,
+  }) async {
+    if (state.step != OnboardingStep.companyDetails) return;
+    final CompanyDoc? doc = state.answers.companyDoc;
+    String cap(String v, int max) => v.length <= max ? v : v.substring(0, max);
+    final List<String> mergedFeatures = <String>{
+      for (final String f in <String>[...features, ...?doc?.features])
+        if (f.trim().isNotEmpty) f.trim(),
+    }.take(20).toList();
+    final CompanyDoc merged = CompanyDoc(
+      description: cap(description.trim(), 2000),
+      industry: cap(industry.trim(), 200),
+      tagline: cap(
+        tagline.trim().isNotEmpty ? tagline.trim() : (doc?.tagline ?? ''),
+        300,
+      ),
+      features: mergedFeatures,
+      website: cap(
+        website.trim().isNotEmpty ? website.trim() : (doc?.website ?? ''),
+        200,
+      ),
+    );
+    state = state.copyWith(answers: state.answers.copyWith(companyDoc: merged));
+    _echoUser('Company details added', badge: 'Saved');
+    await _enter(OnboardingStep.styleChoice);
+  }
+
+  // ── Voice ─────────────────────────────────────────────────────────────────
+
+  Future<void> chooseScreenshots() async {
+    if (state.step != OnboardingStep.styleChoice) return;
+    _echoUser('Upload screenshots');
+    await _enter(OnboardingStep.styleScreenshots);
+  }
+
+  Future<void> chooseWrite() async {
+    if (state.step != OnboardingStep.styleChoice) return;
+    _echoUser('Write a sample');
+    await _enter(OnboardingStep.styleWrite);
+  }
+
+  /// Screenshots are optional — a written sample is not. Skipping them falls
+  /// through to the written sample, never past it: learning a voice from
+  /// someone's LinkedIn history needs a scope the product does not hold.
+  Future<void> skipScreenshots() async {
+    if (state.step != OnboardingStep.styleChoice &&
+        state.step != OnboardingStep.styleScreenshots) {
+      return;
+    }
+    _echoUser("I'll type a sample instead", badge: 'Skipped screenshots');
+    await _enter(OnboardingStep.styleWrite);
+  }
+
+  /// Up to five screenshots of the user's own posts.
+  Future<void> uploadScreenshots() async {
+    if (state.step != OnboardingStep.styleScreenshots) return;
+    final List<PickedImage> images = await ref
+        .read(imagePickingProvider)
+        .pickMany(limit: 5);
+    if (images.isEmpty || _disposed) return;
+    _echoUser(
+      '${images.length} screenshot${images.length > 1 ? 's' : ''}',
+      badge: 'Uploaded',
+    );
+    state = state.copyWith(isBotTyping: true);
+    final String? read = await _repo.analyzeStyleScreenshots(images);
+    if (_disposed) return;
+    state = state.copyWith(isBotTyping: false);
+    if (read == null) {
+      await _sendBot(
+        'Hmm, I had trouble reading those — Analysis failed. Want to write a '
+        'quick sample instead?',
+      );
+      await _enter(OnboardingStep.styleWrite);
+      return;
+    }
+    await _sendBot(
+      "Perfect — I've picked up your tone, vocabulary and post structure. "
+      "I'll write in your voice from here.",
+    );
+    await _enter(OnboardingStep.finish);
   }
 
   /// Keeps the composer's text, so a rejected draft survives the typing hint.
   void setVoiceDraft(String value) => state = state.copyWith(voiceDraft: value);
 
-  /// The writing sample.
-  ///
-  /// There is no skip, and that is deliberate on the web too: auto-learning a
-  /// voice from someone's existing LinkedIn posts needs the `r_member_social`
-  /// scope, which the product does not hold, so "skip — learn from my posts"
-  /// was a promise that could not be kept and left those users with generic
-  /// output forever.
+  /// The written sample. No skip — this is the last place the voice can be
+  /// captured.
   Future<void> submitVoiceSample(String text) async {
-    if (state.step != OnboardingStep.voice) return;
+    if (state.step != OnboardingStep.styleWrite) return;
     final String trimmed = text.trim();
     if (trimmed.length < _minVoiceSample) {
       await _sendBot(
@@ -269,10 +662,7 @@ class OnboardingChatController extends _$OnboardingChatController {
     }
 
     // Cleared only on success — a rejected draft stays in the box.
-    state = state.copyWith(
-      voiceDraft: '',
-      answers: state.answers.copyWith(voiceSample: trimmed),
-    );
+    state = state.copyWith(voiceDraft: '');
     _echoUser(trimmed);
 
     state = state.copyWith(isBotTyping: true);
@@ -285,165 +675,13 @@ class OnboardingChatController extends _$OnboardingChatController {
         "Saved. I'll match this voice in everything I generate for you.",
       );
     } else {
-      // Advances anyway. Losing the sample costs the first few posts' voice,
-      // which the product then picks up from the user's real posts; blocking
-      // the finish on it would cost them the whole setup.
+      // Advances anyway, as the web does: losing the sample costs the first
+      // few posts' voice; blocking the finish on it would cost the setup.
       await _sendBot(
         "Couldn't save that — $failure. I'll pick up your voice from your "
         'first few posts instead.',
       );
     }
-    await _enter(OnboardingStep.connect);
-  }
-
-  // ── Connect LinkedIn ──────────────────────────────────────────────────────
-
-  /// Runs the LinkedIn browser hand-off, then advances.
-  ///
-  /// Deliberately reuses `SettingsRepository.connectLinkedin` rather than
-  /// adding a second implementation to this slice. The hand-off is a PKCE-less
-  /// OAuth trip through the system browser with a `plexaverse://` return, and
-  /// two copies of that drift — the copy that drifts then fails at LinkedIn
-  /// rather than anywhere a stack trace helps.
-  ///
-  /// `type` is derived from the brand answer, so a company-brand user connects
-  /// the account that administers their pages.
-  Future<void> connectLinkedin() async {
-    if (state.step != OnboardingStep.connect) return;
-    _echoUser('Connect LinkedIn');
-    state = state.copyWith(isBotTyping: true);
-
-    final String type =
-        state.answers.brand == BrandChoice.company ? 'company' : 'personal';
-    final ConnectOutcome outcome =
-        await _settings.connectLinkedin(type: type);
-    if (_disposed) return;
-    state = state.copyWith(isBotTyping: false);
-
-    switch (outcome) {
-      case ConnectSucceeded():
-        state = state.copyWith(connectFailed: false);
-        await _sendBot('Connected.');
-        await _afterConnect();
-      case ConnectCancelled():
-        // Backing out of the browser is a decision, not an error — but the
-        // step still has to be answered, so say why it matters and offer the
-        // escape rather than silently re-asking.
-        state = state.copyWith(connectFailed: true);
-        await _sendBot(
-          "No account connected yet. Without one I can write your posts but "
-          "nothing can publish — you can connect now, or do it later from "
-          "Settings.",
-        );
-      case ConnectFailed(:final String? message):
-        state = state.copyWith(connectFailed: true);
-        await _sendBot(
-          message ?? "That didn't go through. Try again, or connect later "
-              'from Settings.',
-        );
-    }
-  }
-
-  /// The escape, unlocked only after a failed attempt. See
-  /// [OnboardingChatState.connectFailed] for why it is not offered up front.
-  Future<void> skipConnect() async {
-    if (state.step != OnboardingStep.connect || !state.connectFailed) return;
-    _echoUser("I'll connect later");
-    await _sendBot(
-      'Fine — Settings › Connected Accounts, whenever you are ready.',
-    );
-    await _afterConnect();
-  }
-
-  /// The one place the flow forks.
-  ///
-  /// A company brand needs a page to publish to and a document to write
-  /// from; without them `brandType: 'company'` is a setting with nothing
-  /// behind it, and every company surface renders empty. A personal brand
-  /// has nothing further to answer.
-  Future<void> _afterConnect() => _enter(
-        state.answers.brand == BrandChoice.company
-            ? OnboardingStep.companyPage
-            : OnboardingStep.finish,
-      );
-
-  // ── Company brand ─────────────────────────────────────────────────────────
-
-  /// The pages the connected account administers, for the chips.
-  ///
-  /// Reuses the Settings repository rather than a second copy: the route
-  /// answers three different ways (a live list, one saved page, or nothing
-  /// with `needsManualInput` when the scope was never granted) and handling
-  /// that twice is how the two would come to disagree.
-  Future<CompanyPageOptions> companyPages() =>
-      _settings.fetchCompanyPages();
-
-  Future<void> pickCompanyPage(String id, String name) async {
-    if (state.step != OnboardingStep.companyPage) return;
-    _echoUser(name);
-    state = state.copyWith(isBotTyping: true);
-
-    // Saved now rather than at finalise: this write goes to the LinkedIn
-    // ACCOUNT row, not the preferences patch, so it is not something the
-    // single finalise write can carry.
-    String? failure;
-    try {
-      await _settings.setCompanyPage(id);
-    } on Object {
-      failure = "I couldn't save that page.";
-    }
-    if (_disposed) return;
-    state = state.copyWith(
-      isBotTyping: false,
-      answers: state.answers.copyWith(
-        companyPageId: failure == null ? id : null,
-        companyPageName: failure == null ? name : null,
-      ),
-    );
-
-    if (failure != null) {
-      await _sendBot('$failure Try again, or pick a different one.');
-      return;
-    }
-    await _enter(OnboardingStep.companyDetails);
-  }
-
-  /// No page to choose — the account administers none, or the scope was
-  /// never granted. Moves on rather than trapping the user on a list that
-  /// will never populate; Settings can link one later.
-  Future<void> skipCompanyPage() async {
-    if (state.step != OnboardingStep.companyPage) return;
-    _echoUser("I'll pick it later");
-    await _sendBot(
-      'Fine — Settings › Connected Accounts when you know which page.',
-    );
-    await _enter(OnboardingStep.companyDetails);
-  }
-
-  void setCompanyDraft({
-    String? description,
-    String? industry,
-    String? tagline,
-  }) =>
-      state = state.copyWith(
-        answers: state.answers.copyWith(
-          companyDescription: description ?? state.answers.companyDescription,
-          companyIndustry: industry ?? state.answers.companyIndustry,
-          companyTagline: tagline ?? state.answers.companyTagline,
-        ),
-      );
-
-  Future<void> submitCompanyDetails() async {
-    if (state.step != OnboardingStep.companyDetails) return;
-    final String description = (state.answers.companyDescription ?? '').trim();
-    if (description.length < 20) {
-      await _sendBot(
-        'A little more — two sentences on what the company actually does is '
-        'enough for me to write from.',
-      );
-      return;
-    }
-    _echoUser(description);
     await _enter(OnboardingStep.finish);
   }
 
@@ -451,10 +689,9 @@ class OnboardingChatController extends _$OnboardingChatController {
 
   /// One awaited write, then a fire-and-forget seed, then the handover.
   ///
-  /// The order matters: `/ai/suggest-topics` reads the profession and industry
-  /// from the preferences row, so it can only run after the row exists. The web
-  /// has the same constraint on `derive-audience`, and awaits it for the same
-  /// reason — firing it alongside the write loses the race about half the time.
+  /// The order matters: `derive-audience` and the roadmap read the
+  /// preferences row this write creates, so the seed runs after it, never
+  /// beside it.
   Future<void> _finalise() async {
     if (state.isFinalising) return;
     state = state.copyWith(isFinalising: true, finaliseError: false);
@@ -488,13 +725,7 @@ class OnboardingChatController extends _$OnboardingChatController {
     // topics. It runs in the background so the handover is not held up, but
     // each piece matters — without the roadmap the home screen is empty, and
     // without the week plan the planner is.
-    unawaited(
-      _repo.seedAfterOnboarding(
-        profession: state.answers.profession,
-        industry: state.answers.industry,
-        brandType: (state.answers.brand ?? BrandChoice.personal).name,
-      ),
-    );
+    unawaited(_repo.seedAfterOnboarding(state.answers));
 
     await _sendBot(
       'Your dashboard is ready — taking you there now.',

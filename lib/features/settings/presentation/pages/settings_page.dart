@@ -10,6 +10,7 @@ import '../widgets/billing_section.dart';
 import '../widgets/cadence_section.dart';
 import '../widgets/company_brand_section.dart';
 import '../widgets/connections_section.dart';
+import '../widgets/plexa_section.dart';
 import '../widgets/profile_section.dart';
 import '../widgets/settings_section.dart';
 import '../widgets/subjects_section.dart';
@@ -111,6 +112,9 @@ class _SettingsBody extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: <Widget>[
+        // First, because it is the one thing here that is new.
+        const PlexaSection(),
+        SizedBox(height: gap),
         ProfileSection(preferences: preferences),
         SizedBox(height: gap),
         BrandTypeSection(preferences: preferences),
