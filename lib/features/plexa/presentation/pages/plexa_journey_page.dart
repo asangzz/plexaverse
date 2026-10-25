@@ -8,6 +8,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 import '../../../../core/router/zave_routes.dart';
+import '../../../../core/ui/app_icons.dart';
 import '../../../../core/ui/zave/zave_kit.dart';
 import '../../../onboarding/application/welcome_bonus.dart';
 import '../../../onboarding/presentation/pages/onboarding_chat_page.dart';
@@ -106,8 +107,6 @@ const Color _card33 = Color(0xFF0E0A2F);
 const Color _card65 = Color(0xFF1A135E);
 const Color _cardBase = Color(0xFF251A82);
 const Color _cardRim = Color(0xFF6057D4);
-const Color _buttonFill = Color(0xFFF4F4F8);
-const Color _buttonInk = Color(0xFF0A0621);
 
 /// The line fades out, then the next fades in — the web's
 /// `AnimatePresence mode="wait"` at 180 ms a side. The interval curves hold the
@@ -359,17 +358,35 @@ class _PlexaJourneyPageState extends ConsumerState<PlexaJourneyPage> {
               ],
             ),
           ),
+        // Over the card's bottom edge, as the design's button was — but never
+        // down into the home indicator's safe area.
+        //
+        // Anchored by its bottom inside a min-size Column (and, wide, a Row):
+        // ZaveButton centres its label in an aligned box, and handed a bounded
+        // height or width it grows to fill it instead of keeping its own size.
         Positioned(
-          left: card.left,
-          right: wide ? card.right + 0.0525 * w : card.right,
-          bottom: card.bottom,
-          child: Align(
-            alignment: wide ? Alignment.centerRight : Alignment.center,
-            // Straddles the card's bottom edge.
-            child: FractionalTranslation(
-              translation: Offset(0, wide ? 0.5 : 0.28),
-              child: _ContinueButton(u: u, onTap: _continue),
-            ),
+          left: wide ? null : card.left + ZaveSpace.lg,
+          right: wide ? card.right + 0.0525 * w : card.right + ZaveSpace.lg,
+          bottom: math.max(
+            card.bottom - (wide ? 30 : 16),
+            MediaQuery.paddingOf(context).bottom + ZaveSpace.sm,
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: wide
+                ? CrossAxisAlignment.end
+                : CrossAxisAlignment.stretch,
+            children: <Widget>[
+              if (wide)
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: <Widget>[
+                    _ContinueButton(wide: wide, onTap: _continue),
+                  ],
+                )
+              else
+                _ContinueButton(wide: wide, onTap: _continue),
+            ],
           ),
         ),
       ],
@@ -400,21 +417,29 @@ class _Chat extends StatelessWidget {
       curve: _chatFadeCurve,
       builder: (BuildContext context, double t, Widget? child) =>
           Opacity(opacity: t, child: child),
-      child: ZaveScaffold(
-        title: 'Plexa setup',
-        body: OnboardingChatBody(
-          lead: SizedBox(
-            key: anchor,
-            width: height * PlexaMascot.boxAspect,
-            height: height,
+      // The Zave ground, but no header: the chat's own top row — Plexa,
+      // progress, log out — is the top bar, as it is on the web. A titled bar
+      // above it said "Plexa setup" over a screen Plexa is already standing on.
+      child: ZaveGroundBox(
+        child: Scaffold(
+          backgroundColor: Colors.transparent,
+          body: SafeArea(
+            child: OnboardingChatBody(
+              lead: SizedBox(
+                key: anchor,
+                width: height * PlexaMascot.boxAspect,
+                height: height,
+              ),
+              // Plexa is the mascot now — no mark beside every message.
+              showBotAvatar: false,
+              // /onboarding is moved on by the onboarding gate; /plexa is not
+              // gated, so it leaves by itself — to the dashboard, as on the
+              // web.
+              onCompleted: exitToDashboard
+                  ? () => context.go(ZaveRoutes.dashboard)
+                  : null,
+            ),
           ),
-          // Plexa is the mascot now — no mark beside every message.
-          showBotAvatar: false,
-          // /onboarding is moved on by the onboarding gate; /plexa is not
-          // gated, so it leaves by itself — to the dashboard, as on the web.
-          onCompleted: exitToDashboard
-              ? () => context.go(ZaveRoutes.dashboard)
-              : null,
         ),
       ),
     );
@@ -540,38 +565,68 @@ class _Greeting extends StatelessWidget {
   }
 }
 
+/// Continue — the app's primary button, in white.
+///
+/// Every measurement is `ZaveButton.primary`'s — the pill, the padding, the
+/// large button type, the chevron, the press — so it reads as the app's own
+/// button. Only the fill differs: white with ink letters, as the design draws
+/// it. ZaveButton has no white kind on purpose (white is what a SELECTED chip
+/// inverts to elsewhere), so this one screen draws its own rather than adding
+/// one for everybody.
+///
+/// A phone gets it across the card, as the sign-in screen's Continue is; the
+/// wide layout keeps it its own width in the card's corner.
 class _ContinueButton extends StatelessWidget {
-  const _ContinueButton({required this.u, required this.onTap});
+  const _ContinueButton({required this.wide, required this.onTap});
 
-  final double u;
+  final bool wide;
   final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
     return Semantics(
       button: true,
+      label: 'Continue',
+      excludeSemantics: true,
       child: ZavePress(
-        child: GestureDetector(
-          behavior: HitTestBehavior.opaque,
-          onTap: onTap,
-          child: Container(
-            width: 1.41 * u,
-            height: 0.38 * u,
-            alignment: Alignment.center,
-            decoration: BoxDecoration(
-              color: _buttonFill,
-              borderRadius: BorderRadius.circular(0.14 * u),
-            ),
-            child: Text(
-              'Continue',
-              maxLines: 1,
-              textScaler: MediaQuery.textScalerOf(
-                context,
-              ).clamp(maxScaleFactor: 1.2),
-              style: GoogleFonts.urbanist(
-                fontSize: 0.167 * u,
-                fontWeight: FontWeight.w700,
-                color: _buttonInk,
+        child: Material(
+          color: Colors.transparent,
+          child: InkWell(
+            onTap: onTap,
+            borderRadius: ZaveRadius.pillBr,
+            splashColor: ZaveColors.ink.withValues(alpha: 0.08),
+            highlightColor: Colors.transparent,
+            child: Container(
+              decoration: BoxDecoration(
+                color: ZaveColors.white,
+                borderRadius: ZaveRadius.pillBr,
+                boxShadow: <BoxShadow>[
+                  BoxShadow(
+                    color: ZaveColors.white.withValues(alpha: 0.18),
+                    blurRadius: 24,
+                  ),
+                ],
+              ),
+              padding: ZaveSpace.btnPrimaryPad,
+              constraints: BoxConstraints(minHeight: ZaveSpace.minTapTarget),
+              child: Row(
+                mainAxisSize: wide ? MainAxisSize.min : MainAxisSize.max,
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: <Widget>[
+                  Text(
+                    'Continue',
+                    maxLines: 1,
+                    style: ZaveType.buttonLarge.copyWith(
+                      color: ZaveColors.ink,
+                    ),
+                  ),
+                  SizedBox(width: ZaveSpace.sm + 2),
+                  const Icon(
+                    AppIcons.chevronRight,
+                    color: ZaveColors.ink,
+                    size: 20,
+                  ),
+                ],
               ),
             ),
           ),

@@ -31,8 +31,8 @@ import '../widgets/upload_panels.dart';
 /// tall form at the end of a scrolling thread gets its submit button
 /// auto-scrolled into view and its first field pushed off the top.
 ///
-/// Must sit inside a [ZaveScaffold]: it clears the scaffold's header with
-/// [ZaveScaffold.contentTop].
+/// Clears whatever is above it with [ZaveScaffold.contentTop]: a scaffold's
+/// header when there is one, otherwise the status bar.
 class OnboardingChatBody extends ConsumerStatefulWidget {
   const OnboardingChatBody({
     this.lead,

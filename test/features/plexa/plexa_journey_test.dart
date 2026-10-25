@@ -7,6 +7,7 @@ import 'package:go_router/go_router.dart';
 import 'package:plexaverse/core/config/env.dart';
 import 'package:plexaverse/core/router/zave_routes.dart';
 import 'package:plexaverse/features/onboarding/application/welcome_bonus.dart';
+import 'package:plexaverse/features/onboarding/presentation/pages/onboarding_chat_page.dart';
 import 'package:plexaverse/features/onboarding/presentation/widgets/chat_lane.dart';
 import 'package:plexaverse/features/plexa/presentation/pages/plexa_journey_page.dart';
 import 'package:plexaverse/features/plexa/presentation/widgets/plexa_clips.dart';
@@ -151,7 +152,9 @@ void main() {
         for (int i = 0; i < 20; i++) {
           await tester.pump(const Duration(milliseconds: 100));
         }
-        expect(find.text('Plexa setup'), findsOneWidget);
+        expect(find.byType(OnboardingChatBody), findsOneWidget);
+        // No titled bar over the chat: its own top row is the top bar.
+        expect(find.text('Plexa setup'), findsNothing);
         // The intro has faded out and left the tree...
         expect(find.text('Continue'), findsNothing);
         // ...and Plexa is still the one mascot — holding her notepad, with no
