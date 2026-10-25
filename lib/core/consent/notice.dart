@@ -11,4 +11,4 @@
 ///
 /// So when the notice changes, this constant and the server's move together,
 /// and older installs are told to update rather than allowed to proceed.
-const String kNoticeVersion = '2026-09-01';
+const String kNoticeVersion = '2026-10-22';

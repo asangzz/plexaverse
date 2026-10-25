@@ -104,6 +104,11 @@ class _AuthPageState extends ConsumerState<AuthPage>
   final ValueNotifier<String?> _passwordError = ValueNotifier<String?>(null);
   final ValueNotifier<String?> _formError = ValueNotifier<String?>(null);
 
+  /// Where the form-level error renders — at the top, while the button that
+  /// produced it is at the bottom of a form taller than the screen. Without
+  /// scrolling it into view, a refused sign-up looked like nothing happened.
+  final GlobalKey _formErrorAnchor = GlobalKey();
+
   /// What the user has ticked on the create-account notice. Reset when the
   /// mode toggles, so switching to sign-in and back cannot leave a stale
   /// acceptance behind.
@@ -179,6 +184,21 @@ class _AuthPageState extends ConsumerState<AuthPage>
       vsync: this,
       duration: const Duration(milliseconds: 400),
     );
+    _formError.addListener(_revealFormError);
+  }
+
+  void _revealFormError() {
+    if (_formError.value == null) return;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final BuildContext? anchor = _formErrorAnchor.currentContext;
+      if (!mounted || anchor == null) return;
+      Scrollable.ensureVisible(
+        anchor,
+        duration: ZaveMotion.fast,
+        curve: ZaveMotion.curve,
+        alignmentPolicy: ScrollPositionAlignmentPolicy.keepVisibleAtStart,
+      );
+    });
   }
 
   @override
@@ -303,8 +323,11 @@ class _AuthPageState extends ConsumerState<AuthPage>
         _formError.value =
             message ?? 'Please check your details and try again.';
         _triggerShake();
-      case RegisterNetworkFailure():
-        _formError.value = 'Something went wrong. Please try again.';
+      case RegisterNetworkFailure(:final String? message):
+        // The server's own words when it sent any — "New sign-ups are
+        // temporarily paused" is not something to retry.
+        _formError.value =
+            message ?? 'Something went wrong. Please try again.';
     }
   }
 
@@ -450,6 +473,9 @@ class _AuthPageState extends ConsumerState<AuthPage>
             // thing that rebuilds when one arrives — a failed sign-in no longer
             // repaints the heading, the toggle and the fields to show a line of
             // text above them.
+            // Zero-height marker the banner is scrolled to — see
+            // [_formErrorAnchor].
+            SizedBox(key: _formErrorAnchor, width: double.infinity),
             ValueListenableBuilder<String?>(
               valueListenable: _formError,
               builder: (BuildContext context, String? formError, Widget? _) =>

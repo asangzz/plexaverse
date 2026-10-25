@@ -120,10 +120,29 @@ class ApiAuthRepository implements AuthRepository {
       if (failure is AuthFailure) {
         return RegisterInvalid(message: failure.message);
       }
+      // Every other 4xx is the server refusing THIS sign-up, with a reason
+      // written for the user: an email that already has an account (409), or
+      // a privacy notice this build is too old to show (NOTICE_VERSION_STALE).
+      // Filed as a network failure they read as "Something went wrong", and
+      // the user retried a request that could never succeed.
+      if (failure is ClientFailure) {
+        return RegisterInvalid(
+          message: failure.message,
+          fieldErrors: failure.statusCode == 409
+              ? const <String, String>{'email': 'Email already registered'}
+              : const <String, String>{},
+        );
+      }
       return RegisterNetworkFailure(
         message: failure is Failure ? failure.message : null,
       );
-    } on Object {
+    } on Object catch (error, stackTrace) {
+      // Almost always a payload-shape mismatch parsing the 2xx body — which
+      // means the account WAS created. Surface it, as signIn does, so it is
+      // debuggable instead of masquerading as a network error.
+      debugPrint(
+        'ApiAuthRepository.register parse failure: $error\n$stackTrace',
+      );
       return const RegisterNetworkFailure();
     }
   }
