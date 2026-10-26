@@ -159,6 +159,22 @@ class ApiPaths {
   // Added to the mobile API by the web-alignment work; there was no planner
   // surface on mobile before, so the Plan tab had nothing to call.
   /// GET the week plan (?week=&season=); PATCH one slot.
+  /// The week as a climbable path. See [learnUnit] for the expensive one.
+  static const String learn = '/learn';
+
+  /// One day's ladder.
+  ///
+  /// A GET that COSTS MONEY on first open: the server generates the whole
+  /// ladder with a model call before it can answer. Never prefetch it, never
+  /// retry it automatically, never refetch it on resume.
+  static const String learnUnit = '/learn/unit';
+
+  /// Answer a level. Graded server-side, always.
+  static const String learnLevel = '/learn/level';
+
+  /// The three levels finished by doing: draft, visual, review.
+  static const String learnAction = '/learn/action';
+
   static const String planner = '/planner';
 
   /// GET the week's article (Thursday's); POST to record that the user published it

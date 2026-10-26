@@ -119,6 +119,17 @@ const List<ZaveDestination> zaveDestinations = <ZaveDestination>[
 
   // ── Management ──
   ZaveDestination(
+    // The written half of Business English: this week's posts, climbed as
+    // levels. The web sits it directly above the spoken page because they
+    // are two halves of one thing; this app has no spoken page yet, so it
+    // leads Management instead.
+    label: 'Learn',
+    route: ZaveRoutes.learn,
+    icon: AppIcons.book,
+    visibility: NavVisibility.both,
+    group: 'Management',
+  ),
+  ZaveDestination(
     label: 'Persona',
     route: ZaveRoutes.persona,
     icon: AppIcons.face,

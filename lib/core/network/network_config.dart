@@ -46,6 +46,13 @@ class NetworkConfig {
     '/persona/chat',
     '/persona/harvest',
     '/onboarding/derive-audience',
+    // Learn. Both of these are model calls wearing ordinary clothes:
+    // `/learn/unit` is a GET that BUILDS the day's ladder on first open, and
+    // `/learn/action` runs the whole brand-post pipeline for the draft level.
+    // Under the default read timeout the first open of a day and the only
+    // button that writes the post would both fail on a slow week.
+    '/learn/unit',
+    '/learn/action',
   ];
 
   /// Whether [path] is served by a model call and so needs

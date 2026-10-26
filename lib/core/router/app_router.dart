@@ -35,6 +35,7 @@ import '../../features/missions/presentation/pages/about_odyssey_page.dart';
 import '../../features/missions/presentation/pages/banner_blueprint_page.dart';
 import '../../features/missions/presentation/pages/headline_hook_page.dart';
 import '../../features/missions/presentation/pages/season_complete_page.dart';
+import '../../features/learn/presentation/pages/learn_page.dart';
 import '../../features/persona/presentation/pages/persona_page.dart';
 import '../../features/planner/presentation/pages/planner_page.dart';
 import '../../features/plexa/presentation/pages/plexa_journey_page.dart';
@@ -73,7 +74,7 @@ part 'app_router.g.dart';
 ///   /posts       — the library
 ///
 ///   ── pushed over the shell (no bottom bar) ──
-///   /create · /company-post · /posts/:id · /schedules · /persona ·
+///   /create · /company-post · /posts/:id · /schedules · /persona · /learn ·
 ///   /settings · /accounts
 ///
 /// The four shell branches match [tabRoutes]; the bottom bar is built from the
@@ -236,6 +237,7 @@ GoRouter appRouter(Ref ref) {
         ),
       ),
       _fullScreen(ZaveRoutes.schedules, const SchedulesPage()),
+      _fullScreen(ZaveRoutes.learn, const LearnPage()),
       _fullScreen(ZaveRoutes.persona, const PersonaPage()),
       _fullScreen(ZaveRoutes.settings, const SettingsPage()),
       _fullScreen(

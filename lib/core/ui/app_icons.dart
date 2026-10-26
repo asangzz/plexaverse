@@ -561,6 +561,33 @@ class AppIcons {
     fontPackage: _pkg,
   ); // arrowRight
 
+  // ── Learn: the levels of a day's climb ────────────────────────────────
+  //
+  // Only three are new. The other four levels reuse glyphs the app already
+  // has — a draft is [create], a poster is [image], a read-back is [eye] —
+  // because a level is one of those things, not a new kind of thing.
+
+  /// The vocabulary level: terms this week's topic needs.
+  static const IconData book = IconData(
+    0xf02d,
+    fontFamily: _family,
+    fontPackage: _pkg,
+  ); // book
+
+  /// The hook level: the opening line.
+  static const IconData quote = IconData(
+    0xf10d,
+    fontFamily: _family,
+    fontPackage: _pkg,
+  ); // quoteLeft
+
+  /// The substance level: what the user actually did at work.
+  static const IconData briefcase = IconData(
+    0xf0b1,
+    fontFamily: _family,
+    fontPackage: _pkg,
+  ); // briefcase
+
   /// Every icon in the vocabulary with its semantic name — drives the style
   /// guide's icon gallery so the set stays self-documenting.
   static const Map<String, IconData> all = <String, IconData>{
@@ -649,5 +676,8 @@ class AppIcons {
     'personRemove': personRemove,
     'doneAll': doneAll,
     'forward': forward,
+    'book': book,
+    'quote': quote,
+    'briefcase': briefcase,
   };
 }

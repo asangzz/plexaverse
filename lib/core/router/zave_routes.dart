@@ -74,6 +74,9 @@ class ZaveRoutes {
 
   // ── Management ────────────────────────────────────────────────────────────
 
+  /// The week, climbed as levels. Byte-identical to the web's `/learn`.
+  static const String learn = '/learn';
+
   /// The persona / teach-voice surface.
   static const String persona = '/persona';
 
