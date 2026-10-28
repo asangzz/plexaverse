@@ -136,7 +136,7 @@ String _$learnPathHash() => r'97b6b3cbf45b3d1e761536349b22d52e95b482ac';
 /// already have.
 ///
 /// So: fetched exactly once per (week, day), kept alive, and every later
-/// version of the unit — from submitting a level, from the draft, from the
+/// version of the unit — from banking a level, from the draft, from the
 /// visual check — is WRITTEN INTO state by [LearnUnitController.absorb]
 /// rather than refetched.
 ///
@@ -159,7 +159,7 @@ final learnUnitControllerProvider = LearnUnitControllerFamily._();
 /// already have.
 ///
 /// So: fetched exactly once per (week, day), kept alive, and every later
-/// version of the unit — from submitting a level, from the draft, from the
+/// version of the unit — from banking a level, from the draft, from the
 /// visual check — is WRITTEN INTO state by [LearnUnitController.absorb]
 /// rather than refetched.
 ///
@@ -180,7 +180,7 @@ final class LearnUnitControllerProvider
   /// already have.
   ///
   /// So: fetched exactly once per (week, day), kept alive, and every later
-  /// version of the unit — from submitting a level, from the draft, from the
+  /// version of the unit — from banking a level, from the draft, from the
   /// visual check — is WRITTEN INTO state by [LearnUnitController.absorb]
   /// rather than refetched.
   ///
@@ -238,7 +238,7 @@ String _$learnUnitControllerHash() =>
 /// already have.
 ///
 /// So: fetched exactly once per (week, day), kept alive, and every later
-/// version of the unit — from submitting a level, from the draft, from the
+/// version of the unit — from banking a level, from the draft, from the
 /// visual check — is WRITTEN INTO state by [LearnUnitController.absorb]
 /// rather than refetched.
 ///
@@ -276,7 +276,7 @@ final class LearnUnitControllerFamily extends $Family
   /// already have.
   ///
   /// So: fetched exactly once per (week, day), kept alive, and every later
-  /// version of the unit — from submitting a level, from the draft, from the
+  /// version of the unit — from banking a level, from the draft, from the
   /// visual check — is WRITTEN INTO state by [LearnUnitController.absorb]
   /// rather than refetched.
   ///
@@ -303,7 +303,7 @@ final class LearnUnitControllerFamily extends $Family
 /// already have.
 ///
 /// So: fetched exactly once per (week, day), kept alive, and every later
-/// version of the unit — from submitting a level, from the draft, from the
+/// version of the unit — from banking a level, from the draft, from the
 /// visual check — is WRITTEN INTO state by [LearnUnitController.absorb]
 /// rather than refetched.
 ///
@@ -390,24 +390,171 @@ abstract class _$LearnOpenDay extends $Notifier<int?> {
   }
 }
 
-/// Drives one unit's climb.
+/// Drives one attempt at one level.
 ///
-/// Every write goes through here so the in-flight flag, the failure and the
-/// server's verdicts live in one place that outlives the player.
+/// Deliberately NOT keepAlive. Quitting a level mid-run discards it — the
+/// hearts are spent, the answers are not banked, and the level is taken again
+/// from the top. That is the web's behaviour and it is the honest one: a run
+/// that survived being walked away from would let a learner spend four hearts,
+/// leave, and come back to a fresh level with the answers already known.
+
+@ProviderFor(LearnRun)
+final learnRunProvider = LearnRunFamily._();
+
+/// Drives one attempt at one level.
+///
+/// Deliberately NOT keepAlive. Quitting a level mid-run discards it — the
+/// hearts are spent, the answers are not banked, and the level is taken again
+/// from the top. That is the web's behaviour and it is the honest one: a run
+/// that survived being walked away from would let a learner spend four hearts,
+/// leave, and come back to a fresh level with the answers already known.
+final class LearnRunProvider
+    extends $NotifierProvider<LearnRun, LearnRunState> {
+  /// Drives one attempt at one level.
+  ///
+  /// Deliberately NOT keepAlive. Quitting a level mid-run discards it — the
+  /// hearts are spent, the answers are not banked, and the level is taken again
+  /// from the top. That is the web's behaviour and it is the honest one: a run
+  /// that survived being walked away from would let a learner spend four hearts,
+  /// leave, and come back to a fresh level with the answers already known.
+  LearnRunProvider._({
+    required LearnRunFamily super.from,
+    required (int, int) super.argument,
+  }) : super(
+         retry: null,
+         name: r'learnRunProvider',
+         isAutoDispose: true,
+         dependencies: null,
+         $allTransitiveDependencies: null,
+       );
+
+  @override
+  String debugGetCreateSourceHash() => _$learnRunHash();
+
+  @override
+  String toString() {
+    return r'learnRunProvider'
+        ''
+        '$argument';
+  }
+
+  @$internal
+  @override
+  LearnRun create() => LearnRun();
+
+  /// {@macro riverpod.override_with_value}
+  Override overrideWithValue(LearnRunState value) {
+    return $ProviderOverride(
+      origin: this,
+      providerOverride: $SyncValueProvider<LearnRunState>(value),
+    );
+  }
+
+  @override
+  bool operator ==(Object other) {
+    return other is LearnRunProvider && other.argument == argument;
+  }
+
+  @override
+  int get hashCode {
+    return argument.hashCode;
+  }
+}
+
+String _$learnRunHash() => r'ea67ffffe087cf5a4b7b21df821793a12704ffb7';
+
+/// Drives one attempt at one level.
+///
+/// Deliberately NOT keepAlive. Quitting a level mid-run discards it — the
+/// hearts are spent, the answers are not banked, and the level is taken again
+/// from the top. That is the web's behaviour and it is the honest one: a run
+/// that survived being walked away from would let a learner spend four hearts,
+/// leave, and come back to a fresh level with the answers already known.
+
+final class LearnRunFamily extends $Family
+    with
+        $ClassFamilyOverride<
+          LearnRun,
+          LearnRunState,
+          LearnRunState,
+          LearnRunState,
+          (int, int)
+        > {
+  LearnRunFamily._()
+    : super(
+        retry: null,
+        name: r'learnRunProvider',
+        dependencies: null,
+        $allTransitiveDependencies: null,
+        isAutoDispose: true,
+      );
+
+  /// Drives one attempt at one level.
+  ///
+  /// Deliberately NOT keepAlive. Quitting a level mid-run discards it — the
+  /// hearts are spent, the answers are not banked, and the level is taken again
+  /// from the top. That is the web's behaviour and it is the honest one: a run
+  /// that survived being walked away from would let a learner spend four hearts,
+  /// leave, and come back to a fresh level with the answers already known.
+
+  LearnRunProvider call(int week, int day) =>
+      LearnRunProvider._(argument: (week, day), from: this);
+
+  @override
+  String toString() => r'learnRunProvider';
+}
+
+/// Drives one attempt at one level.
+///
+/// Deliberately NOT keepAlive. Quitting a level mid-run discards it — the
+/// hearts are spent, the answers are not banked, and the level is taken again
+/// from the top. That is the web's behaviour and it is the honest one: a run
+/// that survived being walked away from would let a learner spend four hearts,
+/// leave, and come back to a fresh level with the answers already known.
+
+abstract class _$LearnRun extends $Notifier<LearnRunState> {
+  late final _$args = ref.$arg as (int, int);
+  int get week => _$args.$1;
+  int get day => _$args.$2;
+
+  LearnRunState build(int week, int day);
+  @$mustCallSuper
+  @override
+  void runBuild() {
+    final ref = this.ref as $Ref<LearnRunState, LearnRunState>;
+    final element =
+        ref.element
+            as $ClassProviderElement<
+              AnyNotifier<LearnRunState, LearnRunState>,
+              LearnRunState,
+              Object?,
+              Object?
+            >;
+    element.handleCreate(ref, () => build(_$args.$1, _$args.$2));
+  }
+}
+
+/// Draft, visual and review.
+///
+/// Every write goes through here so the in-flight flag and the failure live in
+/// one place that outlives the player — the draft is a two-minute call and the
+/// user will leave during it.
 
 @ProviderFor(LearnActions)
 final learnActionsProvider = LearnActionsFamily._();
 
-/// Drives one unit's climb.
+/// Draft, visual and review.
 ///
-/// Every write goes through here so the in-flight flag, the failure and the
-/// server's verdicts live in one place that outlives the player.
+/// Every write goes through here so the in-flight flag and the failure live in
+/// one place that outlives the player — the draft is a two-minute call and the
+/// user will leave during it.
 final class LearnActionsProvider
     extends $NotifierProvider<LearnActions, LearnBusy> {
-  /// Drives one unit's climb.
+  /// Draft, visual and review.
   ///
-  /// Every write goes through here so the in-flight flag, the failure and the
-  /// server's verdicts live in one place that outlives the player.
+  /// Every write goes through here so the in-flight flag and the failure live in
+  /// one place that outlives the player — the draft is a two-minute call and the
+  /// user will leave during it.
   LearnActionsProvider._({
     required LearnActionsFamily super.from,
     required (int, int) super.argument,
@@ -452,12 +599,13 @@ final class LearnActionsProvider
   }
 }
 
-String _$learnActionsHash() => r'6e68f7b59e3dd1343a09133e7729320c6871a5ea';
+String _$learnActionsHash() => r'f3dd61b581aaa7b0b7f031f65f9acf5730015dc8';
 
-/// Drives one unit's climb.
+/// Draft, visual and review.
 ///
-/// Every write goes through here so the in-flight flag, the failure and the
-/// server's verdicts live in one place that outlives the player.
+/// Every write goes through here so the in-flight flag and the failure live in
+/// one place that outlives the player — the draft is a two-minute call and the
+/// user will leave during it.
 
 final class LearnActionsFamily extends $Family
     with
@@ -477,10 +625,11 @@ final class LearnActionsFamily extends $Family
         isAutoDispose: false,
       );
 
-  /// Drives one unit's climb.
+  /// Draft, visual and review.
   ///
-  /// Every write goes through here so the in-flight flag, the failure and the
-  /// server's verdicts live in one place that outlives the player.
+  /// Every write goes through here so the in-flight flag and the failure live in
+  /// one place that outlives the player — the draft is a two-minute call and the
+  /// user will leave during it.
 
   LearnActionsProvider call(int week, int day) =>
       LearnActionsProvider._(argument: (week, day), from: this);
@@ -489,10 +638,11 @@ final class LearnActionsFamily extends $Family
   String toString() => r'learnActionsProvider';
 }
 
-/// Drives one unit's climb.
+/// Draft, visual and review.
 ///
-/// Every write goes through here so the in-flight flag, the failure and the
-/// server's verdicts live in one place that outlives the player.
+/// Every write goes through here so the in-flight flag and the failure live in
+/// one place that outlives the player — the draft is a two-minute call and the
+/// user will leave during it.
 
 abstract class _$LearnActions extends $Notifier<LearnBusy> {
   late final _$args = ref.$arg as (int, int);

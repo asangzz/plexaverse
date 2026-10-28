@@ -21,12 +21,34 @@ abstract class LearnRepository {
   /// which it must, because a climb happens over several sittings.
   Future<LearnUnit> fetchUnit({required int week, required int day});
 
-  /// Answer a level's exercises.
+  /// Grade ONE question. Writes nothing.
   ///
-  /// **A 200 does not mean the level is complete.** A level is all-or-nothing:
-  /// if any answer is wrong the server persists nothing and returns the unit
-  /// unchanged, so the user retries the question rather than banking a mistake
-  /// into the post. Read [SubmitResult.allCorrect], or the returned unit.
+  /// Called on every Check. The quiz is one question to a screen and the
+  /// learner is told whether they were right before the next appears; without
+  /// this the app would have to submit a whole level at once, which is the
+  /// stacked-form behaviour the web replaced, and the two clients would
+  /// teach differently.
+  ///
+  /// Cheap and idempotent — it is a read, so a retry cannot bank an answer or
+  /// advance anything.
+  Future<AnswerVerdict> gradeAnswer({
+    required String unitId,
+    required int levelIndex,
+    required String exerciseId,
+    required String value,
+  });
+
+  /// Bank a level: every answer, re-graded, at the end of the run.
+  ///
+  /// **Mistakes are allowed.** Up to [kMistakeBudget] wrong answers still
+  /// bank the level — a level that demanded a clean run is one retaken until
+  /// the learner has memorised the option positions, which is the single
+  /// thing these exercises must not reward. Past the budget, or with nothing
+  /// right at all, the server writes nothing and throws [LearnOutOfHearts].
+  ///
+  /// Every answer is re-graded here rather than trusted from [gradeAnswer],
+  /// which is a read: the count that decides whether the level passed is made
+  /// again where it is banked.
   ///
   /// Grading is the server's. The correct answers travel inside the ladder
   /// because the player reveals them after answering — this client must never
@@ -75,6 +97,22 @@ class LearnNoPlan implements Exception {
 class LearnImageMissing implements Exception {
   const LearnImageMissing([
     this.message = 'No poster yet — make one and come back.',
+  ]);
+  final String message;
+
+  @override
+  String toString() => message;
+}
+
+/// The five hearts are spent: the level is retaken from the top.
+///
+/// Its own type because it is not an error in the ordinary sense — nothing
+/// broke, nothing was lost but the run, and the only sensible screen is one
+/// button that starts the level again. Rendering it as "something went wrong"
+/// would make a pacing device look like a fault.
+class LearnOutOfHearts implements Exception {
+  const LearnOutOfHearts([
+    this.message = 'That is five wrong in one level. Run it again.',
   ]);
   final String message;
 

@@ -6,17 +6,31 @@ part of 'learn_unit.dart';
 // JsonSerializableGenerator
 // **************************************************************************
 
+_ExerciseOption _$ExerciseOptionFromJson(Map<String, dynamic> json) =>
+    _ExerciseOption(
+      label: json['label'] as String,
+      fills:
+          (json['fills'] as List<dynamic>?)?.map((e) => e as String).toList() ??
+          const <String>[],
+    );
+
+Map<String, dynamic> _$ExerciseOptionToJson(_ExerciseOption instance) =>
+    <String, dynamic>{'label': instance.label, 'fills': instance.fills};
+
 _Exercise _$ExerciseFromJson(Map<String, dynamic> json) => _Exercise(
   id: json['id'] as String,
   type: json['type'] as String,
   prompt: json['prompt'] as String,
   teaches: json['teaches'] as String?,
-  options:
-      (json['options'] as List<dynamic>?)?.map((e) => e as String).toList() ??
-      const <String>[],
+  options: json['options'] == null
+      ? const <ExerciseOption>[]
+      : _optionsFromJson(json['options']),
   correctIndex: (json['correctIndex'] as num?)?.toInt(),
   explain: json['explain'] as String?,
   sentence: json['sentence'] as String?,
+  term: json['term'] as String?,
+  speaker: json['speaker'] as String?,
+  opener: json['opener'] as String?,
   starter: json['starter'] as String?,
   modelAnswer: json['modelAnswer'] as String?,
   placeholder: json['placeholder'] as String?,
@@ -28,10 +42,13 @@ Map<String, dynamic> _$ExerciseToJson(_Exercise instance) => <String, dynamic>{
   'type': instance.type,
   'prompt': instance.prompt,
   'teaches': instance.teaches,
-  'options': instance.options,
+  'options': _optionsToJson(instance.options),
   'correctIndex': instance.correctIndex,
   'explain': instance.explain,
   'sentence': instance.sentence,
+  'term': instance.term,
+  'speaker': instance.speaker,
+  'opener': instance.opener,
   'starter': instance.starter,
   'modelAnswer': instance.modelAnswer,
   'placeholder': instance.placeholder,
@@ -249,4 +266,18 @@ Map<String, dynamic> _$SubmitResultToJson(_SubmitResult instance) =>
     <String, dynamic>{
       'unit': instance.unit.toJson(),
       'results': instance.results.map((e) => e.toJson()).toList(),
+    };
+
+_AnswerVerdict _$AnswerVerdictFromJson(Map<String, dynamic> json) =>
+    _AnswerVerdict(
+      correct: json['correct'] as bool,
+      message: json['message'] as String? ?? '',
+      solution: json['solution'] as String?,
+    );
+
+Map<String, dynamic> _$AnswerVerdictToJson(_AnswerVerdict instance) =>
+    <String, dynamic>{
+      'correct': instance.correct,
+      'message': instance.message,
+      'solution': instance.solution,
     };

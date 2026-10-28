@@ -1,6 +1,7 @@
 import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
+import 'package:plexaverse/features/learn/domain/learn_unit.dart';
 
 /// The Learn UI never decides whether an answer is right.
 ///
@@ -116,6 +117,60 @@ void main() {
     );
   });
 
+  test('a level with an unknown question type is refused, not half-drawn', () {
+    // This has happened once already and will happen again: the server grew
+    // `pair`, `dialogue` and `meaning` between this client being written and
+    // being finished. `renderable` drops what it does not know, which on its
+    // own means a level renders with questions MISSING and the run submits a
+    // partial answer set — graded as wrong, with nothing on screen saying
+    // anything was withheld.
+    //
+    // `ordering` stands in for the NEXT type. Do not change it to one this
+    // build now draws: the whole point is a type nobody here has heard of.
+    const LearnLevel level = LearnLevel(
+      index: 0,
+      kind: LevelKind.vocabulary,
+      title: 'Words that carry',
+      exercises: <Exercise>[
+        Exercise(id: 'a', type: 'choice', prompt: 'known'),
+        Exercise(id: 'b', type: 'ordering', prompt: 'newer than this build'),
+      ],
+    );
+
+    expect(level.renderable, hasLength(1));
+    expect(
+      level.isClimbable,
+      isFalse,
+      reason:
+          'one of the two questions cannot be drawn, so the level must be '
+          'refused rather than shown with the other one',
+    );
+    expect(level.unsupportedTypes, <String>['ordering']);
+  });
+
+  test('a level this build fully understands is climbable', () {
+    const LearnLevel level = LearnLevel(
+      index: 0,
+      kind: LevelKind.vocabulary,
+      title: 'Words that carry',
+      exercises: <Exercise>[
+        Exercise(id: 'a', type: 'choice', prompt: 'known'),
+        Exercise(id: 'b', type: 'compose', prompt: 'also known'),
+      ],
+    );
+    expect(level.isClimbable, isTrue);
+  });
+
+  test('an action level is climbable with no exercises at all', () {
+    // draft / visual / review carry none by design.
+    const LearnLevel level = LearnLevel(
+      index: 4,
+      kind: LevelKind.draft,
+      title: 'Write the post',
+    );
+    expect(level.isClimbable, isTrue);
+  });
+
   test('the reveal that IS allowed is still present', () {
     // Guards the two assertions above. If the player stopped showing the
     // right answer after grading, the rules would pass vacuously and nobody
@@ -135,6 +190,20 @@ void main() {
       views.contains('verdict'),
       isTrue,
       reason: 'the reveal must still be gated on a server verdict',
+    );
+    // The OTHER half of the reveal now comes down the wire: `solution` is
+    // the whole corrected line, sent by /learn/answer only on a miss. If the
+    // bar stopped printing it, a learner would be told "not quite" and never
+    // shown what quite was.
+    final String shell = File(
+      'lib/features/learn/presentation/widgets/quiz_shell.dart',
+    ).readAsStringSync();
+    expect(
+      shell.contains('verdict.solution'),
+      isTrue,
+      reason:
+          'the result bar no longer prints the corrected line, which is the '
+          'one thing it exists to do beyond saying no',
     );
   });
 }

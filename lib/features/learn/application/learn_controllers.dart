@@ -53,7 +53,7 @@ Future<LearnPath> learnPath(Ref ref) {
 /// already have.
 ///
 /// So: fetched exactly once per (week, day), kept alive, and every later
-/// version of the unit — from submitting a level, from the draft, from the
+/// version of the unit — from banking a level, from the draft, from the
 /// visual check — is WRITTEN INTO state by [LearnUnitController.absorb]
 /// rather than refetched.
 ///
@@ -96,12 +96,15 @@ class LearnOpenDay extends _$LearnOpenDay {
 
 /// What the learn screen has in flight.
 ///
-/// On the controller rather than the player widget because a widget can be
+/// On a controller rather than the player widget because a widget can be
 /// disposed mid-call — and the draft call is up to two minutes long, which is
 /// ample time for the user to leave. `test/architecture/no_async_state_in_widgets_test.dart`
 /// enforces this.
 enum LearnWork {
-  /// Grading a level's answers.
+  /// Grading ONE question, at `/learn/answer`. Short.
+  grading,
+
+  /// Banking the level, at `/learn/level`.
   submitting,
 
   /// Writing the post. Long, expensive, and charged.
@@ -114,21 +117,300 @@ enum LearnWork {
   reviewing,
 }
 
-/// In-flight work and the last failure, for the open unit.
-class LearnBusy {
-  const LearnBusy({
+// ── The quiz run ─────────────────────────────────────────────────────────────
+
+/// One attempt at one level: where the learner is in it, and what it has cost.
+///
+/// ## Why a run is a thing with a name
+///
+/// The level is banked once, at the end, by `/learn/level`. Everything before
+/// that — which question is on screen, the answers collected so far, how many
+/// hearts are gone — exists only for the duration of the attempt and is
+/// discarded if the learner quits. That is a run, and it is the unit of state
+/// the quiz actually has. Spreading it over a widget's fields would mean a
+/// rotation or a rebuild could silently restore a heart.
+class LearnRunState {
+  const LearnRunState({
+    this.levelIndex = 0,
+    this.taught = false,
+    this.questionIndex = 0,
+    this.value = '',
+    this.verdict,
+    this.wrong = 0,
+    this.streak = 0,
+    this.answers = const <String, String>{},
+    this.outOfHearts = false,
     this.work,
     this.error,
-    this.results = const <ExerciseResult>[],
   });
+
+  /// Which level this run belongs to. A run is thrown away when it changes.
+  final int levelIndex;
+
+  /// The teaching card has been read. Questions start after it.
+  final bool taught;
+
+  final int questionIndex;
+
+  /// What is answered on screen right now — an option's LABEL for the picker
+  /// types, the typed text for the two free-text ones.
+  final String value;
+
+  /// The server's verdict on the current question, once there is one. Null
+  /// means still answering, and it is what locks the controls.
+  final AnswerVerdict? verdict;
+
+  /// Wrong answers AND skips. Both cost a heart: a free skip is a button that
+  /// finishes the level for you, and the first learner to notice that stops
+  /// answering anything.
+  final int wrong;
+
+  /// Consecutive correct answers. Shown from two up.
+  final int streak;
+
+  /// Collected so far, by exercise id. Sent in one go when the level ends.
+  final Map<String, String> answers;
+
+  /// The budget is spent and the level restarts. Set locally the moment the
+  /// fifth heart goes, and again if the server refuses the bank with
+  /// OUT_OF_HEARTS — the server's count is the one that decides, this one
+  /// just does not make the learner answer three more questions to find out.
+  final bool outOfHearts;
+
+  final LearnWork? work;
+  final String? error;
+
+  bool get isBusy => work != null;
+  int get heartsLeft =>
+      (kMistakeBudget - wrong).clamp(0, kMistakeBudget).toInt();
+
+  LearnRunState copyWith({
+    int? levelIndex,
+    bool? taught,
+    int? questionIndex,
+    String? value,
+    AnswerVerdict? verdict,
+    int? wrong,
+    int? streak,
+    Map<String, String>? answers,
+    bool? outOfHearts,
+    LearnWork? work,
+    String? error,
+    bool clearVerdict = false,
+    bool clearWork = false,
+    bool clearError = false,
+  }) => LearnRunState(
+    levelIndex: levelIndex ?? this.levelIndex,
+    taught: taught ?? this.taught,
+    questionIndex: questionIndex ?? this.questionIndex,
+    value: value ?? this.value,
+    verdict: clearVerdict ? null : (verdict ?? this.verdict),
+    wrong: wrong ?? this.wrong,
+    streak: streak ?? this.streak,
+    answers: answers ?? this.answers,
+    outOfHearts: outOfHearts ?? this.outOfHearts,
+    work: clearWork ? null : (work ?? this.work),
+    error: clearError ? null : (error ?? this.error),
+  );
+}
+
+/// What a step through the run asks the screen to do next.
+enum LearnStep {
+  /// Still inside the level — draw the next question.
+  next,
+
+  /// The level banked. Move on, or close if it was the last one.
+  banked,
+
+  /// Nothing moved: out of hearts, or the request failed.
+  stopped,
+}
+
+/// Drives one attempt at one level.
+///
+/// Deliberately NOT keepAlive. Quitting a level mid-run discards it — the
+/// hearts are spent, the answers are not banked, and the level is taken again
+/// from the top. That is the web's behaviour and it is the honest one: a run
+/// that survived being walked away from would let a learner spend four hearts,
+/// leave, and come back to a fresh level with the answers already known.
+@riverpod
+class LearnRun extends _$LearnRun {
+  @override
+  LearnRunState build(int week, int day) {
+    // Seeded from the ladder, not from zero.
+    //
+    // The player only exists once the unit has loaded, so this read always
+    // finds one. Doing it here rather than from the widget's initState is
+    // what makes the FIRST frame right: a learner resuming a half-climbed
+    // day would otherwise see level one for a frame before being moved.
+    final LearnUnit? unit = ref
+        .read(learnUnitControllerProvider(week, day))
+        .value;
+    final int levels = unit?.levels.length ?? 0;
+    final int at = levels == 0
+        ? 0
+        : (unit?.nextLevelIndex ?? 0).clamp(0, levels - 1);
+    return LearnRunState(levelIndex: at);
+  }
+
+  LearnRepository get _repo => ref.read(learnRepositoryProvider);
+
+  LearnUnitController get _unit =>
+      ref.read(learnUnitControllerProvider(week, day).notifier);
+
+  /// Point the run at a level, discarding any run on a different one.
+  ///
+  /// Called by the player when it mounts and whenever the level changes. Safe
+  /// to call repeatedly: it only resets when the index actually moved, so a
+  /// rebuild mid-question does not cost the learner their place.
+  void ensureLevel(int index) {
+    if (state.levelIndex == index) return;
+    state = LearnRunState(levelIndex: index);
+  }
+
+  /// Move to another level, discarding the run on this one.
+  void goToLevel(int index) => ensureLevel(index);
+
+  /// Take the level again from the top. Hearts included — that is the point.
+  void restart() => state = LearnRunState(levelIndex: state.levelIndex);
+
+  void teachRead() => state = state.copyWith(taught: true);
+
+  void setValue(String value) => state = state.copyWith(value: value);
+
+  void clearError() => state = state.copyWith(clearError: true);
+
+  /// Answer the question on screen.
+  ///
+  /// The verdict is the SERVER's, always. The answer key rides along inside
+  /// the ladder because the explanation is shown after answering, which puts
+  /// it a few lines from this method — and a locally-computed verdict is one
+  /// inspection away from completing a unit without reading a word.
+  Future<void> check({
+    required LearnUnit unit,
+    required LearnLevel level,
+    required Exercise exercise,
+  }) async {
+    if (state.isBusy || state.verdict != null) return;
+    final String value = state.value;
+    state = state.copyWith(work: LearnWork.grading, clearError: true);
+    try {
+      final AnswerVerdict verdict = await _repo.gradeAnswer(
+        unitId: unit.id,
+        // The level is passed in rather than read off this run's own state:
+        // the two cannot disagree that way, and an answer graded against the
+        // wrong level is a question the server has never heard of.
+        levelIndex: level.index,
+        exerciseId: exercise.id,
+        value: value,
+      );
+      final bool spent = !verdict.correct && state.wrong + 1 >= kMistakeBudget;
+      state = state.copyWith(
+        clearWork: true,
+        verdict: verdict,
+        answers: <String, String>{...state.answers, exercise.id: value},
+        streak: verdict.correct ? state.streak + 1 : 0,
+        wrong: verdict.correct ? state.wrong : state.wrong + 1,
+        outOfHearts: spent ? true : null,
+      );
+    } on Object catch (e) {
+      state = state.copyWith(clearWork: true, error: _say(e));
+    }
+  }
+
+  /// Skip moves on. It does not grade.
+  ///
+  /// The web's first version called the grader with a blank answer and showed
+  /// the result bar, which put the correct answer on screen — so Skip behaved
+  /// exactly like getting it wrong, and the one thing the learner had just
+  /// asked not to see was the thing it showed them. Skip means skip: the
+  /// question is recorded unanswered and the next one appears.
+  ///
+  /// It still costs a heart.
+  Future<LearnStep> skip({
+    required LearnUnit unit,
+    required LearnLevel level,
+    required Exercise exercise,
+  }) async {
+    if (state.isBusy) return LearnStep.stopped;
+    final bool spent = state.wrong + 1 >= kMistakeBudget;
+    state = state.copyWith(
+      answers: <String, String>{...state.answers, exercise.id: ''},
+      streak: 0,
+      wrong: state.wrong + 1,
+      outOfHearts: spent ? true : null,
+      clearError: true,
+    );
+    if (spent) return LearnStep.stopped;
+    return advance(unit: unit, level: level);
+  }
+
+  /// Move past the answered question — to the next one, or out of the level.
+  Future<LearnStep> advance({
+    required LearnUnit unit,
+    required LearnLevel level,
+  }) async {
+    if (state.isBusy) return LearnStep.stopped;
+    final bool last = state.questionIndex >= level.exercises.length - 1;
+    if (!last) {
+      state = state.copyWith(
+        questionIndex: state.questionIndex + 1,
+        value: '',
+        clearVerdict: true,
+        clearError: true,
+      );
+      return LearnStep.next;
+    }
+    return _bank(unit: unit, level: level);
+  }
+
+  /// The last question is answered: hand the whole level to the server.
+  ///
+  /// Every answer is re-graded there. This client's heart count is a pacing
+  /// device; the count that decides whether the level banked is the one made
+  /// where it is written.
+  Future<LearnStep> _bank({
+    required LearnUnit unit,
+    required LearnLevel level,
+  }) async {
+    state = state.copyWith(work: LearnWork.submitting, clearError: true);
+    try {
+      final SubmitResult result = await _repo.submitLevel(
+        unitId: unit.id,
+        levelIndex: level.index,
+        answers: <LevelAnswer>[
+          for (final Exercise e in level.exercises)
+            LevelAnswer(exerciseId: e.id, value: state.answers[e.id] ?? ''),
+        ],
+      );
+      _unit.absorb(result.unit);
+      state = state.copyWith(clearWork: true, clearVerdict: true);
+      return LearnStep.banked;
+    } on LearnOutOfHearts catch (e) {
+      state = state.copyWith(
+        clearWork: true,
+        outOfHearts: true,
+        error: e.message,
+      );
+      return LearnStep.stopped;
+    } on Object catch (e) {
+      state = state.copyWith(clearWork: true, error: _say(e));
+      return LearnStep.stopped;
+    }
+  }
+}
+
+// ── The action levels ────────────────────────────────────────────────────────
+
+/// In-flight work and the last failure for the three levels that are finished
+/// by doing rather than by answering.
+class LearnBusy {
+  const LearnBusy({this.work, this.error});
 
   final LearnWork? work;
 
   /// The sentence to show. Null when nothing has failed since the last action.
   final String? error;
-
-  /// Per-exercise verdicts from the last submit. The SERVER's, never ours.
-  final List<ExerciseResult> results;
 
   bool get isBusy => work != null;
   bool get isDrafting => work == LearnWork.drafting;
@@ -136,23 +418,19 @@ class LearnBusy {
   LearnBusy copyWith({
     LearnWork? work,
     String? error,
-    List<ExerciseResult>? results,
     bool clearWork = false,
     bool clearError = false,
-    bool clearResults = false,
   }) => LearnBusy(
     work: clearWork ? null : (work ?? this.work),
     error: clearError ? null : (error ?? this.error),
-    results: clearResults
-        ? const <ExerciseResult>[]
-        : (results ?? this.results),
   );
 }
 
-/// Drives one unit's climb.
+/// Draft, visual and review.
 ///
-/// Every write goes through here so the in-flight flag, the failure and the
-/// server's verdicts live in one place that outlives the player.
+/// Every write goes through here so the in-flight flag and the failure live in
+/// one place that outlives the player — the draft is a two-minute call and the
+/// user will leave during it.
 @Riverpod(keepAlive: true)
 class LearnActions extends _$LearnActions {
   @override
@@ -162,38 +440,6 @@ class LearnActions extends _$LearnActions {
 
   LearnUnitController get _unit =>
       ref.read(learnUnitControllerProvider(week, day).notifier);
-
-  /// Answer a level.
-  ///
-  /// Returns true only when every answer passed. **A successful request is not
-  /// a passed level**: the server grades all-or-nothing and returns the unit
-  /// UNCHANGED when anything is wrong, so the verdict is in `results`, not in
-  /// the absence of an exception.
-  Future<bool> submit({
-    required String unitId,
-    required int levelIndex,
-    required List<LevelAnswer> answers,
-  }) async {
-    if (state.isBusy) return false;
-    state = state.copyWith(
-      work: LearnWork.submitting,
-      clearError: true,
-      clearResults: true,
-    );
-    try {
-      final SubmitResult result = await _repo.submitLevel(
-        unitId: unitId,
-        levelIndex: levelIndex,
-        answers: answers,
-      );
-      _unit.absorb(result.unit);
-      state = state.copyWith(clearWork: true, results: result.results);
-      return result.allCorrect;
-    } on Object catch (e) {
-      state = state.copyWith(clearWork: true, error: _say(e));
-      return false;
-    }
-  }
 
   /// Write the post.
   ///
@@ -268,14 +514,14 @@ class LearnActions extends _$LearnActions {
   }
 
   void clearError() => state = state.copyWith(clearError: true);
-
-  void clearResults() => state = state.copyWith(clearResults: true);
-
-  static String _say(Object e) => switch (e) {
-    LearnImageMissing(:final String message) => message,
-    LearnGenerationFailed(:final String message) => message,
-    LearnNoPlan(:final String message) => message,
-    LearnRestDay(:final String message) => message,
-    _ => 'That did not go through. Try again.',
-  };
 }
+
+/// One sentence for a thrown thing, so no screen ever shows a stack trace.
+String _say(Object e) => switch (e) {
+  LearnOutOfHearts(:final String message) => message,
+  LearnImageMissing(:final String message) => message,
+  LearnGenerationFailed(:final String message) => message,
+  LearnNoPlan(:final String message) => message,
+  LearnRestDay(:final String message) => message,
+  _ => 'That did not go through. Try again.',
+};

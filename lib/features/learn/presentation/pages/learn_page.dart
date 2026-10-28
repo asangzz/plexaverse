@@ -14,13 +14,31 @@ import '../widgets/level_node.dart';
 /// The lesson and the post are the same work: the sentence the user writes in
 /// an exercise is the sentence that ends up in the post, so neither is a tax
 /// on the other.
+///
+/// ## Two screens, not one with a swapped body
+///
+/// The path wears a large title and scrolls. A day being climbed is a quiz: a
+/// progress bar it cannot scroll away from, a question, and a bar pinned to
+/// the foot that the keyboard pushes up. Those are different layouts — the
+/// large-title header is a collapsing sliver and cannot hold a non-scrolling
+/// body at all — so they are different scaffolds rather than one scaffold
+/// apologising for both.
 class LearnPage extends ConsumerWidget {
   const LearnPage({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final AsyncValue<LearnPath> path = ref.watch(learnPathProvider);
     final int? openDay = ref.watch(learnOpenDayProvider);
+    return openDay == null ? const _PathScreen() : _DayScreen(day: openDay);
+  }
+}
+
+class _PathScreen extends ConsumerWidget {
+  const _PathScreen();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final AsyncValue<LearnPath> path = ref.watch(learnPathProvider);
 
     return ZaveScaffold(
       largeTitle: 'Learn',
@@ -40,9 +58,7 @@ class LearnPage extends ConsumerWidget {
             ),
           ],
         ),
-        data: (LearnPath p) => openDay == null
-            ? _Path(path: p)
-            : _Day(week: p.weekNumber, day: openDay),
+        data: (LearnPath p) => _Path(path: p),
       ),
     );
   }
@@ -225,55 +241,70 @@ class _DayRow extends ConsumerWidget {
 }
 
 /// One day's ladder, once it has been opened.
-class _Day extends ConsumerWidget {
-  const _Day({required this.week, required this.day});
+class _DayScreen extends ConsumerWidget {
+  const _DayScreen({required this.day});
 
-  final int week;
   final int day;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final LearnPath? path = ref.watch(learnPathProvider).value;
+    void close() => ref.read(learnOpenDayProvider.notifier).close();
+
+    // A day can only be opened from a loaded path, so this is the
+    // week-changed-underneath case. Going back to the week is the only
+    // sensible answer, and it is one frame.
+    if (path == null) return const _PathScreen();
+
+    final int week = path.weekNumber;
     final AsyncValue<LearnUnit> unit = ref.watch(
       learnUnitControllerProvider(week, day),
     );
 
-    return ZaveScrollView(
-      children: <Widget>[
-        Align(
-          alignment: Alignment.centerLeft,
-          child: ZaveButton(
-            label: 'Back to the week',
-            icon: const Icon(AppIcons.back),
-            onPressed: () => ref.read(learnOpenDayProvider.notifier).close(),
-          ),
-        ),
-        SizedBox(height: ZaveSpace.xl),
-        unit.when(
-          // The first open BUILDS the ladder with a model call, so this wait
-          // is seconds, not milliseconds, and says so.
-          loading: () => const _BuildingLadder(),
-          error: (Object e, StackTrace _) => ZaveEmptyState(
-            kicker: 'COULD NOT OPEN',
-            title: "Today's lesson did not come through",
-            body: e.toString(),
-            action: ZaveButton(
-              label: 'Try again',
-              // By the user, never automatically — a retry is another model
-              // call.
-              onPressed: () =>
-                  ref.invalidate(learnUnitControllerProvider(week, day)),
+    return ZaveScaffold(
+      title: _titleFor(path),
+      // Replaces the route's back arrow, which would leave Learn entirely.
+      // Inside a day, back means back to the week.
+      leading: ZaveIconButton(
+        icon: const Icon(AppIcons.back),
+        tooltip: 'Back to the week',
+        onPressed: close,
+      ),
+      body: unit.when(
+        // The first open BUILDS the ladder with a model call, so this wait is
+        // seconds, not milliseconds, and says so.
+        loading: () => const _BuildingLadder(),
+        error: (Object e, StackTrace _) => ZaveScrollView(
+          children: <Widget>[
+            ZaveEmptyState(
+              kicker: 'COULD NOT OPEN',
+              title: "Today's lesson did not come through",
+              body: e.toString(),
+              action: ZaveButton(
+                label: 'Try again',
+                // By the user, never automatically — a retry is another
+                // model call.
+                onPressed: () =>
+                    ref.invalidate(learnUnitControllerProvider(week, day)),
+              ),
             ),
-          ),
-          data: (LearnUnit u) => LessonPlayer(
-            unit: u,
-            week: week,
-            day: day,
-            onClose: () => ref.read(learnOpenDayProvider.notifier).close(),
-          ),
+          ],
         ),
-        SizedBox(height: ZaveSpace.section),
-      ],
+        data: (LearnUnit u) => LessonPlayer(
+          unit: u,
+          week: week,
+          day: day,
+          onClose: close,
+        ),
+      ),
     );
+  }
+
+  String _titleFor(LearnPath path) {
+    for (final LearnPathDay d in path.days) {
+      if (d.dayIndex == day) return d.title;
+    }
+    return path.unitTitle.isEmpty ? 'This week' : path.unitTitle;
   }
 }
 
@@ -281,35 +312,39 @@ class _BuildingLadder extends StatelessWidget {
   const _BuildingLadder();
 
   @override
-  Widget build(BuildContext context) => ZaveCard(
-    child: Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: <Widget>[
-        Text("WRITING TODAY'S LESSON", style: ZaveType.kicker),
-        SizedBox(height: ZaveSpace.lg),
-        const ZaveShimmer(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: <Widget>[
-              ZaveSkeleton.bar(widthFactor: 0.5, height: 18),
-              SizedBox(height: 12),
-              ZaveSkeleton.bar(),
-              SizedBox(height: 8),
-              ZaveSkeleton.bar(widthFactor: 0.8),
-              SizedBox(height: 20),
-              ZaveSkeleton.block(height: 72),
-              SizedBox(height: 12),
-              ZaveSkeleton.block(height: 72),
-            ],
-          ),
+  Widget build(BuildContext context) => ZaveScrollView(
+    children: <Widget>[
+      ZaveCard(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: <Widget>[
+            Text("WRITING TODAY'S LESSON", style: ZaveType.kicker),
+            SizedBox(height: ZaveSpace.lg),
+            const ZaveShimmer(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: <Widget>[
+                  ZaveSkeleton.bar(widthFactor: 0.5, height: 18),
+                  SizedBox(height: 12),
+                  ZaveSkeleton.bar(),
+                  SizedBox(height: 8),
+                  ZaveSkeleton.bar(widthFactor: 0.8),
+                  SizedBox(height: 20),
+                  ZaveSkeleton.block(height: 72),
+                  SizedBox(height: 12),
+                  ZaveSkeleton.block(height: 72),
+                ],
+              ),
+            ),
+            SizedBox(height: ZaveSpace.lg),
+            Text(
+              'This one is written for you, now. It takes a few seconds.',
+              style: ZaveType.caption.copyWith(color: ZaveColors.ink45),
+            ),
+          ],
         ),
-        SizedBox(height: ZaveSpace.lg),
-        Text(
-          'This one is written for you, now. It takes a few seconds.',
-          style: ZaveType.caption.copyWith(color: ZaveColors.ink45),
-        ),
-      ],
-    ),
+      ),
+    ],
   );
 }
 

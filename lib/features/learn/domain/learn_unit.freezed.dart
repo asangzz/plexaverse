@@ -13,13 +13,294 @@ part of 'learn_unit.dart';
 T _$identity<T>(T value) => value;
 
 /// @nodoc
+mixin _$ExerciseOption {
+
+ String get label;/// `pair` only — what this option puts into the sentence's two blanks,
+/// in order. Empty for every other type.
+ List<String> get fills;
+/// Create a copy of ExerciseOption
+/// with the given fields replaced by the non-null parameter values.
+@JsonKey(includeFromJson: false, includeToJson: false)
+@pragma('vm:prefer-inline')
+$ExerciseOptionCopyWith<ExerciseOption> get copyWith => _$ExerciseOptionCopyWithImpl<ExerciseOption>(this as ExerciseOption, _$identity);
+
+  /// Serializes this ExerciseOption to a JSON map.
+  Map<String, dynamic> toJson();
+
+
+@override
+bool operator ==(Object other) {
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is ExerciseOption&&(identical(other.label, label) || other.label == label)&&const DeepCollectionEquality().equals(other.fills, fills));
+}
+
+@JsonKey(includeFromJson: false, includeToJson: false)
+@override
+int get hashCode => Object.hash(runtimeType,label,const DeepCollectionEquality().hash(fills));
+
+@override
+String toString() {
+  return 'ExerciseOption(label: $label, fills: $fills)';
+}
+
+
+}
+
+/// @nodoc
+abstract mixin class $ExerciseOptionCopyWith<$Res>  {
+  factory $ExerciseOptionCopyWith(ExerciseOption value, $Res Function(ExerciseOption) _then) = _$ExerciseOptionCopyWithImpl;
+@useResult
+$Res call({
+ String label, List<String> fills
+});
+
+
+
+
+}
+/// @nodoc
+class _$ExerciseOptionCopyWithImpl<$Res>
+    implements $ExerciseOptionCopyWith<$Res> {
+  _$ExerciseOptionCopyWithImpl(this._self, this._then);
+
+  final ExerciseOption _self;
+  final $Res Function(ExerciseOption) _then;
+
+/// Create a copy of ExerciseOption
+/// with the given fields replaced by the non-null parameter values.
+@pragma('vm:prefer-inline') @override $Res call({Object? label = null,Object? fills = null,}) {
+  return _then(_self.copyWith(
+label: null == label ? _self.label : label // ignore: cast_nullable_to_non_nullable
+as String,fills: null == fills ? _self.fills : fills // ignore: cast_nullable_to_non_nullable
+as List<String>,
+  ));
+}
+
+}
+
+
+/// Adds pattern-matching-related methods to [ExerciseOption].
+extension ExerciseOptionPatterns on ExerciseOption {
+/// A variant of `map` that fallback to returning `orElse`.
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case final Subclass value:
+///     return ...;
+///   case _:
+///     return orElse();
+/// }
+/// ```
+
+@optionalTypeArgs TResult maybeMap<TResult extends Object?>(TResult Function( _ExerciseOption value)?  $default,{required TResult orElse(),}){
+final _that = this;
+switch (_that) {
+case _ExerciseOption() when $default != null:
+return $default(_that);case _:
+  return orElse();
+
+}
+}
+/// A `switch`-like method, using callbacks.
+///
+/// Callbacks receives the raw object, upcasted.
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case final Subclass value:
+///     return ...;
+///   case final Subclass2 value:
+///     return ...;
+/// }
+/// ```
+
+@optionalTypeArgs TResult map<TResult extends Object?>(TResult Function( _ExerciseOption value)  $default,){
+final _that = this;
+switch (_that) {
+case _ExerciseOption():
+return $default(_that);case _:
+  throw StateError('Unexpected subclass');
+
+}
+}
+/// A variant of `map` that fallback to returning `null`.
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case final Subclass value:
+///     return ...;
+///   case _:
+///     return null;
+/// }
+/// ```
+
+@optionalTypeArgs TResult? mapOrNull<TResult extends Object?>(TResult? Function( _ExerciseOption value)?  $default,){
+final _that = this;
+switch (_that) {
+case _ExerciseOption() when $default != null:
+return $default(_that);case _:
+  return null;
+
+}
+}
+/// A variant of `when` that fallback to an `orElse` callback.
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case Subclass(:final field):
+///     return ...;
+///   case _:
+///     return orElse();
+/// }
+/// ```
+
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String label,  List<String> fills)?  $default,{required TResult orElse(),}) {final _that = this;
+switch (_that) {
+case _ExerciseOption() when $default != null:
+return $default(_that.label,_that.fills);case _:
+  return orElse();
+
+}
+}
+/// A `switch`-like method, using callbacks.
+///
+/// As opposed to `map`, this offers destructuring.
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case Subclass(:final field):
+///     return ...;
+///   case Subclass2(:final field2):
+///     return ...;
+/// }
+/// ```
+
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String label,  List<String> fills)  $default,) {final _that = this;
+switch (_that) {
+case _ExerciseOption():
+return $default(_that.label,_that.fills);case _:
+  throw StateError('Unexpected subclass');
+
+}
+}
+/// A variant of `when` that fallback to returning `null`
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case Subclass(:final field):
+///     return ...;
+///   case _:
+///     return null;
+/// }
+/// ```
+
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String label,  List<String> fills)?  $default,) {final _that = this;
+switch (_that) {
+case _ExerciseOption() when $default != null:
+return $default(_that.label,_that.fills);case _:
+  return null;
+
+}
+}
+
+}
+
+/// @nodoc
+@JsonSerializable()
+
+class _ExerciseOption implements ExerciseOption {
+  const _ExerciseOption({required this.label, final  List<String> fills = const <String>[]}): _fills = fills;
+  factory _ExerciseOption.fromJson(Map<String, dynamic> json) => _$ExerciseOptionFromJson(json);
+
+@override final  String label;
+/// `pair` only — what this option puts into the sentence's two blanks,
+/// in order. Empty for every other type.
+ final  List<String> _fills;
+/// `pair` only — what this option puts into the sentence's two blanks,
+/// in order. Empty for every other type.
+@override@JsonKey() List<String> get fills {
+  if (_fills is EqualUnmodifiableListView) return _fills;
+  // ignore: implicit_dynamic_type
+  return EqualUnmodifiableListView(_fills);
+}
+
+
+/// Create a copy of ExerciseOption
+/// with the given fields replaced by the non-null parameter values.
+@override @JsonKey(includeFromJson: false, includeToJson: false)
+@pragma('vm:prefer-inline')
+_$ExerciseOptionCopyWith<_ExerciseOption> get copyWith => __$ExerciseOptionCopyWithImpl<_ExerciseOption>(this, _$identity);
+
+@override
+Map<String, dynamic> toJson() {
+  return _$ExerciseOptionToJson(this, );
+}
+
+@override
+bool operator ==(Object other) {
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is _ExerciseOption&&(identical(other.label, label) || other.label == label)&&const DeepCollectionEquality().equals(other._fills, _fills));
+}
+
+@JsonKey(includeFromJson: false, includeToJson: false)
+@override
+int get hashCode => Object.hash(runtimeType,label,const DeepCollectionEquality().hash(_fills));
+
+@override
+String toString() {
+  return 'ExerciseOption(label: $label, fills: $fills)';
+}
+
+
+}
+
+/// @nodoc
+abstract mixin class _$ExerciseOptionCopyWith<$Res> implements $ExerciseOptionCopyWith<$Res> {
+  factory _$ExerciseOptionCopyWith(_ExerciseOption value, $Res Function(_ExerciseOption) _then) = __$ExerciseOptionCopyWithImpl;
+@override @useResult
+$Res call({
+ String label, List<String> fills
+});
+
+
+
+
+}
+/// @nodoc
+class __$ExerciseOptionCopyWithImpl<$Res>
+    implements _$ExerciseOptionCopyWith<$Res> {
+  __$ExerciseOptionCopyWithImpl(this._self, this._then);
+
+  final _ExerciseOption _self;
+  final $Res Function(_ExerciseOption) _then;
+
+/// Create a copy of ExerciseOption
+/// with the given fields replaced by the non-null parameter values.
+@override @pragma('vm:prefer-inline') $Res call({Object? label = null,Object? fills = null,}) {
+  return _then(_ExerciseOption(
+label: null == label ? _self.label : label // ignore: cast_nullable_to_non_nullable
+as String,fills: null == fills ? _self._fills : fills // ignore: cast_nullable_to_non_nullable
+as List<String>,
+  ));
+}
+
+
+}
+
+
+/// @nodoc
 mixin _$Exercise {
 
  String get id; String get type; String get prompt;/// One of the five voice-coach upgrade kinds, so written and spoken
 /// mistakes file under the same headings.
- String? get teaches;/// choice, gap
- List<String> get options; int? get correctIndex; String? get explain;/// gap — carries exactly one `___`.
- String? get sentence;/// rewrite — pre-filled so the user edits rather than stares.
+ String? get teaches;/// choice, gap, pair, dialogue, meaning.
+@JsonKey(fromJson: _optionsFromJson, toJson: _optionsToJson) List<ExerciseOption> get options; int? get correctIndex; String? get explain;/// gap carries exactly one `___`; pair carries exactly two.
+ String? get sentence;/// meaning — the term under test, which appears inside [sentence].
+ String? get term;/// dialogue — who left the comment ("A founder in your audience"), and
+/// what they said.
+ String? get speaker; String? get opener;/// rewrite — the weak sentence, shown as a card to rewrite from.
  String? get starter; String? get modelAnswer;/// compose
  String? get placeholder; int get minChars;
 /// Create a copy of Exercise
@@ -34,16 +315,16 @@ $ExerciseCopyWith<Exercise> get copyWith => _$ExerciseCopyWithImpl<Exercise>(thi
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is Exercise&&(identical(other.id, id) || other.id == id)&&(identical(other.type, type) || other.type == type)&&(identical(other.prompt, prompt) || other.prompt == prompt)&&(identical(other.teaches, teaches) || other.teaches == teaches)&&const DeepCollectionEquality().equals(other.options, options)&&(identical(other.correctIndex, correctIndex) || other.correctIndex == correctIndex)&&(identical(other.explain, explain) || other.explain == explain)&&(identical(other.sentence, sentence) || other.sentence == sentence)&&(identical(other.starter, starter) || other.starter == starter)&&(identical(other.modelAnswer, modelAnswer) || other.modelAnswer == modelAnswer)&&(identical(other.placeholder, placeholder) || other.placeholder == placeholder)&&(identical(other.minChars, minChars) || other.minChars == minChars));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is Exercise&&(identical(other.id, id) || other.id == id)&&(identical(other.type, type) || other.type == type)&&(identical(other.prompt, prompt) || other.prompt == prompt)&&(identical(other.teaches, teaches) || other.teaches == teaches)&&const DeepCollectionEquality().equals(other.options, options)&&(identical(other.correctIndex, correctIndex) || other.correctIndex == correctIndex)&&(identical(other.explain, explain) || other.explain == explain)&&(identical(other.sentence, sentence) || other.sentence == sentence)&&(identical(other.term, term) || other.term == term)&&(identical(other.speaker, speaker) || other.speaker == speaker)&&(identical(other.opener, opener) || other.opener == opener)&&(identical(other.starter, starter) || other.starter == starter)&&(identical(other.modelAnswer, modelAnswer) || other.modelAnswer == modelAnswer)&&(identical(other.placeholder, placeholder) || other.placeholder == placeholder)&&(identical(other.minChars, minChars) || other.minChars == minChars));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
-int get hashCode => Object.hash(runtimeType,id,type,prompt,teaches,const DeepCollectionEquality().hash(options),correctIndex,explain,sentence,starter,modelAnswer,placeholder,minChars);
+int get hashCode => Object.hash(runtimeType,id,type,prompt,teaches,const DeepCollectionEquality().hash(options),correctIndex,explain,sentence,term,speaker,opener,starter,modelAnswer,placeholder,minChars);
 
 @override
 String toString() {
-  return 'Exercise(id: $id, type: $type, prompt: $prompt, teaches: $teaches, options: $options, correctIndex: $correctIndex, explain: $explain, sentence: $sentence, starter: $starter, modelAnswer: $modelAnswer, placeholder: $placeholder, minChars: $minChars)';
+  return 'Exercise(id: $id, type: $type, prompt: $prompt, teaches: $teaches, options: $options, correctIndex: $correctIndex, explain: $explain, sentence: $sentence, term: $term, speaker: $speaker, opener: $opener, starter: $starter, modelAnswer: $modelAnswer, placeholder: $placeholder, minChars: $minChars)';
 }
 
 
@@ -54,7 +335,7 @@ abstract mixin class $ExerciseCopyWith<$Res>  {
   factory $ExerciseCopyWith(Exercise value, $Res Function(Exercise) _then) = _$ExerciseCopyWithImpl;
 @useResult
 $Res call({
- String id, String type, String prompt, String? teaches, List<String> options, int? correctIndex, String? explain, String? sentence, String? starter, String? modelAnswer, String? placeholder, int minChars
+ String id, String type, String prompt, String? teaches,@JsonKey(fromJson: _optionsFromJson, toJson: _optionsToJson) List<ExerciseOption> options, int? correctIndex, String? explain, String? sentence, String? term, String? speaker, String? opener, String? starter, String? modelAnswer, String? placeholder, int minChars
 });
 
 
@@ -71,16 +352,19 @@ class _$ExerciseCopyWithImpl<$Res>
 
 /// Create a copy of Exercise
 /// with the given fields replaced by the non-null parameter values.
-@pragma('vm:prefer-inline') @override $Res call({Object? id = null,Object? type = null,Object? prompt = null,Object? teaches = freezed,Object? options = null,Object? correctIndex = freezed,Object? explain = freezed,Object? sentence = freezed,Object? starter = freezed,Object? modelAnswer = freezed,Object? placeholder = freezed,Object? minChars = null,}) {
+@pragma('vm:prefer-inline') @override $Res call({Object? id = null,Object? type = null,Object? prompt = null,Object? teaches = freezed,Object? options = null,Object? correctIndex = freezed,Object? explain = freezed,Object? sentence = freezed,Object? term = freezed,Object? speaker = freezed,Object? opener = freezed,Object? starter = freezed,Object? modelAnswer = freezed,Object? placeholder = freezed,Object? minChars = null,}) {
   return _then(_self.copyWith(
 id: null == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
 as String,type: null == type ? _self.type : type // ignore: cast_nullable_to_non_nullable
 as String,prompt: null == prompt ? _self.prompt : prompt // ignore: cast_nullable_to_non_nullable
 as String,teaches: freezed == teaches ? _self.teaches : teaches // ignore: cast_nullable_to_non_nullable
 as String?,options: null == options ? _self.options : options // ignore: cast_nullable_to_non_nullable
-as List<String>,correctIndex: freezed == correctIndex ? _self.correctIndex : correctIndex // ignore: cast_nullable_to_non_nullable
+as List<ExerciseOption>,correctIndex: freezed == correctIndex ? _self.correctIndex : correctIndex // ignore: cast_nullable_to_non_nullable
 as int?,explain: freezed == explain ? _self.explain : explain // ignore: cast_nullable_to_non_nullable
 as String?,sentence: freezed == sentence ? _self.sentence : sentence // ignore: cast_nullable_to_non_nullable
+as String?,term: freezed == term ? _self.term : term // ignore: cast_nullable_to_non_nullable
+as String?,speaker: freezed == speaker ? _self.speaker : speaker // ignore: cast_nullable_to_non_nullable
+as String?,opener: freezed == opener ? _self.opener : opener // ignore: cast_nullable_to_non_nullable
 as String?,starter: freezed == starter ? _self.starter : starter // ignore: cast_nullable_to_non_nullable
 as String?,modelAnswer: freezed == modelAnswer ? _self.modelAnswer : modelAnswer // ignore: cast_nullable_to_non_nullable
 as String?,placeholder: freezed == placeholder ? _self.placeholder : placeholder // ignore: cast_nullable_to_non_nullable
@@ -170,10 +454,10 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String id,  String type,  String prompt,  String? teaches,  List<String> options,  int? correctIndex,  String? explain,  String? sentence,  String? starter,  String? modelAnswer,  String? placeholder,  int minChars)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String id,  String type,  String prompt,  String? teaches, @JsonKey(fromJson: _optionsFromJson, toJson: _optionsToJson)  List<ExerciseOption> options,  int? correctIndex,  String? explain,  String? sentence,  String? term,  String? speaker,  String? opener,  String? starter,  String? modelAnswer,  String? placeholder,  int minChars)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _Exercise() when $default != null:
-return $default(_that.id,_that.type,_that.prompt,_that.teaches,_that.options,_that.correctIndex,_that.explain,_that.sentence,_that.starter,_that.modelAnswer,_that.placeholder,_that.minChars);case _:
+return $default(_that.id,_that.type,_that.prompt,_that.teaches,_that.options,_that.correctIndex,_that.explain,_that.sentence,_that.term,_that.speaker,_that.opener,_that.starter,_that.modelAnswer,_that.placeholder,_that.minChars);case _:
   return orElse();
 
 }
@@ -191,10 +475,10 @@ return $default(_that.id,_that.type,_that.prompt,_that.teaches,_that.options,_th
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String id,  String type,  String prompt,  String? teaches,  List<String> options,  int? correctIndex,  String? explain,  String? sentence,  String? starter,  String? modelAnswer,  String? placeholder,  int minChars)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String id,  String type,  String prompt,  String? teaches, @JsonKey(fromJson: _optionsFromJson, toJson: _optionsToJson)  List<ExerciseOption> options,  int? correctIndex,  String? explain,  String? sentence,  String? term,  String? speaker,  String? opener,  String? starter,  String? modelAnswer,  String? placeholder,  int minChars)  $default,) {final _that = this;
 switch (_that) {
 case _Exercise():
-return $default(_that.id,_that.type,_that.prompt,_that.teaches,_that.options,_that.correctIndex,_that.explain,_that.sentence,_that.starter,_that.modelAnswer,_that.placeholder,_that.minChars);case _:
+return $default(_that.id,_that.type,_that.prompt,_that.teaches,_that.options,_that.correctIndex,_that.explain,_that.sentence,_that.term,_that.speaker,_that.opener,_that.starter,_that.modelAnswer,_that.placeholder,_that.minChars);case _:
   throw StateError('Unexpected subclass');
 
 }
@@ -211,10 +495,10 @@ return $default(_that.id,_that.type,_that.prompt,_that.teaches,_that.options,_th
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String id,  String type,  String prompt,  String? teaches,  List<String> options,  int? correctIndex,  String? explain,  String? sentence,  String? starter,  String? modelAnswer,  String? placeholder,  int minChars)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String id,  String type,  String prompt,  String? teaches, @JsonKey(fromJson: _optionsFromJson, toJson: _optionsToJson)  List<ExerciseOption> options,  int? correctIndex,  String? explain,  String? sentence,  String? term,  String? speaker,  String? opener,  String? starter,  String? modelAnswer,  String? placeholder,  int minChars)?  $default,) {final _that = this;
 switch (_that) {
 case _Exercise() when $default != null:
-return $default(_that.id,_that.type,_that.prompt,_that.teaches,_that.options,_that.correctIndex,_that.explain,_that.sentence,_that.starter,_that.modelAnswer,_that.placeholder,_that.minChars);case _:
+return $default(_that.id,_that.type,_that.prompt,_that.teaches,_that.options,_that.correctIndex,_that.explain,_that.sentence,_that.term,_that.speaker,_that.opener,_that.starter,_that.modelAnswer,_that.placeholder,_that.minChars);case _:
   return null;
 
 }
@@ -226,7 +510,7 @@ return $default(_that.id,_that.type,_that.prompt,_that.teaches,_that.options,_th
 @JsonSerializable()
 
 class _Exercise extends Exercise {
-  const _Exercise({required this.id, required this.type, required this.prompt, this.teaches, final  List<String> options = const <String>[], this.correctIndex, this.explain, this.sentence, this.starter, this.modelAnswer, this.placeholder, this.minChars = 0}): _options = options,super._();
+  const _Exercise({required this.id, required this.type, required this.prompt, this.teaches, @JsonKey(fromJson: _optionsFromJson, toJson: _optionsToJson) final  List<ExerciseOption> options = const <ExerciseOption>[], this.correctIndex, this.explain, this.sentence, this.term, this.speaker, this.opener, this.starter, this.modelAnswer, this.placeholder, this.minChars = 0}): _options = options,super._();
   factory _Exercise.fromJson(Map<String, dynamic> json) => _$ExerciseFromJson(json);
 
 @override final  String id;
@@ -235,10 +519,10 @@ class _Exercise extends Exercise {
 /// One of the five voice-coach upgrade kinds, so written and spoken
 /// mistakes file under the same headings.
 @override final  String? teaches;
-/// choice, gap
- final  List<String> _options;
-/// choice, gap
-@override@JsonKey() List<String> get options {
+/// choice, gap, pair, dialogue, meaning.
+ final  List<ExerciseOption> _options;
+/// choice, gap, pair, dialogue, meaning.
+@override@JsonKey(fromJson: _optionsFromJson, toJson: _optionsToJson) List<ExerciseOption> get options {
   if (_options is EqualUnmodifiableListView) return _options;
   // ignore: implicit_dynamic_type
   return EqualUnmodifiableListView(_options);
@@ -246,9 +530,15 @@ class _Exercise extends Exercise {
 
 @override final  int? correctIndex;
 @override final  String? explain;
-/// gap — carries exactly one `___`.
+/// gap carries exactly one `___`; pair carries exactly two.
 @override final  String? sentence;
-/// rewrite — pre-filled so the user edits rather than stares.
+/// meaning — the term under test, which appears inside [sentence].
+@override final  String? term;
+/// dialogue — who left the comment ("A founder in your audience"), and
+/// what they said.
+@override final  String? speaker;
+@override final  String? opener;
+/// rewrite — the weak sentence, shown as a card to rewrite from.
 @override final  String? starter;
 @override final  String? modelAnswer;
 /// compose
@@ -268,16 +558,16 @@ Map<String, dynamic> toJson() {
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is _Exercise&&(identical(other.id, id) || other.id == id)&&(identical(other.type, type) || other.type == type)&&(identical(other.prompt, prompt) || other.prompt == prompt)&&(identical(other.teaches, teaches) || other.teaches == teaches)&&const DeepCollectionEquality().equals(other._options, _options)&&(identical(other.correctIndex, correctIndex) || other.correctIndex == correctIndex)&&(identical(other.explain, explain) || other.explain == explain)&&(identical(other.sentence, sentence) || other.sentence == sentence)&&(identical(other.starter, starter) || other.starter == starter)&&(identical(other.modelAnswer, modelAnswer) || other.modelAnswer == modelAnswer)&&(identical(other.placeholder, placeholder) || other.placeholder == placeholder)&&(identical(other.minChars, minChars) || other.minChars == minChars));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is _Exercise&&(identical(other.id, id) || other.id == id)&&(identical(other.type, type) || other.type == type)&&(identical(other.prompt, prompt) || other.prompt == prompt)&&(identical(other.teaches, teaches) || other.teaches == teaches)&&const DeepCollectionEquality().equals(other._options, _options)&&(identical(other.correctIndex, correctIndex) || other.correctIndex == correctIndex)&&(identical(other.explain, explain) || other.explain == explain)&&(identical(other.sentence, sentence) || other.sentence == sentence)&&(identical(other.term, term) || other.term == term)&&(identical(other.speaker, speaker) || other.speaker == speaker)&&(identical(other.opener, opener) || other.opener == opener)&&(identical(other.starter, starter) || other.starter == starter)&&(identical(other.modelAnswer, modelAnswer) || other.modelAnswer == modelAnswer)&&(identical(other.placeholder, placeholder) || other.placeholder == placeholder)&&(identical(other.minChars, minChars) || other.minChars == minChars));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
-int get hashCode => Object.hash(runtimeType,id,type,prompt,teaches,const DeepCollectionEquality().hash(_options),correctIndex,explain,sentence,starter,modelAnswer,placeholder,minChars);
+int get hashCode => Object.hash(runtimeType,id,type,prompt,teaches,const DeepCollectionEquality().hash(_options),correctIndex,explain,sentence,term,speaker,opener,starter,modelAnswer,placeholder,minChars);
 
 @override
 String toString() {
-  return 'Exercise(id: $id, type: $type, prompt: $prompt, teaches: $teaches, options: $options, correctIndex: $correctIndex, explain: $explain, sentence: $sentence, starter: $starter, modelAnswer: $modelAnswer, placeholder: $placeholder, minChars: $minChars)';
+  return 'Exercise(id: $id, type: $type, prompt: $prompt, teaches: $teaches, options: $options, correctIndex: $correctIndex, explain: $explain, sentence: $sentence, term: $term, speaker: $speaker, opener: $opener, starter: $starter, modelAnswer: $modelAnswer, placeholder: $placeholder, minChars: $minChars)';
 }
 
 
@@ -288,7 +578,7 @@ abstract mixin class _$ExerciseCopyWith<$Res> implements $ExerciseCopyWith<$Res>
   factory _$ExerciseCopyWith(_Exercise value, $Res Function(_Exercise) _then) = __$ExerciseCopyWithImpl;
 @override @useResult
 $Res call({
- String id, String type, String prompt, String? teaches, List<String> options, int? correctIndex, String? explain, String? sentence, String? starter, String? modelAnswer, String? placeholder, int minChars
+ String id, String type, String prompt, String? teaches,@JsonKey(fromJson: _optionsFromJson, toJson: _optionsToJson) List<ExerciseOption> options, int? correctIndex, String? explain, String? sentence, String? term, String? speaker, String? opener, String? starter, String? modelAnswer, String? placeholder, int minChars
 });
 
 
@@ -305,16 +595,19 @@ class __$ExerciseCopyWithImpl<$Res>
 
 /// Create a copy of Exercise
 /// with the given fields replaced by the non-null parameter values.
-@override @pragma('vm:prefer-inline') $Res call({Object? id = null,Object? type = null,Object? prompt = null,Object? teaches = freezed,Object? options = null,Object? correctIndex = freezed,Object? explain = freezed,Object? sentence = freezed,Object? starter = freezed,Object? modelAnswer = freezed,Object? placeholder = freezed,Object? minChars = null,}) {
+@override @pragma('vm:prefer-inline') $Res call({Object? id = null,Object? type = null,Object? prompt = null,Object? teaches = freezed,Object? options = null,Object? correctIndex = freezed,Object? explain = freezed,Object? sentence = freezed,Object? term = freezed,Object? speaker = freezed,Object? opener = freezed,Object? starter = freezed,Object? modelAnswer = freezed,Object? placeholder = freezed,Object? minChars = null,}) {
   return _then(_Exercise(
 id: null == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
 as String,type: null == type ? _self.type : type // ignore: cast_nullable_to_non_nullable
 as String,prompt: null == prompt ? _self.prompt : prompt // ignore: cast_nullable_to_non_nullable
 as String,teaches: freezed == teaches ? _self.teaches : teaches // ignore: cast_nullable_to_non_nullable
 as String?,options: null == options ? _self._options : options // ignore: cast_nullable_to_non_nullable
-as List<String>,correctIndex: freezed == correctIndex ? _self.correctIndex : correctIndex // ignore: cast_nullable_to_non_nullable
+as List<ExerciseOption>,correctIndex: freezed == correctIndex ? _self.correctIndex : correctIndex // ignore: cast_nullable_to_non_nullable
 as int?,explain: freezed == explain ? _self.explain : explain // ignore: cast_nullable_to_non_nullable
 as String?,sentence: freezed == sentence ? _self.sentence : sentence // ignore: cast_nullable_to_non_nullable
+as String?,term: freezed == term ? _self.term : term // ignore: cast_nullable_to_non_nullable
+as String?,speaker: freezed == speaker ? _self.speaker : speaker // ignore: cast_nullable_to_non_nullable
+as String?,opener: freezed == opener ? _self.opener : opener // ignore: cast_nullable_to_non_nullable
 as String?,starter: freezed == starter ? _self.starter : starter // ignore: cast_nullable_to_non_nullable
 as String?,modelAnswer: freezed == modelAnswer ? _self.modelAnswer : modelAnswer // ignore: cast_nullable_to_non_nullable
 as String?,placeholder: freezed == placeholder ? _self.placeholder : placeholder // ignore: cast_nullable_to_non_nullable
@@ -2563,8 +2856,8 @@ return $default(_that.unit,_that.results);case _:
 /// @nodoc
 @JsonSerializable()
 
-class _SubmitResult extends SubmitResult {
-  const _SubmitResult({required this.unit, final  List<ExerciseResult> results = const <ExerciseResult>[]}): _results = results,super._();
+class _SubmitResult implements SubmitResult {
+  const _SubmitResult({required this.unit, final  List<ExerciseResult> results = const <ExerciseResult>[]}): _results = results;
   factory _SubmitResult.fromJson(Map<String, dynamic> json) => _$SubmitResultFromJson(json);
 
 @override final  LearnUnit unit;
@@ -2644,6 +2937,281 @@ $LearnUnitCopyWith<$Res> get unit {
     return _then(_self.copyWith(unit: value));
   });
 }
+}
+
+
+/// @nodoc
+mixin _$AnswerVerdict {
+
+ bool get correct; String get message;/// The whole corrected line, and ONLY on a miss — reading the finished
+/// sentence right is what makes the next one easier. Null for the
+/// free-text questions, which have no single right answer.
+ String? get solution;
+/// Create a copy of AnswerVerdict
+/// with the given fields replaced by the non-null parameter values.
+@JsonKey(includeFromJson: false, includeToJson: false)
+@pragma('vm:prefer-inline')
+$AnswerVerdictCopyWith<AnswerVerdict> get copyWith => _$AnswerVerdictCopyWithImpl<AnswerVerdict>(this as AnswerVerdict, _$identity);
+
+  /// Serializes this AnswerVerdict to a JSON map.
+  Map<String, dynamic> toJson();
+
+
+@override
+bool operator ==(Object other) {
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is AnswerVerdict&&(identical(other.correct, correct) || other.correct == correct)&&(identical(other.message, message) || other.message == message)&&(identical(other.solution, solution) || other.solution == solution));
+}
+
+@JsonKey(includeFromJson: false, includeToJson: false)
+@override
+int get hashCode => Object.hash(runtimeType,correct,message,solution);
+
+@override
+String toString() {
+  return 'AnswerVerdict(correct: $correct, message: $message, solution: $solution)';
+}
+
+
+}
+
+/// @nodoc
+abstract mixin class $AnswerVerdictCopyWith<$Res>  {
+  factory $AnswerVerdictCopyWith(AnswerVerdict value, $Res Function(AnswerVerdict) _then) = _$AnswerVerdictCopyWithImpl;
+@useResult
+$Res call({
+ bool correct, String message, String? solution
+});
+
+
+
+
+}
+/// @nodoc
+class _$AnswerVerdictCopyWithImpl<$Res>
+    implements $AnswerVerdictCopyWith<$Res> {
+  _$AnswerVerdictCopyWithImpl(this._self, this._then);
+
+  final AnswerVerdict _self;
+  final $Res Function(AnswerVerdict) _then;
+
+/// Create a copy of AnswerVerdict
+/// with the given fields replaced by the non-null parameter values.
+@pragma('vm:prefer-inline') @override $Res call({Object? correct = null,Object? message = null,Object? solution = freezed,}) {
+  return _then(_self.copyWith(
+correct: null == correct ? _self.correct : correct // ignore: cast_nullable_to_non_nullable
+as bool,message: null == message ? _self.message : message // ignore: cast_nullable_to_non_nullable
+as String,solution: freezed == solution ? _self.solution : solution // ignore: cast_nullable_to_non_nullable
+as String?,
+  ));
+}
+
+}
+
+
+/// Adds pattern-matching-related methods to [AnswerVerdict].
+extension AnswerVerdictPatterns on AnswerVerdict {
+/// A variant of `map` that fallback to returning `orElse`.
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case final Subclass value:
+///     return ...;
+///   case _:
+///     return orElse();
+/// }
+/// ```
+
+@optionalTypeArgs TResult maybeMap<TResult extends Object?>(TResult Function( _AnswerVerdict value)?  $default,{required TResult orElse(),}){
+final _that = this;
+switch (_that) {
+case _AnswerVerdict() when $default != null:
+return $default(_that);case _:
+  return orElse();
+
+}
+}
+/// A `switch`-like method, using callbacks.
+///
+/// Callbacks receives the raw object, upcasted.
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case final Subclass value:
+///     return ...;
+///   case final Subclass2 value:
+///     return ...;
+/// }
+/// ```
+
+@optionalTypeArgs TResult map<TResult extends Object?>(TResult Function( _AnswerVerdict value)  $default,){
+final _that = this;
+switch (_that) {
+case _AnswerVerdict():
+return $default(_that);case _:
+  throw StateError('Unexpected subclass');
+
+}
+}
+/// A variant of `map` that fallback to returning `null`.
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case final Subclass value:
+///     return ...;
+///   case _:
+///     return null;
+/// }
+/// ```
+
+@optionalTypeArgs TResult? mapOrNull<TResult extends Object?>(TResult? Function( _AnswerVerdict value)?  $default,){
+final _that = this;
+switch (_that) {
+case _AnswerVerdict() when $default != null:
+return $default(_that);case _:
+  return null;
+
+}
+}
+/// A variant of `when` that fallback to an `orElse` callback.
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case Subclass(:final field):
+///     return ...;
+///   case _:
+///     return orElse();
+/// }
+/// ```
+
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( bool correct,  String message,  String? solution)?  $default,{required TResult orElse(),}) {final _that = this;
+switch (_that) {
+case _AnswerVerdict() when $default != null:
+return $default(_that.correct,_that.message,_that.solution);case _:
+  return orElse();
+
+}
+}
+/// A `switch`-like method, using callbacks.
+///
+/// As opposed to `map`, this offers destructuring.
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case Subclass(:final field):
+///     return ...;
+///   case Subclass2(:final field2):
+///     return ...;
+/// }
+/// ```
+
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( bool correct,  String message,  String? solution)  $default,) {final _that = this;
+switch (_that) {
+case _AnswerVerdict():
+return $default(_that.correct,_that.message,_that.solution);case _:
+  throw StateError('Unexpected subclass');
+
+}
+}
+/// A variant of `when` that fallback to returning `null`
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case Subclass(:final field):
+///     return ...;
+///   case _:
+///     return null;
+/// }
+/// ```
+
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( bool correct,  String message,  String? solution)?  $default,) {final _that = this;
+switch (_that) {
+case _AnswerVerdict() when $default != null:
+return $default(_that.correct,_that.message,_that.solution);case _:
+  return null;
+
+}
+}
+
+}
+
+/// @nodoc
+@JsonSerializable()
+
+class _AnswerVerdict implements AnswerVerdict {
+  const _AnswerVerdict({required this.correct, this.message = '', this.solution});
+  factory _AnswerVerdict.fromJson(Map<String, dynamic> json) => _$AnswerVerdictFromJson(json);
+
+@override final  bool correct;
+@override@JsonKey() final  String message;
+/// The whole corrected line, and ONLY on a miss — reading the finished
+/// sentence right is what makes the next one easier. Null for the
+/// free-text questions, which have no single right answer.
+@override final  String? solution;
+
+/// Create a copy of AnswerVerdict
+/// with the given fields replaced by the non-null parameter values.
+@override @JsonKey(includeFromJson: false, includeToJson: false)
+@pragma('vm:prefer-inline')
+_$AnswerVerdictCopyWith<_AnswerVerdict> get copyWith => __$AnswerVerdictCopyWithImpl<_AnswerVerdict>(this, _$identity);
+
+@override
+Map<String, dynamic> toJson() {
+  return _$AnswerVerdictToJson(this, );
+}
+
+@override
+bool operator ==(Object other) {
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is _AnswerVerdict&&(identical(other.correct, correct) || other.correct == correct)&&(identical(other.message, message) || other.message == message)&&(identical(other.solution, solution) || other.solution == solution));
+}
+
+@JsonKey(includeFromJson: false, includeToJson: false)
+@override
+int get hashCode => Object.hash(runtimeType,correct,message,solution);
+
+@override
+String toString() {
+  return 'AnswerVerdict(correct: $correct, message: $message, solution: $solution)';
+}
+
+
+}
+
+/// @nodoc
+abstract mixin class _$AnswerVerdictCopyWith<$Res> implements $AnswerVerdictCopyWith<$Res> {
+  factory _$AnswerVerdictCopyWith(_AnswerVerdict value, $Res Function(_AnswerVerdict) _then) = __$AnswerVerdictCopyWithImpl;
+@override @useResult
+$Res call({
+ bool correct, String message, String? solution
+});
+
+
+
+
+}
+/// @nodoc
+class __$AnswerVerdictCopyWithImpl<$Res>
+    implements _$AnswerVerdictCopyWith<$Res> {
+  __$AnswerVerdictCopyWithImpl(this._self, this._then);
+
+  final _AnswerVerdict _self;
+  final $Res Function(_AnswerVerdict) _then;
+
+/// Create a copy of AnswerVerdict
+/// with the given fields replaced by the non-null parameter values.
+@override @pragma('vm:prefer-inline') $Res call({Object? correct = null,Object? message = null,Object? solution = freezed,}) {
+  return _then(_AnswerVerdict(
+correct: null == correct ? _self.correct : correct // ignore: cast_nullable_to_non_nullable
+as bool,message: null == message ? _self.message : message // ignore: cast_nullable_to_non_nullable
+as String,solution: freezed == solution ? _self.solution : solution // ignore: cast_nullable_to_non_nullable
+as String?,
+  ));
+}
+
+
 }
 
 // dart format on

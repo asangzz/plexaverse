@@ -169,7 +169,18 @@ class ApiPaths {
   /// retry it automatically, never refetch it on resume.
   static const String learnUnit = '/learn/unit';
 
-  /// Answer a level. Graded server-side, always.
+  /// Grade ONE question, without writing anything.
+  ///
+  /// Called on every Check: the quiz is one question to a screen and the
+  /// learner is told whether they were right before the next one appears. A
+  /// READ — replaying it can neither advance progress nor bank an answer,
+  /// because [learnLevel] re-grades everything at the end of the level.
+  static const String learnAnswer = '/learn/answer';
+
+  /// Bank a level. Graded server-side, always.
+  ///
+  /// Answers 422 OUT_OF_HEARTS when the five-mistake budget is spent, and
+  /// writes nothing — the level is retaken from the top.
   static const String learnLevel = '/learn/level';
 
   /// The three levels finished by doing: draft, visual, review.
