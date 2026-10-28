@@ -163,6 +163,7 @@ class QuizResultBar extends StatelessWidget {
     required this.onContinue,
     required this.onSkip,
     required this.isLast,
+    this.nothingToAnswer = false,
     this.error,
     super.key,
   });
@@ -182,6 +183,17 @@ class QuizResultBar extends StatelessWidget {
 
   /// The last question of the last level says Finish rather than Continue.
   final bool isLast;
+
+  /// This level has no questions at all.
+  ///
+  /// It should not happen — every taught level in LADDER_TEMPLATE carries
+  /// two or three — but the ladder is written by a model, and a level that
+  /// came back with an empty list used to render the teaching card and then
+  /// NOTHING: no bar, no button, no way to bank it. Backing out and coming
+  /// back landed on the same dead level, for ever, because the day cannot
+  /// advance past a level it cannot complete. So the bar stays, with the one
+  /// control that applies.
+  final bool nothingToAnswer;
 
   /// Something went wrong with the request itself — not a wrong answer.
   final String? error;
@@ -227,7 +239,8 @@ class QuizResultBar extends StatelessWidget {
               ],
               Row(
                 children: <Widget>[
-                  if (v == null)
+                  // Nothing to skip past when there is nothing to answer.
+                  if (v == null && !nothingToAnswer)
                     ZaveButton(
                       label: 'Skip',
                       icon: const Icon(AppIcons.skip),
@@ -235,13 +248,15 @@ class QuizResultBar extends StatelessWidget {
                     ),
                   const Spacer(),
                   ZaveButton.primary(
-                    label: v == null
+                    label: v == null && !nothingToAnswer
                         ? 'Check'
                         : isLast
                         ? 'Finish'
                         : 'Continue',
                     busy: checking,
-                    onPressed: v != null
+                    onPressed: nothingToAnswer
+                        ? (checking ? null : onContinue)
+                        : v != null
                         ? (checking ? null : onContinue)
                         : (canCheck && !checking ? onCheck : null),
                   ),

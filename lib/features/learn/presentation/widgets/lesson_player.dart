@@ -279,6 +279,16 @@ class _QuizState extends State<_Quiz> {
     final bool lastLevel = level.index >= unit.levels.length - 1;
     final bool working = run.work != null;
 
+    /// The teaching card is up, so the question and its bar are not.
+    ///
+    /// Gated on the CARD, not on `run.taught`. Those are only the same thing
+    /// when the level actually has a teaching block — and `teach` is
+    /// nullable on the wire. A level that arrived without one showed its
+    /// first question immediately and no bar underneath it, because nothing
+    /// had set `taught`: no Check, no Skip, no way to answer, and the day
+    /// could never advance past it.
+    final bool showingTeach = !run.taught && level.teach != null;
+
     return Column(
       children: <Widget>[
         Padding(
@@ -310,8 +320,13 @@ class _QuizState extends State<_Quiz> {
               ZaveSpace.section,
             ),
             children: <Widget>[
-              if (!run.taught && level.teach != null)
+              if (showingTeach)
                 _TeachCard(teach: level.teach!, onStart: widget.onTeachRead)
+              else if (total == 0)
+                Text(
+                  'There is nothing to answer on this one.',
+                  style: ZaveType.bodyMuted,
+                )
               else if (exercise != null) ...<Widget>[
                 _ContextStrip(unit: unit, level: level),
                 SizedBox(height: ZaveSpace.lg),
@@ -333,14 +348,18 @@ class _QuizState extends State<_Quiz> {
             ],
           ),
         ),
-        if (run.taught && exercise != null)
+        // The bar also stays for a level with NO questions — see
+        // QuizResultBar.nothingToAnswer. Without it such a level is a dead
+        // end the day can never advance past.
+        if (!showingTeach && (exercise != null || total == 0))
           QuizResultBar(
             verdict: run.verdict,
             checking: working,
-            canCheck: widget.canCheck(exercise, run.value),
-            onCheck: () => widget.onCheck(exercise),
+            nothingToAnswer: total == 0,
+            canCheck: exercise != null && widget.canCheck(exercise, run.value),
+            onCheck: () => exercise == null ? null : widget.onCheck(exercise),
             onContinue: widget.onContinue,
-            onSkip: () => widget.onSkip(exercise),
+            onSkip: () => exercise == null ? null : widget.onSkip(exercise),
             isLast: lastQuestion && lastLevel,
             // A wrong ANSWER is not an error and is never shown here; this
             // is for a request that did not go through.

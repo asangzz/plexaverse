@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/misc.dart' show Override;
 import 'package:flutter_test/flutter_test.dart';
@@ -27,12 +29,23 @@ class _Repo implements LearnRepository {
   /// The server refuses to bank the level.
   bool refuseBank = false;
 
+  /// Held open, so a test can dispose the container mid-call.
+  Completer<void>? gate;
+
+  /// Re-reads of the unit fail — the offline case.
+  bool refuseRefetch = false;
+
+  int fetches = 0;
+
   final List<String> graded = <String>[];
   final List<List<LevelAnswer>> submitted = <List<LevelAnswer>>[];
 
   @override
-  Future<LearnUnit> fetchUnit({required int week, required int day}) async =>
-      unit;
+  Future<LearnUnit> fetchUnit({required int week, required int day}) async {
+    fetches++;
+    if (refuseRefetch && fetches > 1) throw const LearnGenerationFailed();
+    return unit;
+  }
 
   @override
   Future<AnswerVerdict> gradeAnswer({
@@ -42,6 +55,7 @@ class _Repo implements LearnRepository {
     required String value,
   }) async {
     graded.add(exerciseId);
+    await gate?.future;
     final bool correct = right.contains(exerciseId);
     return AnswerVerdict(
       correct: correct,
@@ -57,6 +71,7 @@ class _Repo implements LearnRepository {
     required List<LevelAnswer> answers,
   }) async {
     submitted.add(answers);
+    await gate?.future;
     if (refuseBank) throw const LearnOutOfHearts('server said no');
     return SubmitResult(unit: unit);
   }
@@ -291,6 +306,138 @@ void main() {
           title: 'The first line',
           status: LevelStatus.available,
           exercises: <Exercise>[_choice('q1')],
+        ),
+      ],
+    );
+    final ProviderContainer c = ProviderContainer(
+      overrides: <Override>[
+        learnRepositoryProvider.overrideWithValue(_Repo(unit)),
+      ],
+    );
+    addTearDown(c.dispose);
+    await c.read(learnUnitControllerProvider(4, 0).future);
+
+    expect(c.read(learnRunProvider(4, 0)).levelIndex, 1);
+  });
+
+  test('a disposed run is never written to', () async {
+    // The player is this provider's only listener, so backing out of a day
+    // in the second between Check and the verdict disposes it mid-call.
+    // Riverpod throws UnmountedRefException on a write past that point, and
+    // it escapes to the ZONE rather than to any caller's catch — so in
+    // release it is a crash report on an ordinary gesture.
+    final LearnUnit unit = _unitOf(2);
+    final _Repo repo = _Repo(unit);
+    final ProviderContainer c = ProviderContainer(
+      overrides: <Override>[learnRepositoryProvider.overrideWithValue(repo)],
+    );
+    await c.read(learnUnitControllerProvider(4, 0).future);
+    final ProviderSubscription<LearnRunState> sub = c.listen(
+      learnRunProvider(4, 0),
+      (_, _) {},
+    );
+    final LearnRun run = c.read(learnRunProvider(4, 0).notifier);
+    final LearnLevel level = unit.levels[0];
+
+    repo.gate = Completer<void>();
+    run.setValue('the strong one');
+    final Future<void> pending = run.check(
+      unit: unit,
+      level: level,
+      exercise: level.exercises[0],
+    );
+
+    // The user leaves. Auto-dispose is SCHEDULED rather than immediate, so
+    // the loop has to turn before the provider is actually gone — without
+    // this the held call resumes first and the test proves nothing.
+    sub.close();
+    await Future<void>.delayed(Duration.zero);
+    repo.gate!.complete();
+
+    await expectLater(pending, completes);
+    c.dispose();
+  });
+
+  test('a disposed run survives the level banking under it', () async {
+    final LearnUnit unit = _unitOf(1);
+    final _Repo repo = _Repo(unit);
+    repo.right = <String>{'q0'};
+    final ProviderContainer c = ProviderContainer(
+      overrides: <Override>[learnRepositoryProvider.overrideWithValue(repo)],
+    );
+    await c.read(learnUnitControllerProvider(4, 0).future);
+    final ProviderSubscription<LearnRunState> sub = c.listen(
+      learnRunProvider(4, 0),
+      (_, _) {},
+    );
+    final LearnRun run = c.read(learnRunProvider(4, 0).notifier);
+    final LearnLevel level = unit.levels[0];
+
+    run.setValue('the strong one');
+    await run.check(unit: unit, level: level, exercise: level.exercises[0]);
+
+    repo.gate = Completer<void>();
+    final Future<LearnStep> pending = run.advance(unit: unit, level: level);
+    sub.close();
+    await Future<void>.delayed(Duration.zero);
+    repo.gate!.complete();
+
+    // The level still banks: the UNIT controller is keepAlive, so the work
+    // the learner did lands even though the run that drove it is gone.
+    expect(await pending, LearnStep.banked);
+    expect(repo.submitted, hasLength(1));
+    c.dispose();
+  });
+
+  test('a failed re-read keeps the ladder already in hand', () async {
+    // The draft is a two-minute call on a phone; when it does not come back
+    // the unit is re-read to find out whether it landed anyway. That re-read
+    // is likely to fail for the same reason the draft did — and assigning
+    // the error would replace a climbed, cached ladder with "today's lesson
+    // did not come through", on a provider that is keepAlive and never
+    // refetched. The only way back would cost a model call.
+    final LearnUnit unit = _unitOf(1);
+    final _Repo repo = _Repo(unit);
+    final ProviderContainer c = ProviderContainer(
+      overrides: <Override>[learnRepositoryProvider.overrideWithValue(repo)],
+    );
+    addTearDown(c.dispose);
+    await c.read(learnUnitControllerProvider(4, 0).future);
+
+    repo.refuseRefetch = true;
+    await c
+        .read(learnUnitControllerProvider(4, 0).notifier)
+        .reloadAfterLostResponse();
+
+    final AsyncValue<LearnUnit> after = c.read(
+      learnUnitControllerProvider(4, 0),
+    );
+    expect(after.hasError, isFalse, reason: 'the ladder must survive');
+    expect(after.value?.id, 'unit-1');
+  });
+
+  test('a finished unit opens where it ended', () async {
+    // The server sends nextLevelIndex -1 for a finished unit. Clamping that
+    // to 0 reopened a completed day at its FIRST level and walked the user
+    // through all of them, each saying "you have already finished this".
+    final LearnUnit unit = _unitOf(1).copyWith(
+      nextLevelIndex: -1,
+      status: UnitStatus.complete,
+      levels: <LearnLevel>[
+        LearnLevel(
+          index: 0,
+          kind: LevelKind.vocabulary,
+          title: 'Words that carry',
+          status: LevelStatus.complete,
+          completedAt: '2026-10-28T00:00:00.000Z',
+          exercises: <Exercise>[_choice('q0')],
+        ),
+        const LearnLevel(
+          index: 1,
+          kind: LevelKind.review,
+          title: 'Read it back',
+          status: LevelStatus.complete,
+          completedAt: '2026-10-28T00:00:00.000Z',
         ),
       ],
     );

@@ -78,9 +78,21 @@ class LearnUnitController extends _$LearnUnitController {
   /// finished and been billed while the socket died, and the only way to find
   /// out is to ask.
   Future<void> reloadAfterLostResponse() async {
-    state = await AsyncValue.guard(
+    final AsyncValue<LearnUnit> next = await AsyncValue.guard(
       () => ref.read(learnRepositoryProvider).fetchUnit(week: week, day: day),
     );
+    if (!ref.mounted) return;
+    // A FAILED re-read keeps the ladder we already have.
+    //
+    // This runs after a draft that did not come back, which is overwhelmingly
+    // a network problem — so the re-read is likely to fail for the same
+    // reason. Assigning the error state would replace a perfectly good
+    // ladder, sitting in memory, with "today's lesson did not come through",
+    // and this provider is keepAlive and never refetched: the only way back
+    // is the Try again button, which costs a model call. The user would lose
+    // a climbed day to a dropped connection.
+    if (next.hasError) return;
+    state = next;
   }
 }
 
@@ -228,6 +240,15 @@ enum LearnStep {
 
 /// Drives one attempt at one level.
 ///
+/// ## Nothing is written after this is disposed
+///
+/// The player is the only listener, so backing out of a day disposes this
+/// provider — and the user can do that in the second between tapping Check
+/// and the verdict arriving. Riverpod throws `UnmountedRefException` on a
+/// state write past that point, and it escapes to the zone rather than to
+/// any caller's catch, so in release it is a Sentry report on an ordinary
+/// gesture. Every write after an await is therefore guarded by `ref.mounted`.
+///
 /// Deliberately NOT keepAlive. Quitting a level mid-run discards it — the
 /// hearts are spent, the answers are not banked, and the level is taken again
 /// from the top. That is the web's behaviour and it is the honest one: a run
@@ -247,9 +268,13 @@ class LearnRun extends _$LearnRun {
         .read(learnUnitControllerProvider(week, day))
         .value;
     final int levels = unit?.levels.length ?? 0;
-    final int at = levels == 0
-        ? 0
-        : (unit?.nextLevelIndex ?? 0).clamp(0, levels - 1);
+    if (levels == 0) return const LearnRunState();
+    final int next = unit?.nextLevelIndex ?? 0;
+    // -1 means the unit is FINISHED. Clamping that to 0 reopened a completed
+    // day at its first level and walked the user back through all seven,
+    // each one saying "you have already finished this level". The last one
+    // is where they actually left off.
+    final int at = next < 0 ? levels - 1 : next.clamp(0, levels - 1);
     return LearnRunState(levelIndex: at);
   }
 
@@ -304,6 +329,7 @@ class LearnRun extends _$LearnRun {
         exerciseId: exercise.id,
         value: value,
       );
+      if (!ref.mounted) return;
       final bool spent = !verdict.correct && state.wrong + 1 >= kMistakeBudget;
       state = state.copyWith(
         clearWork: true,
@@ -314,6 +340,7 @@ class LearnRun extends _$LearnRun {
         outOfHearts: spent ? true : null,
       );
     } on Object catch (e) {
+      if (!ref.mounted) return;
       state = state.copyWith(clearWork: true, error: _say(e));
     }
   }
@@ -374,6 +401,15 @@ class LearnRun extends _$LearnRun {
     required LearnLevel level,
   }) async {
     state = state.copyWith(work: LearnWork.submitting, clearError: true);
+    // Taken BEFORE the await, deliberately.
+    //
+    // `_unit` is `ref.read(...)`, and a Ref throws once its provider is
+    // disposed — which this one is the moment the learner leaves the day.
+    // Reading it after the round trip therefore threw INSIDE the try, the
+    // catch reported a banked level as a failure, and the level the learner
+    // had just finished was lost. The controller itself is keepAlive, so a
+    // reference taken while we were still mounted stays good.
+    final LearnUnitController unit_ = _unit;
     try {
       final SubmitResult result = await _repo.submitLevel(
         unitId: unit.id,
@@ -383,10 +419,15 @@ class LearnRun extends _$LearnRun {
             LevelAnswer(exerciseId: e.id, value: state.answers[e.id] ?? ''),
         ],
       );
-      _unit.absorb(result.unit);
+      // The unit controller is keepAlive, so the banked level survives even
+      // if this run does not — a learner who finishes a level and leaves in
+      // the same second keeps the level.
+      unit_.absorb(result.unit);
+      if (!ref.mounted) return LearnStep.banked;
       state = state.copyWith(clearWork: true, clearVerdict: true);
       return LearnStep.banked;
     } on LearnOutOfHearts catch (e) {
+      if (!ref.mounted) return LearnStep.stopped;
       state = state.copyWith(
         clearWork: true,
         outOfHearts: true,
@@ -394,6 +435,7 @@ class LearnRun extends _$LearnRun {
       );
       return LearnStep.stopped;
     } on Object catch (e) {
+      if (!ref.mounted) return LearnStep.stopped;
       state = state.copyWith(clearWork: true, error: _say(e));
       return LearnStep.stopped;
     }
