@@ -224,7 +224,7 @@ final class LearnUnitControllerProvider
 }
 
 String _$learnUnitControllerHash() =>
-    r'735e169cebc7c9d22a723df5a6312072deff6093';
+    r'81c7464e27affc6051f78285efb729a461d49386';
 
 /// One day's ladder.
 ///
@@ -392,6 +392,15 @@ abstract class _$LearnOpenDay extends $Notifier<int?> {
 
 /// Drives one attempt at one level.
 ///
+/// ## Nothing is written after this is disposed
+///
+/// The player is the only listener, so backing out of a day disposes this
+/// provider — and the user can do that in the second between tapping Check
+/// and the verdict arriving. Riverpod throws `UnmountedRefException` on a
+/// state write past that point, and it escapes to the zone rather than to
+/// any caller's catch, so in release it is a Sentry report on an ordinary
+/// gesture. Every write after an await is therefore guarded by `ref.mounted`.
+///
 /// Deliberately NOT keepAlive. Quitting a level mid-run discards it — the
 /// hearts are spent, the answers are not banked, and the level is taken again
 /// from the top. That is the web's behaviour and it is the honest one: a run
@@ -403,6 +412,15 @@ final learnRunProvider = LearnRunFamily._();
 
 /// Drives one attempt at one level.
 ///
+/// ## Nothing is written after this is disposed
+///
+/// The player is the only listener, so backing out of a day disposes this
+/// provider — and the user can do that in the second between tapping Check
+/// and the verdict arriving. Riverpod throws `UnmountedRefException` on a
+/// state write past that point, and it escapes to the zone rather than to
+/// any caller's catch, so in release it is a Sentry report on an ordinary
+/// gesture. Every write after an await is therefore guarded by `ref.mounted`.
+///
 /// Deliberately NOT keepAlive. Quitting a level mid-run discards it — the
 /// hearts are spent, the answers are not banked, and the level is taken again
 /// from the top. That is the web's behaviour and it is the honest one: a run
@@ -411,6 +429,15 @@ final learnRunProvider = LearnRunFamily._();
 final class LearnRunProvider
     extends $NotifierProvider<LearnRun, LearnRunState> {
   /// Drives one attempt at one level.
+  ///
+  /// ## Nothing is written after this is disposed
+  ///
+  /// The player is the only listener, so backing out of a day disposes this
+  /// provider — and the user can do that in the second between tapping Check
+  /// and the verdict arriving. Riverpod throws `UnmountedRefException` on a
+  /// state write past that point, and it escapes to the zone rather than to
+  /// any caller's catch, so in release it is a Sentry report on an ordinary
+  /// gesture. Every write after an await is therefore guarded by `ref.mounted`.
   ///
   /// Deliberately NOT keepAlive. Quitting a level mid-run discards it — the
   /// hearts are spent, the answers are not banked, and the level is taken again
@@ -461,9 +488,18 @@ final class LearnRunProvider
   }
 }
 
-String _$learnRunHash() => r'ea67ffffe087cf5a4b7b21df821793a12704ffb7';
+String _$learnRunHash() => r'c9c793ce58d34dacd38c7fd8d1e3398d33e29853';
 
 /// Drives one attempt at one level.
+///
+/// ## Nothing is written after this is disposed
+///
+/// The player is the only listener, so backing out of a day disposes this
+/// provider — and the user can do that in the second between tapping Check
+/// and the verdict arriving. Riverpod throws `UnmountedRefException` on a
+/// state write past that point, and it escapes to the zone rather than to
+/// any caller's catch, so in release it is a Sentry report on an ordinary
+/// gesture. Every write after an await is therefore guarded by `ref.mounted`.
 ///
 /// Deliberately NOT keepAlive. Quitting a level mid-run discards it — the
 /// hearts are spent, the answers are not banked, and the level is taken again
@@ -491,6 +527,15 @@ final class LearnRunFamily extends $Family
 
   /// Drives one attempt at one level.
   ///
+  /// ## Nothing is written after this is disposed
+  ///
+  /// The player is the only listener, so backing out of a day disposes this
+  /// provider — and the user can do that in the second between tapping Check
+  /// and the verdict arriving. Riverpod throws `UnmountedRefException` on a
+  /// state write past that point, and it escapes to the zone rather than to
+  /// any caller's catch, so in release it is a Sentry report on an ordinary
+  /// gesture. Every write after an await is therefore guarded by `ref.mounted`.
+  ///
   /// Deliberately NOT keepAlive. Quitting a level mid-run discards it — the
   /// hearts are spent, the answers are not banked, and the level is taken again
   /// from the top. That is the web's behaviour and it is the honest one: a run
@@ -505,6 +550,15 @@ final class LearnRunFamily extends $Family
 }
 
 /// Drives one attempt at one level.
+///
+/// ## Nothing is written after this is disposed
+///
+/// The player is the only listener, so backing out of a day disposes this
+/// provider — and the user can do that in the second between tapping Check
+/// and the verdict arriving. Riverpod throws `UnmountedRefException` on a
+/// state write past that point, and it escapes to the zone rather than to
+/// any caller's catch, so in release it is a Sentry report on an ordinary
+/// gesture. Every write after an await is therefore guarded by `ref.mounted`.
 ///
 /// Deliberately NOT keepAlive. Quitting a level mid-run discards it — the
 /// hearts are spent, the answers are not banked, and the level is taken again

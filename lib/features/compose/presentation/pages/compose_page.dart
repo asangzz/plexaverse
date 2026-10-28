@@ -133,7 +133,20 @@ class _ComposePageState extends ConsumerState<ComposePage> {
           ],
 
           if (status.error != null || status.insufficientXp) ...<Widget>[
-            _ProblemCard(status: status),
+            _ProblemCard(
+              status: status,
+              // A poster was attempted and did not land: a brief is stored
+              // and there is no image. Without this the only control on
+              // screen is "Write it", which re-runs the TEXT generation and
+              // charges for it a second time — the body is already written
+              // and already paid for.
+              onRetryPoster:
+                  draft.lastPosterPrompt != null && draft.image == null
+                  ? ref
+                        .read(composeActionsProvider.notifier)
+                        .regeneratePoster
+                  : null,
+            ),
             SizedBox(height: ZaveSpace.lg),
           ],
 
@@ -476,9 +489,12 @@ class _ProgressCard extends StatelessWidget {
 /// Amber in both cases. Zave has no red, and neither of these is destructive:
 /// one is "try again", the other is "top up first".
 class _ProblemCard extends StatelessWidget {
-  const _ProblemCard({required this.status});
+  const _ProblemCard({required this.status, this.onRetryPoster});
 
   final ComposeStatus status;
+
+  /// Offered when the poster is the only thing missing. See the call site.
+  final VoidCallback? onRetryPoster;
 
   @override
   Widget build(BuildContext context) {
@@ -497,23 +513,38 @@ class _ProblemCard extends StatelessWidget {
             ],
           ),
           SizedBox(height: ZaveSpace.md),
+          // The CONTEXTUAL sentence wins, when there is one.
+          //
+          // Three callers set an error AND insufficientXp — "your post is
+          // written, but the poster failed", "saved as a draft, but LinkedIn
+          // rejected the publish", "could not upload the image". Preferring
+          // the generic XP line threw away the only part the user needed:
+          // what survived. The headline and the Top up button already say
+          // which remedy applies, so the sentence is free to say what
+          // happened.
           Text(
-            status.insufficientXp
-                ? "You don't have enough XP to generate."
-                : status.error!,
+            status.error ?? "You don't have enough XP to generate.",
             style: ZaveType.body,
           ),
-          // Only the XP case gets a CTA. "Did not go through" is a retry the
-          // user makes with the button they already pressed; sending them to
-          // Pricing for it would be wrong.
-          if (status.insufficientXp) ...<Widget>[
+          // "Did not go through" on its own is a retry the user makes with
+          // the button they already pressed; sending them to Pricing for it
+          // would be wrong. The poster retry is different — the control for
+          // it lives on the image card, which is not on screen when there is
+          // no image.
+          if (status.insufficientXp || onRetryPoster != null) ...<Widget>[
             SizedBox(height: ZaveSpace.md),
-            Align(
-              alignment: Alignment.centerLeft,
-              child: ZaveButton(
-                label: 'Top up XP',
-                onPressed: () => context.push(ZaveRoutes.pricing),
-              ),
+            Row(
+              children: <Widget>[
+                if (status.insufficientXp)
+                  ZaveButton(
+                    label: 'Top up XP',
+                    onPressed: () => context.push(ZaveRoutes.pricing),
+                  ),
+                if (status.insufficientXp && onRetryPoster != null)
+                  SizedBox(width: ZaveSpace.sm),
+                if (onRetryPoster case final VoidCallback retry)
+                  ZaveButton(label: 'Make the poster', onPressed: retry),
+              ],
             ),
           ],
         ],

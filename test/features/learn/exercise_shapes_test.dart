@@ -113,6 +113,37 @@ void main() {
     expect(back.options.last.fills, isEmpty);
   });
 
+  test('a unit survives a round trip through json', () {
+    // json_serializable writes the DART name unless told otherwise —
+    // `videoScript`, `inProgress` — while every parse() here reads the
+    // SERVER's `video_script` and `in_progress`. A unit that went out and
+    // came back used to change shape: the day's kind fell to its `post`
+    // default and the unit's status to `locked`.
+    final LearnUnit unit = LearnUnit(
+      id: 'u1',
+      season: 1,
+      weekNumber: 4,
+      dayIndex: 2,
+      kind: DayKind.videoScript,
+      title: 'Three things I check before any launch',
+      status: UnitStatus.inProgress,
+      levels: const <LearnLevel>[
+        LearnLevel(
+          index: 0,
+          kind: LevelKind.substance,
+          title: 'What you actually did',
+          status: LevelStatus.available,
+        ),
+      ],
+    );
+
+    final LearnUnit back = LearnUnit.fromJson(unit.toJson());
+    expect(back.kind, DayKind.videoScript);
+    expect(back.status, UnitStatus.inProgress);
+    expect(back.levels.single.kind, LevelKind.substance);
+    expect(back.levels.single.status, LevelStatus.available);
+  });
+
   test('all seven types this build draws are climbable', () {
     const List<String> types = <String>[
       'choice',

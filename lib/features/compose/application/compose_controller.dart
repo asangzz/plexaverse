@@ -262,8 +262,12 @@ class ComposeActions extends _$ComposeActions {
       // say what happened.
       _drafts.setPosterPrompt(prompt);
       state = ComposeStatus(
+        // Kept in the XP case too. Running out of XP at the poster step is
+        // exactly where a user assumes they have lost the post, and this is
+        // the sentence that says they have not; the card's own headline
+        // carries the remedy.
         error: e.insufficientXp
-            ? null
+            ? 'Your post is written. The poster is what needs XP.'
             : 'Your post is written, but the poster failed. ${e.message}',
         insufficientXp: e.insufficientXp,
       );

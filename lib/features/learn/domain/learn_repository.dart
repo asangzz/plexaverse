@@ -141,3 +141,19 @@ class LearnGenerationFailed implements Exception {
   @override
   String toString() => message;
 }
+
+/// One sentence for anything this slice can throw.
+///
+/// The screens used to render `e.toString()`, which for the unrecognised
+/// codes — anything outside the five `_mapped` knows — is a raw
+/// `DioException` dump: the full URL, the status line and the stack. App
+/// stores reject that, and a user cannot act on it. Unknown stays generic on
+/// purpose; a code we have never seen is not something we can explain.
+String learnMessage(Object error) => switch (error) {
+  LearnNoPlan(:final String message) => message,
+  LearnRestDay(:final String message) => message,
+  LearnImageMissing(:final String message) => message,
+  LearnOutOfHearts(:final String message) => message,
+  LearnGenerationFailed(:final String message) => message,
+  _ => 'That did not come through. Try again.',
+};

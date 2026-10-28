@@ -100,6 +100,52 @@ void main() {
     expect(failure.errorCode, 'LEGACY_SHAPE');
   });
 
+  test("the envelope's per-field messages reach ValidationFailure", () async {
+    // `POST /auth/register` builds these — which field was already taken,
+    // which password was too short — and five more routes forward them. The
+    // interceptor looked for `fieldErrors` / `errors` at the top level while
+    // ours are `error.fields`, so a sign-up form could only ever show the
+    // one summary sentence.
+    final Failure failure = await _failureFor(<String, dynamic>{
+      'data': null,
+      'error': <String, dynamic>{
+        'code': 'VALIDATION_FAILED',
+        'message': 'Check the form.',
+        'fields': <String, dynamic>{
+          'email': <String>['That email is already registered.'],
+          'password': <String>['Use at least 12 characters.'],
+        },
+      },
+    }, 422);
+
+    expect(failure, isA<ValidationFailure>());
+    expect(
+      (failure as ValidationFailure).fieldErrors,
+      <String, String>{
+        'email': 'That email is already registered.',
+        'password': 'Use at least 12 characters.',
+      },
+    );
+  });
+
+  test('a 400 carrying nested fields is a validation failure', () async {
+    // The 422 above takes the status branch. This one proves the SNIFF — a
+    // 400 is only a validation failure because it carries field errors, and
+    // that check looked in the wrong place too.
+    final Failure failure = await _failureFor(<String, dynamic>{
+      'data': null,
+      'error': <String, dynamic>{
+        'code': 'VALIDATION_FAILED',
+        'message': 'Check the form.',
+        'fields': <String, dynamic>{
+          'email': <String>['Required.'],
+        },
+      },
+    }, 400);
+
+    expect(failure, isA<ValidationFailure>());
+  });
+
   test('a string error body yields no code rather than a wrong one', () async {
     final Failure failure = await _failureFor(<String, dynamic>{
       'error': 'Bad Request',

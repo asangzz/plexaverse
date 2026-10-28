@@ -173,13 +173,32 @@ class ErrorInterceptor extends Interceptor {
     return null;
   }
 
-  bool _hasFieldErrors(Object? data) =>
-      data is Map && (data['fieldErrors'] is Map || data['errors'] is Map);
+  bool _hasFieldErrors(Object? data) => _fieldMap(data) != null;
+
+  /// Per-field messages, wherever this API puts them.
+  ///
+  /// OURS calls them `error.fields` — nested, and spelled differently from
+  /// the `fieldErrors` / `errors` this looked for at the top level. So
+  /// `ValidationFailure.fieldErrors` was always empty, and the per-field
+  /// text that `POST /auth/register` goes to the trouble of building (which
+  /// field was already taken, which password was too short) never reached a
+  /// form. The legacy spellings are kept: they cost nothing and this
+  /// interceptor is not only ours to feed.
+  Map<dynamic, dynamic>? _fieldMap(Object? data) {
+    if (data is! Map) return null;
+    for (final Object? candidate in <Object?>[
+      data['fieldErrors'],
+      data['errors'],
+      if (data['error'] is Map) (data['error'] as Map)['fields'],
+    ]) {
+      if (candidate is Map) return candidate;
+    }
+    return null;
+  }
 
   Map<String, String> _extractFieldErrors(Object? data) {
-    if (data is! Map) return const <String, String>{};
-    final raw = data['fieldErrors'] ?? data['errors'];
-    if (raw is! Map) return const <String, String>{};
+    final Map<dynamic, dynamic>? raw = _fieldMap(data);
+    if (raw == null) return const <String, String>{};
     final out = <String, String>{};
     raw.forEach((key, value) {
       if (value is String) {

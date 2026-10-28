@@ -76,6 +76,19 @@ enum LevelKind {
       this == LevelKind.review;
 }
 
+/// Enum spellings on the wire.
+///
+/// json_serializable writes the DART name by default — `videoScript`,
+/// `inProgress` — while every `parse()` here reads the SERVER's
+/// `video_script` and `in_progress`. A unit that went out through `toJson`
+/// and came back therefore changed shape under you: the day's kind fell to
+/// its `post` default and the unit's status to `locked`. Nothing serialises
+/// a unit today; the asymmetry is removed so that nothing has to find out.
+String _dayKindWire(DayKind kind) => kind.wire;
+String _levelKindWire(LevelKind kind) => kind.wire;
+String _levelStatusWire(LevelStatus status) => status.wire;
+String _unitStatusWire(UnitStatus status) => status.wire;
+
 /// How many wrong answers a level tolerates before it has to be retaken.
 ///
 /// Five, drawn as hearts. Mirrors `MISTAKE_BUDGET` in the web's
@@ -294,11 +307,16 @@ abstract class LearnLevel with _$LearnLevel {
 
   const factory LearnLevel({
     required int index,
-    @JsonKey(name: 'kind', fromJson: LevelKind.parse) required LevelKind kind,
+    @JsonKey(name: 'kind', fromJson: LevelKind.parse, toJson: _levelKindWire)
+    required LevelKind kind,
     required String title,
     TeachBlock? teach,
     @Default(<Exercise>[]) List<Exercise> exercises,
-    @JsonKey(name: 'status', fromJson: LevelStatus.parse)
+    @JsonKey(
+      name: 'status',
+      fromJson: LevelStatus.parse,
+      toJson: _levelStatusWire,
+    )
     @Default(LevelStatus.locked)
     LevelStatus status,
     @Default(<LevelAnswer>[]) List<LevelAnswer> answers,
@@ -341,13 +359,18 @@ abstract class LearnUnit with _$LearnUnit {
     required int season,
     required int weekNumber,
     required int dayIndex,
-    @JsonKey(name: 'kind', fromJson: DayKind.parse) required DayKind kind,
+    @JsonKey(name: 'kind', fromJson: DayKind.parse, toJson: _dayKindWire)
+    required DayKind kind,
     required String title,
 
     /// The week's topic, above the day's own title.
     @Default('') String unitTitle,
     @Default(<LearnLevel>[]) List<LearnLevel> levels,
-    @JsonKey(name: 'status', fromJson: UnitStatus.parse)
+    @JsonKey(
+      name: 'status',
+      fromJson: UnitStatus.parse,
+      toJson: _unitStatusWire,
+    )
     @Default(UnitStatus.available)
     UnitStatus status,
     @Default(0) int nextLevelIndex,
@@ -385,9 +408,14 @@ abstract class LearnPathDay with _$LearnPathDay {
 
     /// Monday … Sunday, for the node label.
     required String day,
-    @JsonKey(name: 'kind', fromJson: DayKind.parse) required DayKind kind,
+    @JsonKey(name: 'kind', fromJson: DayKind.parse, toJson: _dayKindWire)
+    required DayKind kind,
     required String title,
-    @JsonKey(name: 'status', fromJson: UnitStatus.parse)
+    @JsonKey(
+      name: 'status',
+      fromJson: UnitStatus.parse,
+      toJson: _unitStatusWire,
+    )
     @Default(UnitStatus.locked)
     UnitStatus status,
     @Default(0) int levelCount,

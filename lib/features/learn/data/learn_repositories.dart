@@ -320,14 +320,14 @@ class FakeLearnRepository implements LearnRepository {
       why: 'A reader scanning LinkedIn gives you one line to be specific in.',
       before: 'We improved our processes significantly.',
       after: 'We cut handover time from two days to three hours.',
-      kind: 'specificity',
+      kind: 'clarity',
     ),
     exercises: <Exercise>[
       Exercise(
         id: 'v1',
         type: 'meaning',
         prompt: 'What does it mean here?',
-        teaches: 'specificity',
+        teaches: 'clarity',
         sentence:
             'We cut the handover time by writing one runbook everybody could '
             'follow.',
@@ -346,7 +346,7 @@ class FakeLearnRepository implements LearnRepository {
         id: 'v2',
         type: 'gap',
         prompt: 'Finish the sentence so it carries a fact.',
-        teaches: 'specificity',
+        teaches: 'clarity',
         sentence: 'The new runbook cut our incident response to ___.',
         options: _words(<String>[
           'much faster',
@@ -360,7 +360,7 @@ class FakeLearnRepository implements LearnRepository {
         id: 'v3',
         type: 'pair',
         prompt: 'Both halves, so the sentence holds together.',
-        teaches: 'specificity',
+        teaches: 'clarity',
         sentence: 'We ___ the onboarding doc and new hires ___ on day three.',
         options: const <ExerciseOption>[
           ExerciseOption(
@@ -394,14 +394,14 @@ class FakeLearnRepository implements LearnRepository {
       why: 'The first line is all most people read before deciding.',
       before: 'Some thoughts on documentation culture.',
       after: 'Nobody had read the runbook. We found out at 2am.',
-      kind: 'opening',
+      kind: 'phrasing',
     ),
     exercises: <Exercise>[
       Exercise(
         id: 'h1',
         type: 'choice',
         prompt: 'Which opening makes you read line two?',
-        teaches: 'opening',
+        teaches: 'phrasing',
         options: _words(<String>[
           'Today I want to talk about onboarding.',
           'Our new hire shipped on day three. Here is what we changed.',
@@ -413,7 +413,7 @@ class FakeLearnRepository implements LearnRepository {
         id: 'h2',
         type: 'compose',
         prompt: 'Write your own opening line for today.',
-        teaches: 'opening',
+        teaches: 'phrasing',
         placeholder: 'Start with the moment it happened…',
         minChars: 40,
       ),
@@ -429,14 +429,14 @@ class FakeLearnRepository implements LearnRepository {
       why: 'The passive hides the actor, and the actor is the story.',
       before: 'The process was improved and timelines were met.',
       after: 'Priya rewrote the checklist and we hit the date.',
-      kind: 'active_voice',
+      kind: 'grammar',
     ),
     exercises: const <Exercise>[
       Exercise(
         id: 's1',
         type: 'rewrite',
         prompt: 'Rewrite this so a person does the verb.',
-        teaches: 'active_voice',
+        teaches: 'grammar',
         starter: 'A decision was made to basically restructure the workflow.',
         modelAnswer: 'We restructured the workflow in one afternoon.',
       ),
@@ -444,7 +444,7 @@ class FakeLearnRepository implements LearnRepository {
         id: 's2',
         type: 'compose',
         prompt: 'What did you actually do this week?',
-        teaches: 'specificity',
+        teaches: 'clarity',
         placeholder: 'One thing that really happened…',
         minChars: 60,
       ),
@@ -460,14 +460,14 @@ class FakeLearnRepository implements LearnRepository {
       why: 'A post that asks nothing gets read and scrolled past.',
       before: 'Thoughts?',
       after: 'What is the one doc your team actually reads?',
-      kind: 'call_to_action',
+      kind: 'tone',
     ),
     exercises: <Exercise>[
       Exercise(
         id: 'c1',
         type: 'dialogue',
         prompt: 'Pick the reply.',
-        teaches: 'call_to_action',
+        teaches: 'tone',
         speaker: 'A founder in your audience',
         opener: "We tried runbooks. Nobody kept them up to date.",
         options: _words(<String>[
@@ -485,7 +485,7 @@ class FakeLearnRepository implements LearnRepository {
         id: 'c2',
         type: 'compose',
         prompt: 'Write your closing question.',
-        teaches: 'call_to_action',
+        teaches: 'tone',
         placeholder: 'One question, answerable in a line…',
         minChars: 25,
       ),
@@ -619,18 +619,29 @@ class FakeLearnRepository implements LearnRepository {
       );
     }
     if (e.isRewrite) {
+      // The server's own three checks, in its order: changed, six words,
+      // no filler (`lesson-content.ts` emits exactly this set). A fake that
+      // graded more loosely would pass answers the real backend refuses,
+      // which is the one thing a stand-in must not do.
       final bool changed =
           trimmed.toLowerCase() != (e.starter ?? '').toLowerCase();
-      final bool longEnough = trimmed.split(RegExp(r'\s+')).length >= 5;
+      final bool longEnough = trimmed.split(RegExp(r'\s+')).length >= 6;
+      final String padded = ' ${trimmed.toLowerCase()} ';
+      final String? filler = _fillerWords
+          .where((String w) => padded.contains(' $w '))
+          .firstOrNull;
       return ExerciseResult(
         exerciseId: e.id,
-        correct: trimmed.isNotEmpty && changed && longEnough,
+        correct:
+            trimmed.isNotEmpty && changed && longEnough && filler == null,
         message: trimmed.isEmpty
             ? 'Write your version first.'
             : !changed
             ? 'That is the original sentence — change it.'
             : !longEnough
-            ? 'A little more — aim for at least 5 words.'
+            ? 'A little more — aim for at least 6 words.'
+            : filler != null
+            ? '“$filler” is doing no work. Cut it.'
             : 'That reads much stronger.',
       );
     }
@@ -698,6 +709,13 @@ class FakeLearnRepository implements LearnRepository {
     _units[day] = updated;
     return updated;
   }
+
+  /// `FILLER_WORDS` from the web's ladder, so the mock refuses the same
+  /// padding the server refuses.
+  static const List<String> _fillerWords = <String>[
+    'very', 'really', 'just', 'quite', 'somewhat', 'basically', 'actually',
+    'literally', 'kind of', 'sort of', 'a bit', 'i think', 'i feel like',
+  ];
 
   static const String _fakePost =
       "Nobody had read the runbook. We found out at 2am.\n\n"

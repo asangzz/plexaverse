@@ -240,7 +240,10 @@ class DioClient {
     if (status == 404) {
       return NotFoundFailure(message: message, errorCode: errorCode);
     }
-    if (status == 422 || map['fieldErrors'] is Map || map['errors'] is Map) {
+    if (status == 422 ||
+        map['fields'] is Map ||
+        map['fieldErrors'] is Map ||
+        map['errors'] is Map) {
       return ValidationFailure(
         message: message,
         errorCode: errorCode,
@@ -261,8 +264,11 @@ class DioClient {
     );
   }
 
+  /// `fields` is OUR spelling, and this map IS the envelope's error object —
+  /// so the nesting the interceptor has to walk is already unwrapped here.
+  /// The other two names are kept for anything that is not us.
   Map<String, String> _fieldErrors(Map<dynamic, dynamic> map) {
-    final raw = map['fieldErrors'] ?? map['errors'];
+    final raw = map['fields'] ?? map['fieldErrors'] ?? map['errors'];
     if (raw is! Map) return const <String, String>{};
     final out = <String, String>{};
     raw.forEach((key, value) {

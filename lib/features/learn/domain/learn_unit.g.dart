@@ -111,30 +111,14 @@ _LearnLevel _$LearnLevelFromJson(Map<String, dynamic> json) => _LearnLevel(
 Map<String, dynamic> _$LearnLevelToJson(_LearnLevel instance) =>
     <String, dynamic>{
       'index': instance.index,
-      'kind': _$LevelKindEnumMap[instance.kind]!,
+      'kind': _levelKindWire(instance.kind),
       'title': instance.title,
       'teach': instance.teach?.toJson(),
       'exercises': instance.exercises.map((e) => e.toJson()).toList(),
-      'status': _$LevelStatusEnumMap[instance.status]!,
+      'status': _levelStatusWire(instance.status),
       'answers': instance.answers.map((e) => e.toJson()).toList(),
       'completedAt': instance.completedAt,
     };
-
-const _$LevelKindEnumMap = {
-  LevelKind.vocabulary: 'vocabulary',
-  LevelKind.hook: 'hook',
-  LevelKind.substance: 'substance',
-  LevelKind.close: 'close',
-  LevelKind.draft: 'draft',
-  LevelKind.visual: 'visual',
-  LevelKind.review: 'review',
-};
-
-const _$LevelStatusEnumMap = {
-  LevelStatus.locked: 'locked',
-  LevelStatus.available: 'available',
-  LevelStatus.complete: 'complete',
-};
 
 _LearnUnit _$LearnUnitFromJson(Map<String, dynamic> json) => _LearnUnit(
   id: json['id'] as String,
@@ -164,30 +148,16 @@ Map<String, dynamic> _$LearnUnitToJson(_LearnUnit instance) =>
       'season': instance.season,
       'weekNumber': instance.weekNumber,
       'dayIndex': instance.dayIndex,
-      'kind': _$DayKindEnumMap[instance.kind]!,
+      'kind': _dayKindWire(instance.kind),
       'title': instance.title,
       'unitTitle': instance.unitTitle,
       'levels': instance.levels.map((e) => e.toJson()).toList(),
-      'status': _$UnitStatusEnumMap[instance.status]!,
+      'status': _unitStatusWire(instance.status),
       'nextLevelIndex': instance.nextLevelIndex,
       'postId': instance.postId,
       'postContent': instance.postContent,
       'imageUrl': instance.imageUrl,
     };
-
-const _$DayKindEnumMap = {
-  DayKind.post: 'post',
-  DayKind.videoScript: 'videoScript',
-  DayKind.article: 'article',
-  DayKind.rest: 'rest',
-};
-
-const _$UnitStatusEnumMap = {
-  UnitStatus.locked: 'locked',
-  UnitStatus.available: 'available',
-  UnitStatus.inProgress: 'inProgress',
-  UnitStatus.complete: 'complete',
-};
 
 _LearnPathDay _$LearnPathDayFromJson(Map<String, dynamic> json) =>
     _LearnPathDay(
@@ -207,9 +177,9 @@ Map<String, dynamic> _$LearnPathDayToJson(_LearnPathDay instance) =>
     <String, dynamic>{
       'dayIndex': instance.dayIndex,
       'day': instance.day,
-      'kind': _$DayKindEnumMap[instance.kind]!,
+      'kind': _dayKindWire(instance.kind),
       'title': instance.title,
-      'status': _$UnitStatusEnumMap[instance.status]!,
+      'status': _unitStatusWire(instance.status),
       'levelCount': instance.levelCount,
       'completedCount': instance.completedCount,
       'started': instance.started,

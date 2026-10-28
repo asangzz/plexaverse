@@ -178,6 +178,12 @@ class _LessonPlayerState extends ConsumerState<LessonPlayer> {
         level: level,
         onClose: widget.onClose,
         child: _ActionLevel(
+          // Keyed by level, or Flutter reuses one State across them: the
+          // poster level's resume observer is added in initState, which does
+          // not run again when draft hands over to visual — so the
+          // come-back-from-ChatGPT re-check never fired, and on the way out
+          // the observer stayed attached to a level that had moved on.
+          key: ValueKey<int>(level.index),
           unit: widget.unit,
           level: level,
           week: widget.week,
@@ -518,6 +524,7 @@ class _BeforeAfter extends StatelessWidget {
 /// card that would have to apologise for all three.
 class _ActionLevel extends ConsumerStatefulWidget {
   const _ActionLevel({
+    required super.key,
     required this.unit,
     required this.level,
     required this.week,

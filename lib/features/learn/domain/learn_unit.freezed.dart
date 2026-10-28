@@ -1169,7 +1169,7 @@ as bool?,
 /// @nodoc
 mixin _$LearnLevel {
 
- int get index;@JsonKey(name: 'kind', fromJson: LevelKind.parse) LevelKind get kind; String get title; TeachBlock? get teach; List<Exercise> get exercises;@JsonKey(name: 'status', fromJson: LevelStatus.parse) LevelStatus get status; List<LevelAnswer> get answers; String? get completedAt;
+ int get index;@JsonKey(name: 'kind', fromJson: LevelKind.parse, toJson: _levelKindWire) LevelKind get kind; String get title; TeachBlock? get teach; List<Exercise> get exercises;@JsonKey(name: 'status', fromJson: LevelStatus.parse, toJson: _levelStatusWire) LevelStatus get status; List<LevelAnswer> get answers; String? get completedAt;
 /// Create a copy of LearnLevel
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
@@ -1202,7 +1202,7 @@ abstract mixin class $LearnLevelCopyWith<$Res>  {
   factory $LearnLevelCopyWith(LearnLevel value, $Res Function(LearnLevel) _then) = _$LearnLevelCopyWithImpl;
 @useResult
 $Res call({
- int index,@JsonKey(name: 'kind', fromJson: LevelKind.parse) LevelKind kind, String title, TeachBlock? teach, List<Exercise> exercises,@JsonKey(name: 'status', fromJson: LevelStatus.parse) LevelStatus status, List<LevelAnswer> answers, String? completedAt
+ int index,@JsonKey(name: 'kind', fromJson: LevelKind.parse, toJson: _levelKindWire) LevelKind kind, String title, TeachBlock? teach, List<Exercise> exercises,@JsonKey(name: 'status', fromJson: LevelStatus.parse, toJson: _levelStatusWire) LevelStatus status, List<LevelAnswer> answers, String? completedAt
 });
 
 
@@ -1326,7 +1326,7 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( int index, @JsonKey(name: 'kind', fromJson: LevelKind.parse)  LevelKind kind,  String title,  TeachBlock? teach,  List<Exercise> exercises, @JsonKey(name: 'status', fromJson: LevelStatus.parse)  LevelStatus status,  List<LevelAnswer> answers,  String? completedAt)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( int index, @JsonKey(name: 'kind', fromJson: LevelKind.parse, toJson: _levelKindWire)  LevelKind kind,  String title,  TeachBlock? teach,  List<Exercise> exercises, @JsonKey(name: 'status', fromJson: LevelStatus.parse, toJson: _levelStatusWire)  LevelStatus status,  List<LevelAnswer> answers,  String? completedAt)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _LearnLevel() when $default != null:
 return $default(_that.index,_that.kind,_that.title,_that.teach,_that.exercises,_that.status,_that.answers,_that.completedAt);case _:
@@ -1347,7 +1347,7 @@ return $default(_that.index,_that.kind,_that.title,_that.teach,_that.exercises,_
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( int index, @JsonKey(name: 'kind', fromJson: LevelKind.parse)  LevelKind kind,  String title,  TeachBlock? teach,  List<Exercise> exercises, @JsonKey(name: 'status', fromJson: LevelStatus.parse)  LevelStatus status,  List<LevelAnswer> answers,  String? completedAt)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( int index, @JsonKey(name: 'kind', fromJson: LevelKind.parse, toJson: _levelKindWire)  LevelKind kind,  String title,  TeachBlock? teach,  List<Exercise> exercises, @JsonKey(name: 'status', fromJson: LevelStatus.parse, toJson: _levelStatusWire)  LevelStatus status,  List<LevelAnswer> answers,  String? completedAt)  $default,) {final _that = this;
 switch (_that) {
 case _LearnLevel():
 return $default(_that.index,_that.kind,_that.title,_that.teach,_that.exercises,_that.status,_that.answers,_that.completedAt);case _:
@@ -1367,7 +1367,7 @@ return $default(_that.index,_that.kind,_that.title,_that.teach,_that.exercises,_
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( int index, @JsonKey(name: 'kind', fromJson: LevelKind.parse)  LevelKind kind,  String title,  TeachBlock? teach,  List<Exercise> exercises, @JsonKey(name: 'status', fromJson: LevelStatus.parse)  LevelStatus status,  List<LevelAnswer> answers,  String? completedAt)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( int index, @JsonKey(name: 'kind', fromJson: LevelKind.parse, toJson: _levelKindWire)  LevelKind kind,  String title,  TeachBlock? teach,  List<Exercise> exercises, @JsonKey(name: 'status', fromJson: LevelStatus.parse, toJson: _levelStatusWire)  LevelStatus status,  List<LevelAnswer> answers,  String? completedAt)?  $default,) {final _that = this;
 switch (_that) {
 case _LearnLevel() when $default != null:
 return $default(_that.index,_that.kind,_that.title,_that.teach,_that.exercises,_that.status,_that.answers,_that.completedAt);case _:
@@ -1382,11 +1382,11 @@ return $default(_that.index,_that.kind,_that.title,_that.teach,_that.exercises,_
 @JsonSerializable()
 
 class _LearnLevel extends LearnLevel {
-  const _LearnLevel({required this.index, @JsonKey(name: 'kind', fromJson: LevelKind.parse) required this.kind, required this.title, this.teach, final  List<Exercise> exercises = const <Exercise>[], @JsonKey(name: 'status', fromJson: LevelStatus.parse) this.status = LevelStatus.locked, final  List<LevelAnswer> answers = const <LevelAnswer>[], this.completedAt}): _exercises = exercises,_answers = answers,super._();
+  const _LearnLevel({required this.index, @JsonKey(name: 'kind', fromJson: LevelKind.parse, toJson: _levelKindWire) required this.kind, required this.title, this.teach, final  List<Exercise> exercises = const <Exercise>[], @JsonKey(name: 'status', fromJson: LevelStatus.parse, toJson: _levelStatusWire) this.status = LevelStatus.locked, final  List<LevelAnswer> answers = const <LevelAnswer>[], this.completedAt}): _exercises = exercises,_answers = answers,super._();
   factory _LearnLevel.fromJson(Map<String, dynamic> json) => _$LearnLevelFromJson(json);
 
 @override final  int index;
-@override@JsonKey(name: 'kind', fromJson: LevelKind.parse) final  LevelKind kind;
+@override@JsonKey(name: 'kind', fromJson: LevelKind.parse, toJson: _levelKindWire) final  LevelKind kind;
 @override final  String title;
 @override final  TeachBlock? teach;
  final  List<Exercise> _exercises;
@@ -1396,7 +1396,7 @@ class _LearnLevel extends LearnLevel {
   return EqualUnmodifiableListView(_exercises);
 }
 
-@override@JsonKey(name: 'status', fromJson: LevelStatus.parse) final  LevelStatus status;
+@override@JsonKey(name: 'status', fromJson: LevelStatus.parse, toJson: _levelStatusWire) final  LevelStatus status;
  final  List<LevelAnswer> _answers;
 @override@JsonKey() List<LevelAnswer> get answers {
   if (_answers is EqualUnmodifiableListView) return _answers;
@@ -1439,7 +1439,7 @@ abstract mixin class _$LearnLevelCopyWith<$Res> implements $LearnLevelCopyWith<$
   factory _$LearnLevelCopyWith(_LearnLevel value, $Res Function(_LearnLevel) _then) = __$LearnLevelCopyWithImpl;
 @override @useResult
 $Res call({
- int index,@JsonKey(name: 'kind', fromJson: LevelKind.parse) LevelKind kind, String title, TeachBlock? teach, List<Exercise> exercises,@JsonKey(name: 'status', fromJson: LevelStatus.parse) LevelStatus status, List<LevelAnswer> answers, String? completedAt
+ int index,@JsonKey(name: 'kind', fromJson: LevelKind.parse, toJson: _levelKindWire) LevelKind kind, String title, TeachBlock? teach, List<Exercise> exercises,@JsonKey(name: 'status', fromJson: LevelStatus.parse, toJson: _levelStatusWire) LevelStatus status, List<LevelAnswer> answers, String? completedAt
 });
 
 
@@ -1489,8 +1489,8 @@ $TeachBlockCopyWith<$Res>? get teach {
 /// @nodoc
 mixin _$LearnUnit {
 
- String get id; int get season; int get weekNumber; int get dayIndex;@JsonKey(name: 'kind', fromJson: DayKind.parse) DayKind get kind; String get title;/// The week's topic, above the day's own title.
- String get unitTitle; List<LearnLevel> get levels;@JsonKey(name: 'status', fromJson: UnitStatus.parse) UnitStatus get status; int get nextLevelIndex;/// The post this unit writes, once `draft` has run.
+ String get id; int get season; int get weekNumber; int get dayIndex;@JsonKey(name: 'kind', fromJson: DayKind.parse, toJson: _dayKindWire) DayKind get kind; String get title;/// The week's topic, above the day's own title.
+ String get unitTitle; List<LearnLevel> get levels;@JsonKey(name: 'status', fromJson: UnitStatus.parse, toJson: _unitStatusWire) UnitStatus get status; int get nextLevelIndex;/// The post this unit writes, once `draft` has run.
  String? get postId; String? get postContent; String? get imageUrl;
 /// Create a copy of LearnUnit
 /// with the given fields replaced by the non-null parameter values.
@@ -1524,7 +1524,7 @@ abstract mixin class $LearnUnitCopyWith<$Res>  {
   factory $LearnUnitCopyWith(LearnUnit value, $Res Function(LearnUnit) _then) = _$LearnUnitCopyWithImpl;
 @useResult
 $Res call({
- String id, int season, int weekNumber, int dayIndex,@JsonKey(name: 'kind', fromJson: DayKind.parse) DayKind kind, String title, String unitTitle, List<LearnLevel> levels,@JsonKey(name: 'status', fromJson: UnitStatus.parse) UnitStatus status, int nextLevelIndex, String? postId, String? postContent, String? imageUrl
+ String id, int season, int weekNumber, int dayIndex,@JsonKey(name: 'kind', fromJson: DayKind.parse, toJson: _dayKindWire) DayKind kind, String title, String unitTitle, List<LearnLevel> levels,@JsonKey(name: 'status', fromJson: UnitStatus.parse, toJson: _unitStatusWire) UnitStatus status, int nextLevelIndex, String? postId, String? postContent, String? imageUrl
 });
 
 
@@ -1641,7 +1641,7 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String id,  int season,  int weekNumber,  int dayIndex, @JsonKey(name: 'kind', fromJson: DayKind.parse)  DayKind kind,  String title,  String unitTitle,  List<LearnLevel> levels, @JsonKey(name: 'status', fromJson: UnitStatus.parse)  UnitStatus status,  int nextLevelIndex,  String? postId,  String? postContent,  String? imageUrl)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String id,  int season,  int weekNumber,  int dayIndex, @JsonKey(name: 'kind', fromJson: DayKind.parse, toJson: _dayKindWire)  DayKind kind,  String title,  String unitTitle,  List<LearnLevel> levels, @JsonKey(name: 'status', fromJson: UnitStatus.parse, toJson: _unitStatusWire)  UnitStatus status,  int nextLevelIndex,  String? postId,  String? postContent,  String? imageUrl)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _LearnUnit() when $default != null:
 return $default(_that.id,_that.season,_that.weekNumber,_that.dayIndex,_that.kind,_that.title,_that.unitTitle,_that.levels,_that.status,_that.nextLevelIndex,_that.postId,_that.postContent,_that.imageUrl);case _:
@@ -1662,7 +1662,7 @@ return $default(_that.id,_that.season,_that.weekNumber,_that.dayIndex,_that.kind
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String id,  int season,  int weekNumber,  int dayIndex, @JsonKey(name: 'kind', fromJson: DayKind.parse)  DayKind kind,  String title,  String unitTitle,  List<LearnLevel> levels, @JsonKey(name: 'status', fromJson: UnitStatus.parse)  UnitStatus status,  int nextLevelIndex,  String? postId,  String? postContent,  String? imageUrl)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String id,  int season,  int weekNumber,  int dayIndex, @JsonKey(name: 'kind', fromJson: DayKind.parse, toJson: _dayKindWire)  DayKind kind,  String title,  String unitTitle,  List<LearnLevel> levels, @JsonKey(name: 'status', fromJson: UnitStatus.parse, toJson: _unitStatusWire)  UnitStatus status,  int nextLevelIndex,  String? postId,  String? postContent,  String? imageUrl)  $default,) {final _that = this;
 switch (_that) {
 case _LearnUnit():
 return $default(_that.id,_that.season,_that.weekNumber,_that.dayIndex,_that.kind,_that.title,_that.unitTitle,_that.levels,_that.status,_that.nextLevelIndex,_that.postId,_that.postContent,_that.imageUrl);case _:
@@ -1682,7 +1682,7 @@ return $default(_that.id,_that.season,_that.weekNumber,_that.dayIndex,_that.kind
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String id,  int season,  int weekNumber,  int dayIndex, @JsonKey(name: 'kind', fromJson: DayKind.parse)  DayKind kind,  String title,  String unitTitle,  List<LearnLevel> levels, @JsonKey(name: 'status', fromJson: UnitStatus.parse)  UnitStatus status,  int nextLevelIndex,  String? postId,  String? postContent,  String? imageUrl)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String id,  int season,  int weekNumber,  int dayIndex, @JsonKey(name: 'kind', fromJson: DayKind.parse, toJson: _dayKindWire)  DayKind kind,  String title,  String unitTitle,  List<LearnLevel> levels, @JsonKey(name: 'status', fromJson: UnitStatus.parse, toJson: _unitStatusWire)  UnitStatus status,  int nextLevelIndex,  String? postId,  String? postContent,  String? imageUrl)?  $default,) {final _that = this;
 switch (_that) {
 case _LearnUnit() when $default != null:
 return $default(_that.id,_that.season,_that.weekNumber,_that.dayIndex,_that.kind,_that.title,_that.unitTitle,_that.levels,_that.status,_that.nextLevelIndex,_that.postId,_that.postContent,_that.imageUrl);case _:
@@ -1697,14 +1697,14 @@ return $default(_that.id,_that.season,_that.weekNumber,_that.dayIndex,_that.kind
 @JsonSerializable()
 
 class _LearnUnit extends LearnUnit {
-  const _LearnUnit({required this.id, required this.season, required this.weekNumber, required this.dayIndex, @JsonKey(name: 'kind', fromJson: DayKind.parse) required this.kind, required this.title, this.unitTitle = '', final  List<LearnLevel> levels = const <LearnLevel>[], @JsonKey(name: 'status', fromJson: UnitStatus.parse) this.status = UnitStatus.available, this.nextLevelIndex = 0, this.postId, this.postContent, this.imageUrl}): _levels = levels,super._();
+  const _LearnUnit({required this.id, required this.season, required this.weekNumber, required this.dayIndex, @JsonKey(name: 'kind', fromJson: DayKind.parse, toJson: _dayKindWire) required this.kind, required this.title, this.unitTitle = '', final  List<LearnLevel> levels = const <LearnLevel>[], @JsonKey(name: 'status', fromJson: UnitStatus.parse, toJson: _unitStatusWire) this.status = UnitStatus.available, this.nextLevelIndex = 0, this.postId, this.postContent, this.imageUrl}): _levels = levels,super._();
   factory _LearnUnit.fromJson(Map<String, dynamic> json) => _$LearnUnitFromJson(json);
 
 @override final  String id;
 @override final  int season;
 @override final  int weekNumber;
 @override final  int dayIndex;
-@override@JsonKey(name: 'kind', fromJson: DayKind.parse) final  DayKind kind;
+@override@JsonKey(name: 'kind', fromJson: DayKind.parse, toJson: _dayKindWire) final  DayKind kind;
 @override final  String title;
 /// The week's topic, above the day's own title.
 @override@JsonKey() final  String unitTitle;
@@ -1715,7 +1715,7 @@ class _LearnUnit extends LearnUnit {
   return EqualUnmodifiableListView(_levels);
 }
 
-@override@JsonKey(name: 'status', fromJson: UnitStatus.parse) final  UnitStatus status;
+@override@JsonKey(name: 'status', fromJson: UnitStatus.parse, toJson: _unitStatusWire) final  UnitStatus status;
 @override@JsonKey() final  int nextLevelIndex;
 /// The post this unit writes, once `draft` has run.
 @override final  String? postId;
@@ -1755,7 +1755,7 @@ abstract mixin class _$LearnUnitCopyWith<$Res> implements $LearnUnitCopyWith<$Re
   factory _$LearnUnitCopyWith(_LearnUnit value, $Res Function(_LearnUnit) _then) = __$LearnUnitCopyWithImpl;
 @override @useResult
 $Res call({
- String id, int season, int weekNumber, int dayIndex,@JsonKey(name: 'kind', fromJson: DayKind.parse) DayKind kind, String title, String unitTitle, List<LearnLevel> levels,@JsonKey(name: 'status', fromJson: UnitStatus.parse) UnitStatus status, int nextLevelIndex, String? postId, String? postContent, String? imageUrl
+ String id, int season, int weekNumber, int dayIndex,@JsonKey(name: 'kind', fromJson: DayKind.parse, toJson: _dayKindWire) DayKind kind, String title, String unitTitle, List<LearnLevel> levels,@JsonKey(name: 'status', fromJson: UnitStatus.parse, toJson: _unitStatusWire) UnitStatus status, int nextLevelIndex, String? postId, String? postContent, String? imageUrl
 });
 
 
@@ -1799,7 +1799,7 @@ as String?,
 mixin _$LearnPathDay {
 
  int get dayIndex;/// Monday … Sunday, for the node label.
- String get day;@JsonKey(name: 'kind', fromJson: DayKind.parse) DayKind get kind; String get title;@JsonKey(name: 'status', fromJson: UnitStatus.parse) UnitStatus get status; int get levelCount; int get completedCount;/// False means opening this day will GENERATE its ladder — a model call,
+ String get day;@JsonKey(name: 'kind', fromJson: DayKind.parse, toJson: _dayKindWire) DayKind get kind; String get title;@JsonKey(name: 'status', fromJson: UnitStatus.parse, toJson: _unitStatusWire) UnitStatus get status; int get levelCount; int get completedCount;/// False means opening this day will GENERATE its ladder — a model call,
 /// so the client must expect the first open to be slow.
  bool get started;
 /// Create a copy of LearnPathDay
@@ -1834,7 +1834,7 @@ abstract mixin class $LearnPathDayCopyWith<$Res>  {
   factory $LearnPathDayCopyWith(LearnPathDay value, $Res Function(LearnPathDay) _then) = _$LearnPathDayCopyWithImpl;
 @useResult
 $Res call({
- int dayIndex, String day,@JsonKey(name: 'kind', fromJson: DayKind.parse) DayKind kind, String title,@JsonKey(name: 'status', fromJson: UnitStatus.parse) UnitStatus status, int levelCount, int completedCount, bool started
+ int dayIndex, String day,@JsonKey(name: 'kind', fromJson: DayKind.parse, toJson: _dayKindWire) DayKind kind, String title,@JsonKey(name: 'status', fromJson: UnitStatus.parse, toJson: _unitStatusWire) UnitStatus status, int levelCount, int completedCount, bool started
 });
 
 
@@ -1946,7 +1946,7 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( int dayIndex,  String day, @JsonKey(name: 'kind', fromJson: DayKind.parse)  DayKind kind,  String title, @JsonKey(name: 'status', fromJson: UnitStatus.parse)  UnitStatus status,  int levelCount,  int completedCount,  bool started)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( int dayIndex,  String day, @JsonKey(name: 'kind', fromJson: DayKind.parse, toJson: _dayKindWire)  DayKind kind,  String title, @JsonKey(name: 'status', fromJson: UnitStatus.parse, toJson: _unitStatusWire)  UnitStatus status,  int levelCount,  int completedCount,  bool started)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _LearnPathDay() when $default != null:
 return $default(_that.dayIndex,_that.day,_that.kind,_that.title,_that.status,_that.levelCount,_that.completedCount,_that.started);case _:
@@ -1967,7 +1967,7 @@ return $default(_that.dayIndex,_that.day,_that.kind,_that.title,_that.status,_th
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( int dayIndex,  String day, @JsonKey(name: 'kind', fromJson: DayKind.parse)  DayKind kind,  String title, @JsonKey(name: 'status', fromJson: UnitStatus.parse)  UnitStatus status,  int levelCount,  int completedCount,  bool started)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( int dayIndex,  String day, @JsonKey(name: 'kind', fromJson: DayKind.parse, toJson: _dayKindWire)  DayKind kind,  String title, @JsonKey(name: 'status', fromJson: UnitStatus.parse, toJson: _unitStatusWire)  UnitStatus status,  int levelCount,  int completedCount,  bool started)  $default,) {final _that = this;
 switch (_that) {
 case _LearnPathDay():
 return $default(_that.dayIndex,_that.day,_that.kind,_that.title,_that.status,_that.levelCount,_that.completedCount,_that.started);case _:
@@ -1987,7 +1987,7 @@ return $default(_that.dayIndex,_that.day,_that.kind,_that.title,_that.status,_th
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( int dayIndex,  String day, @JsonKey(name: 'kind', fromJson: DayKind.parse)  DayKind kind,  String title, @JsonKey(name: 'status', fromJson: UnitStatus.parse)  UnitStatus status,  int levelCount,  int completedCount,  bool started)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( int dayIndex,  String day, @JsonKey(name: 'kind', fromJson: DayKind.parse, toJson: _dayKindWire)  DayKind kind,  String title, @JsonKey(name: 'status', fromJson: UnitStatus.parse, toJson: _unitStatusWire)  UnitStatus status,  int levelCount,  int completedCount,  bool started)?  $default,) {final _that = this;
 switch (_that) {
 case _LearnPathDay() when $default != null:
 return $default(_that.dayIndex,_that.day,_that.kind,_that.title,_that.status,_that.levelCount,_that.completedCount,_that.started);case _:
@@ -2002,15 +2002,15 @@ return $default(_that.dayIndex,_that.day,_that.kind,_that.title,_that.status,_th
 @JsonSerializable()
 
 class _LearnPathDay extends LearnPathDay {
-  const _LearnPathDay({required this.dayIndex, required this.day, @JsonKey(name: 'kind', fromJson: DayKind.parse) required this.kind, required this.title, @JsonKey(name: 'status', fromJson: UnitStatus.parse) this.status = UnitStatus.locked, this.levelCount = 0, this.completedCount = 0, this.started = false}): super._();
+  const _LearnPathDay({required this.dayIndex, required this.day, @JsonKey(name: 'kind', fromJson: DayKind.parse, toJson: _dayKindWire) required this.kind, required this.title, @JsonKey(name: 'status', fromJson: UnitStatus.parse, toJson: _unitStatusWire) this.status = UnitStatus.locked, this.levelCount = 0, this.completedCount = 0, this.started = false}): super._();
   factory _LearnPathDay.fromJson(Map<String, dynamic> json) => _$LearnPathDayFromJson(json);
 
 @override final  int dayIndex;
 /// Monday … Sunday, for the node label.
 @override final  String day;
-@override@JsonKey(name: 'kind', fromJson: DayKind.parse) final  DayKind kind;
+@override@JsonKey(name: 'kind', fromJson: DayKind.parse, toJson: _dayKindWire) final  DayKind kind;
 @override final  String title;
-@override@JsonKey(name: 'status', fromJson: UnitStatus.parse) final  UnitStatus status;
+@override@JsonKey(name: 'status', fromJson: UnitStatus.parse, toJson: _unitStatusWire) final  UnitStatus status;
 @override@JsonKey() final  int levelCount;
 @override@JsonKey() final  int completedCount;
 /// False means opening this day will GENERATE its ladder — a model call,
@@ -2050,7 +2050,7 @@ abstract mixin class _$LearnPathDayCopyWith<$Res> implements $LearnPathDayCopyWi
   factory _$LearnPathDayCopyWith(_LearnPathDay value, $Res Function(_LearnPathDay) _then) = __$LearnPathDayCopyWithImpl;
 @override @useResult
 $Res call({
- int dayIndex, String day,@JsonKey(name: 'kind', fromJson: DayKind.parse) DayKind kind, String title,@JsonKey(name: 'status', fromJson: UnitStatus.parse) UnitStatus status, int levelCount, int completedCount, bool started
+ int dayIndex, String day,@JsonKey(name: 'kind', fromJson: DayKind.parse, toJson: _dayKindWire) DayKind kind, String title,@JsonKey(name: 'status', fromJson: UnitStatus.parse, toJson: _unitStatusWire) UnitStatus status, int levelCount, int completedCount, bool started
 });
 
 

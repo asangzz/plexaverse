@@ -1,9 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
+
+import '../../../../core/router/zave_routes.dart';
 
 import '../../../../core/ui/app_icons.dart';
 import '../../../../core/ui/zave/zave_kit.dart';
 import '../../application/learn_controllers.dart';
+import '../../domain/learn_repository.dart';
 import '../../domain/learn_unit.dart';
 import '../widgets/lesson_player.dart';
 import '../widgets/level_node.dart';
@@ -50,11 +54,18 @@ class _PathScreen extends ConsumerWidget {
             ZaveEmptyState(
               kicker: 'NOT READY',
               title: 'No week to climb yet',
-              body: e.toString(),
-              action: ZaveButton(
-                label: 'Try again',
-                onPressed: () => ref.invalidate(learnPathProvider),
-              ),
+              body: learnMessage(e),
+              // A week with no plan is not a failed request, and retrying
+              // cannot produce one — the planner is where a week comes from.
+              action: e is LearnNoPlan
+                  ? ZaveButton(
+                      label: 'Open the planner',
+                      onPressed: () => context.push(ZaveRoutes.planner),
+                    )
+                  : ZaveButton(
+                      label: 'Try again',
+                      onPressed: () => ref.invalidate(learnPathProvider),
+                    ),
             ),
           ],
         ),
@@ -279,7 +290,7 @@ class _DayScreen extends ConsumerWidget {
             ZaveEmptyState(
               kicker: 'COULD NOT OPEN',
               title: "Today's lesson did not come through",
-              body: e.toString(),
+              body: learnMessage(e),
               action: ZaveButton(
                 label: 'Try again',
                 // By the user, never automatically — a retry is another
