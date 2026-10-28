@@ -135,10 +135,38 @@ class ErrorInterceptor extends Interceptor {
     'code',
   ];
 
+  /// The stable code, from the top level or from inside `error`.
+  ///
+  /// ## Why the nested case is not an edge case
+  ///
+  /// It is OUR case. The mobile API answers every rejection with
+  /// `{data: null, error: {code, message}, meta}` (RULINGS ruling 7), so the
+  /// code is never at the top level of a 4xx body. Reading only the top
+  /// level left `Failure.errorCode` null for every enveloped rejection in
+  /// the app, which meant each `switch (failure.errorCode)` fell through to
+  /// its generic branch: "you have not connected a company page", "you are
+  /// out of XP", "that is not a post day" and "you spent the five hearts"
+  /// all arrived as "something went wrong".
+  ///
+  /// Two slices found this and worked around it by reaching past [Failure]
+  /// into the raw body (`company`, `engagement`), each noting that the fix
+  /// belonged here. This is that fix; those workarounds still read the same
+  /// value and are unaffected.
+  ///
+  /// `_extractMessage` has always handled the nesting. The asymmetry between
+  /// the two was the whole bug — the message came through and the code did
+  /// not, so a failure looked specific and branched generic.
   String? _extractErrorCode(Object? data) {
     if (data is! Map) return null;
+    final String? top = _codeIn(data);
+    if (top != null) return top;
+    final Object? nested = data['error'];
+    return nested is Map ? _codeIn(nested) : null;
+  }
+
+  String? _codeIn(Map<dynamic, dynamic> map) {
     for (final key in _errorCodeKeys) {
-      final value = data[key];
+      final value = map[key];
       if (value is String && value.isNotEmpty) return value;
       if (value is num) return value.toString();
     }
