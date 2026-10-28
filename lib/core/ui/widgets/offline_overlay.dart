@@ -187,10 +187,14 @@ class _PillSurface extends StatelessWidget {
       // ONE white surface in a midnight app, over every screen, at the moment
       // the user is already unhappy. Amber because Zave has no red and this is
       // "waiting on something", not "broken".
+      // `shape` ONLY — Material asserts on being given both it and
+      // `borderRadius`, and the assert is the whole widget, not a warning:
+      // the overlay threw on every build and the app logged a framework
+      // error behind every screen. The shape already carries the same
+      // radius, plus the amber hairline that `borderRadius` cannot express.
       child: Material(
         color: ZaveColors.deep,
         elevation: 0,
-        borderRadius: BorderRadius.circular(AppRadius.lg.r),
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(AppRadius.lg.r),
           side: const BorderSide(color: ZaveColors.amber, width: 1),
