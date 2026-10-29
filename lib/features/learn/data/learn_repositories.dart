@@ -592,6 +592,32 @@ class FakeLearnRepository implements LearnRepository {
           l.copyWith(
             status: LevelStatus.complete,
             completedAt: DateTime.now().toIso8601String(),
+            // The ANSWERS are banked too, as the server banks them.
+            //
+            // Without this the mock completed a level and remembered
+            // nothing of what was typed into it, so `collectLearnerInput`
+            // found no lines and the draft level's "your lines" report —
+            // the whole point of the feature — could never appear in the
+            // flavor the app is demonstrated in.
+            answers: <LevelAnswer>[
+              for (int i = 0; i < level.exercises.length; i++)
+                LevelAnswer(
+                  exerciseId: level.exercises[i].id,
+                  value: answers
+                      .firstWhere(
+                        (LevelAnswer a) =>
+                            a.exerciseId == level.exercises[i].id,
+                        orElse: () => LevelAnswer(
+                          exerciseId: level.exercises[i].id,
+                          value: '',
+                        ),
+                      )
+                      .value,
+                  correct: level.exercises[i].isCompose
+                      ? null
+                      : results[i].correct,
+                ),
+            ],
           )
         else
           l,

@@ -43,7 +43,7 @@ LearnUnit _unitWith(LearnLevel level) => LearnUnit(
   ],
 );
 
-Future<void> _pump(WidgetTester tester, LearnUnit unit) async {
+Future<void> _pump(WidgetTester tester, LearnUnit unit, {int? openAt}) async {
   await tester.pumpWidget(
     ProviderScope(
       overrides: <Override>[
@@ -51,13 +51,50 @@ Future<void> _pump(WidgetTester tester, LearnUnit unit) async {
       ],
       child: MaterialApp(
         home: Scaffold(
-          body: LessonPlayer(unit: unit, week: 4, day: 0, onClose: () {}),
+          body: LessonPlayer(
+            unit: unit,
+            week: 4,
+            day: 0,
+            openAt: openAt,
+            onClose: () {},
+          ),
         ),
       ),
     ),
   );
-  await tester.pump();
+  await tester.pumpAndSettle();
 }
+
+LearnUnit _draftedUnit({required String hook, required String post}) => LearnUnit(
+  id: 'unit-1',
+  season: 1,
+  weekNumber: 4,
+  dayIndex: 0,
+  kind: DayKind.post,
+  title: 'Why most onboarding docs go unread',
+  nextLevelIndex: 1,
+  postContent: post,
+  levels: <LearnLevel>[
+    LearnLevel(
+      index: 0,
+      kind: LevelKind.hook,
+      title: 'The first line',
+      status: LevelStatus.complete,
+      completedAt: '2026-10-29T00:00:00.000Z',
+      exercises: const <Exercise>[
+        Exercise(id: 'h1', type: 'compose', prompt: 'Write your opening.'),
+      ],
+      answers: <LevelAnswer>[LevelAnswer(exerciseId: 'h1', value: hook)],
+    ),
+    const LearnLevel(
+      index: 1,
+      kind: LevelKind.draft,
+      title: 'Write the post',
+      status: LevelStatus.complete,
+      completedAt: '2026-10-29T00:00:00.000Z',
+    ),
+  ],
+);
 
 void main() {
   testWidgets('a level with no questions can still be finished', (
@@ -124,5 +161,42 @@ void main() {
     expect(find.text('Got it'), findsNothing);
     expect(find.text('Check'), findsOneWidget);
     expect(find.text('Skip'), findsOneWidget);
+  });
+
+  testWidgets('a dropped opening is said out loud, with both lines', (
+    WidgetTester tester,
+  ) async {
+    // The failure that reached a real user: the post opened with the
+    // planner's title while the line the author had just been taught to
+    // write sat unused, and nothing on screen said so.
+    await _pump(
+      tester,
+      _draftedUnit(
+        hook: 'We deleted six onboarding screens and nobody noticed.',
+        post: 'Most onboarding fails in week one.\n\nSome middle.',
+      ),
+      openAt: 1,
+    );
+
+    expect(find.text('YOUR LINES'), findsOneWidget);
+    expect(
+      find.text('Your opening — Plexa went another way.'),
+      findsOneWidget,
+    );
+    expect(find.textContaining('You can put your own line back'), findsOneWidget);
+  });
+
+  testWidgets('a kept opening says so, and offers no apology', (
+    WidgetTester tester,
+  ) async {
+    const String hook = 'We deleted six onboarding screens and nobody noticed.';
+    await _pump(
+      tester,
+      _draftedUnit(hook: hook, post: '$hook\n\nSome middle.'),
+      openAt: 1,
+    );
+
+    expect(find.text('Your opening — used word for word.'), findsOneWidget);
+    expect(find.textContaining('You can put your own line back'), findsNothing);
   });
 }

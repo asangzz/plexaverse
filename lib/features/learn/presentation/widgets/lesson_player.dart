@@ -6,6 +6,7 @@ import '../../../../core/ui/app_icons.dart';
 import '../../../../core/ui/zave/zave_kit.dart';
 import '../../application/learn_controllers.dart';
 import '../../domain/learn_unit.dart';
+import '../../domain/learner_lines.dart';
 import 'exercise_views.dart';
 import 'level_node.dart';
 import 'quiz_shell.dart';
@@ -686,6 +687,8 @@ class _ActionLevelState extends ConsumerState<_ActionLevel>
         crossAxisAlignment: CrossAxisAlignment.start,
         children: <Widget>[
           _Written(label: 'YOUR POST', body: widget.unit.postContent!),
+          SizedBox(height: ZaveSpace.lg),
+          _LearnerLines(unit: widget.unit),
           SizedBox(height: ZaveSpace.xl),
           _continue(),
         ],
@@ -817,6 +820,8 @@ class _ActionLevelState extends ConsumerState<_ActionLevel>
         if (widget.unit.postContent case final String body
             when body.isNotEmpty) ...<Widget>[
           _Written(label: 'WHAT YOU MADE', body: body),
+          SizedBox(height: ZaveSpace.lg),
+          _LearnerLines(unit: widget.unit),
           SizedBox(height: ZaveSpace.xl),
         ],
         _Taught(unit: widget.unit),
@@ -849,6 +854,136 @@ class _ActionLevelState extends ConsumerState<_ActionLevel>
     expand: true,
     trailing: const Icon(AppIcons.forward),
     onPressed: widget.onDone,
+  );
+}
+
+/// What happened to the lines the learner wrote.
+///
+/// The point of this whole feature is that the post comes out of what they
+/// wrote. When it does not — and sometimes it legitimately will not, because
+/// a hook that reads well on its own does not always carry a post — saying so
+/// is the difference between a product that respects the work and one that
+/// quietly drops it. A learner whose line disappears without a word stops
+/// writing lines.
+///
+/// `edited` is reported as a success, not a departure: the prompt explicitly
+/// asks for light tidying, so a recognisably-theirs opening is the intended
+/// outcome, and flagging it would train people to distrust a correct result.
+class _LearnerLines extends StatelessWidget {
+  const _LearnerLines({required this.unit});
+
+  final LearnUnit unit;
+
+  @override
+  Widget build(BuildContext context) {
+    final LearnerLineReport? report = reportLearnerLines(
+      unit.levels,
+      unit.postContent,
+    );
+    if (report == null || report.isEmpty) return const SizedBox.shrink();
+
+    final Color tint = report.anyReplaced
+        ? ZaveColors.amber
+        : ZaveColors.green;
+
+    return Container(
+      width: double.infinity,
+      padding: ZaveSpace.cardPad,
+      decoration: BoxDecoration(
+        color: tint.withValues(alpha: 0.05),
+        border: Border.all(color: tint.withValues(alpha: 0.22)),
+        borderRadius: ZaveRadius.cardBr,
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: <Widget>[
+          Text('YOUR LINES', style: ZaveType.kicker),
+          SizedBox(height: ZaveSpace.md),
+          _LineRow(label: 'Your opening', verdict: report.hook),
+          if (report.hook.outcome != LineOutcome.missing &&
+              report.close.outcome != LineOutcome.missing)
+            SizedBox(height: ZaveSpace.md),
+          _LineRow(label: 'Your ask', verdict: report.close),
+          if (report.anyReplaced) ...<Widget>[
+            SizedBox(height: ZaveSpace.md),
+            Text(
+              'You can put your own line back in the post editor — nothing '
+              'here is final until you approve it.',
+              style: ZaveType.caption.copyWith(color: ZaveColors.ink45),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+class _LineRow extends StatelessWidget {
+  const _LineRow({required this.label, required this.verdict});
+
+  final String label;
+  final LineVerdict verdict;
+
+  @override
+  Widget build(BuildContext context) {
+    if (verdict.outcome == LineOutcome.missing) {
+      return const SizedBox.shrink();
+    }
+    final bool survived = verdict.outcome.survived;
+    final Color tint = survived ? ZaveColors.green : ZaveColors.amber;
+
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: <Widget>[
+        Padding(
+          padding: const EdgeInsets.only(top: 6),
+          child: ZaveDot(tint),
+        ),
+        SizedBox(width: ZaveSpace.sm),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: <Widget>[
+              Text(
+                switch (verdict.outcome) {
+                  LineOutcome.kept => '$label — used word for word.',
+                  LineOutcome.edited => '$label — used, lightly tidied.',
+                  _ => '$label — Plexa went another way.',
+                },
+                style: ZaveType.label.copyWith(color: tint),
+              ),
+              if (!survived) ...<Widget>[
+                SizedBox(height: ZaveSpace.xs),
+                _Quote(label: 'You wrote', body: verdict.written ?? ''),
+                SizedBox(height: ZaveSpace.xs),
+                _Quote(label: 'The post has', body: verdict.shipped),
+              ],
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _Quote extends StatelessWidget {
+  const _Quote({required this.label, required this.body});
+
+  final String label;
+  final String body;
+
+  @override
+  Widget build(BuildContext context) => Text.rich(
+    TextSpan(
+      children: <InlineSpan>[
+        TextSpan(text: '$label: '),
+        TextSpan(
+          text: '“$body”',
+          style: ZaveType.caption.copyWith(color: ZaveColors.ink85),
+        ),
+      ],
+    ),
+    style: ZaveType.caption.copyWith(color: ZaveColors.ink45),
   );
 }
 
