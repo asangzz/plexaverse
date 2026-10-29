@@ -96,13 +96,36 @@ class LearnUnitController extends _$LearnUnitController {
   }
 }
 
-/// Which day's player is open, if any.
+/// A node on the path: which day, and which level of it.
+///
+/// The level matters because the path draws its nodes from the TEMPLATE,
+/// before any ladder exists — so a user can tap the fifth node of a day that
+/// has never been opened. The ladder, once it arrives, is the authority on
+/// whether that level is actually reachable; see `LessonPlayer`.
+class LearnSpot {
+  const LearnSpot(this.dayIndex, this.levelIndex);
+
+  final int dayIndex;
+  final int levelIndex;
+
+  @override
+  bool operator ==(Object other) =>
+      other is LearnSpot &&
+      other.dayIndex == dayIndex &&
+      other.levelIndex == levelIndex;
+
+  @override
+  int get hashCode => Object.hash(dayIndex, levelIndex);
+}
+
+/// Which node is open, if any.
 @riverpod
 class LearnOpenDay extends _$LearnOpenDay {
   @override
-  int? build() => null;
+  LearnSpot? build() => null;
 
-  void open(int dayIndex) => state = dayIndex;
+  void open(int dayIndex, [int levelIndex = 0]) =>
+      state = LearnSpot(dayIndex, levelIndex);
   void close() => state = null;
 }
 

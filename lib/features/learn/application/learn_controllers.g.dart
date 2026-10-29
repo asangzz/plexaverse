@@ -333,14 +333,15 @@ abstract class _$LearnUnitController extends $AsyncNotifier<LearnUnit> {
   }
 }
 
-/// Which day's player is open, if any.
+/// Which node is open, if any.
 
 @ProviderFor(LearnOpenDay)
 final learnOpenDayProvider = LearnOpenDayProvider._();
 
-/// Which day's player is open, if any.
-final class LearnOpenDayProvider extends $NotifierProvider<LearnOpenDay, int?> {
-  /// Which day's player is open, if any.
+/// Which node is open, if any.
+final class LearnOpenDayProvider
+    extends $NotifierProvider<LearnOpenDay, LearnSpot?> {
+  /// Which node is open, if any.
   LearnOpenDayProvider._()
     : super(
         from: null,
@@ -360,29 +361,29 @@ final class LearnOpenDayProvider extends $NotifierProvider<LearnOpenDay, int?> {
   LearnOpenDay create() => LearnOpenDay();
 
   /// {@macro riverpod.override_with_value}
-  Override overrideWithValue(int? value) {
+  Override overrideWithValue(LearnSpot? value) {
     return $ProviderOverride(
       origin: this,
-      providerOverride: $SyncValueProvider<int?>(value),
+      providerOverride: $SyncValueProvider<LearnSpot?>(value),
     );
   }
 }
 
-String _$learnOpenDayHash() => r'bf8a4a85df2e8e164ed149c206820518fe3b3df4';
+String _$learnOpenDayHash() => r'14265a6a9a693801f08d9661c826625cf8474020';
 
-/// Which day's player is open, if any.
+/// Which node is open, if any.
 
-abstract class _$LearnOpenDay extends $Notifier<int?> {
-  int? build();
+abstract class _$LearnOpenDay extends $Notifier<LearnSpot?> {
+  LearnSpot? build();
   @$mustCallSuper
   @override
   void runBuild() {
-    final ref = this.ref as $Ref<int?, int?>;
+    final ref = this.ref as $Ref<LearnSpot?, LearnSpot?>;
     final element =
         ref.element
             as $ClassProviderElement<
-              AnyNotifier<int?, int?>,
-              int?,
+              AnyNotifier<LearnSpot?, LearnSpot?>,
+              LearnSpot?,
               Object?,
               Object?
             >;

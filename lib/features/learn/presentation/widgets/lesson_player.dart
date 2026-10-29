@@ -40,6 +40,7 @@ class LessonPlayer extends ConsumerStatefulWidget {
     required this.week,
     required this.day,
     required this.onClose,
+    this.openAt,
     super.key,
   });
 
@@ -47,6 +48,14 @@ class LessonPlayer extends ConsumerStatefulWidget {
   final int week;
   final int day;
   final VoidCallback onClose;
+
+  /// The node the user tapped on the path.
+  ///
+  /// The path draws its nodes from the TEMPLATE, before any ladder exists,
+  /// so a tap can land on a level the learner has not reached. The ladder is
+  /// the authority: a locked target is ignored and the run keeps its own
+  /// seed, which is the server's `nextLevelIndex`.
+  final int? openAt;
 
   @override
   ConsumerState<LessonPlayer> createState() => _LessonPlayerState();
@@ -60,6 +69,24 @@ class _LessonPlayerState extends ConsumerState<LessonPlayer> {
   /// these write into on every keystroke.
   final Map<String, TextEditingController> _controllers =
       <String, TextEditingController>{};
+
+  @override
+  void initState() {
+    super.initState();
+    final int? target = widget.openAt;
+    if (target == null) return;
+    // Post-frame: a provider cannot be written to while the tree is
+    // building. The run has already seeded itself to the ladder's own open
+    // level, so this only ever moves a learner who tapped somewhere else —
+    // and only when that somewhere is actually reachable.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      final List<LearnLevel> levels = widget.unit.levels;
+      if (target < 0 || target >= levels.length) return;
+      if (levels[target].isLocked) return;
+      _run.goToLevel(target);
+    });
+  }
 
   @override
   void dispose() {

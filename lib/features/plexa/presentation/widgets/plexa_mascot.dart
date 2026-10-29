@@ -46,6 +46,7 @@ class PlexaMascot extends StatefulWidget {
     required this.clips,
     this.height,
     this.hold = false,
+    this.still = false,
     super.key,
   });
 
@@ -59,6 +60,15 @@ class PlexaMascot extends StatefulWidget {
   /// Crest to feet. Null fills the height it is given — what `/plexa` does,
   /// animating that height as the bird flies into the chat's top row.
   final double? height;
+
+  /// Show the clip's last frame and load no video at all.
+  ///
+  /// For screens where Plexa is scenery rather than a performance — the
+  /// Learn path is thirty nodes long, and a looping video parked in it would
+  /// play for the whole time the user is reading a lesson list. The still is
+  /// the same frame the clip ends on, so a screen that later switches to the
+  /// live mascot does not jump.
+  final bool still;
 
   /// Don't start the current clip yet — the web's `hold`. Plexa stays off
   /// stage (the hello clip's first frame is empty anyway) and starts from
@@ -102,7 +112,7 @@ class _PlexaMascotState extends State<PlexaMascot> {
     if (_started) return;
     _started = true;
     _reduceMotion = MediaQuery.disableAnimationsOf(context);
-    if (_reduceMotion) return;
+    if (_reduceMotion || widget.still) return;
     // The one asked for first, so it is not queued behind the others.
     for (final PlexaClip id in <PlexaClip>[
       widget.clip,
@@ -164,7 +174,7 @@ class _PlexaMascotState extends State<PlexaMascot> {
   }
 
   Widget? _frame() {
-    if (_reduceMotion || _stills.contains(widget.clip)) {
+    if (_reduceMotion || widget.still || _stills.contains(widget.clip)) {
       return Image.asset(widget.clip.still, fit: BoxFit.fill);
     }
     final PlexaClip? shown = _shown;
