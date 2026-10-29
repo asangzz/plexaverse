@@ -119,6 +119,20 @@ dependencies:
   # BlendMask) was replaceable with existing Flutter/Plexaverse primitives.
   flutter_animate: ^4.5.0
 
+  # Dictation — speaking a post instead of typing it, behind the
+  # core/platform speech-input seam. Recognition is the OS's (iOS
+  # Speech.framework, Android SpeechRecognizer), so no audio and no
+  # transcript passes through a Plexaverse server and no recipient is added
+  # under DPDP s11. Not the web's Business English feature — that one is a
+  # live two-way WebRTC call with a model on the other end.
+  # Needs NSMicrophoneUsageDescription + NSSpeechRecognitionUsageDescription
+  # on iOS and RECORD_AUDIO plus a <queries> entry on Android.
+  #
+  # PINNED BELOW 7.5.0 on purpose: 7.5.0 raised its floor to Flutter 3.44 /
+  # Dart 3.12 and this project is on Flutter 3.41.8. Lift the ceiling in the
+  # same change that lifts the toolchain, not before — a caret range here
+  # resolves to a version that cannot build.
+  speech_to_text: ">=7.4.0 <7.5.0"
   # OAuth — LinkedIn in-app browser flow, wrapped behind the
   # core/platform web-auth adapter seam.
   flutter_web_auth_2: ^4.0.1

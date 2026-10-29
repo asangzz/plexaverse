@@ -85,6 +85,14 @@
 	</array>
 	<!-- image_picker. iOS terminates the app on a picker launch when the
 	     matching usage string is absent, so these are required, not optional. -->
+	<!-- Dictation. BOTH are required and they are not interchangeable:
+	     NSMicrophoneUsageDescription covers capturing the audio,
+	     NSSpeechRecognitionUsageDescription covers turning it into text.
+	     Ship one without the other and the app is killed on first use. -->
+	<key>NSMicrophoneUsageDescription</key>
+	<string>Plexaverse uses your microphone so you can speak a post instead of typing it.</string>
+	<key>NSSpeechRecognitionUsageDescription</key>
+	<string>Plexaverse turns what you say into text for your post. Recognition is handled by iOS.</string>
 	<key>NSPhotoLibraryUsageDescription</key>
 	<string>Plexaverse needs access to your photos so you can add an image to a post, set your profile picture, or upload your company logo.</string>
 	<key>NSCameraUsageDescription</key>

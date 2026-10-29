@@ -565,6 +565,13 @@ class _Rewrite extends StatelessWidget {
       minLines: 3,
       maxLines: 5,
       enabled: verdict == null,
+      suffix: verdict != null || controller == null
+          ? null
+          : ZaveDictateButton(
+              controller: controller!,
+              fieldId: 'learn.rewrite',
+              onChanged: onChanged,
+            ),
       onChanged: onChanged,
     ),
   );
@@ -604,6 +611,16 @@ class _Compose extends StatelessWidget {
         minLines: 4,
         maxLines: 8,
         enabled: verdict == null,
+        // The one place in the product that asks for the user's own account
+        // of their own work, and the hardest to type on a phone. Locked
+        // once the server has answered, like the box itself.
+        suffix: verdict != null || controller == null
+            ? null
+            : ZaveDictateButton(
+                controller: controller!,
+                fieldId: 'learn.compose',
+                onChanged: onChanged,
+              ),
         onChanged: onChanged,
       ),
     ],

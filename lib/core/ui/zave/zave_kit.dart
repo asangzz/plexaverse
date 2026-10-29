@@ -21,6 +21,7 @@ export 'zave_brand_mark.dart';
 export 'zave_button.dart';
 export 'zave_card.dart';
 export 'zave_chip.dart';
+export 'zave_dictate_button.dart';
 export 'zave_empty_state.dart';
 export 'zave_field.dart';
 export 'zave_ground.dart';

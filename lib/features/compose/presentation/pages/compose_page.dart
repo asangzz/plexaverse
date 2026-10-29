@@ -236,6 +236,19 @@ class _ComposePageState extends ConsumerState<ComposePage> {
         maxLength: ComposeDraft.charLimit,
         keyboardType: TextInputType.multiline,
         textInputAction: TextInputAction.newline,
+        // Speak the post instead of typing it. The longest field in the
+        // product, and the one a user is most likely to be composing away
+        // from a desk. Hides itself where the device cannot dictate.
+        suffix: ZaveDictateButton(
+          controller: _body,
+          fieldId: 'compose.body',
+          // The field's own onChanged does not fire for a programmatic
+          // write, so the draft would not see a dictated post at all.
+          onChanged: (String value) {
+            actions.clearFeedback();
+            drafts.setContent(value);
+          },
+        ),
         onChanged: (String value) {
           actions.clearFeedback();
           drafts.setContent(value);

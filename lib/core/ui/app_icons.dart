@@ -173,6 +173,23 @@ class AppIcons {
     fontPackage: _pkg,
   ); // forwardStep — "not this one"
 
+  /// Dictation, idle. Verified against font_awesome_flutter 10.8.0's own
+  /// `microphone` (0xf130) rather than from memory — FA codepoints move
+  /// between major versions and a wrong one renders tofu, not a fallback.
+  static const IconData mic = IconData(
+    0xf130,
+    fontFamily: _family,
+    fontPackage: _pkg,
+  ); // microphone
+
+  /// Dictation, live. A different glyph and not just a different colour:
+  /// colour alone is the one difference a colour-blind user may not get.
+  static const IconData micOn = IconData(
+    0xf3c9,
+    fontFamily: _family,
+    fontPackage: _pkg,
+  ); // microphoneLines
+
   // ── Status & feedback ─────────────────────────────────────────────────
   static const IconData checkCircle = IconData(
     0xf058,
@@ -618,6 +635,8 @@ class AppIcons {
     'skip': skip,
     'checkCircle': checkCircle,
     'error': error,
+    'mic': mic,
+    'micOn': micOn,
     'info': info,
     'warning': warning,
     'star': star,

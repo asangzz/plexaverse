@@ -1,6 +1,9 @@
 PODS:
   - connectivity_plus (0.0.1):
     - Flutter
+  - CwlCatchException (2.2.1):
+    - CwlCatchExceptionSupport (~> 2.2.1)
+  - CwlCatchExceptionSupport (2.2.1)
   - file_picker_darwin (1.0.0):
     - Flutter
     - FlutterMacOS
@@ -185,6 +188,10 @@ PODS:
   - shared_preferences_foundation (0.0.1):
     - Flutter
     - FlutterMacOS
+  - speech_to_text (7.2.0):
+    - CwlCatchException
+    - Flutter
+    - FlutterMacOS
   - sqflite_darwin (0.0.4):
     - Flutter
     - FlutterMacOS
@@ -224,6 +231,7 @@ DEPENDENCIES:
   - screen_protector (from `.symlinks/plugins/screen_protector/ios`)
   - share_plus (from `.symlinks/plugins/share_plus/ios`)
   - shared_preferences_foundation (from `.symlinks/plugins/shared_preferences_foundation/darwin`)
+  - speech_to_text (from `.symlinks/plugins/speech_to_text/darwin`)
   - sqflite_darwin (from `.symlinks/plugins/sqflite_darwin/darwin`)
   - sqlcipher_flutter_libs (from `.symlinks/plugins/sqlcipher_flutter_libs/ios`)
   - url_launcher_ios (from `.symlinks/plugins/url_launcher_ios/ios`)
@@ -232,6 +240,8 @@ DEPENDENCIES:
 
 SPEC REPOS:
   trunk:
+    - CwlCatchException
+    - CwlCatchExceptionSupport
     - Firebase
     - FirebaseAnalytics
     - FirebaseCore
@@ -293,6 +303,8 @@ EXTERNAL SOURCES:
     :path: ".symlinks/plugins/share_plus/ios"
   shared_preferences_foundation:
     :path: ".symlinks/plugins/shared_preferences_foundation/darwin"
+  speech_to_text:
+    :path: ".symlinks/plugins/speech_to_text/darwin"
   sqflite_darwin:
     :path: ".symlinks/plugins/sqflite_darwin/darwin"
   sqlcipher_flutter_libs:
@@ -306,6 +318,8 @@ EXTERNAL SOURCES:
 
 SPEC CHECKSUMS:
   connectivity_plus: 2a701ffec2c0ae28a48cf7540e279787e77c447d
+  CwlCatchException: 7acc161b299a6de7f0a46a6ed741eae2c8b4d75a
+  CwlCatchExceptionSupport: 54ccab8d8c78907b57f99717fb19d4cc3bce02dc
   file_picker_darwin: 27e043831d68462d54f1c40e724b1f53c9d1e8be
   Firebase: a8539b633d474fbeb654c7043f9c1649e274045b
   firebase_analytics: 444603cf97c21326b60115cd18d28f4a56bd78f6
@@ -344,6 +358,7 @@ SPEC CHECKSUMS:
   ScreenProtectorKit: 6ceb3e0808341a9bc15d175bff40dfdd4b32da71
   share_plus: 8b6f8b3447e494cca5317c8c3073de39b3600d1f
   shared_preferences_foundation: 5086985c1d43c5ba4d5e69a4e8083a389e2909e6
+  speech_to_text: 87bf9298952e8d9073be1b6aade6d5758db5170c
   sqflite_darwin: 5a7236e3b501866c1c9befc6771dfd73ffb8702d
   SQLCipher: eb79c64049cb002b4e9fcb30edb7979bf4706dfc
   sqlcipher_flutter_libs: d1cde2d92cd9dbf09a77e460ea19412fac319d48
