@@ -288,6 +288,17 @@ void main() {
       expect((await fake.fetchWhatsApp()).connected, isTrue);
     });
 
+    test('the masked number keeps the country code and the last four', () async {
+      // Mirrors the server's maskPhone (+91 ••••• 3210). Bulleting everything
+      // but the last two digits reads as a shape production never produces,
+      // and a masked number its owner cannot recognise is not much use.
+      await fake.sendWhatsAppCode(phone: '+919876543210');
+      await fake.confirmWhatsAppCode('123456');
+
+      final String? masked = (await fake.fetchWhatsApp()).phoneMasked;
+      expect(masked, '+91 ••••• 3210');
+    });
+
     test('disconnecting a plain connection clears it', () async {
       await fake.sendWhatsAppCode(phone: '9876543210');
       await fake.confirmWhatsAppCode('123456');

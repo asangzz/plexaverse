@@ -761,9 +761,21 @@ class FakeSettingsRepository implements SettingsRepository {
     _whatsApp = _whatsApp.copyWith(optedOut: true);
   }
 
-  /// The last two digits, like the server's maskPhone.
-  static String _mask(String digits) =>
-      '${'•' * (digits.length - 2).clamp(0, 10)}${digits.substring(digits.length - 2)}';
+  /// Mirrors the server's maskPhone: +919876543210 → `+91 ••••• 3210`.
+  ///
+  /// Keeping the country code and the last four is what makes a masked number
+  /// recognisable to its owner. An earlier version here bulleted everything
+  /// but the last two, which read as `•••••••10` on screen — a shape
+  /// production never produces, so the mock was showing something that could
+  /// not happen.
+  static String _mask(String digits) {
+    final String e164 = digits.startsWith('+') ? digits : '+$digits';
+    if (e164.length < 8) return '••••';
+    final String cc = e164.length > 10
+        ? e164.substring(0, e164.length - 10)
+        : e164.substring(0, 3);
+    return '$cc ••••• ${e164.substring(e164.length - 4)}';
+  }
 
   @override
   Future<CalendarConnection> fetchCalendar() async {
