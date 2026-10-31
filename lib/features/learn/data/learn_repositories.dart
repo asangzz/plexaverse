@@ -289,7 +289,10 @@ class FakeLearnRepository implements LearnRepository {
       _hook(1),
       _substance(2),
       _close(3),
-      _action(4, LevelKind.draft, 'Write the post'),
+      // Named for what the day makes, like kLadderTemplate and the server's
+      // own LADDER_TEMPLATE. Hardcoding "post" here put "Write the post" on a
+      // script day in the mock flavor — the exact thing the web just fixed.
+      _action(4, LevelKind.draft, 'Write the ${kind.madeThing}'),
       if (kind == DayKind.post) _action(5, LevelKind.visual, 'Make the poster'),
       _action(kind == DayKind.post ? 6 : 5, LevelKind.review, 'Read it back'),
     ];

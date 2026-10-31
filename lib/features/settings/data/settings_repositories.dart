@@ -1,5 +1,5 @@
 import '../../../core/mock/mock_constants.dart';
-import 'package:flutter/foundation.dart' show kReleaseMode;
+import 'package:flutter/foundation.dart' show kReleaseMode, visibleForTesting;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/config/env.dart';
@@ -204,6 +204,100 @@ class ApiSettingsRepository implements SettingsRepository {
     } on Object {
       throw const SettingsUnavailable();
     }
+  }
+
+  @override
+  Future<WhatsAppConnection> fetchWhatsApp() async {
+    try {
+      final Response<Map<String, dynamic>> response = await _client
+          .get<Map<String, dynamic>>(ApiPaths.userWhatsApp);
+      final Map<String, dynamic>? data = response.data;
+      // No row and no credentials look the same from here: nothing to offer.
+      if (data == null) return const WhatsAppConnection();
+      return WhatsAppConnection.fromJson(data);
+    } on Object {
+      throw const SettingsUnavailable();
+    }
+  }
+
+  @override
+  Future<void> sendWhatsAppCode({
+    required String phone,
+    String? defaultCountryCode,
+  }) async {
+    try {
+      await _client.post<Map<String, dynamic>>(
+        ApiPaths.userWhatsAppVerify,
+        data: <String, dynamic>{
+          'phone': phone,
+          'defaultCountryCode': ?defaultCountryCode,
+        },
+      );
+    } on DioException catch (e) {
+      throw _whatsAppFailure(e) ?? const SettingsUnavailable();
+    }
+  }
+
+  @override
+  Future<void> confirmWhatsAppCode(String code) async {
+    try {
+      await _client.put<Map<String, dynamic>>(
+        ApiPaths.userWhatsAppVerify,
+        data: <String, dynamic>{'code': code},
+      );
+    } on DioException catch (e) {
+      throw _whatsAppFailure(e) ?? const SettingsUnavailable();
+    }
+  }
+
+  @override
+  Future<void> disconnectWhatsApp() async {
+    try {
+      await _client.delete<Map<String, dynamic>>(ApiPaths.userWhatsApp);
+    } on Object {
+      throw const SettingsUnavailable();
+    }
+  }
+
+  @override
+  Future<void> resumeWhatsApp() async {
+    try {
+      await _client.patch<Map<String, dynamic>>(
+        ApiPaths.userWhatsApp,
+        // One direction only. The server refuses anything else: opting OUT
+        // from here would be a second, weaker path to what the inbound STOP
+        // webhook already does properly.
+        data: <String, dynamic>{'optedOut': false},
+      );
+    } on Object {
+      throw const SettingsUnavailable();
+    }
+  }
+
+  /// The three refusals worth telling apart, by the server's own error code.
+  ///
+  /// Everything else falls to [SettingsUnavailable], which is what the rest of
+  /// this repository does — these three are singled out because each one sends
+  /// the user somewhere different: wait, agree, or retype.
+  Object? _whatsAppFailure(DioException e) {
+    final Failure? failure = e.error is Failure ? e.error as Failure : null;
+    final String message = failure?.message ?? '';
+    return switch (failure?.errorCode) {
+      'COOLDOWN' => WhatsAppCooldown(
+        message.isEmpty ? 'Wait a moment before asking for another code.' : message,
+      ),
+      'CONSENT_REQUIRED' => WhatsAppConsentRequired(
+        message.isEmpty ? 'Agree to WhatsApp messages first.' : message,
+      ),
+      'WRONG_CODE' => WhatsAppWrongCode(
+        message.isEmpty ? 'That code is not right.' : message,
+      ),
+      // A typed number the server could not read comes back as a plain
+      // validation failure carrying a finished sentence; show that rather
+      // than "something went wrong".
+      'VALIDATION_FAILED' when message.isNotEmpty => WhatsAppRejected(message),
+      _ => null,
+    };
   }
 
   @override
@@ -589,6 +683,87 @@ class FakeSettingsRepository implements SettingsRepository {
     await Future<void>.delayed(_latency);
     _slack = const SlackConnection();
   }
+
+  /// WhatsApp, with the states that matter actually reachable.
+  ///
+  /// The code is `123456` and a wrong one throws, because a fake that accepts
+  /// anything cannot show the one screen this flow has that the others do not
+  /// — the retry on a bad code. `000000` stands in for the cooldown. Without
+  /// these the mock flavor could only ever walk the happy path, which is how
+  /// a refusal screen ships unseen.
+  WhatsAppConnection _whatsApp = const WhatsAppConnection(available: true);
+
+  @override
+  Future<WhatsAppConnection> fetchWhatsApp() async {
+    await Future<void>.delayed(_latency);
+    return _whatsApp;
+  }
+
+  @override
+  Future<void> sendWhatsAppCode({
+    required String phone,
+    String? defaultCountryCode,
+  }) async {
+    await Future<void>.delayed(_latency);
+    if (_whatsApp.optedOut) {
+      throw const WhatsAppRejected(
+        'You told us to stop. Turn messages back on first.',
+      );
+    }
+    final String digits = phone.replaceAll(RegExp(r'[^0-9]'), '');
+    if (digits.length < 8) {
+      throw const WhatsAppRejected('That does not look like a phone number.');
+    }
+    if (digits.endsWith('0000')) {
+      throw const WhatsAppCooldown(
+        'Wait 45 seconds before asking for another code.',
+      );
+    }
+    _whatsApp = _whatsApp.copyWith(
+      awaitingCode: true,
+      phoneMasked: _mask(digits),
+    );
+  }
+
+  @override
+  Future<void> confirmWhatsAppCode(String code) async {
+    await Future<void>.delayed(_latency);
+    if (code.trim() != '123456') throw const WhatsAppWrongCode();
+    _whatsApp = _whatsApp.copyWith(connected: true, awaitingCode: false);
+  }
+
+  @override
+  Future<void> disconnectWhatsApp() async {
+    await Future<void>.delayed(_latency);
+    // Mirrors the server: an opt-out outlives a disconnect, so the flag stays
+    // and only the verification is torn down.
+    _whatsApp = WhatsAppConnection(
+      available: true,
+      optedOut: _whatsApp.optedOut,
+      phoneMasked: _whatsApp.optedOut ? _whatsApp.phoneMasked : null,
+    );
+  }
+
+  @override
+  Future<void> resumeWhatsApp() async {
+    await Future<void>.delayed(_latency);
+    _whatsApp = _whatsApp.copyWith(optedOut: false);
+  }
+
+  /// Put the fake into the opted-out state.
+  ///
+  /// There is no app action that does this — a STOP arrives on WhatsApp and
+  /// reaches the server through its webhook — so without a way in, the one
+  /// rule worth pinning (a disconnect must not clear it) is unreachable from
+  /// a test and unreachable in the mock flavor.
+  @visibleForTesting
+  Future<void> optOutForTest() async {
+    _whatsApp = _whatsApp.copyWith(optedOut: true);
+  }
+
+  /// The last two digits, like the server's maskPhone.
+  static String _mask(String digits) =>
+      '${'•' * (digits.length - 2).clamp(0, 10)}${digits.substring(digits.length - 2)}';
 
   @override
   Future<CalendarConnection> fetchCalendar() async {

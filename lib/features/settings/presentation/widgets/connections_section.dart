@@ -5,6 +5,7 @@ import '../../../../core/ui/app_icons.dart';
 import '../../../../core/ui/zave/zave_kit.dart';
 import '../../application/settings_controllers.dart';
 import '../../application/settings_write_controller.dart';
+import '../../domain/phone_number.dart';
 import '../../domain/settings_repository.dart';
 import 'settings_section.dart';
 
@@ -56,6 +57,8 @@ class ConnectionsSection extends ConsumerWidget {
           const _SlackRow(),
           const SettingsDivider(),
           const _CalendarRow(),
+          const SettingsDivider(),
+          const _WhatsAppRow(),
         ],
       ),
     );
@@ -639,4 +642,211 @@ Future<void> _connect(
   };
   if (note == null) return;
   showSettingsMessage(context, note);
+}
+
+
+/// WhatsApp — the one connection that is typed rather than handed off.
+///
+/// Slack and Calendar bounce to OAuth and come back done. A phone number has
+/// to be typed and then PROVED, so this row expands in place rather than
+/// opening a dialog: its state stays visible beside the other accounts, and
+/// there is no modal to lose your place in halfway through a six-digit code.
+///
+/// Four states live on the row's own line — unavailable, opted out, connected,
+/// and not yet connected — so the list reads consistently whichever you are in.
+class _WhatsAppRow extends ConsumerStatefulWidget {
+  const _WhatsAppRow();
+
+  @override
+  ConsumerState<_WhatsAppRow> createState() => _WhatsAppRowState();
+}
+
+class _WhatsAppRowState extends ConsumerState<_WhatsAppRow> {
+  final TextEditingController _phone = TextEditingController();
+  final TextEditingController _code = TextEditingController();
+
+  /// The form is open. Separate from `awaitingCode`, which is the SERVER
+  /// saying a code is outstanding — a user can open the form and change their
+  /// mind without a code ever being sent.
+  ///
+  /// This is the only flag left here: it is neither in-flight nor failure
+  /// state, just which of two layouts this row is drawing. Busy and error
+  /// live on [WhatsAppActions] — see the architecture test.
+  bool _open = false;
+
+  @override
+  void initState() {
+    super.initState();
+    // Repaint the preview as they type, so the resolved number is live.
+    _phone.addListener(() => setState(() {}));
+  }
+
+  @override
+  void dispose() {
+    _phone.dispose();
+    _code.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final AsyncValue<WhatsAppConnection> whatsApp = ref.watch(
+      whatsAppControllerProvider,
+    );
+
+    return switch (whatsApp) {
+      AsyncError<WhatsAppConnection>() => SectionError(
+        message: "We couldn't load your WhatsApp connection.",
+        onRetry: () => ref.invalidate(whatsAppControllerProvider),
+      ),
+      AsyncData<WhatsAppConnection>(:final WhatsAppConnection value) =>
+        _row(value, ref.watch(whatsAppActionsProvider)),
+      _ => const SectionSkeleton(lines: 1),
+    };
+  }
+
+  Widget _row(WhatsAppConnection value, WhatsAppBusy busy) {
+    final WhatsAppActions control = ref.read(whatsAppActionsProvider.notifier);
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: <Widget>[
+        ConnectionRow(
+          name: 'WhatsApp',
+          status: value.isLive
+              ? ConnectionStatus.live
+              // Opted out is not "broken" and not "absent": the number is
+              // known and deliberately silenced. Amber is Zave's "this needs
+              // you", which is exactly what it is.
+              : value.optedOut
+              ? ConnectionStatus.attention
+              : ConnectionStatus.absent,
+          detail: switch (value) {
+            _ when value.isUnavailable => 'Not switched on yet',
+            _ when value.optedOut =>
+              'You replied STOP. Nothing is being sent.',
+            _ when value.connected => 'Connected · ${value.phoneMasked ?? ''}',
+            _ => 'Get the week plan on WhatsApp',
+          },
+          icon: AppIcons.whatsapp,
+          trailing: _control(value, control, busy),
+        ),
+        if (_open && !value.connected && !value.optedOut)
+          _form(control, value, busy),
+        if (busy.error case final String message) ...<Widget>[
+          SizedBox(height: ZaveSpace.sm),
+          Text(
+            message,
+            style: ZaveType.caption.copyWith(color: ZaveColors.amber),
+          ),
+        ],
+      ],
+    );
+  }
+
+  Widget? _control(
+    WhatsAppConnection value,
+    WhatsAppActions control,
+    WhatsAppBusy busy,
+  ) {
+    if (value.isUnavailable) return null;
+    if (value.optedOut) {
+      return ZaveButton(
+        label: 'Turn back on',
+        busy: busy.busy,
+        onPressed: busy.busy ? null : control.resume,
+      );
+    }
+    if (value.connected) {
+      return ZaveButton(
+        label: 'Disconnect',
+        busy: busy.busy,
+        onPressed: busy.busy ? null : control.disconnect,
+      );
+    }
+    return ZaveButton(
+      label: _open ? 'Cancel' : 'Connect',
+      onPressed: busy.busy
+          ? null
+          : () => setState(() => _open = !_open),
+    );
+  }
+
+  /// The number, then the code. Which half shows is the SERVER's
+  /// `awaitingCode`, not a local flag — a send that silently did nothing would
+  /// otherwise leave the user typing a code that was never issued.
+  Widget _form(
+    WhatsAppActions control,
+    WhatsAppConnection value,
+    WhatsAppBusy busy,
+  ) {
+    if (value.awaitingCode) {
+      return Padding(
+        padding: EdgeInsets.only(top: ZaveSpace.md),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: <Widget>[
+            ZaveField(
+              controller: _code,
+              label: 'SIX-DIGIT CODE',
+              hint: '123456',
+              keyboardType: TextInputType.number,
+              enabled: !busy.busy,
+            ),
+            SizedBox(height: ZaveSpace.md),
+            ZaveButton.primary(
+              label: 'Verify',
+              busy: busy.busy,
+              onPressed: busy.busy
+                  ? null
+                  : () => control.confirmCode(_code.text.trim()),
+            ),
+          ],
+        ),
+      );
+    }
+
+    final PhoneResult parsed = normalisePhone(_phone.text);
+
+    return Padding(
+      padding: EdgeInsets.only(top: ZaveSpace.md),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: <Widget>[
+          ZaveField(
+            controller: _phone,
+            label: 'WHATSAPP NUMBER',
+            hint: '+91 98765 43210',
+            keyboardType: TextInputType.phone,
+            enabled: !busy.busy,
+          ),
+          SizedBox(height: ZaveSpace.sm),
+          // The resolved number, shown BACK before anything is sent. A
+          // mistyped country code is the one mistake here that texts a
+          // stranger — someone who never signed up, cannot unsubscribe, and
+          // whose only recourse is to report us to Meta.
+          Text(
+            _phone.text.trim().isEmpty
+                ? 'Include your country code.'
+                : parsed.isOk
+                ? 'We will message ${parsed.e164}'
+                : parsed.error!,
+            style: ZaveType.caption.copyWith(
+              color: parsed.isOk ? ZaveColors.ink45 : ZaveColors.amber,
+            ),
+          ),
+          SizedBox(height: ZaveSpace.md),
+          ZaveButton.primary(
+            label: 'Send code',
+            busy: busy.busy,
+            // Dead until the number resolves. The server would refuse it
+            // anyway; refusing here costs no round trip and no send.
+            onPressed: busy.busy || !parsed.isOk
+                ? null
+                : () => control.sendCode(_phone.text.trim()),
+          ),
+        ],
+      ),
+    );
+  }
 }

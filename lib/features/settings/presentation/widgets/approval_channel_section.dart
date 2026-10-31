@@ -4,7 +4,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/ui/app_icons.dart';
 import '../../../../core/ui/zave/zave_kit.dart';
 import '../../../preferences/domain/user_preferences.dart';
+import '../../application/settings_controllers.dart';
 import '../../application/settings_write_controller.dart';
+import '../../domain/settings_entities.dart';
 import 'settings_section.dart';
 
 /// **Approval Channel** — where the daily post goes for your sign-off.
@@ -14,10 +16,13 @@ import 'settings_section.dart';
 /// so these are chips — and since a chip tap IS the choice, it saves on tap
 /// rather than parking the decision behind a second button.
 ///
-/// WhatsApp is UI-only on the web too: the column accepts
-/// `slack | whatsapp | email` and nothing delivers to WhatsApp yet. It is kept
-/// because removing it would silently change a stored value users have already
-/// chosen.
+/// WhatsApp DOES deliver now — a number is connected under Connected
+/// Accounts and the Saturday planner notice goes to it. What this section no
+/// longer does is ask for that number: "which way do you want to be told" and
+/// "prove this phone is yours" are two different questions, and the web split
+/// them for that reason. Choosing WhatsApp here with no number connected says
+/// so in one amber line and points at the list above, rather than looking
+/// like it worked.
 class ApprovalChannelSection extends ConsumerWidget {
   const ApprovalChannelSection({required this.preferences, super.key});
 
@@ -79,15 +84,26 @@ class ApprovalChannelSection extends ConsumerWidget {
               ),
             ],
           ),
-          if (current == 'whatsapp') ...<Widget>[
-            SizedBox(height: ZaveSpace.lg),
-            const UnavailableNote(
-              message:
-                  'WhatsApp delivery is not built yet — the preference is '
-                  'stored, but approvals will not arrive there. Slack and '
-                  'email are the two that deliver today.',
-            ),
-          ],
+          // Amber only when the choice cannot be honoured. A note that shows
+          // whenever WhatsApp is picked would train people to ignore it, and
+          // then it is not there when it matters.
+          if (current == 'whatsapp')
+            switch (ref.watch(whatsAppControllerProvider)) {
+              AsyncData<WhatsAppConnection>(:final WhatsAppConnection value)
+                  when !value.isLive =>
+                Padding(
+                  padding: EdgeInsets.only(top: ZaveSpace.lg),
+                  child: UnavailableNote(
+                    message: value.optedOut
+                        ? 'You told WhatsApp to stop messaging you. Turn it '
+                              'back on under Connected Accounts above.'
+                        : 'No WhatsApp number is connected yet. Connect one '
+                              'under Connected Accounts above and approvals '
+                              'will arrive there.',
+                  ),
+                ),
+              _ => const SizedBox.shrink(),
+            },
         ],
       ),
     );

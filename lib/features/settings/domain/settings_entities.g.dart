@@ -106,6 +106,24 @@ Map<String, dynamic> _$SlackConnectionToJson(_SlackConnection instance) =>
       'connectedAt': instance.connectedAt?.toIso8601String(),
     };
 
+_WhatsAppConnection _$WhatsAppConnectionFromJson(Map<String, dynamic> json) =>
+    _WhatsAppConnection(
+      available: json['available'] as bool? ?? false,
+      connected: json['connected'] as bool? ?? false,
+      phoneMasked: json['phoneMasked'] as String?,
+      awaitingCode: json['awaitingCode'] as bool? ?? false,
+      optedOut: json['optedOut'] as bool? ?? false,
+    );
+
+Map<String, dynamic> _$WhatsAppConnectionToJson(_WhatsAppConnection instance) =>
+    <String, dynamic>{
+      'available': instance.available,
+      'connected': instance.connected,
+      'phoneMasked': instance.phoneMasked,
+      'awaitingCode': instance.awaitingCode,
+      'optedOut': instance.optedOut,
+    };
+
 _CalendarTokenStatus _$CalendarTokenStatusFromJson(Map<String, dynamic> json) =>
     _CalendarTokenStatus(
       expired: json['expired'] as bool? ?? false,

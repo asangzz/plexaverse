@@ -125,6 +125,93 @@ class SlackController extends _$SlackController {
   }
 }
 
+/// WhatsApp status. The read half.
+///
+/// Unlike Slack and Calendar there is NO browser hand-off: the user types a
+/// number here and proves it with a code, so the flow has two steps and an
+/// in-flight state. That state lives in [WhatsAppActions], not here and not
+/// on the row — see `test/architecture/no_async_state_in_widgets_test.dart`,
+/// which exists because a `bool _busy` on a widget has shipped as a
+/// user-visible defect five times in this codebase.
+@riverpod
+class WhatsAppController extends _$WhatsAppController {
+  @override
+  Future<WhatsAppConnection> build() =>
+      ref.watch(settingsRepositoryProvider).fetchWhatsApp();
+}
+
+/// What is in flight, and what last failed.
+///
+/// Mirrors [LearnBusy]'s shape for the same reason: the row has to disable
+/// four different controls while any one of them is running, and show one
+/// sentence when one of them refuses.
+class WhatsAppBusy {
+  const WhatsAppBusy({this.busy = false, this.error});
+
+  final bool busy;
+
+  /// The sentence to show. Null when nothing has failed since the last action.
+  final String? error;
+}
+
+/// Connect, verify, disconnect, resume.
+///
+/// Every failure the user can act on arrives here as its own type and is
+/// turned into its sentence: each of the four is an ANSWER — wait, agree,
+/// retype, fix the number — and folding them into "something went wrong"
+/// throws away the only part the user can do anything with.
+@riverpod
+class WhatsAppActions extends _$WhatsAppActions {
+  @override
+  WhatsAppBusy build() => const WhatsAppBusy();
+
+  SettingsRepository get _repo => ref.read(settingsRepositoryProvider);
+
+  /// Send a code to a typed number.
+  Future<void> sendCode(String phone, {String? defaultCountryCode}) =>
+      _run(
+        () => _repo.sendWhatsAppCode(
+          phone: phone,
+          defaultCountryCode: defaultCountryCode,
+        ),
+      );
+
+  /// Check the code. The number is verified only if this succeeds.
+  Future<void> confirmCode(String code) =>
+      _run(() => _repo.confirmWhatsAppCode(code));
+
+  Future<void> disconnect() => _run(_repo.disconnectWhatsApp);
+
+  /// Turn messages back on after a STOP.
+  Future<void> resume() => _run(_repo.resumeWhatsApp);
+
+  Future<void> _run(Future<void> Function() action) async {
+    state = const WhatsAppBusy(busy: true);
+    try {
+      await action();
+      if (!ref.mounted) return;
+      state = const WhatsAppBusy();
+      // Re-read rather than patch locally. Three of these four writes have
+      // server-side consequences the client cannot derive — a disconnect
+      // keeps the row when the user has opted out, and a send starts a clock.
+      // Guessing the new state here is how the row and the server drift.
+      ref.invalidate(whatsAppControllerProvider);
+    } on Object catch (e) {
+      if (!ref.mounted) return;
+      state = WhatsAppBusy(error: _say(e));
+    }
+  }
+
+  /// The server's own sentence where there is one.
+  static String _say(Object error) => switch (error) {
+    WhatsAppCooldown(:final String message) => message,
+    WhatsAppConsentRequired(:final String message) => message,
+    WhatsAppWrongCode(:final String message) => message,
+    WhatsAppRejected(:final String message) => message,
+    _ => 'That did not go through. Try again.',
+  };
+}
+
 /// Google Calendar connection status + disconnect.
 @riverpod
 class CalendarController extends _$CalendarController {

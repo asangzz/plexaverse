@@ -71,6 +71,12 @@ class _LessonPlayerState extends ConsumerState<LessonPlayer> {
   final Map<String, TextEditingController> _controllers =
       <String, TextEditingController>{};
 
+  /// One per free-text question, owned here for the same reason the
+  /// controllers are: the question's widget is rebuilt whenever the run
+  /// changes, and a node created in that build would be a new node every
+  /// frame — so "Say it instead" would focus something that no longer exists.
+  final Map<String, FocusNode> _focusNodes = <String, FocusNode>{};
+
   @override
   void initState() {
     super.initState();
@@ -94,6 +100,9 @@ class _LessonPlayerState extends ConsumerState<LessonPlayer> {
     for (final TextEditingController c in _controllers.values) {
       c.dispose();
     }
+    for (final FocusNode n in _focusNodes.values) {
+      n.dispose();
+    }
     super.dispose();
   }
 
@@ -102,6 +111,9 @@ class _LessonPlayerState extends ConsumerState<LessonPlayer> {
 
   TextEditingController _controllerFor(String id) =>
       _controllers.putIfAbsent(id, TextEditingController.new);
+
+  FocusNode _focusFor(String id) =>
+      _focusNodes.putIfAbsent(id, FocusNode.new);
 
   /// A new run means an empty box, whatever was typed into the last one.
   void _clearTyping() {
@@ -226,6 +238,7 @@ class _LessonPlayerState extends ConsumerState<LessonPlayer> {
       level: level,
       run: run,
       controllerFor: _controllerFor,
+      focusNodeFor: _focusFor,
       canCheck: _canCheck,
       onTeachRead: _run.teachRead,
       onValue: _run.setValue,
@@ -247,6 +260,7 @@ class _Quiz extends StatefulWidget {
     required this.level,
     required this.run,
     required this.controllerFor,
+    required this.focusNodeFor,
     required this.canCheck,
     required this.onTeachRead,
     required this.onValue,
@@ -259,6 +273,7 @@ class _Quiz extends StatefulWidget {
   final LearnLevel level;
   final LearnRunState run;
   final TextEditingController Function(String id) controllerFor;
+  final FocusNode Function(String id) focusNodeFor;
   final bool Function(Exercise exercise, String value) canCheck;
   final VoidCallback onTeachRead;
   final ValueChanged<String> onValue;
@@ -374,6 +389,9 @@ class _QuizState extends State<_Quiz> {
                   value: run.value,
                   controller: exercise.isFreeText
                       ? widget.controllerFor(exercise.id)
+                      : null,
+                  focusNode: exercise.isFreeText
+                      ? widget.focusNodeFor(exercise.id)
                       : null,
                   verdict: run.verdict,
                   onChanged: widget.onValue,
@@ -682,11 +700,20 @@ class _ActionLevelState extends ConsumerState<_ActionLevel>
   );
 
   Widget _draft(LearnBusy busy, bool done) {
+    // What this day actually produces. Wednesday and Friday write a script and
+    // Thursday a newsletter; calling all three a "post" on screen was wrong
+    // before it was confusing, because only two of the five climbable days
+    // become a Post at all.
+    final String made = widget.unit.kind.madeThing;
+
     if (done && (widget.unit.postContent?.isNotEmpty ?? false)) {
       return Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: <Widget>[
-          _Written(label: 'YOUR POST', body: widget.unit.postContent!),
+          _Written(
+            label: 'YOUR ${made.toUpperCase()}',
+            body: widget.unit.postContent!,
+          ),
           SizedBox(height: ZaveSpace.lg),
           _LearnerLines(unit: widget.unit),
           SizedBox(height: ZaveSpace.xl),
@@ -700,7 +727,7 @@ class _ActionLevelState extends ConsumerState<_ActionLevel>
       children: <Widget>[
         Text(
           'Your opening, your account of what happened and your closing ask '
-          'are all written. This puts them together into the post — in your '
+          'are all written. This puts them together into the $made — in your '
           'voice, using your words.',
           style: ZaveType.bodyMuted,
         ),
@@ -713,7 +740,7 @@ class _ActionLevelState extends ConsumerState<_ActionLevel>
           SizedBox(height: ZaveSpace.md),
         ],
         ZaveButton.primary(
-          label: busy.isDrafting ? 'Writing your post…' : 'Write my post',
+          label: busy.isDrafting ? 'Writing your $made…' : 'Write my $made',
           expand: true,
           busy: busy.isDrafting,
           // Enablement comes from the LEVEL, not from a local flag. A 120s

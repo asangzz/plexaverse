@@ -367,6 +367,15 @@ class AppIcons {
     fontPackage: _pkg,
   ); // slack (brand)
 
+  /// Codepoint read off the resolved font_awesome_flutter (10.12.0), not from
+  /// memory — FA moves brand codepoints between majors and a wrong one renders
+  /// tofu rather than falling back to anything.
+  static const IconData whatsapp = IconData(
+    0xf232,
+    fontFamily: _brandFamily,
+    fontPackage: _pkg,
+  ); // whatsapp (brand)
+
   // ── The glyphs the screens kept reaching past this file for ───────────
   //
   // Every entry below replaced a stock Material icon that was being drawn
@@ -610,6 +619,7 @@ class AppIcons {
   static const Map<String, IconData> all = <String, IconData>{
     'home': home,
     'slack': slack,
+    'whatsapp': whatsapp,
     'linkedInIn': linkedInIn,
     'posts': posts,
     'odyssey': odyssey,

@@ -1448,6 +1448,289 @@ as DateTime?,
 
 
 /// @nodoc
+mixin _$WhatsAppConnection {
+
+/// False when the server has no WhatsApp credentials at all.
+ bool get available; bool get connected;/// Masked, always — the full number never leaves the server, not even to
+/// the owner, who knows it already.
+ String? get phoneMasked;/// A code is outstanding and the app should show the code box.
+ bool get awaitingCode; bool get optedOut;
+/// Create a copy of WhatsAppConnection
+/// with the given fields replaced by the non-null parameter values.
+@JsonKey(includeFromJson: false, includeToJson: false)
+@pragma('vm:prefer-inline')
+$WhatsAppConnectionCopyWith<WhatsAppConnection> get copyWith => _$WhatsAppConnectionCopyWithImpl<WhatsAppConnection>(this as WhatsAppConnection, _$identity);
+
+  /// Serializes this WhatsAppConnection to a JSON map.
+  Map<String, dynamic> toJson();
+
+
+@override
+bool operator ==(Object other) {
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is WhatsAppConnection&&(identical(other.available, available) || other.available == available)&&(identical(other.connected, connected) || other.connected == connected)&&(identical(other.phoneMasked, phoneMasked) || other.phoneMasked == phoneMasked)&&(identical(other.awaitingCode, awaitingCode) || other.awaitingCode == awaitingCode)&&(identical(other.optedOut, optedOut) || other.optedOut == optedOut));
+}
+
+@JsonKey(includeFromJson: false, includeToJson: false)
+@override
+int get hashCode => Object.hash(runtimeType,available,connected,phoneMasked,awaitingCode,optedOut);
+
+@override
+String toString() {
+  return 'WhatsAppConnection(available: $available, connected: $connected, phoneMasked: $phoneMasked, awaitingCode: $awaitingCode, optedOut: $optedOut)';
+}
+
+
+}
+
+/// @nodoc
+abstract mixin class $WhatsAppConnectionCopyWith<$Res>  {
+  factory $WhatsAppConnectionCopyWith(WhatsAppConnection value, $Res Function(WhatsAppConnection) _then) = _$WhatsAppConnectionCopyWithImpl;
+@useResult
+$Res call({
+ bool available, bool connected, String? phoneMasked, bool awaitingCode, bool optedOut
+});
+
+
+
+
+}
+/// @nodoc
+class _$WhatsAppConnectionCopyWithImpl<$Res>
+    implements $WhatsAppConnectionCopyWith<$Res> {
+  _$WhatsAppConnectionCopyWithImpl(this._self, this._then);
+
+  final WhatsAppConnection _self;
+  final $Res Function(WhatsAppConnection) _then;
+
+/// Create a copy of WhatsAppConnection
+/// with the given fields replaced by the non-null parameter values.
+@pragma('vm:prefer-inline') @override $Res call({Object? available = null,Object? connected = null,Object? phoneMasked = freezed,Object? awaitingCode = null,Object? optedOut = null,}) {
+  return _then(_self.copyWith(
+available: null == available ? _self.available : available // ignore: cast_nullable_to_non_nullable
+as bool,connected: null == connected ? _self.connected : connected // ignore: cast_nullable_to_non_nullable
+as bool,phoneMasked: freezed == phoneMasked ? _self.phoneMasked : phoneMasked // ignore: cast_nullable_to_non_nullable
+as String?,awaitingCode: null == awaitingCode ? _self.awaitingCode : awaitingCode // ignore: cast_nullable_to_non_nullable
+as bool,optedOut: null == optedOut ? _self.optedOut : optedOut // ignore: cast_nullable_to_non_nullable
+as bool,
+  ));
+}
+
+}
+
+
+/// Adds pattern-matching-related methods to [WhatsAppConnection].
+extension WhatsAppConnectionPatterns on WhatsAppConnection {
+/// A variant of `map` that fallback to returning `orElse`.
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case final Subclass value:
+///     return ...;
+///   case _:
+///     return orElse();
+/// }
+/// ```
+
+@optionalTypeArgs TResult maybeMap<TResult extends Object?>(TResult Function( _WhatsAppConnection value)?  $default,{required TResult orElse(),}){
+final _that = this;
+switch (_that) {
+case _WhatsAppConnection() when $default != null:
+return $default(_that);case _:
+  return orElse();
+
+}
+}
+/// A `switch`-like method, using callbacks.
+///
+/// Callbacks receives the raw object, upcasted.
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case final Subclass value:
+///     return ...;
+///   case final Subclass2 value:
+///     return ...;
+/// }
+/// ```
+
+@optionalTypeArgs TResult map<TResult extends Object?>(TResult Function( _WhatsAppConnection value)  $default,){
+final _that = this;
+switch (_that) {
+case _WhatsAppConnection():
+return $default(_that);case _:
+  throw StateError('Unexpected subclass');
+
+}
+}
+/// A variant of `map` that fallback to returning `null`.
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case final Subclass value:
+///     return ...;
+///   case _:
+///     return null;
+/// }
+/// ```
+
+@optionalTypeArgs TResult? mapOrNull<TResult extends Object?>(TResult? Function( _WhatsAppConnection value)?  $default,){
+final _that = this;
+switch (_that) {
+case _WhatsAppConnection() when $default != null:
+return $default(_that);case _:
+  return null;
+
+}
+}
+/// A variant of `when` that fallback to an `orElse` callback.
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case Subclass(:final field):
+///     return ...;
+///   case _:
+///     return orElse();
+/// }
+/// ```
+
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( bool available,  bool connected,  String? phoneMasked,  bool awaitingCode,  bool optedOut)?  $default,{required TResult orElse(),}) {final _that = this;
+switch (_that) {
+case _WhatsAppConnection() when $default != null:
+return $default(_that.available,_that.connected,_that.phoneMasked,_that.awaitingCode,_that.optedOut);case _:
+  return orElse();
+
+}
+}
+/// A `switch`-like method, using callbacks.
+///
+/// As opposed to `map`, this offers destructuring.
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case Subclass(:final field):
+///     return ...;
+///   case Subclass2(:final field2):
+///     return ...;
+/// }
+/// ```
+
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( bool available,  bool connected,  String? phoneMasked,  bool awaitingCode,  bool optedOut)  $default,) {final _that = this;
+switch (_that) {
+case _WhatsAppConnection():
+return $default(_that.available,_that.connected,_that.phoneMasked,_that.awaitingCode,_that.optedOut);case _:
+  throw StateError('Unexpected subclass');
+
+}
+}
+/// A variant of `when` that fallback to returning `null`
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case Subclass(:final field):
+///     return ...;
+///   case _:
+///     return null;
+/// }
+/// ```
+
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( bool available,  bool connected,  String? phoneMasked,  bool awaitingCode,  bool optedOut)?  $default,) {final _that = this;
+switch (_that) {
+case _WhatsAppConnection() when $default != null:
+return $default(_that.available,_that.connected,_that.phoneMasked,_that.awaitingCode,_that.optedOut);case _:
+  return null;
+
+}
+}
+
+}
+
+/// @nodoc
+@JsonSerializable()
+
+class _WhatsAppConnection extends WhatsAppConnection {
+  const _WhatsAppConnection({this.available = false, this.connected = false, this.phoneMasked, this.awaitingCode = false, this.optedOut = false}): super._();
+  factory _WhatsAppConnection.fromJson(Map<String, dynamic> json) => _$WhatsAppConnectionFromJson(json);
+
+/// False when the server has no WhatsApp credentials at all.
+@override@JsonKey() final  bool available;
+@override@JsonKey() final  bool connected;
+/// Masked, always — the full number never leaves the server, not even to
+/// the owner, who knows it already.
+@override final  String? phoneMasked;
+/// A code is outstanding and the app should show the code box.
+@override@JsonKey() final  bool awaitingCode;
+@override@JsonKey() final  bool optedOut;
+
+/// Create a copy of WhatsAppConnection
+/// with the given fields replaced by the non-null parameter values.
+@override @JsonKey(includeFromJson: false, includeToJson: false)
+@pragma('vm:prefer-inline')
+_$WhatsAppConnectionCopyWith<_WhatsAppConnection> get copyWith => __$WhatsAppConnectionCopyWithImpl<_WhatsAppConnection>(this, _$identity);
+
+@override
+Map<String, dynamic> toJson() {
+  return _$WhatsAppConnectionToJson(this, );
+}
+
+@override
+bool operator ==(Object other) {
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is _WhatsAppConnection&&(identical(other.available, available) || other.available == available)&&(identical(other.connected, connected) || other.connected == connected)&&(identical(other.phoneMasked, phoneMasked) || other.phoneMasked == phoneMasked)&&(identical(other.awaitingCode, awaitingCode) || other.awaitingCode == awaitingCode)&&(identical(other.optedOut, optedOut) || other.optedOut == optedOut));
+}
+
+@JsonKey(includeFromJson: false, includeToJson: false)
+@override
+int get hashCode => Object.hash(runtimeType,available,connected,phoneMasked,awaitingCode,optedOut);
+
+@override
+String toString() {
+  return 'WhatsAppConnection(available: $available, connected: $connected, phoneMasked: $phoneMasked, awaitingCode: $awaitingCode, optedOut: $optedOut)';
+}
+
+
+}
+
+/// @nodoc
+abstract mixin class _$WhatsAppConnectionCopyWith<$Res> implements $WhatsAppConnectionCopyWith<$Res> {
+  factory _$WhatsAppConnectionCopyWith(_WhatsAppConnection value, $Res Function(_WhatsAppConnection) _then) = __$WhatsAppConnectionCopyWithImpl;
+@override @useResult
+$Res call({
+ bool available, bool connected, String? phoneMasked, bool awaitingCode, bool optedOut
+});
+
+
+
+
+}
+/// @nodoc
+class __$WhatsAppConnectionCopyWithImpl<$Res>
+    implements _$WhatsAppConnectionCopyWith<$Res> {
+  __$WhatsAppConnectionCopyWithImpl(this._self, this._then);
+
+  final _WhatsAppConnection _self;
+  final $Res Function(_WhatsAppConnection) _then;
+
+/// Create a copy of WhatsAppConnection
+/// with the given fields replaced by the non-null parameter values.
+@override @pragma('vm:prefer-inline') $Res call({Object? available = null,Object? connected = null,Object? phoneMasked = freezed,Object? awaitingCode = null,Object? optedOut = null,}) {
+  return _then(_WhatsAppConnection(
+available: null == available ? _self.available : available // ignore: cast_nullable_to_non_nullable
+as bool,connected: null == connected ? _self.connected : connected // ignore: cast_nullable_to_non_nullable
+as bool,phoneMasked: freezed == phoneMasked ? _self.phoneMasked : phoneMasked // ignore: cast_nullable_to_non_nullable
+as String?,awaitingCode: null == awaitingCode ? _self.awaitingCode : awaitingCode // ignore: cast_nullable_to_non_nullable
+as bool,optedOut: null == optedOut ? _self.optedOut : optedOut // ignore: cast_nullable_to_non_nullable
+as bool,
+  ));
+}
+
+
+}
+
+
+/// @nodoc
 mixin _$CalendarTokenStatus {
 
  bool get expired; DateTime? get expiresAt; int get expiresInMinutes;

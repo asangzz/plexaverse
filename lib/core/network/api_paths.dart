@@ -72,6 +72,13 @@ class ApiPaths {
   /// GET / POST — DPDP s13. Raise a concern, and see the deadline it carries.
   static const String userGrievance = '/user/grievance';
 
+  /// WhatsApp status, resume-after-STOP (PATCH) and disconnect (DELETE).
+  static const String userWhatsApp = '/user/whatsapp';
+
+  /// Send a code (POST) and check it (PUT). Rate-limited as AUTH, not API:
+  /// every send costs money and lands on a phone the caller merely TYPED.
+  static const String userWhatsAppVerify = '/user/whatsapp/verify';
+
   /// POST multipart `file` — the `.xlsx` LinkedIn lets a member download.
   ///
   /// The only route to personal-profile analytics: LinkedIn shares none of

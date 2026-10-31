@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -6,7 +8,14 @@ import '../../theme/zave/zave.dart';
 import '../app_icons.dart';
 import 'zave_press.dart';
 
-/// Speak instead of typing. Goes in a [ZaveField]'s `suffix`.
+/// Speak instead of typing.
+///
+/// Two looks, one behaviour. Without [label] it is a bare microphone for a
+/// [ZaveField]'s `suffix` — the composer, where filling the box IS the job and
+/// the field is the only thing on screen. With [label] it is a pill that sits
+/// under the field and says what it does, for the quiz, where the box is one
+/// of several things being asked of the learner and a mic in the corner reads
+/// as decoration. Mirrors the web's `SayItInstead`.
 ///
 /// ## It appends, and it replaces the tail
 ///
@@ -27,6 +36,8 @@ class ZaveDictateButton extends ConsumerStatefulWidget {
     required this.controller,
     required this.fieldId,
     this.onChanged,
+    this.label,
+    this.focusNode,
     super.key,
   });
 
@@ -40,6 +51,14 @@ class ZaveDictateButton extends ConsumerStatefulWidget {
   /// Called with the full text after each update, for callers that mirror
   /// the field into their own state (the Learn player does).
   final ValueChanged<String>? onChanged;
+
+  /// Null draws the bare microphone; a string draws a labelled pill.
+  final String? label;
+
+  /// The field's own node. Given one, starting a dictation puts the caret in
+  /// the box — so the words land somewhere the user is already looking, and
+  /// editing them afterwards is one tap rather than two.
+  final FocusNode? focusNode;
 
   @override
   ConsumerState<ZaveDictateButton> createState() => _ZaveDictateButtonState();
@@ -95,7 +114,35 @@ class _ZaveDictateButtonState extends ConsumerState<ZaveDictateButton> {
       return;
     }
     _base = widget.controller.text;
+    // Before starting, not after: the OS may take a moment over the
+    // permission, and a caret that arrives late looks like a dropped tap.
+    if (widget.focusNode != null) {
+      widget.focusNode!.requestFocus();
+      unawaited(_keepVisible());
+    }
     await _dictation.start(widget.fieldId);
+  }
+
+  /// Scroll this back into view after the keyboard has taken its space.
+  ///
+  /// Focusing the field raises the keyboard AND scrolls the field into view,
+  /// and the labelled form sits UNDER the field — so the one control that
+  /// stops the dictation ends up behind the keyboard, a frame after the user
+  /// asked for it. The delay covers the keyboard's own inset animation;
+  /// running it on the next frame alone lands before the insets exist.
+  Future<void> _keepVisible() async {
+    await Future<void>.delayed(const Duration(milliseconds: 320));
+    if (!mounted) return;
+    final BuildContext ctx = context;
+    if (!ctx.mounted || Scrollable.maybeOf(ctx) == null) return;
+    await Scrollable.ensureVisible(
+      ctx,
+      duration: const Duration(milliseconds: 220),
+      curve: Curves.easeOut,
+      // Near the bottom of the viewport: this is the last thing under the
+      // field, and pulling it to the middle would push the question off.
+      alignment: 0.9,
+    );
   }
 
   @override
@@ -127,6 +174,8 @@ class _ZaveDictateButtonState extends ConsumerState<ZaveDictateButton> {
     // live on two fields at once is a lie about the hardware.
     final bool blocked = state.isListening && !listening;
 
+    final String? label = widget.label;
+
     return ZavePress(
       child: GestureDetector(
         onTap: blocked ? null : () => _toggle(listening),
@@ -134,7 +183,13 @@ class _ZaveDictateButtonState extends ConsumerState<ZaveDictateButton> {
         child: Semantics(
           button: true,
           label: listening ? 'Stop dictating' : 'Dictate',
-          child: _Mic(listening: listening, dimmed: blocked),
+          child: label == null
+              ? _Mic(listening: listening, dimmed: blocked)
+              : _Pill(
+                  label: listening ? 'Stop' : label,
+                  listening: listening,
+                  dimmed: blocked,
+                ),
         ),
       ),
     );
@@ -142,10 +197,17 @@ class _ZaveDictateButtonState extends ConsumerState<ZaveDictateButton> {
 }
 
 class _Mic extends StatefulWidget {
-  const _Mic({required this.listening, required this.dimmed});
+  const _Mic({
+    required this.listening,
+    required this.dimmed,
+    this.onViolet = false,
+  });
 
   final bool listening;
   final bool dimmed;
+
+  /// Drawn on the filled pill, where the usual violet glyph disappears.
+  final bool onViolet;
 
   @override
   State<_Mic> createState() => _MicState();
@@ -194,8 +256,10 @@ class _MicState extends State<_Mic> with SingleTickerProviderStateMixin {
   Widget build(BuildContext context) {
     final Widget icon = Icon(
       widget.listening ? AppIcons.micOn : AppIcons.mic,
-      size: 20,
-      color: widget.listening
+      size: widget.onViolet ? 16 : 20,
+      color: widget.onViolet
+          ? ZaveColors.white
+          : widget.listening
           ? ZaveColors.violetLift
           : widget.dimmed
           ? ZaveColors.ink35
@@ -205,4 +269,46 @@ class _MicState extends State<_Mic> with SingleTickerProviderStateMixin {
     if (!widget.listening) return icon;
     return FadeTransition(opacity: _pulse, child: icon);
   }
+}
+
+/// The labelled form: a microphone and what it does.
+class _Pill extends StatelessWidget {
+  const _Pill({
+    required this.label,
+    required this.listening,
+    required this.dimmed,
+  });
+
+  final String label;
+  final bool listening;
+  final bool dimmed;
+
+  @override
+  Widget build(BuildContext context) => Opacity(
+    opacity: dimmed ? 0.5 : 1,
+    child: Container(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 9),
+      decoration: BoxDecoration(
+        color: listening ? ZaveColors.violet : ZaveGlass.controlFill,
+        border: Border.all(
+          color: listening ? ZaveColors.violet : ZaveGlass.controlBorder,
+        ),
+        borderRadius: ZaveRadius.pillBr,
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: <Widget>[
+          _Mic(listening: listening, dimmed: dimmed, onViolet: listening),
+          const SizedBox(width: 7),
+          Text(
+            label,
+            style: ZaveType.caption.copyWith(
+              fontWeight: FontWeight.w700,
+              color: listening ? ZaveColors.white : ZaveColors.ink85,
+            ),
+          ),
+        ],
+      ),
+    ),
+  );
 }

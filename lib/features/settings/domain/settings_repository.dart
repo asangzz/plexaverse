@@ -89,6 +89,47 @@ abstract class SettingsRepository {
   /// Disconnects Slack. `DELETE /slack`.
   Future<void> disconnectSlack();
 
+  /// WhatsApp status. `GET /user/whatsapp`.
+  ///
+  /// Unlike Slack and Calendar there is NO browser hand-off: the user types a
+  /// number here and proves it with a code, so the whole flow lives in the
+  /// app. See [sendWhatsAppCode] and [confirmWhatsAppCode].
+  Future<WhatsAppConnection> fetchWhatsApp();
+
+  /// Send a verification code to a typed number. `POST /user/whatsapp/verify`.
+  ///
+  /// **Costs money and lands on a real phone**, and the number is one the user
+  /// TYPED — it need not be theirs. The server throttles per account and per
+  /// caller for that reason; a client that retries on its own is defeating a
+  /// limit that exists to protect a stranger, not us.
+  ///
+  /// Throws [WhatsAppCooldown] when a code went out too recently, and
+  /// [WhatsAppConsentRequired] when the user has not agreed to WhatsApp
+  /// messages — a code is itself a WhatsApp message, so asking for one without
+  /// consent is already the processing being consented to.
+  Future<void> sendWhatsAppCode({required String phone, String? defaultCountryCode});
+
+  /// Check a typed code. `PUT /user/whatsapp/verify`.
+  ///
+  /// Throws [WhatsAppWrongCode] on a mismatch — its own type because it is the
+  /// one failure that is the user's to fix by retyping, not by waiting or by
+  /// going elsewhere.
+  Future<void> confirmWhatsAppCode(String code);
+
+  /// Disconnect. `DELETE /user/whatsapp`.
+  ///
+  /// NOT an opt-out. The server keeps the row when the user has replied STOP,
+  /// precisely so retyping the number cannot silently re-enable messaging to
+  /// someone who asked us to stop.
+  Future<void> disconnectWhatsApp();
+
+  /// Turn messages back on after a STOP. `PATCH /user/whatsapp`.
+  ///
+  /// The only way out of that state, and deliberately an action taken while
+  /// signed in — never from an inbound "START", which a forwarded message or
+  /// a recycled number could forge.
+  Future<void> resumeWhatsApp();
+
   Future<CalendarConnection> fetchCalendar();
 
   /// Connects Google Calendar through the system browser. Uses its OWN
@@ -265,4 +306,59 @@ class Nominee {
   final String name;
   final String email;
   final String? relationship;
+}
+
+
+/// A code went out too recently to send another.
+///
+/// Its own type because the answer is "wait", and the screen for waiting is
+/// not the screen for a wrong number. The [message] is the server's finished
+/// sentence and already names the seconds.
+class WhatsAppCooldown implements Exception {
+  const WhatsAppCooldown(this.message);
+  final String message;
+
+  @override
+  String toString() => message;
+}
+
+/// The user has not agreed to WhatsApp messages yet.
+///
+/// A verification code IS a WhatsApp message, so this is refused before one is
+/// sent rather than after. The screen's answer is the consent control, not a
+/// retry.
+class WhatsAppConsentRequired implements Exception {
+  const WhatsAppConsentRequired([
+    this.message = 'Agree to WhatsApp messages first.',
+  ]);
+  final String message;
+
+  @override
+  String toString() => message;
+}
+
+/// The typed code did not match.
+///
+/// The one failure the user fixes by retyping, so it leaves the code box up
+/// rather than sending them back to the number.
+class WhatsAppWrongCode implements Exception {
+  const WhatsAppWrongCode([this.message = 'That code is not right.']);
+  final String message;
+
+  @override
+  String toString() => message;
+}
+
+/// The server read the request and refused it in a sentence.
+///
+/// Mostly a number it could not parse. Its own type because
+/// [SettingsUnavailable] deliberately carries no message — it means "this
+/// slice is not answering" — and "that does not look like a phone number" is
+/// the opposite of that: a precise, finished answer the user can act on.
+class WhatsAppRejected implements Exception {
+  const WhatsAppRejected(this.message);
+  final String message;
+
+  @override
+  String toString() => message;
 }

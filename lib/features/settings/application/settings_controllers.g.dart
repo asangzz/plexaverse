@@ -319,6 +319,164 @@ abstract class _$SlackController extends $AsyncNotifier<SlackConnection> {
   }
 }
 
+/// WhatsApp status. The read half.
+///
+/// Unlike Slack and Calendar there is NO browser hand-off: the user types a
+/// number here and proves it with a code, so the flow has two steps and an
+/// in-flight state. That state lives in [WhatsAppActions], not here and not
+/// on the row — see `test/architecture/no_async_state_in_widgets_test.dart`,
+/// which exists because a `bool _busy` on a widget has shipped as a
+/// user-visible defect five times in this codebase.
+
+@ProviderFor(WhatsAppController)
+final whatsAppControllerProvider = WhatsAppControllerProvider._();
+
+/// WhatsApp status. The read half.
+///
+/// Unlike Slack and Calendar there is NO browser hand-off: the user types a
+/// number here and proves it with a code, so the flow has two steps and an
+/// in-flight state. That state lives in [WhatsAppActions], not here and not
+/// on the row — see `test/architecture/no_async_state_in_widgets_test.dart`,
+/// which exists because a `bool _busy` on a widget has shipped as a
+/// user-visible defect five times in this codebase.
+final class WhatsAppControllerProvider
+    extends $AsyncNotifierProvider<WhatsAppController, WhatsAppConnection> {
+  /// WhatsApp status. The read half.
+  ///
+  /// Unlike Slack and Calendar there is NO browser hand-off: the user types a
+  /// number here and proves it with a code, so the flow has two steps and an
+  /// in-flight state. That state lives in [WhatsAppActions], not here and not
+  /// on the row — see `test/architecture/no_async_state_in_widgets_test.dart`,
+  /// which exists because a `bool _busy` on a widget has shipped as a
+  /// user-visible defect five times in this codebase.
+  WhatsAppControllerProvider._()
+    : super(
+        from: null,
+        argument: null,
+        retry: null,
+        name: r'whatsAppControllerProvider',
+        isAutoDispose: true,
+        dependencies: null,
+        $allTransitiveDependencies: null,
+      );
+
+  @override
+  String debugGetCreateSourceHash() => _$whatsAppControllerHash();
+
+  @$internal
+  @override
+  WhatsAppController create() => WhatsAppController();
+}
+
+String _$whatsAppControllerHash() =>
+    r'9688482f4ec6ccf5ed97cdf5181d4ef76ece9cb6';
+
+/// WhatsApp status. The read half.
+///
+/// Unlike Slack and Calendar there is NO browser hand-off: the user types a
+/// number here and proves it with a code, so the flow has two steps and an
+/// in-flight state. That state lives in [WhatsAppActions], not here and not
+/// on the row — see `test/architecture/no_async_state_in_widgets_test.dart`,
+/// which exists because a `bool _busy` on a widget has shipped as a
+/// user-visible defect five times in this codebase.
+
+abstract class _$WhatsAppController extends $AsyncNotifier<WhatsAppConnection> {
+  FutureOr<WhatsAppConnection> build();
+  @$mustCallSuper
+  @override
+  void runBuild() {
+    final ref =
+        this.ref as $Ref<AsyncValue<WhatsAppConnection>, WhatsAppConnection>;
+    final element =
+        ref.element
+            as $ClassProviderElement<
+              AnyNotifier<AsyncValue<WhatsAppConnection>, WhatsAppConnection>,
+              AsyncValue<WhatsAppConnection>,
+              Object?,
+              Object?
+            >;
+    element.handleCreate(ref, build);
+  }
+}
+
+/// Connect, verify, disconnect, resume.
+///
+/// Every failure the user can act on arrives here as its own type and is
+/// turned into its sentence: each of the four is an ANSWER — wait, agree,
+/// retype, fix the number — and folding them into "something went wrong"
+/// throws away the only part the user can do anything with.
+
+@ProviderFor(WhatsAppActions)
+final whatsAppActionsProvider = WhatsAppActionsProvider._();
+
+/// Connect, verify, disconnect, resume.
+///
+/// Every failure the user can act on arrives here as its own type and is
+/// turned into its sentence: each of the four is an ANSWER — wait, agree,
+/// retype, fix the number — and folding them into "something went wrong"
+/// throws away the only part the user can do anything with.
+final class WhatsAppActionsProvider
+    extends $NotifierProvider<WhatsAppActions, WhatsAppBusy> {
+  /// Connect, verify, disconnect, resume.
+  ///
+  /// Every failure the user can act on arrives here as its own type and is
+  /// turned into its sentence: each of the four is an ANSWER — wait, agree,
+  /// retype, fix the number — and folding them into "something went wrong"
+  /// throws away the only part the user can do anything with.
+  WhatsAppActionsProvider._()
+    : super(
+        from: null,
+        argument: null,
+        retry: null,
+        name: r'whatsAppActionsProvider',
+        isAutoDispose: true,
+        dependencies: null,
+        $allTransitiveDependencies: null,
+      );
+
+  @override
+  String debugGetCreateSourceHash() => _$whatsAppActionsHash();
+
+  @$internal
+  @override
+  WhatsAppActions create() => WhatsAppActions();
+
+  /// {@macro riverpod.override_with_value}
+  Override overrideWithValue(WhatsAppBusy value) {
+    return $ProviderOverride(
+      origin: this,
+      providerOverride: $SyncValueProvider<WhatsAppBusy>(value),
+    );
+  }
+}
+
+String _$whatsAppActionsHash() => r'f5966822728ed053d77e8a24a6b09f322654041e';
+
+/// Connect, verify, disconnect, resume.
+///
+/// Every failure the user can act on arrives here as its own type and is
+/// turned into its sentence: each of the four is an ANSWER — wait, agree,
+/// retype, fix the number — and folding them into "something went wrong"
+/// throws away the only part the user can do anything with.
+
+abstract class _$WhatsAppActions extends $Notifier<WhatsAppBusy> {
+  WhatsAppBusy build();
+  @$mustCallSuper
+  @override
+  void runBuild() {
+    final ref = this.ref as $Ref<WhatsAppBusy, WhatsAppBusy>;
+    final element =
+        ref.element
+            as $ClassProviderElement<
+              AnyNotifier<WhatsAppBusy, WhatsAppBusy>,
+              WhatsAppBusy,
+              Object?,
+              Object?
+            >;
+    element.handleCreate(ref, build);
+  }
+}
+
 /// Google Calendar connection status + disconnect.
 
 @ProviderFor(CalendarController)

@@ -53,6 +53,19 @@ enum DayKind {
   /// True when we prepare something the USER then posts. Both of these end in
   /// a hand-off rather than in our publish pipeline.
   bool get isHandoff => this == DayKind.videoScript || this == DayKind.article;
+
+  /// What this day produces, in the words the user sees.
+  ///
+  /// Mirrors `madeThing` in the web's `learn.service.ts`. The Learn player
+  /// called all three a "post" — "Write my post" on a Wednesday — which was
+  /// wrong before it was confusing, because only two of the five climbable
+  /// days become a Post at all. `rest` falls to "post" only because nothing
+  /// is ever written on a rest day and the string is never reached.
+  String get madeThing => switch (this) {
+    DayKind.videoScript => 'script',
+    DayKind.article => 'newsletter',
+    DayKind.post || DayKind.rest => 'post',
+  };
 }
 
 /// The seven days, in order. Mirrors `WEEK_SHAPE`.

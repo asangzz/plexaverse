@@ -34,6 +34,7 @@ class ExerciseView extends StatelessWidget {
     required this.onChanged,
     required this.verdict,
     required this.controller,
+    required this.focusNode,
     super.key,
   });
 
@@ -52,6 +53,10 @@ class ExerciseView extends StatelessWidget {
   /// picker types, which have nothing to type into.
   final TextEditingController? controller;
 
+  /// Also the player's, for the same reason. Tapping "Say it instead" puts
+  /// the caret in the box, so the words land where the user is looking.
+  final FocusNode? focusNode;
+
   @override
   Widget build(BuildContext context) {
     final Exercise e = exercise;
@@ -60,8 +65,8 @@ class ExerciseView extends StatelessWidget {
     if (e.isDialogue) return _Dialogue(exercise: e, value: value, onChanged: onChanged, verdict: verdict);
     if (e.isGap) return _Gap(exercise: e, value: value, onChanged: onChanged, verdict: verdict);
     if (e.isPair) return _Pair(exercise: e, value: value, onChanged: onChanged, verdict: verdict);
-    if (e.isRewrite) return _Rewrite(exercise: e, controller: controller, onChanged: onChanged, verdict: verdict);
-    if (e.isCompose) return _Compose(exercise: e, controller: controller, onChanged: onChanged, verdict: verdict);
+    if (e.isRewrite) return _Rewrite(exercise: e, controller: controller, focusNode: focusNode, onChanged: onChanged, verdict: verdict);
+    if (e.isCompose) return _Compose(exercise: e, controller: controller, focusNode: focusNode, onChanged: onChanged, verdict: verdict);
 
     return _Question(
       prompt: e.prompt,
@@ -542,12 +547,14 @@ class _Rewrite extends StatelessWidget {
   const _Rewrite({
     required this.exercise,
     required this.controller,
+    required this.focusNode,
     required this.onChanged,
     required this.verdict,
   });
 
   final Exercise exercise;
   final TextEditingController? controller;
+  final FocusNode? focusNode;
   final ValueChanged<String> onChanged;
   final Verdict verdict;
 
@@ -558,21 +565,34 @@ class _Rewrite extends StatelessWidget {
     // the commonest non-answer — pressing Check on the starter untouched —
     // the path of least resistance.
     above: _Quoted(label: 'BEFORE', body: exercise.starter ?? ''),
-    child: ZaveField(
-      controller: controller,
-      label: 'YOUR VERSION',
-      hint: 'Your version…',
-      minLines: 3,
-      maxLines: 5,
-      enabled: verdict == null,
-      suffix: verdict != null || controller == null
-          ? null
-          : ZaveDictateButton(
-              controller: controller!,
-              fieldId: 'learn.rewrite',
-              onChanged: onChanged,
-            ),
-      onChanged: onChanged,
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: <Widget>[
+        ZaveField(
+          controller: controller,
+          focusNode: focusNode,
+          label: 'YOUR VERSION',
+          hint: 'Your version…',
+          minLines: 3,
+          maxLines: 5,
+          enabled: verdict == null,
+          onChanged: onChanged,
+        ),
+        // Under the field and labelled, not a mic in the corner. In the
+        // composer the box is the whole screen and an icon is enough; here it
+        // is one of several things being asked, and an unlabelled glyph reads
+        // as decoration. Mirrors the web's SayItInstead.
+        if (verdict == null && controller != null) ...<Widget>[
+          SizedBox(height: ZaveSpace.md),
+          ZaveDictateButton(
+            controller: controller!,
+            fieldId: 'learn.rewrite',
+            label: 'Say it instead',
+            focusNode: focusNode,
+            onChanged: onChanged,
+          ),
+        ],
+      ],
     ),
   );
 }
@@ -582,12 +602,14 @@ class _Compose extends StatelessWidget {
   const _Compose({
     required this.exercise,
     required this.controller,
+    required this.focusNode,
     required this.onChanged,
     required this.verdict,
   });
 
   final Exercise exercise;
   final TextEditingController? controller;
+  final FocusNode? focusNode;
   final ValueChanged<String> onChanged;
   final Verdict verdict;
 
@@ -607,22 +629,26 @@ class _Compose extends StatelessWidget {
       SizedBox(height: ZaveSpace.lg),
       ZaveField(
         controller: controller,
+        focusNode: focusNode,
         hint: exercise.placeholder ?? 'Your answer…',
         minLines: 4,
         maxLines: 8,
         enabled: verdict == null,
-        // The one place in the product that asks for the user's own account
-        // of their own work, and the hardest to type on a phone. Locked
-        // once the server has answered, like the box itself.
-        suffix: verdict != null || controller == null
-            ? null
-            : ZaveDictateButton(
-                controller: controller!,
-                fieldId: 'learn.compose',
-                onChanged: onChanged,
-              ),
         onChanged: onChanged,
       ),
+      // The one place that asks for the user's own account of their own work,
+      // and the hardest to type on a phone — so the one most worth speaking.
+      // Gone once the server has answered, like the box.
+      if (verdict == null && controller != null) ...<Widget>[
+        SizedBox(height: ZaveSpace.md),
+        ZaveDictateButton(
+          controller: controller!,
+          fieldId: 'learn.compose',
+          label: 'Say it instead',
+          focusNode: focusNode,
+          onChanged: onChanged,
+        ),
+      ],
     ],
   );
 }

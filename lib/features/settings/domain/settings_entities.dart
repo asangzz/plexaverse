@@ -153,6 +153,48 @@ abstract class SlackConnection with _$SlackConnection {
       _$SlackConnectionFromJson(json);
 }
 
+/// WhatsApp connection status, as `GET /user/whatsapp` returns it.
+///
+/// Like Slack's, the endpoint never 404s a user who has not connected — it
+/// answers with `connected: false` — so there is no "absent" case here.
+///
+/// ## connected, optedOut and available are three different facts
+///
+/// [available] is the ENVIRONMENT: no credentials on the server and the app
+/// must say so rather than offer a form that cannot work. [connected] is a
+/// verified number. [optedOut] is the user having replied STOP on WhatsApp
+/// itself, which outlives a disconnect on purpose — a deleted row can be
+/// recreated by typing the number in again, and that must not silently undo a
+/// STOP. So a user can be disconnected AND opted out, and the only way back is
+/// the explicit resume.
+@freezed
+abstract class WhatsAppConnection with _$WhatsAppConnection {
+  const WhatsAppConnection._();
+
+  const factory WhatsAppConnection({
+    /// False when the server has no WhatsApp credentials at all.
+    @Default(false) bool available,
+    @Default(false) bool connected,
+
+    /// Masked, always — the full number never leaves the server, not even to
+    /// the owner, who knows it already.
+    String? phoneMasked,
+
+    /// A code is outstanding and the app should show the code box.
+    @Default(false) bool awaitingCode,
+    @Default(false) bool optedOut,
+  }) = _WhatsAppConnection;
+
+  factory WhatsAppConnection.fromJson(Map<String, dynamic> json) =>
+      _$WhatsAppConnectionFromJson(json);
+
+  /// Nothing to offer: the channel is off in this environment.
+  bool get isUnavailable => !available;
+
+  /// Connected and not silenced — messages will actually arrive.
+  bool get isLive => connected && !optedOut;
+}
+
 /// The token half of `GET /google-calendar/status`.
 @freezed
 abstract class CalendarTokenStatus with _$CalendarTokenStatus {
