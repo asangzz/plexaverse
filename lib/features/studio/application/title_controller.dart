@@ -1,5 +1,6 @@
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
+import '../../../core/plan/plan_refusal.dart';
 import '../data/title_repositories.dart';
 import '../domain/title_creator.dart';
 import 'title_creator_state.dart';
@@ -74,14 +75,21 @@ class TitleCreatorController extends _$TitleCreatorController {
           .read(titleRepositoryProvider)
           .suggestTitle(headline: state.headline.trim(), priority: priority);
       state = state.copyWith(result: result, busy: false);
-    } on Object {
-      // Back to step 2, where the user can pick again — the same recovery the
-      // web performs. Stranding them on an empty result screen would leave no
-      // control that does anything.
+    } on Object catch (e) {
+      // Back to step 2 — the same recovery the web performs. Stranding them on
+      // an empty result screen would leave no control that does anything.
+      //
+      // `suggest-title` is plan-gated (10 a day). A plan refusal is not a
+      // glitch: "Try again" would be refused identically, so the server's
+      // message (and, for a limit, when it comes back) replaces it.
+      final PlanRefusal? refusal = PlanRefusal.fromError(e);
       state = state.copyWith(
         step: TitleStep.priority,
         busy: false,
-        error: 'Could not write a headline. Try again.',
+        error:
+            refusal?.displayMessage() ??
+            'Could not write a headline. Try again.',
+        refusal: refusal,
       );
     }
   }

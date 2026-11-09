@@ -46,8 +46,8 @@ import '../widgets/top_voices_section.dart';
 /// (`core/platform/link_opening.dart`), and the search URLs are built in
 /// `core/links/linkedin.dart`.
 ///
-/// The web also prices a regenerate at 50 XP. The mobile route never forwards
-/// the `force` flag that would buy one, so the control renders disabled with
+/// The web also offers a regenerate. The mobile route never forwards the
+/// `force` flag that would ask for one, so the control renders disabled with
 /// the reason attached — see [NewSetUnavailable].
 class CommentsPage extends ConsumerWidget {
   const CommentsPage({this.goldenHour = false, this.topic, super.key});
@@ -82,7 +82,7 @@ class CommentsPage extends ConsumerWidget {
     );
 
     // A failed claim is the one thing on this screen the user must be told
-    // about: their work is done and the XP did not land.
+    // about: their work is done and the step did not close.
     ref.listen<AsyncValue<bool>>(stepCompletionProvider, (
       AsyncValue<bool>? previous,
       AsyncValue<bool> next,
@@ -166,10 +166,9 @@ class CommentsPage extends ConsumerWidget {
               SizedBox(height: ZaveSpace.xl),
               EngagementBlocked(
                 failure: _asFailure(error),
-                knownXpCost: null,
                 onRetry: () =>
                     ref.invalidate(commentsControllerProvider(topic)),
-                onGetXp: () => context.push(ZaveRoutes.pricing),
+                onSeePlans: () => context.push(ZaveRoutes.pricing),
                 onCompleteProfile: () => context.push(ZaveRoutes.settings),
               ),
             ],
@@ -240,7 +239,7 @@ class CommentsPage extends ConsumerWidget {
         ],
 
         SizedBox(height: ZaveSpace.lg),
-        NewSetUnavailable(xpCost: batch.xpCost),
+        const NewSetUnavailable(),
         SizedBox(height: ZaveSpace.xl),
 
         if (batch.isEmpty)
@@ -326,7 +325,7 @@ class CommentsPage extends ConsumerWidget {
         .read(stepCompletionProvider.notifier)
         .complete(mission);
     if (!ok || !context.mounted) return;
-    _say(context, '+${mission.xpReward} XP — step complete.');
+    _say(context, 'Step complete.');
     _leave(context);
   }
 

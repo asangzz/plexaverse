@@ -8,6 +8,7 @@ import '../domain/compose_status.dart';
 import '../domain/linkedin_account.dart';
 import '../../preferences/application/preferences_controller.dart';
 import '../../preferences/domain/user_preferences.dart';
+import '../../../core/plan/plan_refusal.dart';
 import '../../../core/platform/image_picking.dart';
 
 part 'compose_controller.g.dart';
@@ -156,6 +157,20 @@ class ComposeActions extends _$ComposeActions {
   @override
   ComposeStatus build() => const ComposeStatus();
 
+  /// The plan refusal behind the current `insufficientXp` status.
+  ///
+  /// Held here rather than on [ComposeStatus] because that is a freezed value
+  /// and adding a field needs a codegen run. Every site that sets
+  /// `insufficientXp` does so through [_noteRefusal], which writes this first,
+  /// so a rebuild that sees the flag also sees the refusal it belongs to.
+  PlanRefusal? get refusal => _refusal;
+  PlanRefusal? _refusal;
+
+  bool _noteRefusal(ComposeFailure e) {
+    _refusal = e.refusal;
+    return e.refusedByPlan;
+  }
+
   ComposeRepository get _repo => ref.read(composeRepositoryProvider);
 
   ComposeDraft get _draft => ref.read(composeDraftControllerProvider);
@@ -214,10 +229,7 @@ class ComposeActions extends _$ComposeActions {
         reference: reference,
       );
     } on ComposeFailure catch (e) {
-      state = ComposeStatus(
-        error: e.insufficientXp ? null : e.message,
-        insufficientXp: e.insufficientXp,
-      );
+      state = ComposeStatus(error: e.message, insufficientXp: _noteRefusal(e));
       return;
     }
 
@@ -262,14 +274,14 @@ class ComposeActions extends _$ComposeActions {
       // say what happened.
       _drafts.setPosterPrompt(prompt);
       state = ComposeStatus(
-        // Kept in the XP case too. Running out of XP at the poster step is
+        // Kept in the plan case too. Hitting a limit at the poster step is
         // exactly where a user assumes they have lost the post, and this is
-        // the sentence that says they have not; the card's own headline
-        // carries the remedy.
-        error: e.insufficientXp
-            ? 'Your post is written. The poster is what needs XP.'
+        // the sentence that says they have not; the message after it names
+        // the limit and when it comes back.
+        error: e.refusedByPlan
+            ? 'Your post is written. ${e.message}'
             : 'Your post is written, but the poster failed. ${e.message}',
-        insufficientXp: e.insufficientXp,
+        insufficientXp: _noteRefusal(e),
       );
     }
   }
@@ -292,10 +304,7 @@ class ComposeActions extends _$ComposeActions {
       _drafts.setGeneratedImage(ComposeImage(dataUri: poster.imageUrl));
       state = const ComposeStatus();
     } on ComposeFailure catch (e) {
-      state = ComposeStatus(
-        error: e.insufficientXp ? null : e.message,
-        insufficientXp: e.insufficientXp,
-      );
+      state = ComposeStatus(error: e.message, insufficientXp: _noteRefusal(e));
     }
   }
 
@@ -386,7 +395,7 @@ class ComposeActions extends _$ComposeActions {
         error:
             'Saved as a draft, but LinkedIn rejected the publish. ${e.message}',
         savedPostId: created.id,
-        insufficientXp: e.insufficientXp,
+        insufficientXp: _noteRefusal(e),
       );
     }
   }
@@ -441,7 +450,7 @@ class ComposeActions extends _$ComposeActions {
         } on ComposeFailure catch (e) {
           state = ComposeStatus(
             error: 'Could not upload the image. ${e.message}',
-            insufficientXp: e.insufficientXp,
+            insufficientXp: _noteRefusal(e),
           );
           return null;
         }
@@ -472,7 +481,7 @@ class ComposeActions extends _$ComposeActions {
           ? created.copyWith(imageUrl: imageUrl)
           : created;
     } on ComposeFailure catch (e) {
-      state = ComposeStatus(error: e.message, insufficientXp: e.insufficientXp);
+      state = ComposeStatus(error: e.message, insufficientXp: _noteRefusal(e));
       return null;
     }
   }

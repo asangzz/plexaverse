@@ -134,7 +134,7 @@ abstract class FestivePoster with _$FestivePoster {
 enum FestivePosterBusy {
   idle,
 
-  /// `POST /festive/generate` — 800 XP, 5–15s of sharp work.
+  /// `POST /festive/generate` — paid by the plan, 5–15s of sharp work.
   generating,
 
   /// `POST /upload/image` — moving the inline poster into storage so it has a
@@ -157,7 +157,8 @@ abstract class FestivePosterState with _$FestivePosterState {
     /// Rendered in amber, never red.
     String? error,
 
-    /// 402. The remedy is topping up, so the UI must not offer a retry.
+    /// 402 — refused by the plan, so the UI must not offer a retry. Pre-plan
+    /// name kept: renaming a freezed field needs a codegen run.
     @Default(false) bool insufficientXp,
   }) = _FestivePosterState;
 

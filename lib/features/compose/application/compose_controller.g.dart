@@ -272,7 +272,7 @@ final class ComposeActionsProvider
   }
 }
 
-String _$composeActionsHash() => r'5a6b2bdefd828c6b7fe5ce89b1376749a1e42bc4';
+String _$composeActionsHash() => r'f7637b08478a1bcf247f163bd46be89a2f9d24c4';
 
 /// Everything the composer does that can fail or take time.
 ///

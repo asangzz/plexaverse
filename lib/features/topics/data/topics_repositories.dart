@@ -6,6 +6,7 @@ import '../../../core/config/env.dart';
 import '../../../core/network/api_paths.dart';
 import '../../../core/network/dio_client.dart';
 import '../../../core/network/failure.dart';
+import '../../../core/plan/plan_refusal.dart';
 import '../domain/topics_repository.dart';
 
 /// Dio-backed [TopicsRepository].
@@ -133,11 +134,20 @@ class ApiTopicsRepository implements TopicsRepository {
   }
 
   TopicsUnavailable _translate(DioException e) {
+    // The plan gate first, and from the raw response: the interceptor's
+    // [Failure] drops `details`, which is where `resetsAt` lives, and "when
+    // does it come back" is the one useful thing to tell a user at a limit.
+    final PlanRefusal? plan = PlanRefusal.fromDioException(e);
+    if (plan != null) {
+      return TopicsUnavailable(
+        plan.needsPlan ? TopicsFailure.needsPlan : TopicsFailure.limitReached,
+        plan.displayMessage(),
+      );
+    }
     final Object? failure = e.error;
     if (failure is! Failure) return const TopicsUnavailable();
     final TopicsFailure reason = switch (failure.errorCode) {
       'PROFILE_INCOMPLETE' => TopicsFailure.profileIncomplete,
-      'INSUFFICIENT_XP' => TopicsFailure.insufficientXp,
       'NOT_CONFIGURED' => TopicsFailure.notConfigured,
       'UPSTREAM_FAILED' => TopicsFailure.upstream,
       _ => TopicsFailure.unknown,

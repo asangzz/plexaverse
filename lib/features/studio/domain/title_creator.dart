@@ -37,7 +37,7 @@ enum TitlePriority {
 
 /// What `POST /ai/analyze-profession` reads out of a headline.
 ///
-/// Free — no XP gate — and the service returns a usable shell rather than a
+/// Free — no plan gate — and the service returns a usable shell rather than a
 /// 5xx when Gemini is unavailable, so this step can never wedge the wizard.
 @freezed
 abstract class ProfessionAnalysis with _$ProfessionAnalysis {
@@ -55,8 +55,8 @@ abstract class ProfessionAnalysis with _$ProfessionAnalysis {
 
 /// What `POST /ai/suggest-title` gives back.
 ///
-/// XP is charged only on the AI path: when Gemini is down the service returns
-/// a deterministic template for free. The response shape is identical either
+/// Ungated — the template creator is free on purpose (web CLAUDE.md §6d). When
+/// Gemini is down the service returns a deterministic template instead. The response shape is identical either
 /// way, so the client cannot — and should not — tell the difference.
 @freezed
 abstract class TitleSuggestion with _$TitleSuggestion {

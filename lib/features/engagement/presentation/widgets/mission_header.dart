@@ -56,12 +56,6 @@ class MissionHeader extends StatelessWidget {
           spacing: ZaveSpace.sm,
           runSpacing: ZaveSpace.sm,
           children: <Widget>[
-            if (m != null)
-              ZavePill(
-                label: '${m.xpReward} XP',
-                color: ZaveColors.amber,
-                leading: const ZaveDot(ZaveColors.amber),
-              ),
             if (m != null && m.isCompleted)
               const ZavePill(
                 label: 'Already claimed today',
@@ -85,7 +79,7 @@ class MissionHeader extends StatelessWidget {
                 Expanded(
                   child: Text(
                     "Today's roadmap has no step for this habit, so there is "
-                    'no XP to claim. Everything else here still works.',
+                    'nothing to complete. Everything else here still works.',
                     style: ZaveType.caption.copyWith(color: ZaveColors.ink62),
                   ),
                 ),

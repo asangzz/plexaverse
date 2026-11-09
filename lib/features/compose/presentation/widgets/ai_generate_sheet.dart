@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../../core/plan/plan_refusal.dart';
 import '../../../../core/router/zave_routes.dart';
 
 import '../../../../core/ui/zave/zave_kit.dart';
@@ -312,10 +313,11 @@ class _AiGenerateSheetState extends ConsumerState<AiGenerateSheet> {
 
                 if (status.insufficientXp) ...<Widget>[
                   SizedBox(height: ZaveSpace.xl),
-                  const _XpNotice(),
-                ],
-
-                if (status.error != null) ...<Widget>[
+                  _PlanNotice(
+                    message: status.error,
+                    refusal: ref.read(composeActionsProvider.notifier).refusal,
+                  ),
+                ] else if (status.error != null) ...<Widget>[
                   SizedBox(height: ZaveSpace.xl),
                   _ErrorNotice(message: status.error!),
                 ],
@@ -494,13 +496,20 @@ class _ProgressStrip extends StatelessWidget {
   }
 }
 
-/// The server answered 402. Amber — Zave has no red, and running out of XP is
-/// a "waiting on you" state, not a failure.
-class _XpNotice extends StatelessWidget {
-  const _XpNotice();
+/// The plan said no (HTTP 402). Amber — Zave has no red, and a missing plan
+/// or a used-up limit is a "waiting" state, not a failure.
+class _PlanNotice extends StatelessWidget {
+  const _PlanNotice({required this.message, required this.refusal});
+
+  /// The server's message, already carrying when a limit comes back.
+  final String? message;
+  final PlanRefusal? refusal;
 
   @override
   Widget build(BuildContext context) {
+    // A refusal whose details were lost still reads as "needs a plan": with
+    // wallet XP gone, a plan is the only thing a bare 402 can ask for.
+    final bool needsPlan = !(refusal?.isLimit ?? false);
     return Container(
       padding: ZaveSpace.rowPad,
       decoration: ZaveSurface.row,
@@ -511,18 +520,20 @@ class _XpNotice extends StatelessWidget {
           SizedBox(width: ZaveSpace.md),
           Expanded(
             child: Text(
-              "You don't have enough XP to generate a post.",
+              message ?? 'This needs a Plexaverse plan.',
               style: ZaveType.caption.copyWith(color: ZaveColors.amber),
             ),
           ),
-          SizedBox(width: ZaveSpace.md),
-          // The sentence used to end "…top up from Pricing" and stop there,
-          // which names the fix and withholds the way to it. Pricing is a
-          // route; say it with the route.
-          ZaveButton(
-            label: 'Top up',
-            onPressed: () => context.push(ZaveRoutes.pricing),
-          ),
+          // Naming the fix without the way to it was the old bug here, so
+          // the plan case carries the route. A limit has no button: waiting
+          // is the only remedy, and the message says until when.
+          if (needsPlan) ...<Widget>[
+            SizedBox(width: ZaveSpace.md),
+            ZaveButton.brand(
+              label: 'See plans',
+              onPressed: () => context.push(ZaveRoutes.pricing),
+            ),
+          ],
         ],
       ),
     );

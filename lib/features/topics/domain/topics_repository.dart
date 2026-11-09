@@ -4,10 +4,11 @@ export 'topic.dart';
 
 /// Why a topics action could not complete.
 ///
-/// Four of these come straight off `error.code` in the mobile envelope, and
+/// Most of these come straight off `error.code` in the mobile envelope, and
 /// they are kept apart because the right response differs: a profile that is
 /// too thin to seed a suggestion is fixed in Settings, not by tapping the
-/// button again, and an XP shortfall is fixed by buying XP. Collapsing them
+/// button again; a missing plan is fixed by getting one; a used-up daily
+/// limit is fixed only by waiting until it resets. Collapsing them
 /// into one sentinel would leave the screen able to say only "try again" to a
 /// user for whom trying again cannot work.
 enum TopicsFailure {
@@ -16,8 +17,13 @@ enum TopicsFailure {
   /// route to profile editing rather than offer a retry.
   profileIncomplete,
 
-  /// `INSUFFICIENT_XP` — suggesting costs 50 XP and the balance is short.
-  insufficientXp,
+  /// `INSUFFICIENT_XP` (name kept for old builds) — no plan. Suggesting is
+  /// paid for by the plan, so without one no press can work.
+  needsPlan,
+
+  /// `LIMIT_REACHED` — today's topic-suggestion limit is used. The message
+  /// carries when it comes back, because that is the only remedy.
+  limitReached,
 
   /// `NOT_CONFIGURED` — the server is missing an AI key. Transient from the
   /// client's point of view; a deploy may fix it.
@@ -77,7 +83,8 @@ abstract class TopicsRepository {
   Future<void> deleteTopic(String id);
 
   /// `POST /ai/suggest-topics` — three suggestions from the user's profile.
-  /// Costs 50 XP per call, whether or not the user keeps any of them.
+  /// Each call counts against the plan's daily topic-suggestion limit, whether
+  /// or not the user keeps any of them.
   Future<List<SuggestedTopic>> suggestTopics();
 
   /// `POST /roadmap/progress` for Level 5, Step 1 — "Content Strategy

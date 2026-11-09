@@ -5,16 +5,21 @@ import 'package:go_router/go_router.dart';
 import '../../../../core/ui/app_icons.dart';
 import '../../../../core/ui/zave/zave_kit.dart';
 import '../../application/pricing_controller.dart';
-import '../../domain/pricing.dart';
+import '../../domain/pricing_repository.dart';
 import '../widgets/plan_card.dart';
 import '../widgets/referral_card.dart';
-import '../widgets/xp_budget_card.dart';
+import '../widgets/allowances_card.dart';
 
 /// **Pricing** — the web's `/pricing`.
 ///
 /// Geo-priced: `GET /geo/pricing` answers with the user's currency and the two
 /// plan prices, and the plan catalogue itself is static content copied verbatim
 /// from the web's `PLANS` array.
+///
+/// A plan is described by what it includes — one allowance per AI feature, from
+/// `GET /user/allowances` — not by XP. Wallet XP was retired on 10 Nov 2026;
+/// "XP" in this app now means only the contest score, and this screen never
+/// says it.
 ///
 /// ## The one thing this screen cannot do
 ///
@@ -29,17 +34,13 @@ import '../widgets/xp_budget_card.dart';
 /// the precedent this codebase has already set: an honest disabled control
 /// beats a dead one.
 ///
-/// ## Two smaller departures from the web, both forced
+/// ## A departure from the web, forced
 ///
-///   • The web badges the free tier "Claimed" / "No card needed" from
-///     `welcomeXpClaimed`. The mobile `/user/xp` route does not return that
-///     field (it re-shapes the payload to `{balance, transactions, config}`),
-///     so the card states the grant neutrally instead of guessing which half of
-///     the branch this user is in.
-///   • The web decides `/month` vs `/purchase` from `GET /api/payment/config`.
-///     That route now has a mobile mirror, but the period is still not shown:
-///     reading it would mean a second call before the price can render, and
-///     the plans currently sold here are all monthly.
+/// The web decides "Subscribe" vs "Get the 30-day pass" from
+/// `GET /api/payment/config`. That route has a mobile mirror, but this screen
+/// only opens subscription mandates (the one-time order flow is not wired to
+/// the sheet), so it says "Subscribe" and nothing about a pass it cannot sell.
+/// Settings names an active 30-day pass bought on the web as one.
 class PricingPage extends ConsumerWidget {
   const PricingPage({super.key});
 
@@ -68,6 +69,11 @@ class PricingPage extends ConsumerWidget {
     final AsyncValue<ReferralSummary> referral = ref.watch(
       referralControllerProvider,
     );
+    // Never errors (it falls back to the static table), so only loading needs
+    // a placeholder.
+    final AsyncValue<AllowanceTable> allowances = ref.watch(
+      planAllowancesProvider,
+    );
 
     return ZaveScaffold(
       largeTitle: 'Pricing',
@@ -83,6 +89,7 @@ class PricingPage extends ConsumerWidget {
           ref
             ..invalidate(planPricingProvider)
             ..invalidate(pricingBrandTypeProvider)
+            ..invalidate(planAllowancesProvider)
             ..invalidate(referralControllerProvider);
           await ref.read(planPricingProvider.future);
         },
@@ -91,8 +98,8 @@ class PricingPage extends ConsumerWidget {
             Text('Power up your LinkedIn growth', style: ZaveType.h2),
             SizedBox(height: ZaveSpace.md),
             Text(
-              'XP never expires — it simply runs out when used. Top up only '
-              'when you need more.',
+              'One plan pays for every AI feature. Each feature has an '
+              'allowance that resets daily or monthly.',
               style: ZaveType.lead,
             ),
 
@@ -135,7 +142,11 @@ class PricingPage extends ConsumerWidget {
             ),
 
             SizedBox(height: ZaveSpace.md),
-            const XpBudgetCard(),
+            switch (allowances) {
+              AsyncData<AllowanceTable>(:final AllowanceTable value) =>
+                AllowancesCard(table: value),
+              _ => const ZaveShimmer(child: ZaveSkeleton.block(height: 320)),
+            },
 
             SizedBox(height: ZaveSpace.xl),
             referral.when(
@@ -157,13 +168,11 @@ class PricingPage extends ConsumerWidget {
   }
 }
 
-/// The free welcome grant.
+/// What is free without a plan.
 ///
-/// Stated, not offered: the 2,500 XP lands on the FIRST LinkedIn connect
-/// (`awardWelcomeXpIfFirstConnection` on the web), and without
-/// `welcomeXpClaimed` this screen cannot tell whether that already happened.
-/// So there is no "Get Started" / "Claimed" branch and no CTA — a sentence
-/// that is true either way beats a button that might be a lie.
+/// There used to be a 2,500 XP welcome grant here. Wallet XP was retired and
+/// the grant with it, so this states what never needed a plan, with no CTA —
+/// anyone on this screen is signed in and already has it.
 class _FreeTierCard extends StatelessWidget {
   const _FreeTierCard();
 
@@ -175,14 +184,11 @@ class _FreeTierCard extends StatelessWidget {
         children: <Widget>[
           Text('FREE', style: ZaveType.kicker),
           SizedBox(height: ZaveSpace.md),
-          Text(
-            '${groupedNumber(kWelcomeXp)} XP free',
-            style: ZaveType.h2.copyWith(color: ZaveColors.amber),
-          ),
+          Text('Roadmap, lessons and calendar', style: ZaveType.h2),
           SizedBox(height: ZaveSpace.md),
           Text(
-            'Credited the first time you connect a LinkedIn account — about a '
-            'week of automation. No card needed.',
+            'Free without a card. AI writing, posters and the rest need a '
+            'plan.',
             style: ZaveType.bodyMuted,
           ),
         ],
@@ -241,7 +247,7 @@ class _ReferralError extends StatelessWidget {
             children: <Widget>[
               const ZaveDot(ZaveColors.amber),
               SizedBox(width: ZaveSpace.sm),
-              Text('REFER & EARN', style: ZaveType.kicker),
+              Text('REFER A FRIEND', style: ZaveType.kicker),
             ],
           ),
           SizedBox(height: ZaveSpace.md),

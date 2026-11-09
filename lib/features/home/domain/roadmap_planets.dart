@@ -7,10 +7,11 @@
 ///
 /// The arc was rebuilt: four phases across a thousand days, twelve planets
 /// split between them. The old table summed to 66, and keeping it did real
-/// damage rather than merely looking out of date — `seasonOneFinished` is
-/// `day > roadmapTotalDays`, so every user past their sixty-sixth day was
-/// being told Season 1 was over and pushed to the Season Complete screen, 934
-/// days before the web thinks it ends.
+/// damage rather than merely looking out of date: the app's "is the arc
+/// over" check read its length from here, so every user past their
+/// sixty-sixth day was told it was over and pushed to a completion screen,
+/// 934 days before the web thinks it ends. That check is
+/// `UserPreferences.journeyFinished` now, still reading [roadmapTotalDays].
 ///
 /// ## Why the days are explicit bounds now, not a count
 ///

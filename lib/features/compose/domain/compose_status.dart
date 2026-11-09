@@ -62,8 +62,11 @@ abstract class ComposeStatus with _$ComposeStatus {
     /// state.
     String? error,
 
-    /// The server answered 402 INSUFFICIENT_XP. Distinct from [error] because
-    /// the remedy is different: the user has to top up, not retry.
+    /// The plan refused the request (HTTP 402: no plan, or a limit used up).
+    /// Distinct from [error] because the remedy is different: a plan or a
+    /// wait, not a retry. The pre-plan field name is kept because renaming a
+    /// freezed field needs a codegen run; the refusal itself is on
+    /// `ComposeActions.refusal`.
     @Default(false) bool insufficientXp,
 
     /// Set once a submission lands, and cleared the moment the user edits

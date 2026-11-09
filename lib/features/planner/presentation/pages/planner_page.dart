@@ -5,6 +5,8 @@ import 'package:flutter/services.dart' show Clipboard, ClipboardData;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/links/linkedin.dart';
+import '../../../../core/plan/plan_limit_sheet.dart';
+import '../../../../core/plan/plan_refusal.dart';
 import '../../../../core/ui/app_icons.dart';
 import '../../../../core/ui/widgets/open_link.dart';
 import '../../../../core/ui/zave/zave_kit.dart';
@@ -853,7 +855,7 @@ class _SlotSheet extends ConsumerStatefulWidget {
 class _SlotSheetState extends ConsumerState<_SlotSheet> {
   // The five in-flight flags this used to hold are on [PlannerBusy] now. The
   // sheet is dismissible by a swipe while a model call is open, and four of
-  // the five operations cost XP, so a flag that died with the sheet was the
+  // the five operations use the plan, so a flag that died with the sheet was the
   // only thing stopping a re-opened day from buying a second one.
   //
   // The DIRTY flags below stay. They are the text fields' own answer to "did a
@@ -1020,12 +1022,12 @@ class _SlotSheetState extends ConsumerState<_SlotSheet> {
                 // The edits are in a field that is about to be replaced, and
                 // the post behind it is about to be deleted. Saying so is the
                 // difference between a choice and a surprise.
-                ? 'This replaces the current draft with a new one and costs '
-                      'XP. Your unsaved edits to this post will be lost. The '
-                      'poster is kept.'
-                : 'This replaces the current draft with a new one and costs '
-                      'XP. The old draft is deleted. The poster is kept — '
-                      'use "New image" to change that.',
+                ? 'This replaces the current draft with a new one. Your '
+                      'unsaved edits to this post will be lost. The poster is '
+                      'kept.'
+                : 'This replaces the current draft with a new one. The old '
+                      'draft is deleted. The poster is kept — use "New '
+                      'image" to change that.',
           ),
           actions: <Widget>[
             TextButton(
@@ -1075,11 +1077,19 @@ class _SlotSheetState extends ConsumerState<_SlotSheet> {
         setState(() => _bodyLoadedFor = null);
       }
     } on PlannerGenerateFailure catch (e) {
+      // The plan said no: the sheet says why and, for a limit, when it comes
+      // back. No snackbar on top — one message, in one place.
+      final PlanRefusal? refusal = e.refusal;
+      if (refusal != null) {
+        if (mounted) await PlanLimitSheet.show(context, refusal);
+        return;
+      }
       note = switch (e.kind) {
-        // The server's message names the price and the balance, which is the
-        // one thing a generic "not enough XP" would lose.
-        PlannerGenerateFailureKind.insufficientXp =>
-          e.message ?? 'Not enough XP to write this one.',
+        // A refusal whose details were lost — the server's words, still.
+        PlannerGenerateFailureKind.needsPlan =>
+          e.message ?? 'Writing posts needs a Plexaverse plan.',
+        PlannerGenerateFailureKind.limitReached =>
+          e.message ?? "You've used this limit for now.",
         PlannerGenerateFailureKind.noLinkedinAccount =>
           'Connect a LinkedIn account first — Settings › Connected Accounts.',
         // Never "try again". A retry cannot succeed on a day the week gives no
@@ -1110,7 +1120,12 @@ class _SlotSheetState extends ConsumerState<_SlotSheet> {
       note = ok
           ? 'New image.'
           : 'The image did not come back. Your post is unchanged.';
-    } on Object {
+    } on Object catch (e) {
+      final PlanRefusal? refusal = PlanRefusal.fromError(e);
+      if (refusal != null) {
+        if (mounted) await PlanLimitSheet.show(context, refusal);
+        return;
+      }
       note = 'The image did not come back. Your post is unchanged.';
     }
     if (mounted) _say(note);
@@ -1747,7 +1762,7 @@ class _WeekAnalytics extends StatelessWidget {
                   width: tileWidth,
                   child: ZaveStatCard(
                     label: 'Week',
-                    sublabel: plan.phase ?? 'of the season',
+                    sublabel: plan.phase ?? 'of your journey',
                     value: '${plan.weekNumber}',
                     filled: true,
                   ),

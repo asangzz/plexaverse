@@ -24,8 +24,11 @@ import '../widgets/topics_states.dart';
 ///
 /// ## Two things the web does that are easy to miss
 ///
-///  * **Suggesting costs 50 XP per press**, whether or not the user keeps any
-///    of the three results. The price is in the button label for that reason.
+///  * **Every press counts against the plan's daily topic-suggestion limit**,
+///    whether or not the user keeps any of the three results. It used to cost
+///    50 wallet XP and say so in the label; wallet XP is retired, and the
+///    server's refusal (no plan, or the day's limit used) is what tells the
+///    user, so the label no longer carries a price.
 ///  * **Reaching three topics completes a roadmap step** (Level 5, Step 1).
 ///    The goal card above the list is the visible half of that; the POST is
 ///    fired by `TopicsController`, not from here, because it is a consequence
@@ -86,10 +89,10 @@ class _TopicsPageState extends ConsumerState<TopicsPage> {
     }
   }
 
-  /// The 50-XP press. The guard and the in-flight flag are on
+  /// The counted press. The guard and the in-flight flag are on
   /// [TopicSuggestions], not here — see its doc: a flag on this widget stopped
   /// guarding the moment the widget went away, and the thing it guards is
-  /// money.
+  /// a press against the plan's limit.
   Future<void> _suggest() async {
     final ({bool ran, Object? error}) result = await ref
         .read(topicSuggestionsProvider.notifier)
@@ -97,8 +100,8 @@ class _TopicsPageState extends ConsumerState<TopicsPage> {
     final Object? problem = result.error;
     if (!result.ran || problem == null) return;
     // The server's own sentence is more specific than anything we could
-    // compose — a thin profile, an XP shortfall and a model failure each come
-    // back with their own message and their own real remedy.
+    // compose — a thin profile, a missing plan, a used-up daily limit and a
+    // model failure each come back with their own message and remedy.
     _say(
       problem is TopicsUnavailable
           ? (problem.message ?? 'Failed to suggest topics')
@@ -166,8 +169,7 @@ class _TopicsPageState extends ConsumerState<TopicsPage> {
     return <Widget>[
       // Stacked, not side by side. The web's own header is `flex flex-wrap`,
       // so this IS its narrow-width rendering — and two pills sharing a phone's
-      // width would ellipsize "Suggest Topics (50 XP)" down to the point where
-      // the price, which is the whole reason the label carries it, disappears.
+      // width would ellipsize the longer label to the point of saying nothing.
       ZaveButton(
         label: 'Add Topic',
         kind: ZaveButtonKind.primarySmall,
@@ -177,9 +179,7 @@ class _TopicsPageState extends ConsumerState<TopicsPage> {
       ),
       SizedBox(height: ZaveSpace.md),
       ZaveButton(
-        // The price is in the label because the press spends it, and it spends
-        // it whether or not the user keeps a single suggestion.
-        label: 'Suggest Topics (50 XP)',
+        label: 'Suggest Topics',
         icon: const Icon(AppIcons.sparkle),
         expand: true,
         busy: suggestions.suggesting,

@@ -491,7 +491,7 @@ class AppIcons {
     fontPackage: _pkg,
   ); // paintbrush
 
-  /// A season finished. Replaces Material's `celebration_outlined`.
+  /// A milestone reached. Replaces Material's `celebration_outlined`.
   static const IconData celebrate = IconData(
     0xf79f,
     fontFamily: _family,

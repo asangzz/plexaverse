@@ -1,5 +1,4 @@
 import '../../../core/mock/fake_autopost_state.dart';
-import '../../../core/mock/mock_constants.dart';
 import 'package:flutter/foundation.dart' show kReleaseMode;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -14,7 +13,7 @@ import '../domain/home_repository.dart';
 /// success `response.data` is the inner object. Every failure collapses to the
 /// one [HomeUnavailable] sentinel.
 ///
-/// All three paths exist in `ApiPaths` and correspond to real route handlers
+/// The path exists in `ApiPaths` and corresponds to a real route handler
 /// under `app/api/mobile/v1/`. Nothing on this screen calls an invented
 /// endpoint — the persona chip the web renders beside the planner button is
 /// left out precisely because `/persona` does not exist on the mobile API.
@@ -38,23 +37,11 @@ class ApiHomeRepository implements HomeRepository {
       throw const HomeUnavailable();
     }
   }
-
-  @override
-  Future<XpBalance> fetchXpBalance() async {
-    try {
-      final response = await _client.get<Map<String, dynamic>>(ApiPaths.userXp);
-      final Map<String, dynamic>? data = response.data;
-      if (data == null) return const XpBalance();
-      return XpBalance.fromJson(data);
-    } on Object {
-      throw const HomeUnavailable();
-    }
-  }
 }
 
 /// In-memory [HomeRepository] for the `mock` flavor.
 ///
-/// Shaped as a mid-journey Season 1 user, because that is what nearly every
+/// Shaped as a mid-journey user, because that is what nearly every
 /// real user is: day 12, the first four days fully done, day 11 half-missed,
 /// and an AI post waiting for approval — so the panel exercises `completed`,
 /// `missed`, `active` and `locked` without anyone having to fake a date.
@@ -93,12 +80,6 @@ class FakeHomeRepository implements HomeRepository {
       scheduledPostId: FakeAutoPostState.scheduledPostId,
       scheduledPostAt: FakeAutoPostState.scheduledAt,
     );
-  }
-
-  @override
-  Future<XpBalance> fetchXpBalance() async {
-    await Future<void>.delayed(const Duration(milliseconds: 200));
-    return const XpBalance(balance: kMockXpBalance);
   }
 }
 

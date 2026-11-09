@@ -9,7 +9,6 @@ import '../../settings/domain/settings_repository.dart';
 import '../data/onboarding_repositories.dart';
 import '../domain/onboarding_repository.dart';
 import 'onboarding_chat_state.dart';
-import 'welcome_bonus.dart';
 import '../../../core/platform/file_picking.dart';
 import '../../../core/platform/image_picking.dart';
 
@@ -252,9 +251,6 @@ class OnboardingChatController extends _$OnboardingChatController {
       // The connect itself succeeded; a failed read only costs the name.
     }
     if (_disposed) return;
-    // The server credited the welcome bonus on this connect; the screen
-    // celebrates it once it sees the fresh transaction.
-    ref.invalidate(welcomeBonusProvider);
     state = state.copyWith(connectFailed: false, linkedinName: name);
     _echoUser(
       name == null ? 'Connected' : 'Connected as $name',
@@ -292,7 +288,7 @@ class OnboardingChatController extends _$OnboardingChatController {
       answers: state.answers.copyWith(companyPageId: id, companyPageName: name),
     );
     // Persisting the page is what actually links a company brand — the
-    // server credits the welcome XP here. Not awaited, as on the web.
+    // server records the company page here. Not awaited, as on the web.
     unawaited(_savePage(id));
     await _enter(OnboardingStep.companyLogo);
   }
@@ -300,8 +296,6 @@ class OnboardingChatController extends _$OnboardingChatController {
   Future<void> _savePage(String id) async {
     try {
       await _settings.setCompanyPage(id);
-      // A company brand's bonus is credited here, not on the connect.
-      if (!_disposed) ref.invalidate(welcomeBonusProvider);
     } on Object {
       // The finalise write carries the page id too.
     }

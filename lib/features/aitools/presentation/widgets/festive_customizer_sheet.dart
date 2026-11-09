@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../../core/plan/plan_limit_sheet.dart';
+import '../../../../core/plan/plan_refusal.dart';
 import '../../../../core/ui/app_icons.dart';
 import '../../../../core/ui/zave/zave_kit.dart';
 import '../../application/festive_controller.dart';
@@ -13,7 +15,7 @@ import 'ai_tool_sheet.dart';
 /// **Customize poster** — the web's `FestiveCustomizer`.
 ///
 /// Collect a company name, an occasion, a date, a message and a brand colour,
-/// spend 800 XP, and get a composited poster back. The web lays this out as a
+/// and get a composited poster back, paid by the plan. The web lays this out as a
 /// two-column modal that stacks below 1024px; a phone only ever renders the
 /// stacked form, so that is all this is.
 ///
@@ -23,7 +25,7 @@ import 'ai_tool_sheet.dart';
 ///   data URI with `FileReader` and posts that inline as `logoUrl`. A phone
 ///   photo is still megabytes after the picker downscales it, and base64 adds
 ///   a third on top, so sending it with the generate call would park that
-///   upload in front of the 800 XP round-trip. The pick uploads to storage
+///   upload in front of the generation round-trip. The pick uploads to storage
 ///   immediately instead — while the user is still typing — and generate
 ///   sends the short URL it returned. Nothing about that upload is kept here:
 ///   it is [FestivePosterController]'s, because its in-flight flag and
@@ -179,9 +181,11 @@ class _FestiveCustomizerSheetState
 
         if (customizer.run.error != null) ...<Widget>[
           AiToolNoteRow(
-            title: customizer.run.insufficientXp
-                ? 'Not enough XP'
-                : 'That did not work',
+            title: !customizer.run.insufficientXp
+                ? 'That did not work'
+                : (customizer.refusal?.isLimit ?? false)
+                ? 'Limit reached'
+                : 'Needs a plan',
             message: customizer.run.error!,
           ),
           SizedBox(height: ZaveSpace.lg),
@@ -208,7 +212,7 @@ class _FestiveCustomizerSheetState
     // `||` of two. The half that used to live on this widget — the logo
     // upload's in-flight flag — was invisible to the other: Generate stayed
     // live through an upload, the tap read a `logoUrl` that was still null,
-    // and the user was charged 800 XP for a poster missing the logo they had
+    // and the user spent a generation on a poster missing the logo they had
     // just picked.
     final bool busy = customizer.busy;
 
@@ -309,14 +313,6 @@ class _FestiveCustomizerSheetState
       ),
       SizedBox(height: ZaveSpace.xl),
 
-      const XpCostRow(
-        cost: '800 XP per poster',
-        detail:
-            'Charged only when a poster comes back. A failed composite costs '
-            'nothing, so you can retry on another template.',
-      ),
-      SizedBox(height: ZaveSpace.lg),
-
       // Two different halves of `busy`, deliberately, because they want
       // different faces. While the POSTER is being made or saved, the spinner
       // stops the dispatch on its own and `onPressed` stays non-null — a null
@@ -334,7 +330,12 @@ class _FestiveCustomizerSheetState
         busy: customizer.run.isBusy,
         onPressed: customizer.uploadingLogo
             ? null
-            : () => controller.generate(_values),
+            : () async {
+                final PlanRefusal? refusal = await controller.generate(_values);
+                if (refusal != null && mounted) {
+                  await PlanLimitSheet.show(context, refusal);
+                }
+              },
       ),
     ];
   }

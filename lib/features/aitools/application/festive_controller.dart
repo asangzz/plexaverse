@@ -1,5 +1,6 @@
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
+import '../../../core/plan/plan_refusal.dart';
 import '../../../core/platform/image_picking.dart';
 import '../data/ai_tools_repositories.dart';
 import '../domain/ai_tool_failure.dart';
@@ -38,7 +39,7 @@ class FestiveController extends _$FestiveController {
 ///
 /// [FestivePosterState] describes what `/festive/generate` and `/upload/image`
 /// came back with, which is why it is a domain type. The logo is the other
-/// half — an input the user assembles BEFORE any XP is spent — and assembling
+/// half — an input the user assembles BEFORE any generation runs — and assembling
 /// it is a use case (open the picker, upload the bytes, keep the URL), so it
 /// is owned here rather than by whichever widget happens to host the control.
 ///
@@ -46,14 +47,20 @@ class FestiveController extends _$FestiveController {
 /// While they were two — the logo's flag on the sheet's `State`, the rest on
 /// this controller — neither gate could see the other: Generate stayed live
 /// through a logo upload, the tap read a `logoUrl` that was still null, and
-/// the user was charged 800 XP for a poster missing the logo they had just
+/// the user spent a generation on a poster missing the logo they had just
 /// picked.
 class FestiveCustomizerState {
   const FestiveCustomizerState({
     this.run = const FestivePosterState(),
     this.logoUrl,
     this.uploadingLogo = false,
+    this.refusal,
   });
+
+  /// The plan refusal behind `run.error`, when that is what it was. Lives
+  /// here, not on the freezed [FestivePosterState], because adding a field
+  /// there needs a codegen run.
+  final PlanRefusal? refusal;
 
   /// The generate-then-save round-trip: what it is doing, what came back.
   final FestivePosterState run;
@@ -79,6 +86,8 @@ class FestiveCustomizerState {
     run: run ?? this.run,
     logoUrl: logoUrl ?? this.logoUrl,
     uploadingLogo: uploadingLogo ?? this.uploadingLogo,
+    // Not carried: a refusal describes the one failed run, and every
+    // copyWith starts or finishes a different operation.
   );
 
   @override
@@ -86,10 +95,11 @@ class FestiveCustomizerState {
       other is FestiveCustomizerState &&
       other.run == run &&
       other.logoUrl == logoUrl &&
-      other.uploadingLogo == uploadingLogo;
+      other.uploadingLogo == uploadingLogo &&
+      other.refusal == refusal;
 
   @override
-  int get hashCode => Object.hash(run, logoUrl, uploadingLogo);
+  int get hashCode => Object.hash(run, logoUrl, uploadingLogo, refusal);
 }
 
 /// One run of the customizer: pick a logo, generate a poster, then save it
@@ -109,7 +119,7 @@ class FestivePosterController extends _$FestivePosterController {
   /// Returns a message to show, or null when there is nothing to say —
   /// a dismissed picker is a decision, not a failure.
   ///
-  /// This ran on the sheet, which is how the 800 XP charge described on
+  /// This ran on the sheet, which is how the wasted generation described on
   /// [FestiveCustomizerState] was reachable: the flag it kept there was the
   /// half of the form's gate this controller could not see. Raising that flag
   /// here, rather than leaving it to the caller, is the whole point of the
@@ -152,12 +162,15 @@ class FestivePosterController extends _$FestivePosterController {
     return null;
   }
 
-  /// `POST /festive/generate` — 800 XP, charged only on success.
-  Future<void> generate(FestiveCustomizations customizations) async {
+  /// `POST /festive/generate` — paid by the plan.
+  ///
+  /// Returns the plan refusal when the plan said no, so the sheet can open
+  /// the plan sheet once rather than on every rebuild.
+  Future<PlanRefusal?> generate(FestiveCustomizations customizations) async {
     // [FestiveCustomizerState.busy], not `run.isBusy`: a logo still uploading
     // means the poster this would pay for is not the poster the user asked
     // for. The form gates the button too, but the money is spent here.
-    if (state.busy) return;
+    if (state.busy) return null;
 
     final String? logoUrl = state.logoUrl;
     state = FestiveCustomizerState(
@@ -176,13 +189,17 @@ class FestivePosterController extends _$FestivePosterController {
             customizations: customizations.copyWith(logoUrl: logoUrl),
           );
       state = state.copyWith(run: FestivePosterState(poster: poster));
+      return null;
     } on AiToolFailure catch (e) {
-      state = state.copyWith(
+      state = FestiveCustomizerState(
         run: FestivePosterState(
           error: e.message,
-          insufficientXp: e.insufficientXp,
+          insufficientXp: e.refusedByPlan,
         ),
+        logoUrl: state.logoUrl,
+        refusal: e.refusal,
       );
+      return e.refusal;
     }
   }
 
@@ -211,7 +228,7 @@ class FestivePosterController extends _$FestivePosterController {
         run: state.run.copyWith(
           busy: FestivePosterBusy.idle,
           error: e.message,
-          insufficientXp: e.insufficientXp,
+          insufficientXp: e.refusedByPlan,
         ),
       );
     }

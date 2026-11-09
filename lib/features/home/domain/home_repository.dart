@@ -1,8 +1,6 @@
 import 'roadmap_progress.dart';
-import 'xp_balance.dart';
 
 export 'roadmap_progress.dart';
-export 'xp_balance.dart';
 
 /// Thrown when the home screen cannot be loaded. One sentinel per feature,
 /// matching the posts/planner slices — the UI maps it to a single retryable
@@ -13,22 +11,17 @@ class HomeUnavailable implements Exception {
 
 /// Seam between the home screen and the backend.
 ///
-/// Three reads, no writes. That is not an oversight: on the web the roadmap
-/// **never** POSTs a completion from the dashboard. Season 1's step rows only
-/// navigate, and Season 2's habit rows thread a `handleComplete` that the row
-/// never calls — completion happens server-side when the work actually lands.
+/// One read, no writes. That is not an oversight: on the web the roadmap
+/// **never** POSTs a completion from the dashboard. The step rows only
+/// navigate — completion happens server-side when the work actually lands.
 /// Adding a tick-to-complete affordance here would let a user mark a post
 /// published without publishing one.
+///
+/// There used to be a second read, `GET /user/xp`, for the balance chip in the
+/// header. Wallet XP was retired on 10 Nov 2026 — the plan pays for AI
+/// features now — and that route answers 0 for everyone, so the read is gone
+/// rather than kept alive to draw a number that can no longer move.
 abstract class HomeRepository {
   /// `GET /roadmap/progress`.
   Future<RoadmapProgress> fetchRoadmapProgress();
-
-  /// `GET /user/xp`.
-  Future<XpBalance> fetchXpBalance();
-
-  /// `GET /user/preferences`.
-  ///
-  /// Lives here rather than in a preferences slice because the preferences
-  /// feature currently has a domain model and nothing else, and the home
-  /// screen cannot choose between Season 1 and Season 2 without it. See the
 }

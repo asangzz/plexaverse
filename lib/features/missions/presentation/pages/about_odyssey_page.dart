@@ -11,7 +11,7 @@ import '../widgets/mission_chrome.dart';
 
 /// **The About Odyssey** — the web's `/roadmap/about-odyssey`.
 ///
-/// Day-4 profile mission, reached from the Season 1 roadmap's step row.
+/// Day-4 profile mission, reached from the journey roadmap's step row.
 /// AI-draft or write a three-paragraph LinkedIn About section, curate up to ten
 /// skills, copy it across, then complete the step.
 ///
@@ -146,7 +146,6 @@ class _AboutOdysseyPageState extends ConsumerState<AboutOdysseyPage> {
           level: AboutOdysseyPage.levelId,
           step: AboutOdysseyPage.stepId,
           totalSteps: 7,
-          rewardXp: 70,
         ),
 
         SizedBox(height: ZaveSpace.xl),

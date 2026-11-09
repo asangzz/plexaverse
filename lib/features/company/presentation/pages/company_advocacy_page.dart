@@ -14,7 +14,9 @@ import '../widgets/company_states.dart';
 /// **Advocacy** — the web's `/company-advocacy`, "Employee Amplification".
 ///
 /// A feed of company posts flagged for advocacy; resharing one to your own
-/// LinkedIn feed earns 50 XP. The feed is GLOBAL on purpose — every teammate
+/// LinkedIn feed widens the company's reach. It used to earn 50 wallet XP;
+/// wallet XP is retired (the plan pays for AI now), so a reshare pays nothing
+/// and the copy no longer promises it. The feed is GLOBAL on purpose — every teammate
 /// sees the same set, which is what makes it a team surface rather than a
 /// personal queue.
 ///
@@ -57,12 +59,8 @@ class CompanyAdvocacyPage extends ConsumerWidget {
         child: ZaveScrollView(
           children: <Widget>[
             Text(
-              // The web ships this sentence with literal `**` around "50 XP" —
-              // un-rendered markdown, a visible bug. The emphasis is dropped
-              // rather than reproduced.
-              "Support your company's growth! Reshare featured posts to your "
-              'personal LinkedIn network to boost organic reach and unlock '
-              '50 XP per share.',
+              "Support your company's growth. Reshare featured posts to your "
+              'personal LinkedIn network to boost their organic reach.',
               style: ZaveType.lead,
             ),
             SizedBox(height: ZaveSpace.xl),
@@ -148,9 +146,12 @@ class CompanyAdvocacyPage extends ConsumerWidget {
     return cards;
   }
 
-  /// The XP toast.
+  /// The reshare toast.
   ///
-  /// The web animates a purple gradient panel with a bouncing emoji. Zave has
+  /// It keys off [AdvocacyState.lastXpAward] only because that is the field the
+  /// controller sets on every successful reshare; the number itself is ignored,
+  /// since wallet XP is retired and the server now awards nothing. The web
+  /// animates a purple gradient panel with a bouncing emoji. Zave has
   /// neither a decorative gradient nor a bounce, so the award is announced in
   /// the app's own snack bar — which the Zave theme already styles — and the
   /// state is cleared so it fires once.
@@ -159,12 +160,12 @@ class CompanyAdvocacyPage extends ConsumerWidget {
       AsyncValue<AdvocacyState>? previous,
       AsyncValue<AdvocacyState> next,
     ) {
-      final int? xp = next.value?.lastXpAward;
-      if (xp == null || xp == previous?.value?.lastXpAward) return;
+      final int? award = next.value?.lastXpAward;
+      if (award == null || award == previous?.value?.lastXpAward) return;
       ScaffoldMessenger.of(context)
         ..hideCurrentSnackBar()
         ..showSnackBar(
-          SnackBar(content: Text('Amplified — +$xp XP added to your balance')),
+          const SnackBar(content: Text('Amplified — shared to your feed.')),
         );
       ref.read(advocacyControllerProvider.notifier).clearAward();
     });

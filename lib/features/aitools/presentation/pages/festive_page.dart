@@ -4,7 +4,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/ui/zave/zave_kit.dart';
 import '../../application/festive_controller.dart';
 import '../../domain/festive_template.dart';
-import '../widgets/ai_tool_note.dart';
 import '../widgets/ai_tool_sheet.dart';
 import '../widgets/festive_customizer_sheet.dart';
 import '../widgets/template_gallery.dart';
@@ -13,7 +12,7 @@ import '../widgets/template_gallery.dart';
 ///
 /// Occasion posters (Diwali, Christmas, Holi, Eid, Republic Day, New Year,
 /// birthdays, anniversaries) composited from a Figma-derived base image plus
-/// the user's own text. 800 XP a poster. Nav visibility is `admin` in v1; the
+/// the user's own text, paid by the plan. Nav visibility is `admin` in v1; the
 /// nav gates it, the screen does not.
 ///
 /// Worth stating because the name misleads: this is **not** AI generation. The
@@ -134,21 +133,19 @@ class _Body extends ConsumerWidget {
   }
 }
 
-/// The heading block — the web's emoji + h1 + "NEW" pill + subtitle + XP badge.
+/// The heading block — the web's emoji + h1 + "NEW" pill + subtitle.
 ///
-/// The title and its lead now live in the scaffold's large header, so what is
-/// left here is the cost. The gradient "NEW" pill does not survive the port: in
-/// Zave a fill names a status, and "new" is a marketing label rather than a
-/// state of the user's work. The XP badge does survive, because a cost is
-/// something the user needs before they tap, not after.
+/// The title lives in the scaffold's large header, so what is left here is
+/// one line on how it works. The gradient "NEW" pill does not survive the
+/// port: in Zave a fill names a status, and "new" is a marketing label. The
+/// old per-poster XP price went with wallet XP — the plan pays now, and a
+/// limit is explained when it is hit, not before.
 class _Intro extends StatelessWidget {
   const _Intro();
 
   @override
-  Widget build(BuildContext context) => const XpCostRow(
-    cost: '800 XP per poster',
-    detail:
-        'Charged only when a poster comes back, so a failed one costs you '
-        'nothing.',
+  Widget build(BuildContext context) => Text(
+    'Pick an occasion, add your details, and get a poster back in seconds.',
+    style: ZaveType.caption,
   );
 }

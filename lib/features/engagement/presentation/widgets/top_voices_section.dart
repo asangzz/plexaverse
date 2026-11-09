@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../../core/engagement/top_voice_categories.dart';
+import '../../../../core/plan/plan_refusal.dart';
 import '../../../../core/responsive/screen_util.dart';
 import '../../../../core/router/zave_routes.dart';
 import '../../../../core/ui/app_icons.dart';
@@ -417,8 +418,13 @@ class _CuratedUnavailable extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final Object f = failure;
-    final bool noXp =
-        f is EngagementFailure && f.kind == EngagementBlock.insufficientXp;
+    // A plan refusal is not retryable, so it gets the server's sentence
+    // (which, for a limit, says when it comes back) and no "Try again".
+    final PlanRefusal? refusal = f is EngagementFailure ? f.refusal : null;
+    final bool refused =
+        f is EngagementFailure &&
+        (f.kind == EngagementBlock.needsPlan ||
+            f.kind == EngagementBlock.limitReached);
 
     return ZaveCard(
       child: Column(
@@ -427,14 +433,14 @@ class _CuratedUnavailable extends StatelessWidget {
           Text('TODAY’S TOP VOICES', style: ZaveType.kicker),
           SizedBox(height: ZaveSpace.sm),
           Text(
-            noXp
-                ? 'Today’s curated posts need more XP than you have. The '
-                      'comments below are already written and still count.'
+            refused
+                ? '${refusal?.displayMessage() ?? 'Today’s curated posts need a plan.'} '
+                      'The comments below are already written and still count.'
                 : 'Could not load today’s curated posts. The comments below '
                       'still count toward the day.',
             style: ZaveType.bodyMuted,
           ),
-          if (!noXp) ...<Widget>[
+          if (!refused) ...<Widget>[
             SizedBox(height: ZaveSpace.lg),
             Align(
               alignment: Alignment.centerLeft,
@@ -442,6 +448,17 @@ class _CuratedUnavailable extends StatelessWidget {
                 label: 'Try again',
                 icon: const Icon(AppIcons.refresh),
                 onPressed: onRetry,
+              ),
+            ),
+          ],
+          // A limit has no button: the sentence above says when it is back.
+          if (refused && !(refusal?.isLimit ?? false)) ...<Widget>[
+            SizedBox(height: ZaveSpace.lg),
+            Align(
+              alignment: Alignment.centerLeft,
+              child: ZaveButton.brand(
+                label: 'See plans',
+                onPressed: () => context.push(ZaveRoutes.pricing),
               ),
             ),
           ],

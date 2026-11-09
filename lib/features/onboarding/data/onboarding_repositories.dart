@@ -183,36 +183,6 @@ class ApiOnboardingRepository implements OnboardingRepository {
     }
   }
 
-  @override
-  Future<bool> hasFreshWelcomeBonus() async {
-    try {
-      final response = await _client.get<Map<String, dynamic>>(
-        ApiPaths.userXp,
-        queryParameters: const <String, dynamic>{'include': 'history'},
-      );
-      final List<Object?> history =
-          (response.data?['transactions'] as List<Object?>?) ??
-          const <Object?>[];
-      final Iterable<Map<String, dynamic>> registrations = history
-          .whereType<Map<String, dynamic>>()
-          .where((Map<String, dynamic> t) => t['action'] == 'registration');
-      // The web's two checks, kept apart as it keeps them: the bonus was
-      // earned, and it landed within the last two minutes.
-      final bool earned = registrations.any(
-        (Map<String, dynamic> t) => t['type'] == 'earn',
-      );
-      final DateTime cutoff = DateTime.now().subtract(
-        const Duration(minutes: 2),
-      );
-      final bool recent = registrations.any((Map<String, dynamic> t) {
-        final DateTime? at = DateTime.tryParse('${t['createdAt']}');
-        return at != null && at.isAfter(cutoff);
-      });
-      return earned && recent;
-    } on Object {
-      return false;
-    }
-  }
 
   @override
   Future<void> completeOnboarding(Map<String, dynamic> patch) async {
@@ -348,8 +318,6 @@ class FakeOnboardingRepository implements OnboardingRepository {
     return null;
   }
 
-  @override
-  Future<bool> hasFreshWelcomeBonus() async => false;
 
   @override
   Future<void> completeOnboarding(Map<String, dynamic> patch) async {

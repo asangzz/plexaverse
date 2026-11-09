@@ -28,9 +28,8 @@ abstract class AiDesignerReply with _$AiDesignerReply {
     StudioDesignData? design,
     @Default('') String model,
 
-    /// How many images the route actually generated. Non-zero means XP was
-    /// charged per image on top of the base cost, which the server states in
-    /// [message] when it had to strip them for affordability.
+    /// How many images the route actually generated. The server states in
+    /// [message] when it had to leave them out (an image limit reached).
     @Default(0) int imagesGenerated,
   }) = _AiDesignerReply;
 

@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/links/linkedin.dart';
+import '../../../../core/plan/plan_limit_sheet.dart';
+import '../../../../core/plan/plan_refusal.dart';
 import '../../../../core/platform/image_picking.dart';
 import '../../../../core/ui/app_icons.dart';
 import '../../../../core/ui/widgets/open_link.dart';
@@ -15,8 +17,8 @@ import '../widgets/headshot_stepper.dart';
 
 /// **The Visual Persona** — the web's `/headshots`.
 ///
-/// Upload three to ten reference photos, pick a look and a background, spend
-/// XP, get four LinkedIn portraits back. It is the roadmap's Level 1 Step 5,
+/// Upload three to ten reference photos, pick a look and a background, get
+/// four LinkedIn portraits back, paid by the plan. It is the roadmap's Level 1 Step 5,
 /// which is why it has no nav entry on either platform: it is reached from the
 /// mission that asks for it.
 ///
@@ -24,7 +26,7 @@ import '../widgets/headshot_stepper.dart';
 ///
 /// The web gates "Select Looks" on three photos; here the gate is on the
 /// generate button instead, so the looks and backgrounds can be seen and
-/// chosen before the photos are in. The button that actually spends XP still
+/// chosen before the photos are in. The button that actually generates still
 /// refuses, and says why.
 ///
 /// This began as a workaround — the app once shipped no image picker, so
@@ -36,9 +38,6 @@ import '../widgets/headshot_stepper.dart';
 ///
 /// ## What the web gets wrong here, and this does not
 ///
-/// • The XP figure. The page says "1000 XP will be deducted"; the server
-///   charges `AI_GENERATE_HEADSHOT`, which is **1200**. The app quotes the
-///   server, because the server is what takes the XP.
 /// • "Download HD" is hover-only, so on a phone the results are a dead end.
 ///   There is nothing to hover here.
 class HeadshotsPage extends ConsumerWidget {
@@ -64,9 +63,7 @@ class HeadshotsPage extends ConsumerWidget {
           if (session.error != null) ...<Widget>[
             ZaveCard(
               child: AiToolNote(
-                title: session.insufficientXp
-                    ? 'Not enough XP'
-                    : 'That did not work',
+                title: _errorTitle(session, controller.refusal),
                 message: session.error!,
               ),
             ),
@@ -94,7 +91,12 @@ class HeadshotsPage extends ConsumerWidget {
   }
 }
 
-/// Where the page sits in the roadmap, and what it costs. The name itself is
+String _errorTitle(HeadshotSession session, PlanRefusal? refusal) {
+  if (!session.insufficientXp) return 'That did not work';
+  return refusal?.isLimit ?? false ? 'Limit reached' : 'Needs a plan';
+}
+
+/// Where the page sits in the roadmap. The name itself is
 /// the scaffold's large title now; repeating it here would say it twice on one
 /// screen. The web's h1 carries one word in a gradient — Zave has no gradient
 /// text and a gradient is not a status, so the emphasis stays with the kicker.
@@ -111,7 +113,6 @@ class _Intro extends StatelessWidget {
         spacing: ZaveSpace.sm,
         runSpacing: ZaveSpace.sm,
         children: const <Widget>[
-          ZavePill(label: 'Reward: 100 XP', color: ZaveColors.amber),
           ZavePill(label: '4 portraits', color: ZaveColors.ink62),
         ],
       ),
@@ -304,11 +305,11 @@ class _StyleStep extends StatelessWidget {
       ),
 
       SizedBox(height: ZaveSpace.xl),
-      const XpCostRow(
-        cost: '1200 XP will be deducted',
-        detail:
-            'Four portraits, generated together. If any of the four fails the '
-            'whole run is refused and no XP is spent.',
+      const AiToolNoteRow(
+        title: 'Four portraits',
+        message:
+            'Generated together, on your plan. If any of the four fails, the '
+            'whole run is refused.',
       ),
 
       if (!session.canGenerate) ...<Widget>[
@@ -328,7 +329,14 @@ class _StyleStep extends StatelessWidget {
         kind: ZaveButtonKind.primary,
         expand: true,
         busy: session.generating,
-        onPressed: session.canGenerate ? controller.generate : null,
+        onPressed: session.canGenerate
+            ? () async {
+                final PlanRefusal? refusal = await controller.generate();
+                if (refusal != null && context.mounted) {
+                  await PlanLimitSheet.show(context, refusal);
+                }
+              }
+            : null,
       ),
       SizedBox(height: ZaveSpace.md),
       ZaveButton(

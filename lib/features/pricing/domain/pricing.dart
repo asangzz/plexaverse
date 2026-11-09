@@ -60,6 +60,10 @@ abstract class PlanPricing with _$PlanPricing {
 /// Not `json_serializable`: the wire shape nests the counters under `stats`
 /// (and carries a `recentReferrals` array this screen does not render), so the
 /// mapping is written out in [fromWire] rather than bent into annotations.
+///
+/// `stats.totalXPEarned` is still on the wire for old builds and is ignored on
+/// purpose: referrals pay the referrer a month of plan time now, and the XP
+/// figure is history from before wallet XP was retired.
 @freezed
 abstract class ReferralSummary with _$ReferralSummary {
   const ReferralSummary._();
@@ -69,7 +73,6 @@ abstract class ReferralSummary with _$ReferralSummary {
     /// error.
     String? code,
     @Default(0) int totalReferrals,
-    @Default(0) int totalXpEarned,
   }) = _ReferralSummary;
 
   static ReferralSummary fromWire(Map<String, dynamic> json) {
@@ -80,8 +83,6 @@ abstract class ReferralSummary with _$ReferralSummary {
     return ReferralSummary(
       code: json['code'] as String?,
       totalReferrals: (s['totalReferrals'] as num?)?.toInt() ?? 0,
-      // The server spells this one with a capital XP.
-      totalXpEarned: (s['totalXPEarned'] as num?)?.toInt() ?? 0,
     );
   }
 
@@ -95,18 +96,22 @@ abstract class ReferralSummary with _$ReferralSummary {
 /// the PRICE comes from the server. Copy is reproduced verbatim so the two
 /// surfaces cannot quietly disagree about what a plan includes.
 ///
+/// A plan used to be described by the XP it credited (11,000). Wallet XP was
+/// retired on 10 Nov 2026: the plan pays for every AI feature, up to a
+/// per-feature allowance. The allowances are the same for both plans, so they
+/// are listed once under the cards (`allowance.dart`), from the live table — not
+/// copied into each card where they would go stale.
+///
 /// The web's per-plan `theme` block (accent hex, glow, gradient button) is
 /// deliberately NOT ported. Zave's first rule is that colour only ever names a
 /// status, so a plan does not get a house colour; both cards are ordinary glass
-/// and the only colour on them is amber for XP (points) on the XP badge and
-/// blue on the CTA (the XP / upgrade path, which is the one thing
-/// [ZaveColors.blue] is reserved for).
+/// and the only colour on them is blue on the CTA (the upgrade path, which is
+/// the one thing [ZaveColors.blue] is reserved for).
 class PricingPlan {
   const PricingPlan._({
     required this.id,
     required this.label,
     required this.tagline,
-    required this.xp,
     required this.popular,
     required this.badge,
     required this.features,
@@ -120,7 +125,6 @@ class PricingPlan {
   final String id;
   final String label;
   final String tagline;
-  final int xp;
   final bool popular;
 
   /// `'Most Advanced'` on the company plan, null on personal.
@@ -144,15 +148,12 @@ class PricingPlan {
     id: 'personal',
     label: 'PERSONAL',
     tagline: 'For professionals & thought leaders',
-    xp: 11000,
     popular: false,
     badge: null,
     features: <String>[
-      '11,000 XP — No expiry',
+      'Every AI feature, with a daily allowance',
       'Daily AI Post + Image generation',
-      'AI comment drafts (15/day)',
-      'AI connection messages (10/day)',
-      '66-Day Gamified Roadmap',
+      '1000-Day Gamified Roadmap',
       'AI Profile Optimizer',
       'Post Analytics Dashboard',
       'Smart post scheduling & calendar',
@@ -169,11 +170,10 @@ class PricingPlan {
     id: 'company',
     label: 'COMPANY',
     tagline: 'For brands & marketing teams',
-    xp: 11000,
     popular: true,
     badge: 'Most Advanced',
     features: <String>[
-      '11,000 XP — No expiry',
+      'Every AI feature, with a daily allowance',
       inheritanceRow,
       'Company Post AI Generator',
       'Community Inbox (AI comment replies)',
@@ -194,36 +194,6 @@ class PricingPlan {
       ? all
       : all.where((PricingPlan p) => p.id == brandType).toList(growable: false);
 }
-
-/// One row of the "Daily XP Budget" table.
-///
-/// Static content on the web too. The emoji are dropped: Zave names things with
-/// Manrope, not with pictograms, and the numbers are the point of this block.
-class XpBudgetItem {
-  const XpBudgetItem({
-    required this.task,
-    required this.cost,
-    required this.note,
-  });
-
-  final String task;
-  final int cost;
-  final String note;
-
-  static const List<XpBudgetItem> all = <XpBudgetItem>[
-    XpBudgetItem(task: 'AI Post', cost: 150, note: 'Text + image'),
-    XpBudgetItem(task: 'Comments', cost: 75, note: '15 drafted'),
-    XpBudgetItem(task: 'Connections', cost: 60, note: '10 messages'),
-    XpBudgetItem(task: 'Extra Step', cost: 100, note: 'Varies per task'),
-  ];
-}
-
-/// The free welcome grant, credited the first time a LinkedIn account is
-/// connected. `REGISTRATION_XP` in the web's `lib/xp-constants.ts`.
-const int kWelcomeXp = 2500;
-
-/// The referral bonus both sides receive.
-const int kReferralXp = 2500;
 
 /// `11000` → `11,000`.
 ///

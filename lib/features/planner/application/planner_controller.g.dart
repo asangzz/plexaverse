@@ -97,7 +97,7 @@ abstract class _$PlannerWeek extends $Notifier<({int? season, int? week})> {
 ///
 /// It was, until this change. The sheet is a modal bottom sheet, every one of
 /// these operations is a model call that takes seconds, and four of the five
-/// cost XP — so the ordinary gesture of swiping the sheet away while one is
+/// count against the plan — so the ordinary gesture of swiping the sheet away while one is
 /// running destroyed the only record that it was running. Re-opening the day
 /// then showed "Write this post", "New image" or "Write the script" fully
 /// live, and a second tap bought a second one.
@@ -131,7 +131,7 @@ final plannerBusyProvider = PlannerBusyProvider._();
 ///
 /// It was, until this change. The sheet is a modal bottom sheet, every one of
 /// these operations is a model call that takes seconds, and four of the five
-/// cost XP — so the ordinary gesture of swiping the sheet away while one is
+/// count against the plan — so the ordinary gesture of swiping the sheet away while one is
 /// running destroyed the only record that it was running. Re-opening the day
 /// then showed "Write this post", "New image" or "Write the script" fully
 /// live, and a second tap bought a second one.
@@ -163,7 +163,7 @@ final class PlannerBusyProvider
   ///
   /// It was, until this change. The sheet is a modal bottom sheet, every one of
   /// these operations is a model call that takes seconds, and four of the five
-  /// cost XP — so the ordinary gesture of swiping the sheet away while one is
+  /// count against the plan — so the ordinary gesture of swiping the sheet away while one is
   /// running destroyed the only record that it was running. Re-opening the day
   /// then showed "Write this post", "New image" or "Write the script" fully
   /// live, and a second tap bought a second one.
@@ -222,7 +222,7 @@ String _$plannerBusyHash() => r'2495daf62a21de9703ac5aad5fd4c2bb949020d7';
 ///
 /// It was, until this change. The sheet is a modal bottom sheet, every one of
 /// these operations is a model call that takes seconds, and four of the five
-/// cost XP — so the ordinary gesture of swiping the sheet away while one is
+/// count against the plan — so the ordinary gesture of swiping the sheet away while one is
 /// running destroyed the only record that it was running. Re-opening the day
 /// then showed "Write this post", "New image" or "Write the script" fully
 /// live, and a second tap bought a second one.
@@ -381,7 +381,7 @@ final class VideoScriptsControllerProvider
 }
 
 String _$videoScriptsControllerHash() =>
-    r'994bdd62225725adfea87a6ff3a4a0350bc83ac3';
+    r'def2fe6025a537107ec43f0ce30b6f714dd57b60';
 
 /// The week's video scripts, keyed to the week on screen.
 ///

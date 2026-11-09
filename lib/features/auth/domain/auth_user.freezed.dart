@@ -15,7 +15,7 @@ T _$identity<T>(T value) => value;
 /// @nodoc
 mixin _$AuthUser {
 
- String get id; String get name; String get email;@JsonKey(name: 'image') String? get avatarUrl; String get role; int get xpBalance; String? get createdAt;
+ String get id; String get name; String get email;@JsonKey(name: 'image') String? get avatarUrl; String get role; String? get createdAt;
 /// Create a copy of AuthUser
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
@@ -28,16 +28,16 @@ $AuthUserCopyWith<AuthUser> get copyWith => _$AuthUserCopyWithImpl<AuthUser>(thi
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is AuthUser&&(identical(other.id, id) || other.id == id)&&(identical(other.name, name) || other.name == name)&&(identical(other.email, email) || other.email == email)&&(identical(other.avatarUrl, avatarUrl) || other.avatarUrl == avatarUrl)&&(identical(other.role, role) || other.role == role)&&(identical(other.xpBalance, xpBalance) || other.xpBalance == xpBalance)&&(identical(other.createdAt, createdAt) || other.createdAt == createdAt));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is AuthUser&&(identical(other.id, id) || other.id == id)&&(identical(other.name, name) || other.name == name)&&(identical(other.email, email) || other.email == email)&&(identical(other.avatarUrl, avatarUrl) || other.avatarUrl == avatarUrl)&&(identical(other.role, role) || other.role == role)&&(identical(other.createdAt, createdAt) || other.createdAt == createdAt));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
-int get hashCode => Object.hash(runtimeType,id,name,email,avatarUrl,role,xpBalance,createdAt);
+int get hashCode => Object.hash(runtimeType,id,name,email,avatarUrl,role,createdAt);
 
 @override
 String toString() {
-  return 'AuthUser(id: $id, name: $name, email: $email, avatarUrl: $avatarUrl, role: $role, xpBalance: $xpBalance, createdAt: $createdAt)';
+  return 'AuthUser(id: $id, name: $name, email: $email, avatarUrl: $avatarUrl, role: $role, createdAt: $createdAt)';
 }
 
 
@@ -48,7 +48,7 @@ abstract mixin class $AuthUserCopyWith<$Res>  {
   factory $AuthUserCopyWith(AuthUser value, $Res Function(AuthUser) _then) = _$AuthUserCopyWithImpl;
 @useResult
 $Res call({
- String id, String name, String email,@JsonKey(name: 'image') String? avatarUrl, String role, int xpBalance, String? createdAt
+ String id, String name, String email,@JsonKey(name: 'image') String? avatarUrl, String role, String? createdAt
 });
 
 
@@ -65,15 +65,14 @@ class _$AuthUserCopyWithImpl<$Res>
 
 /// Create a copy of AuthUser
 /// with the given fields replaced by the non-null parameter values.
-@pragma('vm:prefer-inline') @override $Res call({Object? id = null,Object? name = null,Object? email = null,Object? avatarUrl = freezed,Object? role = null,Object? xpBalance = null,Object? createdAt = freezed,}) {
+@pragma('vm:prefer-inline') @override $Res call({Object? id = null,Object? name = null,Object? email = null,Object? avatarUrl = freezed,Object? role = null,Object? createdAt = freezed,}) {
   return _then(_self.copyWith(
 id: null == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
 as String,name: null == name ? _self.name : name // ignore: cast_nullable_to_non_nullable
 as String,email: null == email ? _self.email : email // ignore: cast_nullable_to_non_nullable
 as String,avatarUrl: freezed == avatarUrl ? _self.avatarUrl : avatarUrl // ignore: cast_nullable_to_non_nullable
 as String?,role: null == role ? _self.role : role // ignore: cast_nullable_to_non_nullable
-as String,xpBalance: null == xpBalance ? _self.xpBalance : xpBalance // ignore: cast_nullable_to_non_nullable
-as int,createdAt: freezed == createdAt ? _self.createdAt : createdAt // ignore: cast_nullable_to_non_nullable
+as String,createdAt: freezed == createdAt ? _self.createdAt : createdAt // ignore: cast_nullable_to_non_nullable
 as String?,
   ));
 }
@@ -159,10 +158,10 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String id,  String name,  String email, @JsonKey(name: 'image')  String? avatarUrl,  String role,  int xpBalance,  String? createdAt)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String id,  String name,  String email, @JsonKey(name: 'image')  String? avatarUrl,  String role,  String? createdAt)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _AuthUser() when $default != null:
-return $default(_that.id,_that.name,_that.email,_that.avatarUrl,_that.role,_that.xpBalance,_that.createdAt);case _:
+return $default(_that.id,_that.name,_that.email,_that.avatarUrl,_that.role,_that.createdAt);case _:
   return orElse();
 
 }
@@ -180,10 +179,10 @@ return $default(_that.id,_that.name,_that.email,_that.avatarUrl,_that.role,_that
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String id,  String name,  String email, @JsonKey(name: 'image')  String? avatarUrl,  String role,  int xpBalance,  String? createdAt)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String id,  String name,  String email, @JsonKey(name: 'image')  String? avatarUrl,  String role,  String? createdAt)  $default,) {final _that = this;
 switch (_that) {
 case _AuthUser():
-return $default(_that.id,_that.name,_that.email,_that.avatarUrl,_that.role,_that.xpBalance,_that.createdAt);case _:
+return $default(_that.id,_that.name,_that.email,_that.avatarUrl,_that.role,_that.createdAt);case _:
   throw StateError('Unexpected subclass');
 
 }
@@ -200,10 +199,10 @@ return $default(_that.id,_that.name,_that.email,_that.avatarUrl,_that.role,_that
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String id,  String name,  String email, @JsonKey(name: 'image')  String? avatarUrl,  String role,  int xpBalance,  String? createdAt)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String id,  String name,  String email, @JsonKey(name: 'image')  String? avatarUrl,  String role,  String? createdAt)?  $default,) {final _that = this;
 switch (_that) {
 case _AuthUser() when $default != null:
-return $default(_that.id,_that.name,_that.email,_that.avatarUrl,_that.role,_that.xpBalance,_that.createdAt);case _:
+return $default(_that.id,_that.name,_that.email,_that.avatarUrl,_that.role,_that.createdAt);case _:
   return null;
 
 }
@@ -215,7 +214,7 @@ return $default(_that.id,_that.name,_that.email,_that.avatarUrl,_that.role,_that
 @JsonSerializable()
 
 class _AuthUser implements AuthUser {
-  const _AuthUser({required this.id, required this.name, required this.email, @JsonKey(name: 'image') this.avatarUrl, this.role = 'user', this.xpBalance = 0, this.createdAt});
+  const _AuthUser({required this.id, required this.name, required this.email, @JsonKey(name: 'image') this.avatarUrl, this.role = 'user', this.createdAt});
   factory _AuthUser.fromJson(Map<String, dynamic> json) => _$AuthUserFromJson(json);
 
 @override final  String id;
@@ -223,7 +222,6 @@ class _AuthUser implements AuthUser {
 @override final  String email;
 @override@JsonKey(name: 'image') final  String? avatarUrl;
 @override@JsonKey() final  String role;
-@override@JsonKey() final  int xpBalance;
 @override final  String? createdAt;
 
 /// Create a copy of AuthUser
@@ -239,16 +237,16 @@ Map<String, dynamic> toJson() {
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is _AuthUser&&(identical(other.id, id) || other.id == id)&&(identical(other.name, name) || other.name == name)&&(identical(other.email, email) || other.email == email)&&(identical(other.avatarUrl, avatarUrl) || other.avatarUrl == avatarUrl)&&(identical(other.role, role) || other.role == role)&&(identical(other.xpBalance, xpBalance) || other.xpBalance == xpBalance)&&(identical(other.createdAt, createdAt) || other.createdAt == createdAt));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is _AuthUser&&(identical(other.id, id) || other.id == id)&&(identical(other.name, name) || other.name == name)&&(identical(other.email, email) || other.email == email)&&(identical(other.avatarUrl, avatarUrl) || other.avatarUrl == avatarUrl)&&(identical(other.role, role) || other.role == role)&&(identical(other.createdAt, createdAt) || other.createdAt == createdAt));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
-int get hashCode => Object.hash(runtimeType,id,name,email,avatarUrl,role,xpBalance,createdAt);
+int get hashCode => Object.hash(runtimeType,id,name,email,avatarUrl,role,createdAt);
 
 @override
 String toString() {
-  return 'AuthUser(id: $id, name: $name, email: $email, avatarUrl: $avatarUrl, role: $role, xpBalance: $xpBalance, createdAt: $createdAt)';
+  return 'AuthUser(id: $id, name: $name, email: $email, avatarUrl: $avatarUrl, role: $role, createdAt: $createdAt)';
 }
 
 
@@ -259,7 +257,7 @@ abstract mixin class _$AuthUserCopyWith<$Res> implements $AuthUserCopyWith<$Res>
   factory _$AuthUserCopyWith(_AuthUser value, $Res Function(_AuthUser) _then) = __$AuthUserCopyWithImpl;
 @override @useResult
 $Res call({
- String id, String name, String email,@JsonKey(name: 'image') String? avatarUrl, String role, int xpBalance, String? createdAt
+ String id, String name, String email,@JsonKey(name: 'image') String? avatarUrl, String role, String? createdAt
 });
 
 
@@ -276,15 +274,14 @@ class __$AuthUserCopyWithImpl<$Res>
 
 /// Create a copy of AuthUser
 /// with the given fields replaced by the non-null parameter values.
-@override @pragma('vm:prefer-inline') $Res call({Object? id = null,Object? name = null,Object? email = null,Object? avatarUrl = freezed,Object? role = null,Object? xpBalance = null,Object? createdAt = freezed,}) {
+@override @pragma('vm:prefer-inline') $Res call({Object? id = null,Object? name = null,Object? email = null,Object? avatarUrl = freezed,Object? role = null,Object? createdAt = freezed,}) {
   return _then(_AuthUser(
 id: null == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
 as String,name: null == name ? _self.name : name // ignore: cast_nullable_to_non_nullable
 as String,email: null == email ? _self.email : email // ignore: cast_nullable_to_non_nullable
 as String,avatarUrl: freezed == avatarUrl ? _self.avatarUrl : avatarUrl // ignore: cast_nullable_to_non_nullable
 as String?,role: null == role ? _self.role : role // ignore: cast_nullable_to_non_nullable
-as String,xpBalance: null == xpBalance ? _self.xpBalance : xpBalance // ignore: cast_nullable_to_non_nullable
-as int,createdAt: freezed == createdAt ? _self.createdAt : createdAt // ignore: cast_nullable_to_non_nullable
+as String,createdAt: freezed == createdAt ? _self.createdAt : createdAt // ignore: cast_nullable_to_non_nullable
 as String?,
   ));
 }

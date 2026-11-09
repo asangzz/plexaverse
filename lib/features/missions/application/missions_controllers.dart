@@ -85,7 +85,7 @@ class MissionProfileController extends _$MissionProfileController {
 Future<List<BannerTemplate>> bannerTemplates(Ref ref) =>
     ref.watch(missionsRepositoryProvider).fetchBannerTemplates();
 
-/// The Season 1 recap numbers.
+/// The finished journey's recap numbers (journey-complete screen).
 @riverpod
 Future<SeasonRecap> seasonRecap(Ref ref) =>
     ref.watch(missionsRepositoryProvider).fetchSeasonRecap();

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../../core/plan/plan_refusal.dart';
 import '../../../../core/platform/image_picking.dart';
 import '../../../../core/router/zave_routes.dart';
 import '../../../../core/ui/app_icons.dart';
@@ -135,16 +136,22 @@ class _ComposePageState extends ConsumerState<ComposePage> {
           if (status.error != null || status.insufficientXp) ...<Widget>[
             _ProblemCard(
               status: status,
+              refusal: status.insufficientXp
+                  ? ref.read(composeActionsProvider.notifier).refusal
+                  : null,
               // A poster was attempted and did not land: a brief is stored
               // and there is no image. Without this the only control on
               // screen is "Write it", which re-runs the TEXT generation and
               // charges for it a second time — the body is already written
               // and already paid for.
+              //
+              // Not offered when a limit refused it: the same request would
+              // be refused the same way until the limit resets.
               onRetryPoster:
-                  draft.lastPosterPrompt != null && draft.image == null
-                  ? ref
-                        .read(composeActionsProvider.notifier)
-                        .regeneratePoster
+                  draft.lastPosterPrompt != null &&
+                      draft.image == null &&
+                      !status.insufficientXp
+                  ? ref.read(composeActionsProvider.notifier).regeneratePoster
                   : null,
             ),
             SizedBox(height: ZaveSpace.lg),
@@ -497,20 +504,32 @@ class _ProgressCard extends StatelessWidget {
   }
 }
 
-/// Something went wrong, or the user is out of XP.
+/// Something went wrong, or the plan said no.
 ///
-/// Amber in both cases. Zave has no red, and neither of these is destructive:
-/// one is "try again", the other is "top up first".
+/// Amber in every case. Zave has no red, and none of these is destructive:
+/// one is "try again", one is "get a plan", one is "wait for the limit".
 class _ProblemCard extends StatelessWidget {
-  const _ProblemCard({required this.status, this.onRetryPoster});
+  const _ProblemCard({required this.status, this.refusal, this.onRetryPoster});
 
   final ComposeStatus status;
+
+  /// The plan refusal, when `status.insufficientXp` says there is one.
+  final PlanRefusal? refusal;
 
   /// Offered when the poster is the only thing missing. See the call site.
   final VoidCallback? onRetryPoster;
 
   @override
   Widget build(BuildContext context) {
+    // A refusal whose details were lost still reads as "needs a plan": with
+    // wallet XP gone, a plan is the only thing a bare 402 can be asking for.
+    final bool needsPlan =
+        status.insufficientXp && !(refusal?.isLimit ?? false);
+    final String kicker = !status.insufficientXp
+        ? 'DID NOT GO THROUGH'
+        : needsPlan
+        ? 'NEEDS A PLAN'
+        : 'LIMIT REACHED';
     return ZaveCard(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -519,24 +538,17 @@ class _ProblemCard extends StatelessWidget {
             children: <Widget>[
               const ZaveDot(ZaveColors.amber),
               SizedBox(width: ZaveSpace.sm),
-              Text(
-                status.insufficientXp ? 'NOT ENOUGH XP' : 'DID NOT GO THROUGH',
-                style: ZaveType.kicker,
-              ),
+              Text(kicker, style: ZaveType.kicker),
             ],
           ),
           SizedBox(height: ZaveSpace.md),
           // The CONTEXTUAL sentence wins, when there is one.
           //
-          // Three callers set an error AND insufficientXp — "your post is
-          // written, but the poster failed", "saved as a draft, but LinkedIn
-          // rejected the publish", "could not upload the image". Preferring
-          // the generic XP line threw away the only part the user needed:
-          // what survived. The headline and the Top up button already say
-          // which remedy applies, so the sentence is free to say what
-          // happened.
+          // Some callers prefix the plan's message with what survived —
+          // "your post is written", "saved as a draft". That part is the one
+          // the user needs most, so it is never swapped for a generic line.
           Text(
-            status.error ?? "You don't have enough XP to generate.",
+            status.error ?? 'This needs a Plexaverse plan.',
             style: ZaveType.body,
           ),
           // "Did not go through" on its own is a retry the user makes with
@@ -544,16 +556,19 @@ class _ProblemCard extends StatelessWidget {
           // would be wrong. The poster retry is different — the control for
           // it lives on the image card, which is not on screen when there is
           // no image.
-          if (status.insufficientXp || onRetryPoster != null) ...<Widget>[
+          //
+          // A limit gets no button at all: the message already says when it
+          // comes back, and selling a plan to someone who has one is wrong.
+          if (needsPlan || onRetryPoster != null) ...<Widget>[
             SizedBox(height: ZaveSpace.md),
             Row(
               children: <Widget>[
-                if (status.insufficientXp)
-                  ZaveButton(
-                    label: 'Top up XP',
+                if (needsPlan)
+                  ZaveButton.brand(
+                    label: 'See plans',
                     onPressed: () => context.push(ZaveRoutes.pricing),
                   ),
-                if (status.insufficientXp && onRetryPoster != null)
+                if (needsPlan && onRetryPoster != null)
                   SizedBox(width: ZaveSpace.sm),
                 if (onRetryPoster case final VoidCallback retry)
                   ZaveButton(label: 'Make the poster', onPressed: retry),

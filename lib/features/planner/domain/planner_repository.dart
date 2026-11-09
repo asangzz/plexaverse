@@ -1,3 +1,4 @@
+import '../../../core/plan/plan_refusal.dart';
 import 'plan_slot.dart';
 import 'video_script.dart';
 import 'weekly_article.dart';
@@ -39,9 +40,10 @@ abstract class PlannerRepository {
 
   /// Writes the post for [slotIndex], or replaces it when [force] is true.
   ///
-  /// Costs XP. Throws [PlannerGenerateFailure] rather than returning a
+  /// Paid by the plan. Throws [PlannerGenerateFailure] rather than returning a
   /// sentinel, because the reasons are genuinely different actions for the
-  /// user — top up, connect an account, or simply try again — and collapsing
+  /// user — get a plan, wait for a limit, connect an account, or simply try
+  /// again — and collapsing
   /// them into null would lose the only thing that tells them which.
   Future<GeneratedSlot> generateSlotPost({
     required String planId,
@@ -67,8 +69,8 @@ abstract class PlannerRepository {
   /// exactly this pair, in this order; mobile made only the first half, which
   /// is why every planner post on the phone arrived as bare text.
   ///
-  /// Costs XP (one image generation), so it is only ever worth calling for a
-  /// slot this request actually wrote.
+  /// One image generation against the plan's limit, so it is only ever worth
+  /// calling for a slot this request actually wrote.
   ///
   /// Returns the poster as a base64 `data:` URI, or null when none came back.
   Future<String?> generateSlotPoster({
@@ -249,8 +251,8 @@ class GeneratedSlot {
   final String? postId;
 
   /// True when another request had already claimed the slot — a double-tap,
-  /// or a retry that raced the first attempt. Success, not an error, and no
-  /// XP was spent the second time.
+  /// or a retry that raced the first attempt. Success, not an error, and
+  /// nothing was generated the second time.
   final bool alreadyGenerated;
 
   /// The body the model wrote.
@@ -266,18 +268,31 @@ class GeneratedSlot {
 
 /// Why a slot generation did not produce a post.
 class PlannerGenerateFailure implements Exception {
-  const PlannerGenerateFailure({required this.kind, this.message});
+  const PlannerGenerateFailure({
+    required this.kind,
+    this.message,
+    this.refusal,
+  });
 
   final PlannerGenerateFailureKind kind;
 
-  /// The server's own words where it sent them — the XP message names the
-  /// price and the balance, which a generic string would lose.
+  /// The server's own words where it sent them — a limit message names the
+  /// feature and the period, which a generic string would lose.
   final String? message;
+
+  /// The parsed plan refusal for [PlannerGenerateFailureKind.needsPlan] and
+  /// [PlannerGenerateFailureKind.limitReached].
+  final PlanRefusal? refusal;
 }
 
 enum PlannerGenerateFailureKind {
-  /// 402. The user needs to top up before this will work.
-  insufficientXp,
+  /// 402 `INSUFFICIENT_XP` (reason `NOT_ENTITLED`) — no plan. The code name is
+  /// left over from wallet XP, which is retired. Next action: see plans.
+  needsPlan,
+
+  /// 402 `LIMIT_REACHED` — the plan's allowance for this is used up. Next
+  /// action: wait until it resets.
+  limitReached,
 
   /// 400. Nothing to publish to, so nothing to generate for.
   noLinkedinAccount,
@@ -287,7 +302,7 @@ enum PlannerGenerateFailureKind {
   ///
   /// A retry can never succeed, which is what separates it from [failed]: the
   /// answer is not "try again" but "this is not that kind of day". The server
-  /// refuses before spending any XP.
+  /// refuses before anything counts against the plan.
   notAPostDay,
 
   /// Anything else — the slot has been rolled back and a retry is sensible.

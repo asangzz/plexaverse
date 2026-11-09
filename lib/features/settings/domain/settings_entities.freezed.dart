@@ -16,7 +16,7 @@ T _$identity<T>(T value) => value;
 mixin _$AccountIdentity {
 
  String get id; String get name; String get email;/// The server sends the avatar under `image`; the app calls it what it is.
-@JsonKey(name: 'image') String? get avatarUrl; String get role; int get xpBalance;
+@JsonKey(name: 'image') String? get avatarUrl; String get role;
 /// Create a copy of AccountIdentity
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
@@ -29,16 +29,16 @@ $AccountIdentityCopyWith<AccountIdentity> get copyWith => _$AccountIdentityCopyW
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is AccountIdentity&&(identical(other.id, id) || other.id == id)&&(identical(other.name, name) || other.name == name)&&(identical(other.email, email) || other.email == email)&&(identical(other.avatarUrl, avatarUrl) || other.avatarUrl == avatarUrl)&&(identical(other.role, role) || other.role == role)&&(identical(other.xpBalance, xpBalance) || other.xpBalance == xpBalance));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is AccountIdentity&&(identical(other.id, id) || other.id == id)&&(identical(other.name, name) || other.name == name)&&(identical(other.email, email) || other.email == email)&&(identical(other.avatarUrl, avatarUrl) || other.avatarUrl == avatarUrl)&&(identical(other.role, role) || other.role == role));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
-int get hashCode => Object.hash(runtimeType,id,name,email,avatarUrl,role,xpBalance);
+int get hashCode => Object.hash(runtimeType,id,name,email,avatarUrl,role);
 
 @override
 String toString() {
-  return 'AccountIdentity(id: $id, name: $name, email: $email, avatarUrl: $avatarUrl, role: $role, xpBalance: $xpBalance)';
+  return 'AccountIdentity(id: $id, name: $name, email: $email, avatarUrl: $avatarUrl, role: $role)';
 }
 
 
@@ -49,7 +49,7 @@ abstract mixin class $AccountIdentityCopyWith<$Res>  {
   factory $AccountIdentityCopyWith(AccountIdentity value, $Res Function(AccountIdentity) _then) = _$AccountIdentityCopyWithImpl;
 @useResult
 $Res call({
- String id, String name, String email,@JsonKey(name: 'image') String? avatarUrl, String role, int xpBalance
+ String id, String name, String email,@JsonKey(name: 'image') String? avatarUrl, String role
 });
 
 
@@ -66,15 +66,14 @@ class _$AccountIdentityCopyWithImpl<$Res>
 
 /// Create a copy of AccountIdentity
 /// with the given fields replaced by the non-null parameter values.
-@pragma('vm:prefer-inline') @override $Res call({Object? id = null,Object? name = null,Object? email = null,Object? avatarUrl = freezed,Object? role = null,Object? xpBalance = null,}) {
+@pragma('vm:prefer-inline') @override $Res call({Object? id = null,Object? name = null,Object? email = null,Object? avatarUrl = freezed,Object? role = null,}) {
   return _then(_self.copyWith(
 id: null == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
 as String,name: null == name ? _self.name : name // ignore: cast_nullable_to_non_nullable
 as String,email: null == email ? _self.email : email // ignore: cast_nullable_to_non_nullable
 as String,avatarUrl: freezed == avatarUrl ? _self.avatarUrl : avatarUrl // ignore: cast_nullable_to_non_nullable
 as String?,role: null == role ? _self.role : role // ignore: cast_nullable_to_non_nullable
-as String,xpBalance: null == xpBalance ? _self.xpBalance : xpBalance // ignore: cast_nullable_to_non_nullable
-as int,
+as String,
   ));
 }
 
@@ -159,10 +158,10 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String id,  String name,  String email, @JsonKey(name: 'image')  String? avatarUrl,  String role,  int xpBalance)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String id,  String name,  String email, @JsonKey(name: 'image')  String? avatarUrl,  String role)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _AccountIdentity() when $default != null:
-return $default(_that.id,_that.name,_that.email,_that.avatarUrl,_that.role,_that.xpBalance);case _:
+return $default(_that.id,_that.name,_that.email,_that.avatarUrl,_that.role);case _:
   return orElse();
 
 }
@@ -180,10 +179,10 @@ return $default(_that.id,_that.name,_that.email,_that.avatarUrl,_that.role,_that
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String id,  String name,  String email, @JsonKey(name: 'image')  String? avatarUrl,  String role,  int xpBalance)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String id,  String name,  String email, @JsonKey(name: 'image')  String? avatarUrl,  String role)  $default,) {final _that = this;
 switch (_that) {
 case _AccountIdentity():
-return $default(_that.id,_that.name,_that.email,_that.avatarUrl,_that.role,_that.xpBalance);case _:
+return $default(_that.id,_that.name,_that.email,_that.avatarUrl,_that.role);case _:
   throw StateError('Unexpected subclass');
 
 }
@@ -200,10 +199,10 @@ return $default(_that.id,_that.name,_that.email,_that.avatarUrl,_that.role,_that
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String id,  String name,  String email, @JsonKey(name: 'image')  String? avatarUrl,  String role,  int xpBalance)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String id,  String name,  String email, @JsonKey(name: 'image')  String? avatarUrl,  String role)?  $default,) {final _that = this;
 switch (_that) {
 case _AccountIdentity() when $default != null:
-return $default(_that.id,_that.name,_that.email,_that.avatarUrl,_that.role,_that.xpBalance);case _:
+return $default(_that.id,_that.name,_that.email,_that.avatarUrl,_that.role);case _:
   return null;
 
 }
@@ -215,7 +214,7 @@ return $default(_that.id,_that.name,_that.email,_that.avatarUrl,_that.role,_that
 @JsonSerializable()
 
 class _AccountIdentity extends AccountIdentity {
-  const _AccountIdentity({required this.id, this.name = '', this.email = '', @JsonKey(name: 'image') this.avatarUrl, this.role = 'user', this.xpBalance = 0}): super._();
+  const _AccountIdentity({required this.id, this.name = '', this.email = '', @JsonKey(name: 'image') this.avatarUrl, this.role = 'user'}): super._();
   factory _AccountIdentity.fromJson(Map<String, dynamic> json) => _$AccountIdentityFromJson(json);
 
 @override final  String id;
@@ -224,7 +223,6 @@ class _AccountIdentity extends AccountIdentity {
 /// The server sends the avatar under `image`; the app calls it what it is.
 @override@JsonKey(name: 'image') final  String? avatarUrl;
 @override@JsonKey() final  String role;
-@override@JsonKey() final  int xpBalance;
 
 /// Create a copy of AccountIdentity
 /// with the given fields replaced by the non-null parameter values.
@@ -239,16 +237,16 @@ Map<String, dynamic> toJson() {
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is _AccountIdentity&&(identical(other.id, id) || other.id == id)&&(identical(other.name, name) || other.name == name)&&(identical(other.email, email) || other.email == email)&&(identical(other.avatarUrl, avatarUrl) || other.avatarUrl == avatarUrl)&&(identical(other.role, role) || other.role == role)&&(identical(other.xpBalance, xpBalance) || other.xpBalance == xpBalance));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is _AccountIdentity&&(identical(other.id, id) || other.id == id)&&(identical(other.name, name) || other.name == name)&&(identical(other.email, email) || other.email == email)&&(identical(other.avatarUrl, avatarUrl) || other.avatarUrl == avatarUrl)&&(identical(other.role, role) || other.role == role));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
-int get hashCode => Object.hash(runtimeType,id,name,email,avatarUrl,role,xpBalance);
+int get hashCode => Object.hash(runtimeType,id,name,email,avatarUrl,role);
 
 @override
 String toString() {
-  return 'AccountIdentity(id: $id, name: $name, email: $email, avatarUrl: $avatarUrl, role: $role, xpBalance: $xpBalance)';
+  return 'AccountIdentity(id: $id, name: $name, email: $email, avatarUrl: $avatarUrl, role: $role)';
 }
 
 
@@ -259,7 +257,7 @@ abstract mixin class _$AccountIdentityCopyWith<$Res> implements $AccountIdentity
   factory _$AccountIdentityCopyWith(_AccountIdentity value, $Res Function(_AccountIdentity) _then) = __$AccountIdentityCopyWithImpl;
 @override @useResult
 $Res call({
- String id, String name, String email,@JsonKey(name: 'image') String? avatarUrl, String role, int xpBalance
+ String id, String name, String email,@JsonKey(name: 'image') String? avatarUrl, String role
 });
 
 
@@ -276,15 +274,14 @@ class __$AccountIdentityCopyWithImpl<$Res>
 
 /// Create a copy of AccountIdentity
 /// with the given fields replaced by the non-null parameter values.
-@override @pragma('vm:prefer-inline') $Res call({Object? id = null,Object? name = null,Object? email = null,Object? avatarUrl = freezed,Object? role = null,Object? xpBalance = null,}) {
+@override @pragma('vm:prefer-inline') $Res call({Object? id = null,Object? name = null,Object? email = null,Object? avatarUrl = freezed,Object? role = null,}) {
   return _then(_AccountIdentity(
 id: null == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
 as String,name: null == name ? _self.name : name // ignore: cast_nullable_to_non_nullable
 as String,email: null == email ? _self.email : email // ignore: cast_nullable_to_non_nullable
 as String,avatarUrl: freezed == avatarUrl ? _self.avatarUrl : avatarUrl // ignore: cast_nullable_to_non_nullable
 as String?,role: null == role ? _self.role : role // ignore: cast_nullable_to_non_nullable
-as String,xpBalance: null == xpBalance ? _self.xpBalance : xpBalance // ignore: cast_nullable_to_non_nullable
-as int,
+as String,
   ));
 }
 
@@ -295,10 +292,16 @@ as int,
 /// @nodoc
 mixin _$SubscriptionState {
 
-/// `'active'` while the plan is paid up. Anything else — including null for
-/// an account that has never paid — is treated as inactive.
- String? get status;/// `'subscription'` (autopay mandate) or `'onetime'` (a single XP top-up).
- String? get paymentMode; DateTime? get currentPeriodEnd;
+/// `'active'` while a recurring subscription is paid up. Null for an
+/// account that never subscribed, `'inactive'` / `'cancelled'` otherwise.
+ String? get status;/// `'subscription'` (autopay mandate) or `'onetime'` (the 30-day pass:
+/// paid once, 30 days of the plan, no renewal).
+ String? get paymentMode; DateTime? get currentPeriodEnd;/// The server's entitlement verdict. Null when the server did not say
+/// (every build of `/auth/me` before it exposes `resolveEntitlement`).
+ bool? get entitled;/// `subscription_active` | `recent_purchase` | `granted` |
+/// `never_subscribed` | `lapsed`, as `EntitlementReason` on the server.
+ String? get entitlementReason;/// When the current access ends, for a pass or given plan time.
+ DateTime? get accessEndsAt;
 /// Create a copy of SubscriptionState
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
@@ -311,16 +314,16 @@ $SubscriptionStateCopyWith<SubscriptionState> get copyWith => _$SubscriptionStat
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is SubscriptionState&&(identical(other.status, status) || other.status == status)&&(identical(other.paymentMode, paymentMode) || other.paymentMode == paymentMode)&&(identical(other.currentPeriodEnd, currentPeriodEnd) || other.currentPeriodEnd == currentPeriodEnd));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is SubscriptionState&&(identical(other.status, status) || other.status == status)&&(identical(other.paymentMode, paymentMode) || other.paymentMode == paymentMode)&&(identical(other.currentPeriodEnd, currentPeriodEnd) || other.currentPeriodEnd == currentPeriodEnd)&&(identical(other.entitled, entitled) || other.entitled == entitled)&&(identical(other.entitlementReason, entitlementReason) || other.entitlementReason == entitlementReason)&&(identical(other.accessEndsAt, accessEndsAt) || other.accessEndsAt == accessEndsAt));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
-int get hashCode => Object.hash(runtimeType,status,paymentMode,currentPeriodEnd);
+int get hashCode => Object.hash(runtimeType,status,paymentMode,currentPeriodEnd,entitled,entitlementReason,accessEndsAt);
 
 @override
 String toString() {
-  return 'SubscriptionState(status: $status, paymentMode: $paymentMode, currentPeriodEnd: $currentPeriodEnd)';
+  return 'SubscriptionState(status: $status, paymentMode: $paymentMode, currentPeriodEnd: $currentPeriodEnd, entitled: $entitled, entitlementReason: $entitlementReason, accessEndsAt: $accessEndsAt)';
 }
 
 
@@ -331,7 +334,7 @@ abstract mixin class $SubscriptionStateCopyWith<$Res>  {
   factory $SubscriptionStateCopyWith(SubscriptionState value, $Res Function(SubscriptionState) _then) = _$SubscriptionStateCopyWithImpl;
 @useResult
 $Res call({
- String? status, String? paymentMode, DateTime? currentPeriodEnd
+ String? status, String? paymentMode, DateTime? currentPeriodEnd, bool? entitled, String? entitlementReason, DateTime? accessEndsAt
 });
 
 
@@ -348,11 +351,14 @@ class _$SubscriptionStateCopyWithImpl<$Res>
 
 /// Create a copy of SubscriptionState
 /// with the given fields replaced by the non-null parameter values.
-@pragma('vm:prefer-inline') @override $Res call({Object? status = freezed,Object? paymentMode = freezed,Object? currentPeriodEnd = freezed,}) {
+@pragma('vm:prefer-inline') @override $Res call({Object? status = freezed,Object? paymentMode = freezed,Object? currentPeriodEnd = freezed,Object? entitled = freezed,Object? entitlementReason = freezed,Object? accessEndsAt = freezed,}) {
   return _then(_self.copyWith(
 status: freezed == status ? _self.status : status // ignore: cast_nullable_to_non_nullable
 as String?,paymentMode: freezed == paymentMode ? _self.paymentMode : paymentMode // ignore: cast_nullable_to_non_nullable
 as String?,currentPeriodEnd: freezed == currentPeriodEnd ? _self.currentPeriodEnd : currentPeriodEnd // ignore: cast_nullable_to_non_nullable
+as DateTime?,entitled: freezed == entitled ? _self.entitled : entitled // ignore: cast_nullable_to_non_nullable
+as bool?,entitlementReason: freezed == entitlementReason ? _self.entitlementReason : entitlementReason // ignore: cast_nullable_to_non_nullable
+as String?,accessEndsAt: freezed == accessEndsAt ? _self.accessEndsAt : accessEndsAt // ignore: cast_nullable_to_non_nullable
 as DateTime?,
   ));
 }
@@ -438,10 +444,10 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String? status,  String? paymentMode,  DateTime? currentPeriodEnd)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String? status,  String? paymentMode,  DateTime? currentPeriodEnd,  bool? entitled,  String? entitlementReason,  DateTime? accessEndsAt)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _SubscriptionState() when $default != null:
-return $default(_that.status,_that.paymentMode,_that.currentPeriodEnd);case _:
+return $default(_that.status,_that.paymentMode,_that.currentPeriodEnd,_that.entitled,_that.entitlementReason,_that.accessEndsAt);case _:
   return orElse();
 
 }
@@ -459,10 +465,10 @@ return $default(_that.status,_that.paymentMode,_that.currentPeriodEnd);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String? status,  String? paymentMode,  DateTime? currentPeriodEnd)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String? status,  String? paymentMode,  DateTime? currentPeriodEnd,  bool? entitled,  String? entitlementReason,  DateTime? accessEndsAt)  $default,) {final _that = this;
 switch (_that) {
 case _SubscriptionState():
-return $default(_that.status,_that.paymentMode,_that.currentPeriodEnd);case _:
+return $default(_that.status,_that.paymentMode,_that.currentPeriodEnd,_that.entitled,_that.entitlementReason,_that.accessEndsAt);case _:
   throw StateError('Unexpected subclass');
 
 }
@@ -479,10 +485,10 @@ return $default(_that.status,_that.paymentMode,_that.currentPeriodEnd);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String? status,  String? paymentMode,  DateTime? currentPeriodEnd)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String? status,  String? paymentMode,  DateTime? currentPeriodEnd,  bool? entitled,  String? entitlementReason,  DateTime? accessEndsAt)?  $default,) {final _that = this;
 switch (_that) {
 case _SubscriptionState() when $default != null:
-return $default(_that.status,_that.paymentMode,_that.currentPeriodEnd);case _:
+return $default(_that.status,_that.paymentMode,_that.currentPeriodEnd,_that.entitled,_that.entitlementReason,_that.accessEndsAt);case _:
   return null;
 
 }
@@ -494,15 +500,24 @@ return $default(_that.status,_that.paymentMode,_that.currentPeriodEnd);case _:
 @JsonSerializable()
 
 class _SubscriptionState extends SubscriptionState {
-  const _SubscriptionState({this.status, this.paymentMode, this.currentPeriodEnd}): super._();
+  const _SubscriptionState({this.status, this.paymentMode, this.currentPeriodEnd, this.entitled, this.entitlementReason, this.accessEndsAt}): super._();
   factory _SubscriptionState.fromJson(Map<String, dynamic> json) => _$SubscriptionStateFromJson(json);
 
-/// `'active'` while the plan is paid up. Anything else — including null for
-/// an account that has never paid — is treated as inactive.
+/// `'active'` while a recurring subscription is paid up. Null for an
+/// account that never subscribed, `'inactive'` / `'cancelled'` otherwise.
 @override final  String? status;
-/// `'subscription'` (autopay mandate) or `'onetime'` (a single XP top-up).
+/// `'subscription'` (autopay mandate) or `'onetime'` (the 30-day pass:
+/// paid once, 30 days of the plan, no renewal).
 @override final  String? paymentMode;
 @override final  DateTime? currentPeriodEnd;
+/// The server's entitlement verdict. Null when the server did not say
+/// (every build of `/auth/me` before it exposes `resolveEntitlement`).
+@override final  bool? entitled;
+/// `subscription_active` | `recent_purchase` | `granted` |
+/// `never_subscribed` | `lapsed`, as `EntitlementReason` on the server.
+@override final  String? entitlementReason;
+/// When the current access ends, for a pass or given plan time.
+@override final  DateTime? accessEndsAt;
 
 /// Create a copy of SubscriptionState
 /// with the given fields replaced by the non-null parameter values.
@@ -517,16 +532,16 @@ Map<String, dynamic> toJson() {
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is _SubscriptionState&&(identical(other.status, status) || other.status == status)&&(identical(other.paymentMode, paymentMode) || other.paymentMode == paymentMode)&&(identical(other.currentPeriodEnd, currentPeriodEnd) || other.currentPeriodEnd == currentPeriodEnd));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is _SubscriptionState&&(identical(other.status, status) || other.status == status)&&(identical(other.paymentMode, paymentMode) || other.paymentMode == paymentMode)&&(identical(other.currentPeriodEnd, currentPeriodEnd) || other.currentPeriodEnd == currentPeriodEnd)&&(identical(other.entitled, entitled) || other.entitled == entitled)&&(identical(other.entitlementReason, entitlementReason) || other.entitlementReason == entitlementReason)&&(identical(other.accessEndsAt, accessEndsAt) || other.accessEndsAt == accessEndsAt));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
-int get hashCode => Object.hash(runtimeType,status,paymentMode,currentPeriodEnd);
+int get hashCode => Object.hash(runtimeType,status,paymentMode,currentPeriodEnd,entitled,entitlementReason,accessEndsAt);
 
 @override
 String toString() {
-  return 'SubscriptionState(status: $status, paymentMode: $paymentMode, currentPeriodEnd: $currentPeriodEnd)';
+  return 'SubscriptionState(status: $status, paymentMode: $paymentMode, currentPeriodEnd: $currentPeriodEnd, entitled: $entitled, entitlementReason: $entitlementReason, accessEndsAt: $accessEndsAt)';
 }
 
 
@@ -537,7 +552,7 @@ abstract mixin class _$SubscriptionStateCopyWith<$Res> implements $SubscriptionS
   factory _$SubscriptionStateCopyWith(_SubscriptionState value, $Res Function(_SubscriptionState) _then) = __$SubscriptionStateCopyWithImpl;
 @override @useResult
 $Res call({
- String? status, String? paymentMode, DateTime? currentPeriodEnd
+ String? status, String? paymentMode, DateTime? currentPeriodEnd, bool? entitled, String? entitlementReason, DateTime? accessEndsAt
 });
 
 
@@ -554,11 +569,14 @@ class __$SubscriptionStateCopyWithImpl<$Res>
 
 /// Create a copy of SubscriptionState
 /// with the given fields replaced by the non-null parameter values.
-@override @pragma('vm:prefer-inline') $Res call({Object? status = freezed,Object? paymentMode = freezed,Object? currentPeriodEnd = freezed,}) {
+@override @pragma('vm:prefer-inline') $Res call({Object? status = freezed,Object? paymentMode = freezed,Object? currentPeriodEnd = freezed,Object? entitled = freezed,Object? entitlementReason = freezed,Object? accessEndsAt = freezed,}) {
   return _then(_SubscriptionState(
 status: freezed == status ? _self.status : status // ignore: cast_nullable_to_non_nullable
 as String?,paymentMode: freezed == paymentMode ? _self.paymentMode : paymentMode // ignore: cast_nullable_to_non_nullable
 as String?,currentPeriodEnd: freezed == currentPeriodEnd ? _self.currentPeriodEnd : currentPeriodEnd // ignore: cast_nullable_to_non_nullable
+as DateTime?,entitled: freezed == entitled ? _self.entitled : entitled // ignore: cast_nullable_to_non_nullable
+as bool?,entitlementReason: freezed == entitlementReason ? _self.entitlementReason : entitlementReason // ignore: cast_nullable_to_non_nullable
+as String?,accessEndsAt: freezed == accessEndsAt ? _self.accessEndsAt : accessEndsAt // ignore: cast_nullable_to_non_nullable
 as DateTime?,
   ));
 }
@@ -2565,269 +2583,6 @@ as String,personalPrice: null == personalPrice ? _self.personalPrice : personalP
 as int,companyPrice: null == companyPrice ? _self.companyPrice : companyPrice // ignore: cast_nullable_to_non_nullable
 as int,isIndia: null == isIndia ? _self.isIndia : isIndia // ignore: cast_nullable_to_non_nullable
 as bool,subunitMultiplier: null == subunitMultiplier ? _self.subunitMultiplier : subunitMultiplier // ignore: cast_nullable_to_non_nullable
-as int,
-  ));
-}
-
-
-}
-
-
-/// @nodoc
-mixin _$XpSummary {
-
- int get balance;
-/// Create a copy of XpSummary
-/// with the given fields replaced by the non-null parameter values.
-@JsonKey(includeFromJson: false, includeToJson: false)
-@pragma('vm:prefer-inline')
-$XpSummaryCopyWith<XpSummary> get copyWith => _$XpSummaryCopyWithImpl<XpSummary>(this as XpSummary, _$identity);
-
-  /// Serializes this XpSummary to a JSON map.
-  Map<String, dynamic> toJson();
-
-
-@override
-bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is XpSummary&&(identical(other.balance, balance) || other.balance == balance));
-}
-
-@JsonKey(includeFromJson: false, includeToJson: false)
-@override
-int get hashCode => Object.hash(runtimeType,balance);
-
-@override
-String toString() {
-  return 'XpSummary(balance: $balance)';
-}
-
-
-}
-
-/// @nodoc
-abstract mixin class $XpSummaryCopyWith<$Res>  {
-  factory $XpSummaryCopyWith(XpSummary value, $Res Function(XpSummary) _then) = _$XpSummaryCopyWithImpl;
-@useResult
-$Res call({
- int balance
-});
-
-
-
-
-}
-/// @nodoc
-class _$XpSummaryCopyWithImpl<$Res>
-    implements $XpSummaryCopyWith<$Res> {
-  _$XpSummaryCopyWithImpl(this._self, this._then);
-
-  final XpSummary _self;
-  final $Res Function(XpSummary) _then;
-
-/// Create a copy of XpSummary
-/// with the given fields replaced by the non-null parameter values.
-@pragma('vm:prefer-inline') @override $Res call({Object? balance = null,}) {
-  return _then(_self.copyWith(
-balance: null == balance ? _self.balance : balance // ignore: cast_nullable_to_non_nullable
-as int,
-  ));
-}
-
-}
-
-
-/// Adds pattern-matching-related methods to [XpSummary].
-extension XpSummaryPatterns on XpSummary {
-/// A variant of `map` that fallback to returning `orElse`.
-///
-/// It is equivalent to doing:
-/// ```dart
-/// switch (sealedClass) {
-///   case final Subclass value:
-///     return ...;
-///   case _:
-///     return orElse();
-/// }
-/// ```
-
-@optionalTypeArgs TResult maybeMap<TResult extends Object?>(TResult Function( _XpSummary value)?  $default,{required TResult orElse(),}){
-final _that = this;
-switch (_that) {
-case _XpSummary() when $default != null:
-return $default(_that);case _:
-  return orElse();
-
-}
-}
-/// A `switch`-like method, using callbacks.
-///
-/// Callbacks receives the raw object, upcasted.
-/// It is equivalent to doing:
-/// ```dart
-/// switch (sealedClass) {
-///   case final Subclass value:
-///     return ...;
-///   case final Subclass2 value:
-///     return ...;
-/// }
-/// ```
-
-@optionalTypeArgs TResult map<TResult extends Object?>(TResult Function( _XpSummary value)  $default,){
-final _that = this;
-switch (_that) {
-case _XpSummary():
-return $default(_that);case _:
-  throw StateError('Unexpected subclass');
-
-}
-}
-/// A variant of `map` that fallback to returning `null`.
-///
-/// It is equivalent to doing:
-/// ```dart
-/// switch (sealedClass) {
-///   case final Subclass value:
-///     return ...;
-///   case _:
-///     return null;
-/// }
-/// ```
-
-@optionalTypeArgs TResult? mapOrNull<TResult extends Object?>(TResult? Function( _XpSummary value)?  $default,){
-final _that = this;
-switch (_that) {
-case _XpSummary() when $default != null:
-return $default(_that);case _:
-  return null;
-
-}
-}
-/// A variant of `when` that fallback to an `orElse` callback.
-///
-/// It is equivalent to doing:
-/// ```dart
-/// switch (sealedClass) {
-///   case Subclass(:final field):
-///     return ...;
-///   case _:
-///     return orElse();
-/// }
-/// ```
-
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( int balance)?  $default,{required TResult orElse(),}) {final _that = this;
-switch (_that) {
-case _XpSummary() when $default != null:
-return $default(_that.balance);case _:
-  return orElse();
-
-}
-}
-/// A `switch`-like method, using callbacks.
-///
-/// As opposed to `map`, this offers destructuring.
-/// It is equivalent to doing:
-/// ```dart
-/// switch (sealedClass) {
-///   case Subclass(:final field):
-///     return ...;
-///   case Subclass2(:final field2):
-///     return ...;
-/// }
-/// ```
-
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( int balance)  $default,) {final _that = this;
-switch (_that) {
-case _XpSummary():
-return $default(_that.balance);case _:
-  throw StateError('Unexpected subclass');
-
-}
-}
-/// A variant of `when` that fallback to returning `null`
-///
-/// It is equivalent to doing:
-/// ```dart
-/// switch (sealedClass) {
-///   case Subclass(:final field):
-///     return ...;
-///   case _:
-///     return null;
-/// }
-/// ```
-
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( int balance)?  $default,) {final _that = this;
-switch (_that) {
-case _XpSummary() when $default != null:
-return $default(_that.balance);case _:
-  return null;
-
-}
-}
-
-}
-
-/// @nodoc
-@JsonSerializable()
-
-class _XpSummary extends XpSummary {
-  const _XpSummary({this.balance = 0}): super._();
-  factory _XpSummary.fromJson(Map<String, dynamic> json) => _$XpSummaryFromJson(json);
-
-@override@JsonKey() final  int balance;
-
-/// Create a copy of XpSummary
-/// with the given fields replaced by the non-null parameter values.
-@override @JsonKey(includeFromJson: false, includeToJson: false)
-@pragma('vm:prefer-inline')
-_$XpSummaryCopyWith<_XpSummary> get copyWith => __$XpSummaryCopyWithImpl<_XpSummary>(this, _$identity);
-
-@override
-Map<String, dynamic> toJson() {
-  return _$XpSummaryToJson(this, );
-}
-
-@override
-bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is _XpSummary&&(identical(other.balance, balance) || other.balance == balance));
-}
-
-@JsonKey(includeFromJson: false, includeToJson: false)
-@override
-int get hashCode => Object.hash(runtimeType,balance);
-
-@override
-String toString() {
-  return 'XpSummary(balance: $balance)';
-}
-
-
-}
-
-/// @nodoc
-abstract mixin class _$XpSummaryCopyWith<$Res> implements $XpSummaryCopyWith<$Res> {
-  factory _$XpSummaryCopyWith(_XpSummary value, $Res Function(_XpSummary) _then) = __$XpSummaryCopyWithImpl;
-@override @useResult
-$Res call({
- int balance
-});
-
-
-
-
-}
-/// @nodoc
-class __$XpSummaryCopyWithImpl<$Res>
-    implements _$XpSummaryCopyWith<$Res> {
-  __$XpSummaryCopyWithImpl(this._self, this._then);
-
-  final _XpSummary _self;
-  final $Res Function(_XpSummary) _then;
-
-/// Create a copy of XpSummary
-/// with the given fields replaced by the non-null parameter values.
-@override @pragma('vm:prefer-inline') $Res call({Object? balance = null,}) {
-  return _then(_XpSummary(
-balance: null == balance ? _self.balance : balance // ignore: cast_nullable_to_non_nullable
 as int,
   ));
 }

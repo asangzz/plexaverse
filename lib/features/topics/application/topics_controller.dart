@@ -89,11 +89,12 @@ class TopicsController extends _$TopicsController {
 /// They were `_suggesting` and `_addingName` on `_TopicsPageState`, and both
 /// guard something that outlives the widget holding them:
 ///
-///  * **`suggesting` guards 50 XP.** The suggest call is charged per press.
+///  * **`suggesting` guards the plan's limit.** Each suggest call counts
+///    against the plan's daily topic-suggestion limit.
 ///    The page's `if (_suggesting) return` evaporated the moment the widget
 ///    was disposed, so leaving the screen mid-call and coming straight back
-///    gave a live button over a call that was still running — a second 50 XP
-///    for one user intent, and the screen is reached from a roadmap task, so
+///    gave a live button over a call that was still running — a second counted
+///    press for one user intent, and the screen is reached from a roadmap task, so
 ///    bouncing in and out of it is the normal way to use it.
 ///  * **`addingName` guards a write that finishes after the widget.** The add
 ///    was `create()` on the page, then `dismiss()` after the await; a dispose
@@ -111,12 +112,12 @@ class TopicSuggestionsState {
   });
 
   /// The suggestions the user is looking at. They survive a rebuild — the user
-  /// has paid for them — but NOT leaving the screen, which matches the web:
+  /// has used a press on them — but NOT leaving the screen, which matches the web:
   /// its `suggestedTopics` is component state and the endpoint is
   /// non-deterministic, so there is nothing to restore.
   final List<SuggestedTopic> items;
 
-  /// True while the 50-XP suggest call is in flight.
+  /// True while the counted suggest call is in flight.
   final bool suggesting;
 
   /// The name of the suggestion currently being added, so only that card's
@@ -153,14 +154,15 @@ class TopicSuggestions extends _$TopicSuggestions {
     return const TopicSuggestionsState();
   }
 
-  /// `POST /ai/suggest-topics`. Costs 50 XP per call.
+  /// `POST /ai/suggest-topics`. Each call counts against the plan's daily
+  /// topic-suggestion limit.
   ///
   /// `ran` is false when a call was already in flight and this press was
-  /// refused rather than charged — which the caller must be able to tell from
+  /// refused rather than counted — which the caller must be able to tell from
   /// a success, or it would announce a result nobody asked for.
   ///
   /// `error` is the failure itself, not a sentence. [TopicsUnavailable] keeps
-  /// an XP shortfall, a thin profile and a model failure apart, which is a
+  /// a missing plan, a used-up limit, a thin profile and a model failure apart, which is a
   /// distinction the screen needs; turning it into copy is the screen's job,
   /// not this one's.
   Future<({bool ran, Object? error})> suggest() async {
@@ -169,7 +171,7 @@ class TopicSuggestions extends _$TopicSuggestions {
     // Held for the length of the call. This provider is autoDispose and the
     // topics page is normally its only listener, so leaving the screen
     // mid-request would otherwise tear the notifier down before the results —
-    // which the user has already been charged for — could be written back.
+    // which have already counted against the user's limit — could be written back.
     // Type inferred: `KeepAliveLink` is not exported from riverpod_annotation.
     final link = ref.keepAlive();
     state = state.copyWith(suggesting: true);

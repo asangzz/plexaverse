@@ -222,7 +222,7 @@ final class FestivePosterControllerProvider
 }
 
 String _$festivePosterControllerHash() =>
-    r'd8c206ff0319c9b41216ef93b47d8adc1b44d7f5';
+    r'd9058adb8b1546b1799cc3ce2922020a858fab97';
 
 /// One run of the customizer: pick a logo, generate a poster, then save it
 /// somewhere it can be used.

@@ -6,7 +6,6 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:plexaverse/core/config/env.dart';
 import 'package:plexaverse/core/router/zave_routes.dart';
-import 'package:plexaverse/features/onboarding/application/welcome_bonus.dart';
 import 'package:plexaverse/features/onboarding/presentation/pages/onboarding_chat_page.dart';
 import 'package:plexaverse/features/onboarding/presentation/widgets/chat_lane.dart';
 import 'package:plexaverse/features/plexa/presentation/pages/plexa_journey_page.dart';
@@ -65,7 +64,7 @@ void main() {
   }
 
   group('the intro', () {
-    Future<void> pumpIntro(WidgetTester tester, {bool freshBonus = false}) {
+    Future<void> pumpIntro(WidgetTester tester) {
       tester.view.physicalSize = const Size(390, 844) * 3;
       tester.view.devicePixelRatio = 3;
       addTearDown(tester.view.reset);
@@ -90,7 +89,6 @@ void main() {
           // as the mock flavour does.
           overrides: [
             envProvider.overrideWithValue(Env.mock),
-            welcomeBonusProvider.overrideWith((Ref ref) async => freshBonus),
           ],
           child: MediaQuery(
             // Reduced motion: the still, and no player — a test has no video
@@ -169,39 +167,14 @@ void main() {
     bool held(WidgetTester tester) =>
         tester.widget<PlexaMascot>(find.byType(PlexaMascot)).hold;
 
-    testWidgets('a fresh welcome bonus is celebrated, and Plexa waits for it', (
-      WidgetTester tester,
-    ) async {
-      await pumpIntro(tester, freshBonus: true);
-      await tester.pump();
-
-      expect(find.text('+2,500 XP'), findsOneWidget);
-      // Her entrance would happen behind the overlay where nobody sees it.
-      expect(held(tester), isTrue);
-
-      await tester.tap(find.text('Tap anywhere to continue'));
-      await tester.pump();
-      expect(find.text('+2,500 XP'), findsNothing);
-      expect(held(tester), isFalse);
-    });
-
-    testWidgets('the celebration also leaves by itself after four seconds', (
-      WidgetTester tester,
-    ) async {
-      await pumpIntro(tester, freshBonus: true);
-      await tester.pump();
-      expect(find.text('+2,500 XP'), findsOneWidget);
-      await tester.pump(const Duration(seconds: 4));
-      await tester.pump();
-      expect(find.text('+2,500 XP'), findsNothing);
-    });
-
-    testWidgets('no fresh bonus: no celebration, and nothing held', (
+    // There is no welcome bonus any more (wallet XP retired 10 Nov 2026):
+    // nothing to celebrate, and nothing holds Plexa back from her entrance.
+    testWidgets('no welcome bonus: no celebration, and nothing held', (
       WidgetTester tester,
     ) async {
       await pumpIntro(tester);
       await tester.pump();
-      expect(find.text('+2,500 XP'), findsNothing);
+      expect(find.textContaining('XP'), findsNothing);
       expect(held(tester), isFalse);
     });
 

@@ -120,6 +120,68 @@ final class PricingBrandTypeProvider
 
 String _$pricingBrandTypeHash() => r'b8f1d113fbee8a7160eb8d03653ffe15a8278d10';
 
+/// What every plan includes, per AI feature.
+///
+/// Never errors: a failed read falls back to [AllowanceTable.fallback], the
+/// static list that mirrors the web's defaults. The block exists to say what a
+/// plan buys, and a user deciding whether to pay should not see that sentence
+/// replaced by a retry button. An empty live answer falls back too — a plan
+/// that includes nothing is never the truth.
+
+@ProviderFor(planAllowances)
+final planAllowancesProvider = PlanAllowancesProvider._();
+
+/// What every plan includes, per AI feature.
+///
+/// Never errors: a failed read falls back to [AllowanceTable.fallback], the
+/// static list that mirrors the web's defaults. The block exists to say what a
+/// plan buys, and a user deciding whether to pay should not see that sentence
+/// replaced by a retry button. An empty live answer falls back too — a plan
+/// that includes nothing is never the truth.
+
+final class PlanAllowancesProvider
+    extends
+        $FunctionalProvider<
+          AsyncValue<AllowanceTable>,
+          AllowanceTable,
+          FutureOr<AllowanceTable>
+        >
+    with $FutureModifier<AllowanceTable>, $FutureProvider<AllowanceTable> {
+  /// What every plan includes, per AI feature.
+  ///
+  /// Never errors: a failed read falls back to [AllowanceTable.fallback], the
+  /// static list that mirrors the web's defaults. The block exists to say what a
+  /// plan buys, and a user deciding whether to pay should not see that sentence
+  /// replaced by a retry button. An empty live answer falls back too — a plan
+  /// that includes nothing is never the truth.
+  PlanAllowancesProvider._()
+    : super(
+        from: null,
+        argument: null,
+        retry: null,
+        name: r'planAllowancesProvider',
+        isAutoDispose: true,
+        dependencies: null,
+        $allTransitiveDependencies: null,
+      );
+
+  @override
+  String debugGetCreateSourceHash() => _$planAllowancesHash();
+
+  @$internal
+  @override
+  $FutureProviderElement<AllowanceTable> $createElement(
+    $ProviderPointer pointer,
+  ) => $FutureProviderElement(pointer);
+
+  @override
+  FutureOr<AllowanceTable> create(Ref ref) {
+    return planAllowances(ref);
+  }
+}
+
+String _$planAllowancesHash() => r'7b62d894107c49c1f9f36471e9d259684e995b7f';
+
 /// The referral code and its lifetime counters.
 
 @ProviderFor(ReferralController)
@@ -223,7 +285,7 @@ final class CheckoutControllerProvider
 }
 
 String _$checkoutControllerHash() =>
-    r'4b58b6b4247a6b34ae14fd529cec67f6be29245a';
+    r'01588ce739841561175d6ce0e8645ecf796d693b';
 
 /// Buying a plan: create the mandate, open the sheet, verify the result.
 ///

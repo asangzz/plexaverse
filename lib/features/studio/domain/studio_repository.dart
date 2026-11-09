@@ -9,12 +9,12 @@ import 'studio_design.dart';
 /// conversion, because those have no mobile route and inventing one would
 /// produce a control that 404s behind a `catch`.
 abstract class StudioRepository {
-  /// Whether Studio is unlocked, and the XP price. Cheap and safe to call on
-  /// every Studio render.
+  /// Whether Studio is open — it comes with every plan, so this is the plan
+  /// check. Cheap and safe to call on every Studio render.
   Future<StudioAccess> fetchAccess();
 
-  /// Spends the XP. Idempotent server-side — a second call after unlock
-  /// reports `alreadyUnlocked` and charges nothing.
+  /// The pre-plan "unlock". Kept because the route still exists for older
+  /// builds; it charges nothing, and this app no longer calls it.
   Future<StudioUnlockResult> unlock();
 
   /// The user's own designs, newest-updated first. `data` is omitted by the

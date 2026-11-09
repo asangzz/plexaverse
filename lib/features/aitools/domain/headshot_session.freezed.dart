@@ -302,7 +302,10 @@ mixin _$HeadshotSession {
  List<String> get results; bool get generating;/// `POST /roadmap/progress` in flight, and then done. Headshots is the
 /// roadmap's Level 1 Step 5, and closing it out is part of the page.
  bool get finishing; bool get finished;/// Amber, never red.
- String? get error;/// 402 — the user needs more XP, not another attempt.
+ String? get error;/// 402 — refused by the plan (no plan, or the limit is used up), not a
+/// failure another attempt would fix. The field keeps its pre-plan name
+/// because renaming a freezed field needs a codegen run this slice does
+/// not own; the `PlanRefusal` itself is on the controller.
  bool get insufficientXp;
 /// Create a copy of HeadshotSession
 /// with the given fields replaced by the non-null parameter values.
@@ -545,7 +548,10 @@ class _HeadshotSession extends HeadshotSession {
 @override@JsonKey() final  bool finished;
 /// Amber, never red.
 @override final  String? error;
-/// 402 — the user needs more XP, not another attempt.
+/// 402 — refused by the plan (no plan, or the limit is used up), not a
+/// failure another attempt would fix. The field keeps its pre-plan name
+/// because renaming a freezed field needs a codegen run this slice does
+/// not own; the `PlanRefusal` itself is on the controller.
 @override@JsonKey() final  bool insufficientXp;
 
 /// Create a copy of HeadshotSession

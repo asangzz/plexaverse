@@ -5,7 +5,12 @@ import '../../../../core/ui/app_icons.dart';
 import '../../../../core/ui/zave/zave_kit.dart';
 import '../../domain/pricing.dart';
 
-/// "Refer & Earn" — the code, its counters, and the one action.
+/// "Refer a friend" — the code, its counter, and the one action.
+///
+/// The reward is the REFERRER'S only: a month of plan time (30 days) when a
+/// friend they referred first subscribes. The friend gets nothing, so the copy
+/// promises them nothing. It used to say "both of you get 2,500 XP"; wallet XP
+/// was retired on 10 Nov 2026 and the XP-earned counter went with it.
 ///
 /// ## Why this copies a CODE and not a LINK
 ///
@@ -32,11 +37,10 @@ class ReferralCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: <Widget>[
-          Text('REFER & EARN', style: ZaveType.kicker),
+          Text('REFER A FRIEND', style: ZaveType.kicker),
           SizedBox(height: ZaveSpace.sm),
           Text(
-            'Both of you get +${groupedNumber(kReferralXp)} XP — a full week of '
-            'automation',
+            'Get a month free when a friend you refer subscribes',
             style: ZaveType.bodyMuted,
           ),
           SizedBox(height: ZaveSpace.xl),
@@ -65,31 +69,16 @@ class ReferralCard extends StatelessWidget {
             SizedBox(height: ZaveSpace.md),
             Text(
               'Share it with a friend. They enter it when they sign up on '
-              'plexaverse.com, and you both get the XP.',
+              'plexaverse.com. When they first subscribe, you get a month '
+              'free.',
               style: ZaveType.caption,
             ),
 
             if (summary.totalReferrals > 0) ...<Widget>[
               SizedBox(height: ZaveSpace.xl),
-              Row(
-                children: <Widget>[
-                  Expanded(
-                    child: _Counter(
-                      value: '${summary.totalReferrals}',
-                      label: 'Friends referred',
-                      color: ZaveColors.white,
-                    ),
-                  ),
-                  SizedBox(width: ZaveSpace.md),
-                  Expanded(
-                    child: _Counter(
-                      // Amber: XP is points.
-                      value: '+${groupedNumber(summary.totalXpEarned)}',
-                      label: 'XP earned',
-                      color: ZaveColors.amber,
-                    ),
-                  ),
-                ],
+              _Counter(
+                value: '${summary.totalReferrals}',
+                label: 'Friends referred',
               ),
             ],
           ],
@@ -134,15 +123,10 @@ class _CopyButtonState extends State<_CopyButton> {
 }
 
 class _Counter extends StatelessWidget {
-  const _Counter({
-    required this.value,
-    required this.label,
-    required this.color,
-  });
+  const _Counter({required this.value, required this.label});
 
   final String value;
   final String label;
-  final Color color;
 
   @override
   Widget build(BuildContext context) {
@@ -153,7 +137,7 @@ class _Counter extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         mainAxisSize: MainAxisSize.min,
         children: <Widget>[
-          Text(value, style: ZaveType.h3.copyWith(color: color)),
+          Text(value, style: ZaveType.h3.copyWith(color: ZaveColors.white)),
           SizedBox(height: ZaveSpace.xs),
           Text(label.toUpperCase(), style: ZaveType.kicker),
         ],

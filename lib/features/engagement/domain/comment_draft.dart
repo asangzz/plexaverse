@@ -62,8 +62,8 @@ abstract class CommentDraft with _$CommentDraft {
 /// A day's batch of comments.
 ///
 /// [cached] is the whole reason this screen is cheap to reopen: the server
-/// stores one batch per user per day and replays it for free. Only an explicit
-/// "new set" spends XP again — and that path does not exist on mobile yet, see
+/// stores one batch per user per day and replays it without counting it again.
+/// Only an explicit "new set" would count again — and that path does not exist on mobile yet, see
 /// `ApiEngagementRepository.generateComments`.
 @freezed
 abstract class CommentBatch with _$CommentBatch {

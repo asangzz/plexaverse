@@ -13,8 +13,13 @@ part 'user_preferences.g.dart';
 ///   • [onboardingCompleted] gates the dashboard. False → the onboarding chat.
 ///   • [brandType] selects personal vs company navigation and the compose
 ///     screen (`/create` vs `/company-post`).
-///   • [currentSeason] selects the home screen: 1 → the 66-day planet roadmap,
-///     2 → the Season 2 dashboard. It flips server-side at roadmap day 66.
+///   • [roadmapStartedAt] and [journeyCompletedAt] place the user on the
+///     1000-day journey, and say when it is finished (see [journeyFinished]).
+///
+/// [currentSeason] is NOT a season any more. The server keeps the column as the
+/// JOURNEY NUMBER — the key that stops journey 2's week 1 colliding with
+/// journey 1's — and nothing user-visible may call it a season. Read it
+/// through [journeyNumber].
 ///
 /// `GET /api/mobile/v1/user/preferences` returns the whole Prisma row (60+
 /// columns) plus `approvalChannel`. This models the subset the mobile UI
@@ -92,8 +97,34 @@ abstract class UserPreferences with _$UserPreferences {
     @Default('slack') String approvalChannel,
   }) = _UserPreferences;
 
+  /// Built from the raw row so [journeyCompletedAt] can be read off it.
+  ///
+  /// It MUST stay an expression body that calls `_$UserPreferencesFromJson`:
+  /// freezed only generates JSON support (and `toJson`) when the `fromJson`
+  /// factory is an `=>` expression. A block body silently drops the whole
+  /// `.g.dart` at the next build_runner run.
   factory UserPreferences.fromJson(Map<String, dynamic> json) =>
-      _$UserPreferencesFromJson(json);
+      _withJourneyEnd(_$UserPreferencesFromJson(json), json);
+
+  /// Parks the raw `journeyCompletedAt` on [preferences]. See
+  /// [journeyCompletedAt] for why it is not (yet) a freezed field.
+  static UserPreferences _withJourneyEnd(
+    UserPreferences preferences,
+    Map<String, dynamic> json,
+  ) {
+    final Object? completed = json['journeyCompletedAt'];
+    if (completed is String) {
+      final DateTime? at = DateTime.tryParse(completed);
+      if (at != null) _journeyCompletedAt[preferences] = at;
+    }
+    return preferences;
+  }
+
+  /// Side table for [journeyCompletedAt]. Expando entries die with the object,
+  /// so this cannot leak preferences rows.
+  static final Expando<DateTime> _journeyCompletedAt = Expando<DateTime>(
+    'journeyCompletedAt',
+  );
 
   /// The state of a user the server has never seen. Distinct from "loading":
   /// this one routes to onboarding.
@@ -102,29 +133,48 @@ abstract class UserPreferences with _$UserPreferences {
   /// True when this user runs a company brand.
   bool get isCompany => brandType == 'company';
 
-  /// True once the roadmap has advanced past Season 1's 66 days. Selects the
-  /// Season 2 dashboard over the planet roadmap.
-  bool get isSeason2 => currentSeason >= 2;
+  /// When the server stamped day 1000 — the journey's finish line — or null
+  /// while the journey is still running. Cleared by starting a new journey.
+  ///
+  /// **Interim: read off the raw JSON, not a freezed field.** Adding the field
+  /// to the factory needs a build_runner pass, and this change could not run
+  /// one. So [UserPreferences.fromJson] parks the value in an [Expando] keyed
+  /// on the instance. Two known gaps, both covered by [journeyFinished]'s
+  /// day fallback (the server stamps at day 1000, which is when the fallback
+  /// fires anyway): a `copyWith` copy does not carry it, and it takes no part
+  /// in `==`. Once the field is generated, move it into the factory as
+  /// `DateTime? journeyCompletedAt` and delete the Expando.
+  DateTime? get journeyCompletedAt => _journeyCompletedAt[this];
 
-  /// True once Season 1 is behind the user but they have not chosen a Season 2
-  /// path yet — the state the Season Complete screen exists for.
+  /// Which journey this is, 1-based. [currentSeason] under its real meaning;
+  /// clamped because a 0 from a malformed row would read as "journey 0".
+  int get journeyNumber => currentSeason < 1 ? 1 : currentSeason;
+
+  /// Day of the current journey, 1-indexed, capped at [roadmapTotalDays].
   ///
-  /// Ported from `isSeasonOneFinished` in lib/narrative-phases.ts, including
-  /// its day arithmetic: the roadmap is 1-indexed (the start day is day 1), so
-  /// the season is over strictly AFTER the last day, not on it.
-  ///
-  /// **The length is [roadmapTotalDays], not a literal.** It was `day > 66`
-  /// here while the web had already moved to a thousand, which did not read as
-  /// a stale number — it read as the product ending. Every user past their
-  /// sixty-sixth day was shown the Season Complete screen 934 days early,
-  /// while the server still considered them mid-Season-1, so nothing on the
-  /// backend agreed with what they were being told.
-  bool get seasonOneFinished {
+  /// A port of `getRoadmapDay` in the web's lib/narrative-phases.ts: the start
+  /// day IS day 1, and no start date reads as day 1.
+  int get journeyDay {
     final DateTime? started = roadmapStartedAt;
-    if (started == null || currentSeason >= 2) return false;
+    if (started == null) return 1;
     final int day = DateTime.now().difference(started).inDays + 1;
-    return day > roadmapTotalDays;
+    return day.clamp(1, roadmapTotalDays);
   }
+
+  /// True once this journey has reached its finish line, day 1000.
+  ///
+  /// [journeyCompletedAt] is the server's answer, but the server only stamps
+  /// it from the auto-post chain or a web dashboard visit. A user with
+  /// auto-post off who only uses the app would never be stamped, so the day
+  /// count is a fallback — the same one `startNewJourney` accepts on the
+  /// server, so the start the finish screen offers will not be refused.
+  ///
+  /// This replaces `isSeason2` / `seasonOneFinished`. There is no second mode
+  /// any more: a finished journey still shows the normal journey home, and a
+  /// user on journey 2+ is simply at their own roadmap day.
+  bool get journeyFinished =>
+      journeyCompletedAt != null ||
+      (roadmapStartedAt != null && journeyDay >= roadmapTotalDays);
 
   // `isMaintenance` lived here — `postsPerWeek <= 3` — with a doc saying the
   // post slots shrink. It had no callers, and the claim stopped being true at

@@ -82,7 +82,7 @@ enum HeadshotBackground {
 ///
 /// [headshots] are `data:image/png;base64,…` URIs, four of them, generated in
 /// parallel. The call is all-or-nothing: if any of the four is rejected the
-/// whole request fails and no XP is spent, so there is no partial state to
+/// whole request fails, so there is no partial state to
 /// model here.
 @freezed
 abstract class HeadshotResult with _$HeadshotResult {
@@ -132,7 +132,10 @@ abstract class HeadshotSession with _$HeadshotSession {
     /// Amber, never red.
     String? error,
 
-    /// 402 — the user needs more XP, not another attempt.
+    /// 402 — refused by the plan (no plan, or the limit is used up), not a
+    /// failure another attempt would fix. The field keeps its pre-plan name
+    /// because renaming a freezed field needs a codegen run this slice does
+    /// not own; the `PlanRefusal` itself is on the controller.
     @Default(false) bool insufficientXp,
   }) = _HeadshotSession;
 

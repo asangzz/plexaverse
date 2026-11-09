@@ -66,7 +66,7 @@ class StudioPage extends ConsumerWidget {
             StudioNotice.failure(
               title: "Studio didn't load.",
               body:
-                  'We could not check whether Studio is unlocked on this '
+                  'We could not check whether Studio is open on this '
                   'account.',
               onAction: () => ref.invalidate(studioAccessControllerProvider),
             ),
@@ -74,7 +74,7 @@ class StudioPage extends ConsumerWidget {
         ),
       ),
       data: (StudioAccess status) {
-        if (!status.hasAccess) return _LockedStudio(access: status);
+        if (!status.hasAccess) return const _LockedStudio();
         if (designId != null) return StudioDesignPage(designId: designId!);
         return const StudioLibraryView();
       },
@@ -93,29 +93,24 @@ abstract final class _Skeleton {
   static const double tile = 116;
 }
 
-/// The XP gate.
+/// The plan gate.
 ///
-/// The web hard-codes "Unlock for 2,000 XP"; the price comes from the server
-/// here, because it is an admin-tunable XP constant and a figure baked into a
-/// build is a figure that goes stale without anyone noticing.
-///
-/// Blue is the XP path in Zave and the ONLY brand-coloured fill, so the unlock
-/// is the one correct use of [ZaveButtonKind.brand] on this screen.
-class _LockedStudio extends ConsumerWidget {
-  const _LockedStudio({required this.access});
-
-  final StudioAccess access;
+/// Studio used to be a one-time XP unlock; wallet XP is retired and Studio now
+/// comes with every plan, so the only thing this screen can offer someone
+/// without access is the way to a plan. Blue is Zave's upgrade path and the
+/// ONLY brand-coloured fill, so that button is the one correct use of
+/// [ZaveButtonKind.brand] here.
+class _LockedStudio extends StatelessWidget {
+  const _LockedStudio();
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final bool affordable = access.canAfford;
-
+  Widget build(BuildContext context) {
     return ZaveScaffold(
       largeTitle: 'Studio',
       subtitle: 'Your creative engine',
       body: ZaveScrollView(
         children: <Widget>[
-          Text('LOCKED', style: ZaveType.kicker),
+          Text('NEEDS A PLAN', style: ZaveType.kicker),
           SizedBox(height: ZaveSpace.lg),
           Text(
             'The design surface behind your posters. Open a saved design, '
@@ -130,37 +125,27 @@ class _LockedStudio extends ConsumerWidget {
               children: <Widget>[
                 Row(
                   children: <Widget>[
-                    // Amber is "waiting" — waiting on XP, in this case.
-                    ZaveDot(affordable ? ZaveColors.green : ZaveColors.amber),
+                    // Amber is "waiting" — on a plan, in this case.
+                    const ZaveDot(ZaveColors.amber),
                     SizedBox(width: ZaveSpace.sm),
                     Expanded(
                       child: Text(
-                        affordable ? 'READY TO UNLOCK' : 'NOT ENOUGH XP',
+                        'INCLUDED IN EVERY PLAN',
                         style: ZaveType.kicker,
                       ),
                     ),
                   ],
                 ),
                 SizedBox(height: ZaveSpace.md),
-                Text('${access.requiredXp} XP', style: ZaveType.h3),
-                SizedBox(height: ZaveSpace.sm),
                 Text(
-                  affordable
-                      ? 'You have ${access.currentXp} XP. One-time unlock, '
-                            'kept for good.'
-                      : 'You have ${access.currentXp} XP — '
-                            '${access.shortfall} short.',
+                  'Pick a plan or a 30-day pass and Studio opens.',
                   style: ZaveType.bodyMuted,
                 ),
                 SizedBox(height: ZaveSpace.lg),
                 ZaveButton.brand(
-                  label: 'Unlock Studio',
+                  label: 'See plans',
                   expand: true,
-                  onPressed: affordable
-                      ? () => ref
-                            .read(studioAccessControllerProvider.notifier)
-                            .unlock()
-                      : null,
+                  onPressed: () => context.push(ZaveRoutes.pricing),
                 ),
               ],
             ),

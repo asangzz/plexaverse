@@ -1,3 +1,4 @@
+import '../../../core/plan/plan_refusal.dart';
 import '../../home/domain/roadmap_progress.dart';
 import '../../plexa/domain/plexa_day.dart';
 import 'comment_draft.dart';
@@ -20,12 +21,18 @@ export 'engagement_mission.dart';
 /// and a different next action; a single error card would send a user with an
 /// empty profile to the pricing page.
 enum EngagementBlock {
-  /// 402 — the XP balance will not cover the batch. Next action: buy XP.
-  insufficientXp,
+  /// 402 `INSUFFICIENT_XP` (reason `NOT_ENTITLED`) — no plan. The code name
+  /// is a leftover from wallet XP, which is retired. Next action: see plans.
+  needsPlan,
+
+  /// 402 `LIMIT_REACHED` — the plan covers this, but today's or this month's
+  /// allowance is used. Next action: wait; the message says until when.
+  limitReached,
 
   /// 400 `PROFILE_INCOMPLETE` — no profession on the profile, or a placeholder
   /// one ("Professional", "User"). Next action: finish the profile. The server
-  /// refuses BEFORE spending XP, which is the point of the check.
+  /// refuses BEFORE the generation counts against the plan, which is the
+  /// point of the check.
   profileIncomplete,
 
   /// Anything else — a model failure, a dropped connection, a 5xx. Retryable.
@@ -38,21 +45,16 @@ enum EngagementBlock {
 /// these better than a client-side guess can, and quoting it is how the user
 /// finds out that (say) their headline is the problem rather than their plan.
 class EngagementFailure implements Exception {
-  const EngagementFailure(this.kind, {this.message, this.requiredXp});
+  const EngagementFailure(this.kind, {this.message, this.refusal});
 
   final EngagementBlock kind;
 
   /// The backend's message, when the envelope carried one.
   final String? message;
 
-  /// How much XP a fresh batch needs.
-  ///
-  /// Almost always null today: the service throws `INSUFFICIENT_XP` with
-  /// `details.requiredXP`, but the mobile envelope's error mapper drops the
-  /// details block, so the number never reaches this client. The screen prices
-  /// the action from the last successful batch's `xpCost` instead and says
-  /// nothing when it has none — see the note in the summary for the orchestrator.
-  final int? requiredXp;
+  /// The parsed plan refusal for [EngagementBlock.needsPlan] and
+  /// [EngagementBlock.limitReached] — carries when a limit resets.
+  final PlanRefusal? refusal;
 
   @override
   String toString() => 'EngagementFailure($kind, $message)';
@@ -91,11 +93,12 @@ abstract class EngagementRepository {
   ///
   /// The upper half of the comments screen. Unlike [generateComments] this one
   /// has no cheap replay to hide behind: the service stores its picks before it
-  /// returns, so the first call of the day costs XP and every later one is
-  /// free, including the one Open Plexa makes through its own aggregate.
+  /// returns, so the first call of the day is the one the plan counts and
+  /// every later one is a replay, including the one Open Plexa makes through
+  /// its own aggregate.
   ///
-  /// Throws an [EngagementFailure] with [EngagementBlock.insufficientXp] when
-  /// the balance is short.
+  /// Throws an [EngagementFailure] with [EngagementBlock.needsPlan] or
+  /// [EngagementBlock.limitReached] when the plan refuses.
   Future<TopVoiceDay> fetchTopVoices();
 
   /// `PATCH /top-voices` — stamp that the user opened one to comment.

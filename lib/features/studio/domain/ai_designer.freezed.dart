@@ -15,9 +15,8 @@ T _$identity<T>(T value) => value;
 /// @nodoc
 mixin _$AiDesignerReply {
 
- String get message; StudioDesignData? get design; String get model;/// How many images the route actually generated. Non-zero means XP was
-/// charged per image on top of the base cost, which the server states in
-/// [message] when it had to strip them for affordability.
+ String get message; StudioDesignData? get design; String get model;/// How many images the route actually generated. The server states in
+/// [message] when it had to leave them out (an image limit reached).
  int get imagesGenerated;
 /// Create a copy of AiDesignerReply
 /// with the given fields replaced by the non-null parameter values.
@@ -233,9 +232,8 @@ class _AiDesignerReply implements AiDesignerReply {
 @override@JsonKey() final  String message;
 @override final  StudioDesignData? design;
 @override@JsonKey() final  String model;
-/// How many images the route actually generated. Non-zero means XP was
-/// charged per image on top of the base cost, which the server states in
-/// [message] when it had to strip them for affordability.
+/// How many images the route actually generated. The server states in
+/// [message] when it had to leave them out (an image limit reached).
 @override@JsonKey() final  int imagesGenerated;
 
 /// Create a copy of AiDesignerReply

@@ -11,7 +11,7 @@ import '../widgets/mission_chrome.dart';
 
 /// **The Headline Hook** — the web's `/roadmap/headline-hook`.
 ///
-/// Day-3 profile mission, reached from the Season 1 roadmap's step row. Write
+/// Day-3 profile mission, reached from the journey roadmap's step row. Write
 /// or AI-optimise a LinkedIn headline, copy it across, tick a three-item manual
 /// checklist, then complete the step.
 ///
@@ -171,7 +171,6 @@ class _HeadlineHookPageState extends ConsumerState<HeadlineHookPage> {
           level: HeadlineHookPage.levelId,
           step: HeadlineHookPage.stepId,
           totalSteps: 7,
-          rewardXp: 50,
         ),
 
         SizedBox(height: ZaveSpace.xl),

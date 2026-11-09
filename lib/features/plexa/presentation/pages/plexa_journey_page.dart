@@ -10,11 +10,9 @@ import 'package:google_fonts/google_fonts.dart';
 import '../../../../core/router/zave_routes.dart';
 import '../../../../core/ui/app_icons.dart';
 import '../../../../core/ui/zave/zave_kit.dart';
-import '../../../onboarding/application/welcome_bonus.dart';
 import '../../../onboarding/presentation/pages/onboarding_chat_page.dart';
 import '../widgets/plexa_clips.dart';
 import '../widgets/plexa_mascot.dart';
-import '../widgets/welcome_bonus_overlay.dart';
 
 /// **Plexa's journey** — the app's onboarding, and the web's: Plexa's intro,
 /// then the chat with her in the top row. A port of
@@ -145,7 +143,6 @@ class _PlexaJourneyPageState extends ConsumerState<PlexaJourneyPage> {
   Rect? _bird;
 
   /// The welcome bonus has been celebrated (or tapped away) on this visit.
-  bool _welcomeDismissed = false;
 
   bool get _isLastStep => _step == _steps.length - 1;
 
@@ -189,14 +186,8 @@ class _PlexaJourneyPageState extends ConsumerState<PlexaJourneyPage> {
     WidgetsBinding.instance.addPostFrameCallback((_) => _measure());
     final bool chatOpen = _phase == _Phase.onboarding;
 
-    // The web's `freshRegistration` and its `hold`. Plexa waits for the answer
-    // too — the overlay can only be ruled out once it is in — but only for the
-    // FIRST answer: a re-read after the connect must not take her off stage.
-    final AsyncValue<bool> bonus = ref.watch(welcomeBonusProvider);
-    final bool bonusPending = !bonus.hasValue && !bonus.hasError;
-    final bool celebrate =
-        !_welcomeDismissed &&
-        (bonus.whenOrNull(data: (bool fresh) => fresh) ?? false);
+    // There is no welcome bonus to celebrate (wallet XP was retired on
+    // 10 Nov 2026), so nothing holds Plexa back from her entrance.
 
     return AnnotatedRegion<SystemUiOverlayStyle>(
       value: SystemUiOverlayStyle.light,
@@ -249,17 +240,10 @@ class _PlexaJourneyPageState extends ConsumerState<PlexaJourneyPage> {
                     child: PlexaMascot(
                       clip: chatOpen ? _onboardingClip : _steps[_step].clip,
                       clips: _clips,
-                      hold: bonusPending || celebrate,
+                      hold: false,
                     ),
                   ),
                 ),
-                if (celebrate)
-                  Positioned.fill(
-                    key: const ValueKey<String>('welcome-bonus'),
-                    child: WelcomeBonusOverlay(
-                      onDismiss: () => setState(() => _welcomeDismissed = true),
-                    ),
-                  ),
               ],
             );
           },

@@ -5,33 +5,19 @@ import '../domain/studio_design.dart';
 
 part 'studio_controller.g.dart';
 
-/// Whether Studio is unlocked.
+/// Whether Studio is open to this user.
 ///
-/// Every Studio surface watches this, so it is the one place the XP gate is
-/// decided. Kept as its own controller rather than folded into the library so
-/// that unlocking re-renders the gate without re-fetching the design list —
-/// and so the list's own failure cannot be mistaken for "you don't have
-/// access", which is the confusing failure this split exists to prevent.
+/// Every Studio surface watches this, so it is the one place the gate is
+/// decided. Studio comes with every plan (10 Nov 2026 — the one-time XP
+/// unlock is gone), so `hasAccess` is the plan check. Kept as its own
+/// controller rather than folded into the library so the list's own failure
+/// cannot be mistaken for "you don't have access", which is the confusing
+/// failure this split exists to prevent.
 @riverpod
 class StudioAccessController extends _$StudioAccessController {
   @override
   Future<StudioAccess> build() =>
       ref.watch(studioRepositoryProvider).fetchAccess();
-
-  /// Spends the XP and re-reads.
-  ///
-  /// Not optimistic: this one costs the user something, and a gate that opens
-  /// before the server agreed is the wrong kind of confident. The screen falls
-  /// back to its loading state for the round trip rather than holding the
-  /// stale balance under a spinner — a one-time purchase is the wrong place to
-  /// show a number that is about to change.
-  Future<void> unlock() async {
-    state = const AsyncLoading<StudioAccess>();
-    state = await AsyncValue.guard(() async {
-      await ref.read(studioRepositoryProvider).unlock();
-      return ref.read(studioRepositoryProvider).fetchAccess();
-    });
-  }
 }
 
 /// The user's saved designs.

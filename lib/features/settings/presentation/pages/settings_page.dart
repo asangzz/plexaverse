@@ -60,7 +60,6 @@ class SettingsPage extends ConsumerWidget {
           ref
             ..invalidate(preferencesControllerProvider)
             ..invalidate(accountSnapshotProvider)
-            ..invalidate(xpSummaryProvider)
             ..invalidate(linkedinAccountsControllerProvider)
             ..invalidate(slackControllerProvider)
             ..invalidate(calendarControllerProvider)

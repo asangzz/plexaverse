@@ -325,7 +325,7 @@ class _ChatTabState extends ConsumerState<_ChatTab> {
 
     return PersonaSection(
       title: 'Talk to Plexa',
-      lead: 'Free — never costs XP.',
+      lead: 'Free — it never counts against your plan.',
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: <Widget>[

@@ -8,15 +8,7 @@ part of 'home_controllers.dart';
 
 // GENERATED CODE - DO NOT MODIFY BY HAND
 // ignore_for_file: type=lint, type=warning
-/// The signed-in user's preferences.
-///
-/// **This provider lives in the home slice on purpose, and temporarily.**
-/// `features/preferences/` currently contains a domain model and nothing else —
-/// no repository, no provider — yet the home screen cannot choose between the
-/// Season 1 roadmap and the Season 2 dashboard without `currentSeason`, and
-/// several other screens will need the same row. When the preferences slice
-/// grows a data layer this should move there wholesale and this file should
-/// The user's position on the 66-day roadmap.
+/// The user's position on the 1000-day roadmap.
 ///
 /// The web caches this for 30 seconds and busts the browser cache on every
 /// fetch; here the equivalent is simply that the provider is re-read on
@@ -25,30 +17,14 @@ part of 'home_controllers.dart';
 @ProviderFor(RoadmapProgressController)
 final roadmapProgressControllerProvider = RoadmapProgressControllerProvider._();
 
-/// The signed-in user's preferences.
-///
-/// **This provider lives in the home slice on purpose, and temporarily.**
-/// `features/preferences/` currently contains a domain model and nothing else —
-/// no repository, no provider — yet the home screen cannot choose between the
-/// Season 1 roadmap and the Season 2 dashboard without `currentSeason`, and
-/// several other screens will need the same row. When the preferences slice
-/// grows a data layer this should move there wholesale and this file should
-/// The user's position on the 66-day roadmap.
+/// The user's position on the 1000-day roadmap.
 ///
 /// The web caches this for 30 seconds and busts the browser cache on every
 /// fetch; here the equivalent is simply that the provider is re-read on
 /// invalidation and on a pull-to-refresh.
 final class RoadmapProgressControllerProvider
     extends $AsyncNotifierProvider<RoadmapProgressController, RoadmapProgress> {
-  /// The signed-in user's preferences.
-  ///
-  /// **This provider lives in the home slice on purpose, and temporarily.**
-  /// `features/preferences/` currently contains a domain model and nothing else —
-  /// no repository, no provider — yet the home screen cannot choose between the
-  /// Season 1 roadmap and the Season 2 dashboard without `currentSeason`, and
-  /// several other screens will need the same row. When the preferences slice
-  /// grows a data layer this should move there wholesale and this file should
-  /// The user's position on the 66-day roadmap.
+  /// The user's position on the 1000-day roadmap.
   ///
   /// The web caches this for 30 seconds and busts the browser cache on every
   /// fetch; here the equivalent is simply that the provider is re-read on
@@ -75,15 +51,7 @@ final class RoadmapProgressControllerProvider
 String _$roadmapProgressControllerHash() =>
     r'db06a220208904080c45496f916fbdf58c88fef5';
 
-/// The signed-in user's preferences.
-///
-/// **This provider lives in the home slice on purpose, and temporarily.**
-/// `features/preferences/` currently contains a domain model and nothing else —
-/// no repository, no provider — yet the home screen cannot choose between the
-/// Season 1 roadmap and the Season 2 dashboard without `currentSeason`, and
-/// several other screens will need the same row. When the preferences slice
-/// grows a data layer this should move there wholesale and this file should
-/// The user's position on the 66-day roadmap.
+/// The user's position on the 1000-day roadmap.
 ///
 /// The web caches this for 30 seconds and busts the browser cache on every
 /// fetch; here the equivalent is simply that the provider is re-read on
@@ -108,7 +76,7 @@ abstract class _$RoadmapProgressController
   }
 }
 
-/// The 66 days, with progress folded in.
+/// The journey's days, with progress folded in.
 ///
 /// Derived rather than stored: the roadmap is a pure function of the progress
 /// payload plus today's date, and caching it separately is how the two drift.
@@ -116,7 +84,7 @@ abstract class _$RoadmapProgressController
 @ProviderFor(roadmapLevels)
 final roadmapLevelsProvider = RoadmapLevelsProvider._();
 
-/// The 66 days, with progress folded in.
+/// The journey's days, with progress folded in.
 ///
 /// Derived rather than stored: the roadmap is a pure function of the progress
 /// payload plus today's date, and caching it separately is how the two drift.
@@ -131,7 +99,7 @@ final class RoadmapLevelsProvider
     with
         $FutureModifier<List<RoadmapLevel>>,
         $FutureProvider<List<RoadmapLevel>> {
-  /// The 66 days, with progress folded in.
+  /// The journey's days, with progress folded in.
   ///
   /// Derived rather than stored: the roadmap is a pure function of the progress
   /// payload plus today's date, and caching it separately is how the two drift.
@@ -278,61 +246,3 @@ final class ActiveRoadmapDayProvider
 }
 
 String _$activeRoadmapDayHash() => r'b7fdcfec5ae22b714b88b5d3cae82b394954982c';
-
-/// The XP balance shown in the header.
-///
-/// The web refetches this every 30 seconds; a phone in a user's pocket does not
-/// need a background poll for a number that only moves when the user does
-/// something, so this refreshes on invalidation instead. Flagged as a
-/// deliberate departure rather than an omission.
-
-@ProviderFor(xpBalance)
-final xpBalanceProvider = XpBalanceProvider._();
-
-/// The XP balance shown in the header.
-///
-/// The web refetches this every 30 seconds; a phone in a user's pocket does not
-/// need a background poll for a number that only moves when the user does
-/// something, so this refreshes on invalidation instead. Flagged as a
-/// deliberate departure rather than an omission.
-
-final class XpBalanceProvider
-    extends
-        $FunctionalProvider<
-          AsyncValue<XpBalance>,
-          XpBalance,
-          FutureOr<XpBalance>
-        >
-    with $FutureModifier<XpBalance>, $FutureProvider<XpBalance> {
-  /// The XP balance shown in the header.
-  ///
-  /// The web refetches this every 30 seconds; a phone in a user's pocket does not
-  /// need a background poll for a number that only moves when the user does
-  /// something, so this refreshes on invalidation instead. Flagged as a
-  /// deliberate departure rather than an omission.
-  XpBalanceProvider._()
-    : super(
-        from: null,
-        argument: null,
-        retry: null,
-        name: r'xpBalanceProvider',
-        isAutoDispose: true,
-        dependencies: null,
-        $allTransitiveDependencies: null,
-      );
-
-  @override
-  String debugGetCreateSourceHash() => _$xpBalanceHash();
-
-  @$internal
-  @override
-  $FutureProviderElement<XpBalance> $createElement($ProviderPointer pointer) =>
-      $FutureProviderElement(pointer);
-
-  @override
-  FutureOr<XpBalance> create(Ref ref) {
-    return xpBalance(ref);
-  }
-}
-
-String _$xpBalanceHash() => r'4eef8aab8abbdea9a34f0e71ed8f71172d5bef3b';

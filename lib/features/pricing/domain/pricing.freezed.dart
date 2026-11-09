@@ -304,7 +304,7 @@ mixin _$ReferralSummary {
 
 /// Null until the user generates one. That is the empty state, not an
 /// error.
- String? get code; int get totalReferrals; int get totalXpEarned;
+ String? get code; int get totalReferrals;
 /// Create a copy of ReferralSummary
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
@@ -315,16 +315,16 @@ $ReferralSummaryCopyWith<ReferralSummary> get copyWith => _$ReferralSummaryCopyW
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is ReferralSummary&&(identical(other.code, code) || other.code == code)&&(identical(other.totalReferrals, totalReferrals) || other.totalReferrals == totalReferrals)&&(identical(other.totalXpEarned, totalXpEarned) || other.totalXpEarned == totalXpEarned));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is ReferralSummary&&(identical(other.code, code) || other.code == code)&&(identical(other.totalReferrals, totalReferrals) || other.totalReferrals == totalReferrals));
 }
 
 
 @override
-int get hashCode => Object.hash(runtimeType,code,totalReferrals,totalXpEarned);
+int get hashCode => Object.hash(runtimeType,code,totalReferrals);
 
 @override
 String toString() {
-  return 'ReferralSummary(code: $code, totalReferrals: $totalReferrals, totalXpEarned: $totalXpEarned)';
+  return 'ReferralSummary(code: $code, totalReferrals: $totalReferrals)';
 }
 
 
@@ -335,7 +335,7 @@ abstract mixin class $ReferralSummaryCopyWith<$Res>  {
   factory $ReferralSummaryCopyWith(ReferralSummary value, $Res Function(ReferralSummary) _then) = _$ReferralSummaryCopyWithImpl;
 @useResult
 $Res call({
- String? code, int totalReferrals, int totalXpEarned
+ String? code, int totalReferrals
 });
 
 
@@ -352,11 +352,10 @@ class _$ReferralSummaryCopyWithImpl<$Res>
 
 /// Create a copy of ReferralSummary
 /// with the given fields replaced by the non-null parameter values.
-@pragma('vm:prefer-inline') @override $Res call({Object? code = freezed,Object? totalReferrals = null,Object? totalXpEarned = null,}) {
+@pragma('vm:prefer-inline') @override $Res call({Object? code = freezed,Object? totalReferrals = null,}) {
   return _then(_self.copyWith(
 code: freezed == code ? _self.code : code // ignore: cast_nullable_to_non_nullable
 as String?,totalReferrals: null == totalReferrals ? _self.totalReferrals : totalReferrals // ignore: cast_nullable_to_non_nullable
-as int,totalXpEarned: null == totalXpEarned ? _self.totalXpEarned : totalXpEarned // ignore: cast_nullable_to_non_nullable
 as int,
   ));
 }
@@ -442,10 +441,10 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String? code,  int totalReferrals,  int totalXpEarned)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String? code,  int totalReferrals)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _ReferralSummary() when $default != null:
-return $default(_that.code,_that.totalReferrals,_that.totalXpEarned);case _:
+return $default(_that.code,_that.totalReferrals);case _:
   return orElse();
 
 }
@@ -463,10 +462,10 @@ return $default(_that.code,_that.totalReferrals,_that.totalXpEarned);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String? code,  int totalReferrals,  int totalXpEarned)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String? code,  int totalReferrals)  $default,) {final _that = this;
 switch (_that) {
 case _ReferralSummary():
-return $default(_that.code,_that.totalReferrals,_that.totalXpEarned);case _:
+return $default(_that.code,_that.totalReferrals);case _:
   throw StateError('Unexpected subclass');
 
 }
@@ -483,10 +482,10 @@ return $default(_that.code,_that.totalReferrals,_that.totalXpEarned);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String? code,  int totalReferrals,  int totalXpEarned)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String? code,  int totalReferrals)?  $default,) {final _that = this;
 switch (_that) {
 case _ReferralSummary() when $default != null:
-return $default(_that.code,_that.totalReferrals,_that.totalXpEarned);case _:
+return $default(_that.code,_that.totalReferrals);case _:
   return null;
 
 }
@@ -498,14 +497,13 @@ return $default(_that.code,_that.totalReferrals,_that.totalXpEarned);case _:
 
 
 class _ReferralSummary extends ReferralSummary {
-  const _ReferralSummary({this.code, this.totalReferrals = 0, this.totalXpEarned = 0}): super._();
+  const _ReferralSummary({this.code, this.totalReferrals = 0}): super._();
   
 
 /// Null until the user generates one. That is the empty state, not an
 /// error.
 @override final  String? code;
 @override@JsonKey() final  int totalReferrals;
-@override@JsonKey() final  int totalXpEarned;
 
 /// Create a copy of ReferralSummary
 /// with the given fields replaced by the non-null parameter values.
@@ -517,16 +515,16 @@ _$ReferralSummaryCopyWith<_ReferralSummary> get copyWith => __$ReferralSummaryCo
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is _ReferralSummary&&(identical(other.code, code) || other.code == code)&&(identical(other.totalReferrals, totalReferrals) || other.totalReferrals == totalReferrals)&&(identical(other.totalXpEarned, totalXpEarned) || other.totalXpEarned == totalXpEarned));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is _ReferralSummary&&(identical(other.code, code) || other.code == code)&&(identical(other.totalReferrals, totalReferrals) || other.totalReferrals == totalReferrals));
 }
 
 
 @override
-int get hashCode => Object.hash(runtimeType,code,totalReferrals,totalXpEarned);
+int get hashCode => Object.hash(runtimeType,code,totalReferrals);
 
 @override
 String toString() {
-  return 'ReferralSummary(code: $code, totalReferrals: $totalReferrals, totalXpEarned: $totalXpEarned)';
+  return 'ReferralSummary(code: $code, totalReferrals: $totalReferrals)';
 }
 
 
@@ -537,7 +535,7 @@ abstract mixin class _$ReferralSummaryCopyWith<$Res> implements $ReferralSummary
   factory _$ReferralSummaryCopyWith(_ReferralSummary value, $Res Function(_ReferralSummary) _then) = __$ReferralSummaryCopyWithImpl;
 @override @useResult
 $Res call({
- String? code, int totalReferrals, int totalXpEarned
+ String? code, int totalReferrals
 });
 
 
@@ -554,11 +552,10 @@ class __$ReferralSummaryCopyWithImpl<$Res>
 
 /// Create a copy of ReferralSummary
 /// with the given fields replaced by the non-null parameter values.
-@override @pragma('vm:prefer-inline') $Res call({Object? code = freezed,Object? totalReferrals = null,Object? totalXpEarned = null,}) {
+@override @pragma('vm:prefer-inline') $Res call({Object? code = freezed,Object? totalReferrals = null,}) {
   return _then(_ReferralSummary(
 code: freezed == code ? _self.code : code // ignore: cast_nullable_to_non_nullable
 as String?,totalReferrals: null == totalReferrals ? _self.totalReferrals : totalReferrals // ignore: cast_nullable_to_non_nullable
-as int,totalXpEarned: null == totalXpEarned ? _self.totalXpEarned : totalXpEarned // ignore: cast_nullable_to_non_nullable
 as int,
   ));
 }

@@ -1,4 +1,3 @@
-import '../../../core/mock/mock_constants.dart';
 import 'package:flutter/foundation.dart' show kReleaseMode, visibleForTesting;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -47,20 +46,6 @@ class ApiSettingsRepository implements SettingsRepository {
       final Map<String, dynamic>? data = response.data;
       if (data == null) throw const SettingsUnavailable();
       return AccountSnapshot.fromJson(data);
-    } on SettingsUnavailable {
-      rethrow;
-    } on Object {
-      throw const SettingsUnavailable();
-    }
-  }
-
-  @override
-  Future<XpSummary> fetchXp() async {
-    try {
-      final response = await _client.get<Map<String, dynamic>>(ApiPaths.userXp);
-      final Map<String, dynamic>? data = response.data;
-      if (data == null) throw const SettingsUnavailable();
-      return XpSummary.fromJson(data);
     } on SettingsUnavailable {
       rethrow;
     } on Object {
@@ -284,7 +269,9 @@ class ApiSettingsRepository implements SettingsRepository {
     final String message = failure?.message ?? '';
     return switch (failure?.errorCode) {
       'COOLDOWN' => WhatsAppCooldown(
-        message.isEmpty ? 'Wait a moment before asking for another code.' : message,
+        message.isEmpty
+            ? 'Wait a moment before asking for another code.'
+            : message,
       ),
       'CONSENT_REQUIRED' => WhatsAppConsentRequired(
         message.isEmpty ? 'Agree to WhatsApp messages first.' : message,
@@ -615,7 +602,6 @@ class FakeSettingsRepository implements SettingsRepository {
         id: 'user_fake',
         name: 'Asang Borkar',
         email: 'asang@example.com',
-        xpBalance: kMockXpBalance,
       ),
       subscription: SubscriptionState(
         status: 'active',
@@ -623,12 +609,6 @@ class FakeSettingsRepository implements SettingsRepository {
         currentPeriodEnd: DateTime.now().add(const Duration(days: 19)),
       ),
     );
-  }
-
-  @override
-  Future<XpSummary> fetchXp() async {
-    await Future<void>.delayed(_latency);
-    return const XpSummary(balance: kMockXpBalance);
   }
 
   @override

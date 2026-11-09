@@ -77,7 +77,11 @@ abstract class MissionProfile with _$MissionProfile {
       : 'Expert Professional';
 }
 
-/// The Season 1 recap numbers.
+/// The finished journey's recap numbers, shown on the journey-complete screen.
+///
+/// Still named for the season it used to close; renaming a freezed class needs
+/// a build_runner pass. [xpBalance] is never set or shown any more (wallet XP
+/// is retired) and goes at the next regeneration.
 ///
 /// The web's server component reads these straight off Prisma. Mobile has no
 /// such route, so they are assembled from three reads — see

@@ -1,5 +1,7 @@
+import 'allowance.dart';
 import 'pricing.dart';
 
+export 'allowance.dart';
 export 'pricing.dart';
 
 /// Thrown when a pricing read cannot be satisfied.
@@ -47,6 +49,14 @@ abstract class PricingRepository {
   /// null-brandType branch rather than a guess.
   Future<String?> fetchBrandType();
 
+  /// `GET /user/allowances` — what the plan includes per AI feature, and how
+  /// much of each this user has used this period.
+  ///
+  /// Throws [PricingUnavailable] on any failure; the provider, not the
+  /// repository, decides to fall back to [Allowance.defaults], so a test can
+  /// still tell a live answer from the fallback.
+  Future<List<Allowance>> fetchAllowances();
+
   /// `GET /referral` — the active code plus lifetime counters.
   Future<ReferralSummary> fetchReferral();
 
@@ -74,7 +84,6 @@ abstract class PricingRepository {
     required String signature,
   });
 }
-
 
 /// What the payment sheet needs to open.
 class CheckoutIntent {

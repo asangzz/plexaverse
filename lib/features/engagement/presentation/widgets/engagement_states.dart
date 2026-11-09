@@ -60,8 +60,9 @@ class _CardSkeleton extends StatelessWidget {
 /// The card both habit screens show when a generation is refused.
 ///
 /// One widget with three branches rather than three call sites, because the
-/// branch is the whole point: an out-of-XP user and a user with an empty
-/// profile need different sentences and different buttons, and collapsing them
+/// branch is the whole point: a user without a plan, a user at today's limit
+/// and a user with an empty profile need different sentences and different
+/// buttons, and collapsing them
 /// into one "something went wrong" is how a user ends up on the pricing page
 /// to fix a missing job title.
 ///
@@ -71,24 +72,15 @@ class EngagementBlocked extends StatelessWidget {
   const EngagementBlocked({
     required this.failure,
     required this.onRetry,
-    required this.onGetXp,
+    required this.onSeePlans,
     required this.onCompleteProfile,
-    this.knownXpCost,
     super.key,
   });
 
   final EngagementFailure failure;
   final VoidCallback onRetry;
-  final VoidCallback onGetXp;
+  final VoidCallback onSeePlans;
   final VoidCallback onCompleteProfile;
-
-  /// The last price the server quoted, if this screen has ever seen one.
-  ///
-  /// The service throws `INSUFFICIENT_XP` with `details.requiredXP`, but the
-  /// mobile envelope's error mapper drops the details block, so the number
-  /// never arrives with the refusal. Rather than invent one, the copy names a
-  /// figure only when a previous successful batch quoted it.
-  final int? knownXpCost;
 
   @override
   Widget build(BuildContext context) {
@@ -96,33 +88,39 @@ class EngagementBlocked extends StatelessWidget {
       String kicker,
       String title,
       String body,
-      Widget action,
+      Widget? action,
     ) = switch (failure.kind) {
-      EngagementBlock.insufficientXp => (
-        'NOT ENOUGH XP',
-        'This one costs XP',
-        knownXpCost == null
-            ? 'Your balance will not cover a new batch. Top up and come back — '
-                  "today's batch stays free once it exists."
-            : 'A batch costs $knownXpCost XP and your balance will not cover '
-                  "it. Top up and come back — today's batch stays free once it "
-                  'exists.',
-        ZaveButton(label: 'Get more XP', onPressed: onGetXp),
+      EngagementBlock.needsPlan => (
+        'NEEDS A PLAN',
+        'This is part of a plan',
+        failure.refusal?.message ??
+            failure.message ??
+            'Daily suggestions come with a Plexaverse plan.',
+        ZaveButton.brand(label: 'See plans', onPressed: onSeePlans),
+      ),
+      // No button: the only remedy is time, and the line under the title
+      // says how much. "Try again" would be refused the same way.
+      EngagementBlock.limitReached => (
+        'LIMIT REACHED',
+        failure.refusal?.backAtLabel() ?? 'Back soon',
+        failure.refusal?.message ??
+            failure.message ??
+            "You've used this feature's limit for now.",
+        null,
       ),
       EngagementBlock.profileIncomplete => (
         'PROFILE INCOMPLETE',
         'We need to know what you do',
         'Add your headline or profession in settings, and this screen can find '
             'people worth reaching out to. Without it the list would be '
-            'generic, so nothing was generated and nothing was charged.',
+            'generic, so nothing was generated.',
         ZaveButton(label: 'Complete profile', onPressed: onCompleteProfile),
       ),
       EngagementBlock.unavailable => (
         'COULD NOT LOAD',
         'That did not come back',
         failure.message ??
-            'The connection dropped, or the model refused. Nothing was '
-                'charged — try again.',
+            'The connection dropped, or the model refused. Try again.',
         ZaveButton(label: 'Try again', onPressed: onRetry),
       ),
     };
@@ -142,8 +140,10 @@ class EngagementBlocked extends StatelessWidget {
           Text(title, style: ZaveType.h3),
           SizedBox(height: ZaveSpace.md),
           Text(body, style: ZaveType.bodyMuted),
-          SizedBox(height: ZaveSpace.lg),
-          action,
+          if (action != null) ...<Widget>[
+            SizedBox(height: ZaveSpace.lg),
+            action,
+          ],
         ],
       ),
     );
@@ -154,20 +154,20 @@ class EngagementBlocked extends StatelessWidget {
 ///
 /// The web's cached-batch notice, and worth keeping: the screen auto-generates
 /// on open, so a user who does not know about the daily cache reasonably
-/// assumes every visit is costing them XP.
+/// assumes every visit counts against their plan's limit.
 class CachedBatchNote extends StatelessWidget {
   const CachedBatchNote({super.key});
 
   @override
   Widget build(BuildContext context) => Text(
-    "Today's set — come back any time, it's free until tomorrow.",
+    "Today's set — come back any time, it stays until tomorrow.",
     style: ZaveType.caption,
   );
 }
 
 /// The "new set" control, disabled, with the reason said out loud.
 ///
-/// The web prices a regenerate ("↺ New set · 50 XP") behind a confirm. The
+/// The web offers a regenerate ("↺ New set") behind a confirm. The
 /// mobile route at `app/api/mobile/v1/ai/{comments,connections}/route.ts` never
 /// forwards a `force` flag to the service, so the request would be accepted,
 /// ignored, and answered with today's cached batch. A button that spends
@@ -175,10 +175,7 @@ class CachedBatchNote extends StatelessWidget {
 /// swallowed no-op is the exact failure mode this codebase's API layer was
 /// rebuilt to stop — so the control renders, disabled, saying why.
 class NewSetUnavailable extends StatelessWidget {
-  const NewSetUnavailable({required this.xpCost, super.key});
-
-  /// The server's quoted price, when the batch carried one.
-  final int? xpCost;
+  const NewSetUnavailable({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -192,7 +189,7 @@ class NewSetUnavailable extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: <Widget>[
                 Text(
-                  xpCost == null ? 'New set' : 'New set · $xpCost XP',
+                  'New set',
                   style: ZaveType.label.copyWith(color: ZaveColors.ink45),
                 ),
                 SizedBox(height: ZaveSpace.xs),

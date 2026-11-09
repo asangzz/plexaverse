@@ -9,98 +9,48 @@ import '../../../../core/ui/app_icons.dart';
 import '../../../../core/ui/zave/zave_kit.dart';
 import '../../../plexa/presentation/plexa_day_sheet.dart';
 import '../../../preferences/application/preferences_controller.dart';
+import '../../../missions/application/journey_controller.dart';
 import '../../../preferences/domain/user_preferences.dart';
 import '../../application/home_controllers.dart';
-import '../../domain/home_repository.dart';
 import '../../domain/roadmap_level.dart';
 import '../widgets/follower_checkpoint.dart';
 import '../widgets/home_states.dart';
 import '../widgets/levels_panel.dart';
 import '../widgets/roadmap_timeline.dart';
-import '../widgets/season_two_view.dart';
 
 /// **Home** — the web's `/dashboard`.
 ///
-/// The landing surface, and the screen the product is actually about. It
-/// renders **exactly one of two things**, chosen by `UserPreferences
-/// .currentSeason`:
+/// The landing surface, and the screen the product is actually about: the
+/// 1000-day journey's planet timeline with its mission sheet, at the user's
+/// day of their CURRENT journey. There is one mode. The old Season 2 "black
+/// hole" loop is gone from the product, and a user on journey 2 or later is
+/// simply at their own roadmap day on the same view.
 ///
-/// * **Season 1** (the default, and what nearly every user sees) — the 66-day
-///   planet timeline with its mission sheet.
-/// * **Season 2** — the black hole and its four-phase weekly cycle.
+/// Day 1000 is a finish line. When the journey is finished this screen still
+/// renders normally, and offers the journey-complete screen once per app
+/// session on top of it — see [_JourneyFinishLine].
 ///
 /// There is deliberately **no stat grid and no recent-posts list**. The web
 /// used to fire an eight-query dashboard fetch here whose result was never
 /// drawn, and blocked first paint on it; it was removed, and re-adding one on
 /// mobile would re-import the same mistake. What this screen asks the server
-/// for is the roadmap, the preferences that choose between the two seasons, and
-/// the XP balance in the corner — nothing else.
+/// for is the roadmap and the preferences — nothing else.
+///
+/// The wallet XP pill that sat in the top-right corner is gone with wallet XP
+/// itself: the plan pays for AI features now, and "XP" means only the contest
+/// score, which lives on the contest screens.
 class HomePage extends StatelessWidget {
   const HomePage({super.key});
 
   @override
   Widget build(BuildContext context) {
-    // No header at all — not even for the XP pill.
-    //
-    // `actions` alone was enough to build one, so home wore a full sticky
-    // header (blur, hairline, the lot) to carry a single read-only pill. The
-    // pill stays where it was; it is now laid over the body rather than
-    // mounted in chrome, so the timeline runs to the top of the screen the
-    // way it was drawn to.
-    return const ZaveScaffold(body: _HomeWithXp());
+    // No header: the timeline runs to the top of the screen the way it was
+    // drawn to.
+    return const ZaveScaffold(body: _JourneyFinishLine(child: _HomeBody()));
   }
 }
 
-/// The roadmap, with the XP balance laid over its top-right corner.
-///
-/// [IgnorePointer] because the pill is a readout, not a control: overlaying it
-/// must not take taps away from the timeline underneath, and the orbit is
-/// exactly where a thumb reaches for the current day.
-class _HomeWithXp extends StatelessWidget {
-  const _HomeWithXp();
-
-  @override
-  Widget build(BuildContext context) {
-    return Stack(
-      children: <Widget>[
-        const _HomeBody(),
-        Positioned(
-          top: MediaQuery.paddingOf(context).top + ZaveSpace.sm,
-          right: ZaveSpace.gutter,
-          child: const IgnorePointer(child: _XpPill()),
-        ),
-      ],
-    );
-  }
-}
-
-/// The XP balance, where the web puts it — top-right of the home screen.
-///
-/// Amber because amber is Zave's word for points. (Blue is "the XP *path*" and
-/// belongs to the buttons that lead to buying or earning it, not to a readout
-/// of how much you already have.)
-class _XpPill extends ConsumerWidget {
-  const _XpPill();
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final AsyncValue<XpBalance> xp = ref.watch(xpBalanceProvider);
-
-    return xp.when(
-      // A failed XP read must never take the home screen with it — the balance
-      // is decoration on a screen whose job is the roadmap.
-      error: (Object _, StackTrace _) => const SizedBox.shrink(),
-      loading: () => const SizedBox.shrink(),
-      data: (XpBalance value) => ZavePill(
-        label: '${value.balance} XP',
-        color: ZaveColors.amber,
-        leading: const ZaveDot(ZaveColors.amber),
-      ),
-    );
-  }
-}
-
-/// Picks the season, and owns every loading and error state on this screen.
+/// Owns every loading and error state on this screen.
 ///
 /// Built as its own widget rather than inline in [HomePage] so that
 /// [ZaveScaffold.contentTop] resolves: the inset is published *below* the
@@ -116,11 +66,10 @@ class _HomeBody extends ConsumerWidget {
       preferencesControllerProvider,
     );
 
-    // Same rule as the timeline below: a value that is being refreshed is
-    // still a value. `when` treats any loading as "nothing to show", so every
-    // preferences invalidation used to blank the whole screen to a skeleton
-    // and rebuild the timeline underneath it.
-    if (prefs.hasValue) return _seasonBody(prefs.requireValue, topInset);
+    // A value that is being refreshed is still a value. `when` treats any
+    // loading as "nothing to show", so every preferences invalidation used to
+    // blank the whole screen to a skeleton and rebuild the timeline under it.
+    if (prefs.hasValue) return _JourneyBody(topInset: topInset);
 
     return prefs.when(
       loading: () => HomeSkeleton(topInset: topInset),
@@ -128,24 +77,59 @@ class _HomeBody extends ConsumerWidget {
         topInset: topInset,
         onRetry: () => ref.invalidate(preferencesControllerProvider),
       ),
-      data: (UserPreferences preferences) => _seasonBody(preferences, topInset),
+      data: (UserPreferences _) => _JourneyBody(topInset: topInset),
+    );
+  }
+}
+
+/// Offers the journey-complete screen once per app session when the journey
+/// is finished.
+///
+/// The web's `/dashboard` redirects a finished user to `/journey-complete`
+/// until they press "Keep going for now", which sets a session cookie. The app
+/// does the same with [journeyCompletePromptProvider], and marks it as soon as
+/// it pushes — back is also "not now", and a home that re-pushed after every
+/// pop would be a screen nobody could leave.
+///
+/// A push, not a replacement of the body: home keeps rendering the journey
+/// underneath, so dismissing the screen lands somewhere real.
+///
+/// `listenManual` with `fireImmediately`, because the finished state is
+/// usually already in the cache when home mounts, and a plain listener only
+/// fires on CHANGES. The push waits a frame — go_router will not accept one
+/// mid-build.
+class _JourneyFinishLine extends ConsumerStatefulWidget {
+  const _JourneyFinishLine({required this.child});
+
+  final Widget child;
+
+  @override
+  ConsumerState<_JourneyFinishLine> createState() => _JourneyFinishLineState();
+}
+
+class _JourneyFinishLineState extends ConsumerState<_JourneyFinishLine> {
+  @override
+  void initState() {
+    super.initState();
+    ref.listenManual<AsyncValue<UserPreferences>>(
+      preferencesControllerProvider,
+      (AsyncValue<UserPreferences>? _, AsyncValue<UserPreferences> next) {
+        final UserPreferences? prefs = next.value;
+        if (prefs == null || !prefs.journeyFinished) return;
+        if (ref.read(journeyCompletePromptProvider)) return;
+        // Marked before the push, not after: a second preferences emission
+        // in the same frame must not queue a second screen.
+        ref.read(journeyCompletePromptProvider.notifier).markHandled();
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (mounted) context.push(ZaveRoutes.journeyComplete);
+        });
+      },
+      fireImmediately: true,
     );
   }
 
-  /// Three states, not two. A user past day 66 who has not chosen a Season 2
-  /// path belongs on the Season Complete screen — the route existed and
-  /// nothing ever navigated to it, so finishing the 66-day arc simply carried
-  /// on showing a roadmap with nothing left in it.
-  Widget _seasonBody(UserPreferences preferences, double topInset) =>
-      switch (preferences) {
-        final UserPreferences p when p.isSeason2 => _SeasonTwoBody(
-          preferences: p,
-          topInset: topInset,
-        ),
-        final UserPreferences p when p.seasonOneFinished =>
-          const _SeasonOneFinishedRedirect(),
-        _ => _SeasonOneBody(topInset: topInset),
-      };
+  @override
+  Widget build(BuildContext context) => widget.child;
 }
 
 /// Opens a task's screen.
@@ -176,9 +160,9 @@ void _start(BuildContext context, String link) {
   }
 }
 
-/// Season 1 — the 66-day timeline over a draggable mission sheet.
-class _SeasonOneBody extends ConsumerWidget {
-  const _SeasonOneBody({required this.topInset});
+/// The journey — the planet timeline over a draggable mission sheet.
+class _JourneyBody extends ConsumerWidget {
+  const _JourneyBody({required this.topInset});
 
   final double topInset;
 
@@ -228,7 +212,7 @@ class _SeasonOneBody extends ConsumerWidget {
     }
 
     final List<RoadmapLevel> days = levels.requireValue;
-    // The roadmap is synthetic and always 66 days long, so this cannot happen
+    // The roadmap is synthetic and never empty, so this cannot happen
     // — but reading `.first` off an empty list would take the whole screen
     // down, and the error card is the honest answer either way.
     if (days.isEmpty) {
@@ -393,68 +377,4 @@ class _MissionSheet extends StatelessWidget {
       ),
     );
   }
-}
-
-/// Season 2 — the black hole and the day's habits.
-class _SeasonTwoBody extends ConsumerWidget {
-  const _SeasonTwoBody({required this.preferences, required this.topInset});
-
-  final UserPreferences preferences;
-  final double topInset;
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final AsyncValue<RoadmapProgress> progress = ref.watch(
-      roadmapProgressControllerProvider,
-    );
-
-    return progress.when(
-      loading: () => HomeSkeleton(topInset: topInset),
-      error: (Object _, StackTrace _) => HomeError(
-        topInset: topInset,
-        onRetry: () =>
-            ref.read(roadmapProgressControllerProvider.notifier).refresh(),
-      ),
-      data: (RoadmapProgress value) => SeasonTwoView(
-        progress: value,
-        contentMode: preferences.contentMode,
-        seasonStartedAt: preferences.seasonStartedAt,
-        roadmapStartedAt: preferences.roadmapStartedAt,
-        topInset: topInset,
-        onStart: (String link) => _start(context, link),
-      ),
-    );
-  }
-}
-
-/// Sends a user who has finished Season 1 to the Season Complete screen.
-///
-/// A redirect rather than rendering the screen inline: Season Complete is a
-/// full-screen route with its own back behaviour, and the user may want to
-/// look at their dashboard again before deciding. Replacing the home body
-/// with it would leave them nowhere to go back to.
-///
-/// Fired once per mount, after the first frame — navigating during build
-/// throws, and go_router needs the tree settled before it will accept a push.
-class _SeasonOneFinishedRedirect extends StatefulWidget {
-  const _SeasonOneFinishedRedirect();
-
-  @override
-  State<_SeasonOneFinishedRedirect> createState() =>
-      _SeasonOneFinishedRedirectState();
-}
-
-class _SeasonOneFinishedRedirectState
-    extends State<_SeasonOneFinishedRedirect> {
-  @override
-  void initState() {
-    super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted) context.push(ZaveRoutes.seasonComplete);
-    });
-  }
-
-  @override
-  Widget build(BuildContext context) =>
-      const Center(child: CircularProgressIndicator());
 }

@@ -38,8 +38,8 @@ import '../widgets/mission_header.dart';
 ///    render on `!activeStepInfo` and therefore spins forever for any user
 ///    whose day has no `/connections` step — which is every company-brand user,
 ///    since a Company Page cannot send connection requests at all. Here the
-///    targets generate and work regardless; only the claim-your-XP action is
-///    withheld, with a line saying why.
+///    targets generate and work regardless; only the complete-the-step action
+///    is withheld, with a line saying why.
 /// 2. **No LinkedIn drawer.** The web opens a people search beside the list;
 ///    a phone opens it in the LinkedIn app instead, through
 ///    [ConnectionTarget.searchUrl]. Same destination, the user's own session,
@@ -113,9 +113,8 @@ class ConnectionsPage extends ConsumerWidget {
               SizedBox(height: ZaveSpace.xl),
               EngagementBlocked(
                 failure: _asFailure(error),
-                knownXpCost: null,
                 onRetry: () => ref.invalidate(connectionsControllerProvider),
-                onGetXp: () => context.push(ZaveRoutes.pricing),
+                onSeePlans: () => context.push(ZaveRoutes.pricing),
                 // The web sends this one to /settings, and so does this: the
                 // headline and profession live there, and they are exactly
                 // what PROFILE_INCOMPLETE is complaining about.
@@ -171,7 +170,7 @@ class ConnectionsPage extends ConsumerWidget {
         ],
 
         SizedBox(height: ZaveSpace.lg),
-        NewSetUnavailable(xpCost: batch.xpCost),
+        const NewSetUnavailable(),
         SizedBox(height: ZaveSpace.xl),
 
         if (batch.isEmpty)
@@ -249,7 +248,7 @@ class ConnectionsPage extends ConsumerWidget {
         .read(stepCompletionProvider.notifier)
         .complete(mission);
     if (!ok || !context.mounted) return;
-    _say(context, '+${mission.xpReward} XP — step complete.');
+    _say(context, 'Step complete.');
     _leave(context);
   }
 

@@ -6,15 +6,7 @@ import '../domain/roadmap_level.dart';
 
 part 'home_controllers.g.dart';
 
-/// The signed-in user's preferences.
-///
-/// **This provider lives in the home slice on purpose, and temporarily.**
-/// `features/preferences/` currently contains a domain model and nothing else —
-/// no repository, no provider — yet the home screen cannot choose between the
-/// Season 1 roadmap and the Season 2 dashboard without `currentSeason`, and
-/// several other screens will need the same row. When the preferences slice
-/// grows a data layer this should move there wholesale and this file should
-/// The user's position on the 66-day roadmap.
+/// The user's position on the 1000-day roadmap.
 ///
 /// The web caches this for 30 seconds and busts the browser cache on every
 /// fetch; here the equivalent is simply that the provider is re-read on
@@ -30,7 +22,7 @@ class RoadmapProgressController extends _$RoadmapProgressController {
   void refresh() => ref.invalidateSelf();
 }
 
-/// The 66 days, with progress folded in.
+/// The journey's days, with progress folded in.
 ///
 /// Derived rather than stored: the roadmap is a pure function of the progress
 /// payload plus today's date, and caching it separately is how the two drift.
@@ -72,13 +64,3 @@ Future<int> activeRoadmapDay(Ref ref) async {
   }
   return levels.isEmpty ? 1 : levels.first.id;
 }
-
-/// The XP balance shown in the header.
-///
-/// The web refetches this every 30 seconds; a phone in a user's pocket does not
-/// need a background poll for a number that only moves when the user does
-/// something, so this refreshes on invalidation instead. Flagged as a
-/// deliberate departure rather than an omission.
-@riverpod
-Future<XpBalance> xpBalance(Ref ref) =>
-    ref.watch(homeRepositoryProvider).fetchXpBalance();

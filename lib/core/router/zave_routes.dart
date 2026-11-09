@@ -31,8 +31,7 @@ class ZaveRoutes {
 
   // ── Overview ──────────────────────────────────────────────────────────────
 
-  /// Home. Renders the Season 1 roadmap or the Season 2 dashboard depending on
-  /// `UserPreferences.currentSeason`.
+  /// Home. The journey roadmap, at the user's day of their current journey.
   static const String dashboard = '/dashboard';
 
   /// Company-brand analytics. Nav visibility: company.
@@ -120,6 +119,12 @@ class ZaveRoutes {
   static const String headshots = '/headshots';
   static const String titleCreator = '/title-creator';
   static const String pricing = '/pricing';
+
+  /// Day 1000 — the finish line, and the choice to start a new journey.
+  static const String journeyComplete = '/journey-complete';
+
+  /// The old name of [journeyComplete]. Only a redirect now: shipped
+  /// notifications and deep links still name it.
   static const String seasonComplete = '/season-complete';
 
   /// Roadmap mission pages.

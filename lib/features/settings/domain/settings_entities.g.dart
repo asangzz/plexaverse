@@ -13,7 +13,6 @@ _AccountIdentity _$AccountIdentityFromJson(Map<String, dynamic> json) =>
       email: json['email'] as String? ?? '',
       avatarUrl: json['image'] as String?,
       role: json['role'] as String? ?? 'user',
-      xpBalance: (json['xpBalance'] as num?)?.toInt() ?? 0,
     );
 
 Map<String, dynamic> _$AccountIdentityToJson(_AccountIdentity instance) =>
@@ -23,7 +22,6 @@ Map<String, dynamic> _$AccountIdentityToJson(_AccountIdentity instance) =>
       'email': instance.email,
       'image': instance.avatarUrl,
       'role': instance.role,
-      'xpBalance': instance.xpBalance,
     };
 
 _SubscriptionState _$SubscriptionStateFromJson(Map<String, dynamic> json) =>
@@ -33,6 +31,11 @@ _SubscriptionState _$SubscriptionStateFromJson(Map<String, dynamic> json) =>
       currentPeriodEnd: json['currentPeriodEnd'] == null
           ? null
           : DateTime.parse(json['currentPeriodEnd'] as String),
+      entitled: json['entitled'] as bool?,
+      entitlementReason: json['entitlementReason'] as String?,
+      accessEndsAt: json['accessEndsAt'] == null
+          ? null
+          : DateTime.parse(json['accessEndsAt'] as String),
     );
 
 Map<String, dynamic> _$SubscriptionStateToJson(_SubscriptionState instance) =>
@@ -40,6 +43,9 @@ Map<String, dynamic> _$SubscriptionStateToJson(_SubscriptionState instance) =>
       'status': instance.status,
       'paymentMode': instance.paymentMode,
       'currentPeriodEnd': instance.currentPeriodEnd?.toIso8601String(),
+      'entitled': instance.entitled,
+      'entitlementReason': instance.entitlementReason,
+      'accessEndsAt': instance.accessEndsAt?.toIso8601String(),
     };
 
 _AccountSnapshot _$AccountSnapshotFromJson(Map<String, dynamic> json) =>
@@ -185,9 +191,3 @@ Map<String, dynamic> _$GeoPricingToJson(_GeoPricing instance) =>
       'isIndia': instance.isIndia,
       'subunitMultiplier': instance.subunitMultiplier,
     };
-
-_XpSummary _$XpSummaryFromJson(Map<String, dynamic> json) =>
-    _XpSummary(balance: (json['balance'] as num?)?.toInt() ?? 0);
-
-Map<String, dynamic> _$XpSummaryToJson(_XpSummary instance) =>
-    <String, dynamic>{'balance': instance.balance};

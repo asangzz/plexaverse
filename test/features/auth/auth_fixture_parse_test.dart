@@ -44,8 +44,9 @@ void main() {
       // `image` wire key is aliased to avatarUrl via @JsonKey(name: 'image').
       expect(user.avatarUrl, (json['user'] as Map)['image']);
       expect(user.role, isNotEmpty);
-      // xpBalance / createdAt round-trip without throwing.
-      expect(user.xpBalance, isA<int>());
+      // The fixtures still carry the retired `xpBalance`; parsing must
+      // ignore it rather than throw.
+      expect(user.toJson().containsKey('xpBalance'), isFalse);
     });
   }
 
@@ -54,7 +55,6 @@ void main() {
     final user = AuthUser.fromJson(json['user'] as Map<String, dynamic>);
     expect(user.email, 'demo@plexaverse.com');
     expect(user.avatarUrl, isNotNull);
-    expect(user.xpBalance, 1280);
     expect(user.createdAt, isNotNull);
   });
 
@@ -62,6 +62,5 @@ void main() {
     final json = await load('assets/mock/auth/register_success.json');
     final user = AuthUser.fromJson(json['user'] as Map<String, dynamic>);
     expect(user.avatarUrl, isNull);
-    expect(user.xpBalance, 0);
   });
 }

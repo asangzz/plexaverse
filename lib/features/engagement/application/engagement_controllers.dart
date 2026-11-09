@@ -296,15 +296,15 @@ class ConnectionsController extends _$ConnectionsController {
   }
 }
 
-/// Claiming the roadmap step's XP.
+/// Completing the roadmap step.
 ///
 /// Its own notifier rather than a flag on either batch controller, because the
 /// write is about the ROADMAP, not about the batch: it must survive a batch
 /// refresh, and it invalidates [engagementProgressProvider] so the step comes
 /// back marked complete without a second round of guessing on the client.
 ///
-/// Not optimistic. Awarding XP in the UI before the server has recorded it is
-/// the one thing a gamified surface must never get wrong — a step that looks
+/// Not optimistic. Marking a step done in the UI before the server has
+/// recorded it is the one thing a gamified surface must never get wrong — a step that looks
 /// claimed but was not is a support ticket, and the write is a single fast POST.
 @riverpod
 class StepCompletion extends _$StepCompletion {

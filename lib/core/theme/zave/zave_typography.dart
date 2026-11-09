@@ -189,16 +189,15 @@ class ZaveType {
   );
 
   /// `.mono` — 13px / lh 1.7 / ink-62, on the [ZaveGlass.codeFill] block.
-  /// Also the face for the Season 2 dashboard's monospaced readouts.
   static TextStyle get mono => GoogleFonts.jetBrainsMono(
     fontSize: 13.sp,
     height: 1.7,
     color: ZaveColors.ink62,
   );
 
-  /// Space Grotesk — used by the Season 2 dashboard and the Season 1 roadmap
-  /// for their instrument-panel numerals. Not part of the core Zave scale;
-  /// scoped to those two surfaces so it does not leak into ordinary screens.
+  /// Space Grotesk — instrument-panel numerals, first drawn for the journey
+  /// roadmap. Not part of the core Zave scale; keep it to numeric readouts so
+  /// it does not leak into ordinary text.
   static TextStyle spaceGrotesk({
     required double size,
     FontWeight weight = FontWeight.w700,

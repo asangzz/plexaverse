@@ -28,7 +28,7 @@ class ChatLaneMetrics {
 ///
 /// The web paints it with an indigo gradient (`#5761EB → #4752d9`) and a
 /// coloured shadow. Neither survives a port to Zave: colour here only ever
-/// names a status, [ZaveColors.blue] is reserved for the XP / upgrade path, and
+/// names a status, [ZaveColors.blue] is reserved for the plan / upgrade path, and
 /// depth is a fill step rather than a shadow. But Zave already has a way to say
 /// "this one is the chosen thing" — **selected inverts to solid white with ink
 /// text** — and that is precisely what a sent answer is. So the user's bubble

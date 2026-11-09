@@ -61,9 +61,6 @@ abstract class SettingsRepository {
   /// Identity + billing state. See [AccountSnapshot].
   Future<AccountSnapshot> fetchAccount();
 
-  /// The XP balance shown beside the plan.
-  Future<XpSummary> fetchXp();
-
   /// Every connected LinkedIn profile, personal and company.
   Future<List<LinkedinAccount>> fetchLinkedinAccounts();
 
@@ -107,7 +104,10 @@ abstract class SettingsRepository {
   /// [WhatsAppConsentRequired] when the user has not agreed to WhatsApp
   /// messages — a code is itself a WhatsApp message, so asking for one without
   /// consent is already the processing being consented to.
-  Future<void> sendWhatsAppCode({required String phone, String? defaultCountryCode});
+  Future<void> sendWhatsAppCode({
+    required String phone,
+    String? defaultCountryCode,
+  });
 
   /// Check a typed code. `PUT /user/whatsapp/verify`.
   ///
@@ -151,7 +151,10 @@ abstract class SettingsRepository {
   ///
   /// [vanityName] accepts a full company URL or a numeric page id, mirroring
   /// what the web's field takes.
-  Future<CompanyPageOptions> fetchCompanyPages({String? orgId, String? vanityName});
+  Future<CompanyPageOptions> fetchCompanyPages({
+    String? orgId,
+    String? vanityName,
+  });
 
   /// Saves the chosen page onto the connected company account. `PATCH
   /// /linkedin/organizations`.
@@ -202,21 +205,19 @@ abstract class SettingsRepository {
   /// DPDP s13 — raises a concern. Returns the days the Fiduciary has to
   /// respond, which is stamped server-side at creation so a later policy
   /// change cannot move a deadline already given.
-  Future<int> raiseGrievance({required String category, required String message});
+  Future<int> raiseGrievance({
+    required String category,
+    required String message,
+  });
 
   /// Localised plan pricing. [countryCode] is the device's region; the server
   /// defaults to `IN` when it is absent or unrecognised.
   Future<GeoPricing> fetchPricing({String? countryCode});
 }
 
-
 /// One LinkedIn company page the connected account administers.
 class CompanyPage {
-  const CompanyPage({
-    required this.id,
-    required this.name,
-    this.saved = false,
-  });
+  const CompanyPage({required this.id, required this.name, this.saved = false});
 
   factory CompanyPage.fromJson(Map<String, dynamic> json) => CompanyPage(
     id: (json['id'] ?? '').toString(),
@@ -248,7 +249,6 @@ class CompanyPageOptions {
   /// The server's own explanation, written to be shown.
   final String? message;
 }
-
 
 /// One thing the user can agree to, independently.
 class ConsentPurposeState {
@@ -288,14 +288,9 @@ class ConsentLedger {
   final List<ConsentPurposeState> purposes;
 }
 
-
 /// The person who may act for the user if they cannot act for themselves.
 class Nominee {
-  const Nominee({
-    required this.name,
-    required this.email,
-    this.relationship,
-  });
+  const Nominee({required this.name, required this.email, this.relationship});
 
   factory Nominee.fromJson(Map<String, dynamic> json) => Nominee(
     name: (json['nomineeName'] as String?) ?? '',
@@ -307,7 +302,6 @@ class Nominee {
   final String email;
   final String? relationship;
 }
-
 
 /// A code went out too recently to send another.
 ///

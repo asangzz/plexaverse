@@ -9,10 +9,10 @@ import '../../../core/platform/checkout.dart';
 part 'pricing_controller.g.dart';
 
 // Pricing is ONE SCREEN MADE OF INDEPENDENT BLOCKS — the price list, the plan
-// gate, the referral card — so it is modelled as three small providers rather
-// than one snapshot. The web reaches the same shape with one hook per resource,
-// and the reason is worth repeating: a referral read that 500s must not take
-// the price list down with it.
+// gate, what a plan includes, the referral card — so it is modelled as small
+// providers rather than one snapshot. The web reaches the same shape with one
+// hook per resource, and the reason is worth repeating: a referral read that
+// 500s must not take the price list down with it.
 
 /// Localised plan prices.
 ///
@@ -37,6 +37,26 @@ Future<PlanPricing> planPricing(Ref ref) {
 @riverpod
 Future<String?> pricingBrandType(Ref ref) =>
     ref.watch(pricingRepositoryProvider).fetchBrandType();
+
+/// What every plan includes, per AI feature.
+///
+/// Never errors: a failed read falls back to [AllowanceTable.fallback], the
+/// static list that mirrors the web's defaults. The block exists to say what a
+/// plan buys, and a user deciding whether to pay should not see that sentence
+/// replaced by a retry button. An empty live answer falls back too — a plan
+/// that includes nothing is never the truth.
+@riverpod
+Future<AllowanceTable> planAllowances(Ref ref) async {
+  try {
+    final List<Allowance> rows = await ref
+        .watch(pricingRepositoryProvider)
+        .fetchAllowances();
+    if (rows.isEmpty) return AllowanceTable.fallback;
+    return AllowanceTable(rows: rows, live: true);
+  } on Object {
+    return AllowanceTable.fallback;
+  }
+}
 
 /// The referral code and its lifetime counters.
 @riverpod
@@ -88,22 +108,21 @@ class CheckoutController extends _$CheckoutController {
       return 'Payments are not configured yet. Please try from the web app.';
     }
 
-    final CheckoutResult result = await ref.read(checkoutProvider).open(
-      keyId: keyId,
-      name: 'Plexaverse',
-      description: planType,
-      subscriptionId: intent.subscriptionId,
-    );
+    final CheckoutResult result = await ref
+        .read(checkoutProvider)
+        .open(
+          keyId: keyId,
+          name: 'Plexaverse',
+          description: planType,
+          subscriptionId: intent.subscriptionId,
+        );
 
     switch (result) {
       case CheckoutCancelled():
         return null;
       case CheckoutFailed(:final String? message):
         return message ?? 'That payment did not go through.';
-      case CheckoutPaid(
-          :final String paymentId,
-          :final String? signature,
-        ):
+      case CheckoutPaid(:final String paymentId, :final String? signature):
         if (signature == null) {
           // Without a signature the server cannot prove the payment. Say so
           // rather than reporting success the ledger will not agree with.
@@ -124,9 +143,11 @@ class CheckoutController extends _$CheckoutController {
           return 'Payment taken. Confirming it failed — your plan will '
               'activate shortly, or contact support.';
         }
-        // The plan lives on the user row, which several screens branch on.
+        // The plan lives on the user row, which several screens branch on,
+        // and it changes what every allowance gate answers.
         ref.invalidate(planPricingProvider);
         ref.invalidate(pricingBrandTypeProvider);
+        ref.invalidate(planAllowancesProvider);
         return 'You are on the plan. Welcome aboard.';
     }
   }

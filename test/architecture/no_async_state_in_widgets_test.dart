@@ -35,23 +35,16 @@ import 'package:flutter_test/flutter_test.dart';
 /// check is the question in the doc: if the widget were disposed
 /// mid-operation, or a second screen asked, would the answer be wrong?
 void main() {
-  /// The one legitimate case, and why.
+  /// Exemptions, each with its reason.
   ///
-  /// `_PathCardState._busy` on the season-complete screen is SPINNER state,
-  /// not a guard. The guard that stops a second irreversible
-  /// `POST /season/advance` is the shared one on
-  /// `seasonAdvanceControllerProvider` — three cards are built, and one tap
-  /// has to close all three, which a per-card field cannot do. This flag only
-  /// says which of the three the user tapped, so its own card spins and the
-  /// other two merely disable. That is per-card visual state, and it is read
-  /// alongside the shared guard: `(advancing || _busy)`.
+  /// Empty. The one entry was the old season-complete screen's per-card
+  /// spinner flag; that screen is gone, and its replacement (the
+  /// journey-complete page) has a single start button that reads its in-flight
+  /// state straight off `journeyStartControllerProvider`.
   ///
-  /// An addition here needs that standard of argument. "It is only small" is
-  /// not one.
-  const Map<String, String> allowed = <String, String>{
-    'lib/features/missions/presentation/pages/season_complete_page.dart':
-        'spinner-only; the real guard is on seasonAdvanceControllerProvider',
-  };
+  /// An addition here needs a real argument: why the state cannot live on the
+  /// slice's controller. "It is only small" is not one.
+  const Map<String, String> allowed = <String, String>{};
 
   /// Comments stripped, so a field that has been commented out does not count
   /// as present and a commented-out one does not count as a violation.

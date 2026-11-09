@@ -101,7 +101,7 @@ class AdvocacyCard extends StatelessWidget {
             )
           else
             ZaveButton(
-              label: reshared ? 'Successfully Shared' : 'Reshare & Earn 50 XP',
+              label: reshared ? 'Successfully Shared' : 'Reshare to my feed',
               kind: reshared
                   ? ZaveButtonKind.ghost
                   : ZaveButtonKind.primarySmall,

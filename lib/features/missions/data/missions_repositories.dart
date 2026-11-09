@@ -1,5 +1,3 @@
-import '../../../core/mock/mock_constants.dart';
-import '../../home/domain/roadmap_level.dart';
 import '../../home/domain/roadmap_planets.dart';
 import 'package:flutter/foundation.dart' show kReleaseMode;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -194,23 +192,18 @@ class ApiMissionsRepository implements MissionsRepository {
       final int day = (progress['currentDay'] as num?)?.toInt() ?? 0;
       final DateTime? startedAt = _dateOf(progress['roadmapStartedAt']);
 
-      final int balance = await _xpBalance();
       final (int count, bool atLeast) = await _publishedSince(startedAt);
 
+      // No XP read. Wallet XP is retired — `/user/xp` answers 0 for everyone
+      // — so a recap that showed it would print a zero as an achievement.
       return SeasonRecap(
         roadmapDay: day,
         postsPublished: count,
         postsAtLeast: atLeast,
-        xpBalance: balance,
       );
     } on Object {
       throw const MissionUnavailable();
     }
-  }
-
-  Future<int> _xpBalance() async {
-    final response = await _client.get<Map<String, dynamic>>(ApiPaths.userXp);
-    return (response.data?['balance'] as num?)?.toInt() ?? 0;
   }
 
   /// Counts published posts since the roadmap started.
@@ -297,22 +290,10 @@ class FakeMissionsRepository implements MissionsRepository {
     required int stepId,
   }) async {
     await Future<void>.delayed(_latency);
-    // The step's OWN reward, not a flat 50. Publishing and the weekly reach
-    // log are both 100 on the real roadmap, so a flat answer here meant the
-    // XP a card promised and the XP the gain animation reported disagreed for
-    // three of the five steps — and the fake was the one lying.
-    return MissionStepResult(xpAwarded: _rewardFor(stepId));
+    // No XP: roadmap steps award nothing since wallet XP was retired, and
+    // the real endpoint no longer sends `xpAwarded`.
+    return const MissionStepResult();
   }
-
-  /// Mirrors the rewards in `getBaseRoadmap`.
-  static int _rewardFor(int stepId) => switch (stepId) {
-    1 => 100, // Publish a post
-    2 => 50, // Comment on posts
-    3 => 50, // Send connection requests
-    4 => 100, // The day's extra
-    weeklyReachStepId => 100, // Log this week's reach
-    _ => 50,
-  };
 
   @override
   Future<String> suggestHeadline({
@@ -402,18 +383,10 @@ class FakeMissionsRepository implements MissionsRepository {
   @override
   Future<SeasonRecap> fetchSeasonRecap() async {
     await Future<void>.delayed(_latency);
-    // A finished SEASON, on the arc the product actually runs.
-    //
-    // This was day 66 with 54 posts — the old sixty-six-day season at seven
-    // posts a week. The roadmap is 1000 days now and the week publishes
-    // twice, so a completed season is ~286 posts, not 54, and day 66 is not
-    // the end of anything. A recap screen that can only show a number the
-    // product cannot produce cannot be checked against one that it can.
-    return const SeasonRecap(
-      roadmapDay: roadmapTotalDays,
-      postsPublished: 286,
-      xpBalance: kMockXpBalance,
-    );
+    // A finished JOURNEY, on the arc the product actually runs: 1000 days
+    // at two posts a week is ~286 posts. A recap that can only show a number
+    // the product cannot produce cannot be checked against one that it can.
+    return const SeasonRecap(roadmapDay: roadmapTotalDays, postsPublished: 286);
   }
 }
 

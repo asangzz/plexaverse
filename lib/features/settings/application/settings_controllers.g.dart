@@ -48,49 +48,6 @@ final class AccountSnapshotProvider
 
 String _$accountSnapshotHash() => r'5dc09e0077586d1610c78e73935937e6ce3da95f';
 
-/// The XP balance shown beside the plan.
-
-@ProviderFor(xpSummary)
-final xpSummaryProvider = XpSummaryProvider._();
-
-/// The XP balance shown beside the plan.
-
-final class XpSummaryProvider
-    extends
-        $FunctionalProvider<
-          AsyncValue<XpSummary>,
-          XpSummary,
-          FutureOr<XpSummary>
-        >
-    with $FutureModifier<XpSummary>, $FutureProvider<XpSummary> {
-  /// The XP balance shown beside the plan.
-  XpSummaryProvider._()
-    : super(
-        from: null,
-        argument: null,
-        retry: null,
-        name: r'xpSummaryProvider',
-        isAutoDispose: true,
-        dependencies: null,
-        $allTransitiveDependencies: null,
-      );
-
-  @override
-  String debugGetCreateSourceHash() => _$xpSummaryHash();
-
-  @$internal
-  @override
-  $FutureProviderElement<XpSummary> $createElement($ProviderPointer pointer) =>
-      $FutureProviderElement(pointer);
-
-  @override
-  FutureOr<XpSummary> create(Ref ref) {
-    return xpSummary(ref);
-  }
-}
-
-String _$xpSummaryHash() => r'77593d50714f4056b9b62b7191109e019c48fff4';
-
 /// Connected LinkedIn profiles, plus the connect hand-off.
 
 @ProviderFor(LinkedinAccountsController)

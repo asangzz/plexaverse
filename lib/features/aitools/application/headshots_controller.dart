@@ -1,5 +1,6 @@
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
+import '../../../core/plan/plan_refusal.dart';
 import '../../../core/platform/image_picking.dart';
 import '../data/ai_tools_repositories.dart';
 import '../domain/ai_tool_failure.dart';
@@ -17,6 +18,15 @@ part 'headshots_controller.g.dart';
 class HeadshotsController extends _$HeadshotsController {
   @override
   HeadshotSession build() => const HeadshotSession();
+
+  /// The plan refusal behind the current error, if that is what it was.
+  ///
+  /// Held here rather than on [HeadshotSession] because that is a freezed
+  /// value and adding a field needs a codegen run. It is always written
+  /// BEFORE the state assignment that rebuilds the page, so a build that sees
+  /// `insufficientXp` also sees the refusal it belongs to.
+  PlanRefusal? get refusal => _refusal;
+  PlanRefusal? _refusal;
 
   void goTo(HeadshotStep step) => state = state.copyWith(step: step);
 
@@ -39,8 +49,9 @@ class HeadshotsController extends _$HeadshotsController {
     if (state.photos.length >= maxHeadshotPhotos) {
       return 'That is the maximum of $maxHeadshotPhotos photos.';
     }
-    final ImagePickResult result =
-        await ref.read(imagePickingProvider).pick(source);
+    final ImagePickResult result = await ref
+        .read(imagePickingProvider)
+        .pick(source);
     switch (result) {
       case PickedImage(:final String dataUri):
         addPhotos(<String>[dataUri]);
@@ -70,19 +81,24 @@ class HeadshotsController extends _$HeadshotsController {
     state = state.copyWith(photos: next);
   }
 
-  /// `POST /ai/headshot` — 1200 XP, four portraits, all or nothing.
+  /// `POST /ai/headshot` — paid by the plan, four portraits, all or nothing.
   ///
   /// The server generates the four in parallel and rejects the whole call if
-  /// any one of them fails, so XP is never spent on a partial set. That is why
-  /// there is no per-image state here: there is nothing partial to show.
-  Future<void> generate() async {
-    if (state.generating) return;
+  /// any one of them fails. That is why there is no per-image state here:
+  /// there is nothing partial to show.
+  ///
+  /// Returns the plan refusal when the plan said no, so the page can open the
+  /// plan sheet once — an event, not something every rebuild re-reads.
+  Future<PlanRefusal?> generate() async {
+    if (state.generating) return null;
     if (!state.canGenerate) {
       state = state.copyWith(
         error: 'Add at least $minHeadshotPhotos reference photos first.',
       );
-      return;
+      return null;
     }
+
+    _refusal = null;
 
     state = state.copyWith(
       step: HeadshotStep.generate,
@@ -104,22 +120,25 @@ class HeadshotsController extends _$HeadshotsController {
         generating: false,
         results: result.headshots,
       );
+      return null;
     } on AiToolFailure catch (e) {
       // Back to the step the user can act on, exactly as the web does: a
       // failed generation must not strand them on a spinner screen.
+      _refusal = e.refusal;
       state = state.copyWith(
         step: HeadshotStep.style,
         generating: false,
         error: e.message,
-        insufficientXp: e.insufficientXp,
+        insufficientXp: e.refusedByPlan,
       );
+      return e.refusal;
     }
   }
 
   /// "Finish step" — close out the roadmap's Level 1 Step 5.
   ///
-  /// The call is idempotent server-side, so a double tap cannot double-credit
-  /// the XP. It deliberately does not navigate: the roadmap is another slice
+  /// The call is idempotent server-side, so a double tap cannot close the step
+  /// twice. It deliberately does not navigate: the roadmap is another slice
   /// and the dashboard picks the completion up on its next read.
   Future<void> finishStep() async {
     if (state.finishing || state.finished) return;

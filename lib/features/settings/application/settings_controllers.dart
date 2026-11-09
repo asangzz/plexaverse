@@ -12,18 +12,13 @@ part 'settings_controllers.g.dart';
 //
 // The web reaches the same shape with one React Query hook per resource
 // (useUserPreferences, useLinkedinAccounts, useSlackConnection,
-// useGoogleCalendar, useXP), and the reason is worth repeating here: a single
+// useGoogleCalendar), and the reason is worth repeating here: a single
 // combined fetch makes Slack being down take the whole page with it. Each
 // provider below owns one section's loading, error and retry.
 
 @riverpod
 Future<AccountSnapshot> accountSnapshot(Ref ref) =>
     ref.watch(settingsRepositoryProvider).fetchAccount();
-
-/// The XP balance shown beside the plan.
-@riverpod
-Future<XpSummary> xpSummary(Ref ref) =>
-    ref.watch(settingsRepositoryProvider).fetchXp();
 
 /// Connected LinkedIn profiles, plus the connect hand-off.
 @riverpod
@@ -108,8 +103,9 @@ class SlackController extends _$SlackController {
   /// Returns the outcome rather than throwing so the caller can stay silent
   /// on a cancel — the same contract the LinkedIn connect uses.
   Future<ConnectOutcome> connect() async {
-    final ConnectOutcome outcome =
-        await ref.read(settingsRepositoryProvider).connectSlack();
+    final ConnectOutcome outcome = await ref
+        .read(settingsRepositoryProvider)
+        .connectSlack();
     if (outcome is ConnectSucceeded) {
       state = const AsyncLoading<SlackConnection>();
       state = await AsyncValue.guard(
@@ -168,13 +164,12 @@ class WhatsAppActions extends _$WhatsAppActions {
   SettingsRepository get _repo => ref.read(settingsRepositoryProvider);
 
   /// Send a code to a typed number.
-  Future<void> sendCode(String phone, {String? defaultCountryCode}) =>
-      _run(
-        () => _repo.sendWhatsAppCode(
-          phone: phone,
-          defaultCountryCode: defaultCountryCode,
-        ),
-      );
+  Future<void> sendCode(String phone, {String? defaultCountryCode}) => _run(
+    () => _repo.sendWhatsAppCode(
+      phone: phone,
+      defaultCountryCode: defaultCountryCode,
+    ),
+  );
 
   /// Check the code. The number is verified only if this succeeds.
   Future<void> confirmCode(String code) =>
@@ -220,8 +215,9 @@ class CalendarController extends _$CalendarController {
       ref.watch(settingsRepositoryProvider).fetchCalendar();
 
   Future<ConnectOutcome> connect() async {
-    final ConnectOutcome outcome =
-        await ref.read(settingsRepositoryProvider).connectCalendar();
+    final ConnectOutcome outcome = await ref
+        .read(settingsRepositoryProvider)
+        .connectCalendar();
     if (outcome is ConnectSucceeded) {
       state = const AsyncLoading<CalendarConnection>();
       state = await AsyncValue.guard(
@@ -246,9 +242,9 @@ class CalendarController extends _$CalendarController {
 @riverpod
 Future<GeoPricing> geoPricing(Ref ref) {
   final String? country = PlatformDispatcher.instance.locale.countryCode;
-  return ref.watch(settingsRepositoryProvider).fetchPricing(
-    countryCode: country,
-  );
+  return ref
+      .watch(settingsRepositoryProvider)
+      .fetchPricing(countryCode: country);
 }
 
 /// The LinkedIn company pages this account can publish to.

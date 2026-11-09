@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../../core/plan/plan_limit_sheet.dart';
+import '../../../../core/plan/plan_refusal.dart';
 import '../../../../core/router/zave_routes.dart';
 import '../../../../core/security/clipboard_policy.dart';
 import '../../../../core/ui/app_icons.dart';
@@ -34,6 +36,17 @@ class TitleCreatorPage extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final TitleCreatorState state = ref.watch(titleCreatorControllerProvider);
+
+    // A plan refusal opens the plan sheet once, as it lands: the inline line
+    // has no button, and the sheet is the only way to pricing.
+    ref.listen<PlanRefusal?>(
+      titleCreatorControllerProvider.select((TitleCreatorState s) => s.refusal),
+      (PlanRefusal? previous, PlanRefusal? next) {
+        if (next != null && !identical(previous, next)) {
+          PlanLimitSheet.show(context, next);
+        }
+      },
+    );
 
     return ZaveScaffold(
       title: 'Title creator',

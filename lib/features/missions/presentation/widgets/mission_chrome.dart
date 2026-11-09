@@ -6,20 +6,20 @@ import '../../application/mission_form_state.dart';
 /// The header every `/roadmap/*` mission shares.
 ///
 /// The web writes its title as `The `+ a gradient-filled word +` Hook`, and
-/// puts the level / step / reward in two pills on the right. Zave has no
-/// decorative gradients — colour only ever names a status — so the title is
-/// plain white Manrope and the accent survives as emphasis of PLACEMENT (its
-/// own line, the largest type on the screen) rather than of hue.
+/// puts the level / step in pills on the right. Zave has no decorative
+/// gradients — colour only ever names a status — so the title is plain white
+/// Manrope and the accent survives as emphasis of PLACEMENT (its own line, the
+/// largest type on the screen) rather than of hue.
 ///
-/// The reward pill keeps its colour, because there it means something: amber
-/// is points, everywhere in this app.
+/// There is no reward pill any more. It promised "Reward: N XP", and roadmap
+/// steps award nothing since wallet XP was retired; "XP" now means only the
+/// contest score.
 class MissionHeader extends StatelessWidget {
   const MissionHeader({
     required this.subtitle,
     required this.level,
     required this.step,
     required this.totalSteps,
-    required this.rewardXp,
     this.title,
     super.key,
   });
@@ -34,15 +34,14 @@ class MissionHeader extends StatelessWidget {
   /// way once you start reading; repeating it here would put the screen back
   /// to two names, which is the thing the expanded header was added to fix.
   ///
-  /// The kicker and the reward pill stay regardless: "LEVEL 1 · STEP 3 OF 7"
-  /// and the XP are facts about the step, not a second title.
+  /// The kicker stays regardless: "LEVEL 1 · STEP 3 OF 7" is a fact about the
+  /// step, not a second title.
   final String? title;
 
   final String subtitle;
   final int level;
   final int step;
   final int totalSteps;
-  final int rewardXp;
 
   @override
   Widget build(BuildContext context) {
@@ -59,15 +58,6 @@ class MissionHeader extends StatelessWidget {
           SizedBox(height: ZaveSpace.md),
         ],
         Text(subtitle, style: ZaveType.lead),
-        SizedBox(height: ZaveSpace.lg),
-        Align(
-          alignment: Alignment.centerLeft,
-          child: ZavePill(
-            label: 'Reward: $rewardXp XP',
-            color: ZaveColors.amber,
-            leading: const ZaveDot(ZaveColors.amber),
-          ),
-        ),
       ],
     );
   }

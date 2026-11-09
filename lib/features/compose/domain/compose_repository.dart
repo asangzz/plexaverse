@@ -1,3 +1,4 @@
+import '../../../core/plan/plan_refusal.dart';
 import 'linkedin_account.dart';
 
 export 'compose_context.dart';
@@ -11,18 +12,23 @@ import 'compose_models.dart';
 /// application layer never sees a `DioException`, never branches on a status
 /// code, and `package:dio` stays out of everything above `data/`.
 ///
-/// [insufficientXp] is split out of [message] because the remedy is different
-/// in kind. Every other failure here is "try again"; this one is "you cannot,
-/// until you top up", and showing it as a retryable error would send the user
-/// round a loop that cannot succeed.
+/// [refusal] is split out of [message] because the remedy is different in
+/// kind. Every other failure here is "try again"; a plan refusal is "you
+/// cannot, until you have a plan" or "not until the limit resets", and
+/// showing it as a retryable error would send the user round a loop that
+/// cannot succeed.
 class ComposeFailure implements Exception {
-  const ComposeFailure(this.message, {this.insufficientXp = false, this.code});
+  const ComposeFailure(this.message, {this.refusal, this.code});
 
   /// Safe to show the user. The server's own message when it sent one, because
   /// it is more specific than anything this client could guess.
   final String message;
 
-  final bool insufficientXp;
+  /// Set when the plan said no (HTTP 402). [message] already carries the
+  /// server's copy and, for a limit, when it comes back.
+  final PlanRefusal? refusal;
+
+  bool get refusedByPlan => refusal != null;
 
   /// The envelope's stable `error.code`, for branching that outlives copy
   /// changes.

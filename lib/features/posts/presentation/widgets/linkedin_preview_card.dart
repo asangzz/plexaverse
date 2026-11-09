@@ -237,7 +237,7 @@ class _LinkedInPreviewCardState extends State<LinkedInPreviewCard> {
 /// The author's initial on an ink disc.
 ///
 /// The web paints a `#5761EB → #00AAFF` gradient here. Zave's only brand fill
-/// is [ZaveColors.blue], and it is reserved for the XP / upgrade path — a blue
+/// is [ZaveColors.blue], and it is reserved for the plan / upgrade path — a blue
 /// avatar would be a miscolour, not a style choice — so the disc is ink, which
 /// is the correct partner for a white surface.
 class _Avatar extends StatelessWidget {

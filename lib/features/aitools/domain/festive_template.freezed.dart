@@ -1133,7 +1133,8 @@ mixin _$FestivePosterState {
 
  FestivePosterBusy get busy; FestivePoster? get poster;/// The storage URL, once the poster has been saved.
  String? get savedUrl;/// Rendered in amber, never red.
- String? get error;/// 402. The remedy is topping up, so the UI must not offer a retry.
+ String? get error;/// 402 — refused by the plan, so the UI must not offer a retry. Pre-plan
+/// name kept: renaming a freezed field needs a codegen run.
  bool get insufficientXp;
 /// Create a copy of FestivePosterState
 /// with the given fields replaced by the non-null parameter values.
@@ -1351,7 +1352,8 @@ class _FestivePosterState extends FestivePosterState {
 @override final  String? savedUrl;
 /// Rendered in amber, never red.
 @override final  String? error;
-/// 402. The remedy is topping up, so the UI must not offer a retry.
+/// 402 — refused by the plan, so the UI must not offer a retry. Pre-plan
+/// name kept: renaming a freezed field needs a codegen run.
 @override@JsonKey() final  bool insufficientXp;
 
 /// Create a copy of FestivePosterState

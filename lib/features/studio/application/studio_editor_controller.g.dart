@@ -86,7 +86,7 @@ final class StudioEditorProvider
   }
 }
 
-String _$studioEditorHash() => r'9030a32f52c4d7ca5fbed56ec9394b3857f2e5cc';
+String _$studioEditorHash() => r'601ecdc5323becc2567fff061ca77032eafb0c32';
 
 /// One design, open for light editing.
 ///
@@ -239,7 +239,7 @@ final class AiDesignerProvider
   }
 }
 
-String _$aiDesignerHash() => r'29e21aa705baaca52d9ebe01fbb9e333943297e7';
+String _$aiDesignerHash() => r'94711cad6a5bf19034cbec377b2aabda589f0699';
 
 /// The AI Designer conversation for one design.
 ///

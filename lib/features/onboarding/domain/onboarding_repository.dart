@@ -67,13 +67,6 @@ abstract class OnboardingRepository {
   /// Returns the failure reason, or null on success, so the chat can quote it.
   Future<String?> saveStyleSample(String text);
 
-  /// `GET /user/xp?include=history` — whether the one-time welcome bonus
-  /// landed in the last two minutes, which is when the onboarding celebrates
-  /// it. The server credits it on the first LinkedIn connect (a company
-  /// brand: when its page is saved), so the answer changes mid-chat. False on
-  /// any failure: a missed celebration costs nothing.
-  Future<bool> hasFreshWelcomeBonus();
-
   /// `PATCH /user/preferences` — the single write that ends onboarding.
   /// Throws [OnboardingUnavailable] on failure; this is the one call whose
   /// outcome the user has to see.

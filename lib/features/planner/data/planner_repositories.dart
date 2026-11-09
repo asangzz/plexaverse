@@ -12,6 +12,7 @@ import '../domain/video_script.dart';
 import '../domain/weekly_article.dart';
 import 'package:dio/dio.dart';
 import '../../../core/network/failure.dart';
+import '../../../core/plan/plan_refusal.dart';
 
 /// Dio-backed [PlannerRepository].
 ///
@@ -84,10 +85,7 @@ class ApiPlannerRepository implements PlannerRepository {
         posterTitle: data?['posterTitle'] as String?,
       );
     } on DioException catch (e) {
-      throw PlannerGenerateFailure(
-        kind: _generateKind(e),
-        message: _serverMessage(e),
-      );
+      throw _generateFailure(e);
     } on Object {
       throw const PlannerGenerateFailure(
         kind: PlannerGenerateFailureKind.failed,
@@ -95,12 +93,34 @@ class ApiPlannerRepository implements PlannerRepository {
     }
   }
 
-  /// Maps the server's code onto the three genuinely different next actions.
+  /// The plan gate first: its 402 carries details (when a limit resets) that
+  /// the generic [Failure] mapping drops, and the message the user reads
+  /// should say when they can write again.
+  static PlannerGenerateFailure _generateFailure(DioException e) {
+    final PlanRefusal? refusal = PlanRefusal.fromDioException(e);
+    if (refusal != null) {
+      return PlannerGenerateFailure(
+        kind: refusal.isLimit
+            ? PlannerGenerateFailureKind.limitReached
+            : PlannerGenerateFailureKind.needsPlan,
+        message: refusal.displayMessage(),
+        refusal: refusal,
+      );
+    }
+    return PlannerGenerateFailure(
+      kind: _generateKind(e),
+      message: _serverMessage(e),
+    );
+  }
+
+  /// Maps the server's code onto the genuinely different next actions.
   static PlannerGenerateFailureKind _generateKind(DioException e) {
     final Object? failure = e.error;
     final String? code = failure is Failure ? failure.errorCode : null;
-    if (code == 'INSUFFICIENT_XP' || e.response?.statusCode == 402) {
-      return PlannerGenerateFailureKind.insufficientXp;
+    // A bare 402 with no recognisable code: wallet XP is gone, so a plan is
+    // the only thing it can be asking for.
+    if (e.response?.statusCode == 402) {
+      return PlannerGenerateFailureKind.needsPlan;
     }
     if (code == 'NO_LINKEDIN_ACCOUNT') {
       return PlannerGenerateFailureKind.noLinkedinAccount;
@@ -144,10 +164,7 @@ class ApiPlannerRepository implements PlannerRepository {
         alreadyGenerated: data?['alreadyGenerated'] == true,
       );
     } on DioException catch (e) {
-      throw PlannerGenerateFailure(
-        kind: _generateKind(e),
-        message: _serverMessage(e),
-      );
+      throw _generateFailure(e);
     } on Object {
       throw const PlannerGenerateFailure(
         kind: PlannerGenerateFailureKind.failed,
@@ -621,7 +638,7 @@ class FakePlannerRepository implements PlannerRepository {
     final PlanSlot slot = _plan.posts[slotIndex];
 
     // Five days in seven have nothing for the post generator to make, and the
-    // server refuses them with NOT_A_POST_DAY before spending any XP. The fake
+    // server refuses them with NOT_A_POST_DAY before generating anything. The fake
     // used to generate a post for any index, so the one failure kind a user
     // can actually reach by tapping — and the branch that tells them a retry
     // will never work — could not be walked in mock at all.

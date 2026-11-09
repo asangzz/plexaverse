@@ -13,7 +13,7 @@ import '../widgets/mission_chrome.dart';
 
 /// **Banner Blueprint** — the web's `/roadmap/banner-blueprint`.
 ///
-/// Profile-banner mission, reached from the Season 1 roadmap's step row. A
+/// Profile-banner mission, reached from the journey roadmap's step row. A
 /// carousel of Studio banner templates, each auto-personalised with the user's
 /// name and position, rendered live from the design's own element tree.
 ///

@@ -54,6 +54,22 @@ class ApiPricingRepository implements PricingRepository {
   }
 
   @override
+  Future<List<Allowance>> fetchAllowances() async {
+    try {
+      final response = await _client.get<Map<String, dynamic>>(
+        ApiPaths.userAllowances,
+      );
+      final Map<String, dynamic>? data = response.data;
+      if (data == null) throw const PricingUnavailable();
+      return Allowance.listFromJson(data);
+    } on PricingUnavailable {
+      rethrow;
+    } on Object {
+      throw const PricingUnavailable();
+    }
+  }
+
+  @override
   Future<ReferralSummary> fetchReferral() async {
     try {
       final response = await _client.get<Map<String, dynamic>>(
@@ -74,7 +90,7 @@ class ApiPricingRepository implements PricingRepository {
         ApiPaths.referral,
       );
       // POST answers `{code}` only — no counters. Re-read rather than
-      // inventing zeroes, which would blank a returning user's earned total.
+      // inventing zeroes, which would blank a returning user's referral count.
       final String? code = response.data?['code'] as String?;
       final ReferralSummary current = await fetchReferral();
       return current.code == null && code != null
@@ -142,7 +158,6 @@ class FakePricingRepository implements PricingRepository {
   ReferralSummary _referral = const ReferralSummary(
     code: 'PLEXA-7F2K',
     totalReferrals: 3,
-    totalXpEarned: 7500,
   );
 
   @override
@@ -155,6 +170,34 @@ class FakePricingRepository implements PricingRepository {
   Future<String?> fetchBrandType() async {
     await Future<void>.delayed(_latency);
     return 'personal';
+  }
+
+  /// The static table, with today's use filled in on two rows — enough for
+  /// the "left today" branch to render without a backend.
+  @override
+  Future<List<Allowance>> fetchAllowances() async {
+    await Future<void>.delayed(_latency);
+    final DateTime tomorrow = DateTime.now().add(const Duration(days: 1));
+    return <Allowance>[
+      for (final Allowance a in Allowance.defaults)
+        Allowance(
+          key: a.key,
+          label: a.label,
+          limit: a.limit,
+          period: a.period,
+          used: switch (a.key) {
+            'ai_generate_post' => 1,
+            'ai_generate_comment' => 6,
+            _ => 0,
+          },
+          remaining: switch (a.key) {
+            'ai_generate_post' => a.limit - 1,
+            'ai_generate_comment' => a.limit - 6,
+            _ => a.limit,
+          },
+          resetsAt: tomorrow,
+        ),
+    ];
   }
 
   @override

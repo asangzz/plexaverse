@@ -12,7 +12,13 @@ import 'package:go_router/go_router.dart';
 import '../../domain/settings_repository.dart';
 import 'settings_section.dart';
 
-/// **Plan & XP** — the Settings-side view of the web's `/pricing` page.
+/// **Plan** — the Settings-side view of the web's `/pricing` page.
+///
+/// Plan status only. There is no XP balance here any more: wallet XP was
+/// retired on 10 Nov 2026 and the plan itself pays for every AI feature, up
+/// to a per-feature allowance. What the plan includes lives on Pricing, which
+/// reads it from the server; repeating it here would be a second copy to keep
+/// in step.
 ///
 /// The web shows one card per plan and filters the list by `brandType`, so most
 /// real users see exactly one; this shows that one directly. The price comes
@@ -36,11 +42,10 @@ class BillingSection extends ConsumerWidget {
       accountSnapshotProvider,
     );
     final AsyncValue<GeoPricing> pricing = ref.watch(geoPricingProvider);
-    final AsyncValue<XpSummary> xp = ref.watch(xpSummaryProvider);
 
     if (account.hasError) {
       return SettingsSection(
-        title: 'Plan & XP',
+        title: 'Plan',
         child: SectionError(
           message: "We couldn't load your plan.",
           onRetry: () => ref.invalidate(accountSnapshotProvider),
@@ -51,7 +56,7 @@ class BillingSection extends ConsumerWidget {
     final AccountSnapshot? snapshot = account.value;
     if (snapshot == null) {
       return const SettingsSection(
-        title: 'Plan & XP',
+        title: 'Plan',
         child: SectionSkeleton(lines: 3),
       );
     }
@@ -61,7 +66,7 @@ class BillingSection extends ConsumerWidget {
     final GeoPricing? prices = pricing.value;
 
     return SettingsSection(
-      title: 'Plan & XP',
+      title: 'Plan',
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: <Widget>[
@@ -121,7 +126,10 @@ class BillingSection extends ConsumerWidget {
           ],
 
           if (subscription.isActive &&
-              subscription.currentPeriodEnd != null) ...<Widget>[
+              (subscription.isRecurring
+                      ? subscription.currentPeriodEnd
+                      : subscription.endsAt) !=
+                  null) ...<Widget>[
             SizedBox(height: ZaveSpace.md),
             Text(
               subscription.isRecurring
@@ -129,47 +137,38 @@ class BillingSection extends ConsumerWidget {
                         '${DateFormat.yMMMd().format(subscription.currentPeriodEnd!)}'
                         ' · cancel anytime'
                   : 'Active until '
-                        '${DateFormat.yMMMd().format(subscription.currentPeriodEnd!)}',
+                        '${DateFormat.yMMMd().format(subscription.endsAt!)}',
               style: ZaveType.caption,
             ),
           ],
 
-          const SettingsDivider(),
-
-          Row(
-            children: <Widget>[
-              // Amber is the XP colour in Zave — "points, waiting".
-              const ZaveDot(ZaveColors.amber),
-              SizedBox(width: ZaveSpace.md),
-              Expanded(
-                child: Text(
-                  'XP balance',
-                  style: ZaveType.label.copyWith(color: ZaveColors.white),
-                ),
-              ),
-              Text(switch (xp) {
-                AsyncData<XpSummary>(:final XpSummary value) =>
-                  NumberFormat.decimalPattern().format(value.balance),
-                AsyncError<XpSummary>() => '—',
-                _ => '…',
-              }, style: ZaveType.h3.copyWith(color: ZaveColors.amber)),
-            ],
-          ),
-          SizedBox(height: ZaveSpace.sm),
-          Text(
-            'XP never expires — it simply runs out when used. Top up only '
-            'when you need more.',
-            style: ZaveType.caption,
-          ),
+          if (!subscription.isActive) ...<Widget>[
+            SizedBox(height: ZaveSpace.md),
+            Text(
+              // Hedged while the server sends no entitlement verdict: a
+              // 30-day pass and given plan time never set `status`, so this
+              // branch also holds people whose AI features work. Telling them
+              // they "need a plan" would be false.
+              subscription.isUnknown
+                  ? 'Your roadmap, lessons and calendar are free. AI writing, '
+                        'posters and the rest come with a plan. A 30-day pass '
+                        'or plan time given to you may not show here yet.'
+                  : 'Your roadmap, lessons and calendar are free. AI writing, '
+                        'posters and the rest come with a plan.',
+              style: ZaveType.caption,
+            ),
+          ],
 
           SizedBox(height: ZaveSpace.lg),
-          // Pricing owns the plan cards and the checkout sheet; this block
-          // is the balance. Sending the user there beats a second copy of
-          // the same purchase flow in Settings.
+          // Pricing owns the plan cards, what each plan includes, and the
+          // checkout sheet. Sending the user there beats a second copy of the
+          // same purchase flow in Settings.
           Align(
             alignment: Alignment.centerLeft,
             child: ZaveButton(
-              label: 'Plans and top-ups',
+              label: subscription.isActive
+                  ? 'What your plan includes'
+                  : 'See plans',
               icon: const Icon(AppIcons.bolt),
               onPressed: () => context.push(ZaveRoutes.pricing),
             ),
@@ -188,18 +187,40 @@ class _StatusPill extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (subscription.isActive) {
-      return const ZavePill(
-        label: 'Active',
+      // Saying which kind of active this is tells the user whether they will
+      // be charged again: a 30-day pass and given plan time do not renew.
+      final String label;
+      if (subscription.isRecurring) {
+        label = 'Active';
+      } else if (subscription.isGranted) {
+        label = 'Plan time given';
+      } else {
+        label = '30-day pass';
+      }
+      return ZavePill(
+        label: label,
         color: ZaveColors.mint,
-        leading: ZaveDot(ZaveColors.green),
+        leading: const ZaveDot(ZaveColors.green),
       );
     }
     // Not "failed" — a user who has never paid is waiting, not broken. Amber
     // carries both meanings in Zave, which has no red.
-    return const ZavePill(
-      label: 'No plan',
+    //
+    // "No plan" only when it is safe to say: the server said so, or the
+    // status is the never-paid / ended default. A cancelled subscriber may
+    // still hold a pass we cannot see, so that reads as what we do know.
+    final String label;
+    if (subscription.entitled == false ||
+        subscription.status == null ||
+        subscription.status == 'inactive') {
+      label = 'No plan';
+    } else {
+      label = 'Not renewing';
+    }
+    return ZavePill(
+      label: label,
       color: ZaveColors.amber,
-      leading: ZaveDot(ZaveColors.amber),
+      leading: const ZaveDot(ZaveColors.amber),
     );
   }
 }

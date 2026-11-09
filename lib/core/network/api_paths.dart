@@ -101,7 +101,10 @@ class ApiPaths {
   /// Optional `?days=N` trims the window.
   static const String personaReachHistory = '/persona/reach/history';
 
-  /// POST — starts Season 2. `{choice, targetRole?}`. Idempotent.
+  /// POST — starts a new journey after day 1000. `{targetRole?}`. Idempotent.
+  ///
+  /// The path still says "season" because it is the server's compatibility
+  /// alias; the journey has no seasons and no user-facing copy may say so.
   static const String seasonAdvance = '/season/advance';
 
   /// Warm-boot check — validates the stored token AND returns fresh role /
@@ -113,7 +116,14 @@ class ApiPaths {
   /// PATCH is a partial upsert — send only what changed. There is no PUT on
   /// mobile, by design.
   static const String userPreferences = '/user/preferences';
-  static const String userXp = '/user/xp';
+
+  /// GET — what the plan includes, per AI feature, and how much of each is
+  /// used this period: `{allowances: [{key, limit, period, label, enabled,
+  /// used, remaining, periodKey, resetsAt}]}`.
+  ///
+  /// Replaced `/user/xp` when wallet XP was retired (10 Nov 2026). That route
+  /// still answers, but always with a balance of 0, so nothing here reads it.
+  static const String userAllowances = '/user/allowances';
 
   /// The auto-post kill switch. PATCH `{enabled: bool}`.
   ///
@@ -157,7 +167,8 @@ class ApiPaths {
   ///
   /// It never generates and never charges — a lane with nothing prepared comes
   /// back `ready: false`, and generating goes through [aiComments] /
-  /// [aiConnections] where the XP cost is attached to a decision the user made.
+  /// [aiConnections] where the plan's allowance is spent on a decision the user
+  /// made.
   ///
   /// POST marks one item done, or undoes it.
   static const String plexaDay = '/plexa/day';
@@ -229,13 +240,14 @@ class ApiPaths {
   ///
   /// The planner's primary action, and the last thing keeping the mobile
   /// planner read-only. `force: true` is Regenerate: it replaces the existing
-  /// draft and deletes the superseded one. Costs XP, so a 402 here is an
-  /// answer, not a fault.
+  /// draft and deletes the superseded one. Counts against the plan's post
+  /// allowance, so a 402 here (no plan, or the limit used) is an answer, not a
+  /// fault.
   static const String plannerGeneratePost = '/planner/generate-post';
 
   /// POST — the carousel equivalent of [plannerGeneratePost], for a slot whose
-  /// `format` is `carousel`. Same claim and rollback; XP is charged inside the
-  /// carousel generator rather than by a gate in front of it.
+  /// `format` is `carousel`. Same claim and rollback; the carousel allowance is
+  /// counted inside the carousel generator rather than by a gate in front of it.
   static const String plannerGenerateCarousel = '/planner/generate-carousel';
 
   /// POST `{planId, topic}` — replaces the week's topic and rewrites the days

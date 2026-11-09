@@ -34,7 +34,7 @@ import '../../features/onboarding/application/onboarding_controller.dart';
 import '../../features/missions/presentation/pages/about_odyssey_page.dart';
 import '../../features/missions/presentation/pages/banner_blueprint_page.dart';
 import '../../features/missions/presentation/pages/headline_hook_page.dart';
-import '../../features/missions/presentation/pages/season_complete_page.dart';
+import '../../features/missions/presentation/pages/journey_complete_page.dart';
 import '../../features/learn/presentation/pages/learn_page.dart';
 import '../../features/persona/presentation/pages/persona_page.dart';
 import '../../features/planner/presentation/pages/planner_page.dart';
@@ -68,7 +68,7 @@ part 'app_router.g.dart';
 ///   /styleguide  — the Zave reference (public)
 ///
 ///   ── the signed-in shell (bottom bar) ──
-///   /dashboard   — Season 1 roadmap or Season 2 dashboard
+///   /dashboard   — the journey roadmap
 ///   /planner     — the week
 ///   /calendar    — the month
 ///   /posts       — the library
@@ -266,7 +266,14 @@ GoRouter appRouter(Ref ref) {
       _fullScreen(ZaveRoutes.connections, const ConnectionsPage()),
       _fullScreen(ZaveRoutes.topics, const TopicsPage()),
       _fullScreen(ZaveRoutes.pricing, const PricingPage()),
-      _fullScreen(ZaveRoutes.seasonComplete, const SeasonCompletePage()),
+      _fullScreen(ZaveRoutes.journeyComplete, const JourneyCompletePage()),
+      // The pre-journey name. Redirected rather than removed: notifications
+      // already delivered, and older links, still open it.
+      GoRoute(
+        path: ZaveRoutes.seasonComplete,
+        parentNavigatorKey: _rootNavigatorKey,
+        redirect: (_, _) => ZaveRoutes.journeyComplete,
+      ),
       _fullScreen(ZaveRoutes.roadmapAboutOdyssey, const AboutOdysseyPage()),
       _fullScreen(ZaveRoutes.roadmapHeadlineHook, const HeadlineHookPage()),
       _fullScreen(

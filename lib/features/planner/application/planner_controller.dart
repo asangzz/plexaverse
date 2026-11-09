@@ -1,6 +1,7 @@
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 import '../../../core/network/failure.dart';
+import '../../../core/plan/plan_refusal.dart';
 import '../../settings/application/settings_controllers.dart';
 import '../../settings/domain/settings_entities.dart';
 import '../../posts/application/post_library_controllers.dart';
@@ -53,7 +54,7 @@ enum SlotWork {
 ///
 /// It was, until this change. The sheet is a modal bottom sheet, every one of
 /// these operations is a model call that takes seconds, and four of the five
-/// cost XP — so the ordinary gesture of swiping the sheet away while one is
+/// count against the plan — so the ordinary gesture of swiping the sheet away while one is
 /// running destroyed the only record that it was running. Re-opening the day
 /// then showed "Write this post", "New image" or "Write the script" fully
 /// live, and a second tap bought a second one.
@@ -216,8 +217,8 @@ class PlannerController extends _$PlannerController {
   ///
   /// ## Why nothing in here is fatal
   ///
-  /// The post already exists and the XP for it is already spent. A poster that
-  /// fails costs the user an image they can redo; letting that failure escape
+  /// The post already exists and has already counted against the plan. A
+  /// poster that fails costs the user an image they can redo; letting that failure escape
   /// would cost them the post, and the planner row would roll back to
   /// `planned` over artwork. So every step swallows: no poster, no `imageUrl`
   /// in the answer, or a PATCH that does not land all leave the day exactly as
@@ -277,8 +278,8 @@ class PlannerController extends _$PlannerController {
   ///
   /// The deliberate opposite of [_attachPoster] in two ways. It runs on
   /// demand rather than as a silent tail of generation, so its failure is
-  /// REPORTED — the user pressed a button and paid XP, and swallowing that
-  /// would leave them staring at the old image wondering whether anything
+  /// REPORTED — the user pressed a button that uses their plan, and
+  /// swallowing that would leave them staring at the old image wondering whether anything
   /// happened. And it draws from the post's own body rather than from a
   /// generation result, because by now the user may have edited the words the
   /// picture is supposed to illustrate.
@@ -681,8 +682,11 @@ class VideoScriptsController extends _$VideoScriptsController {
       return null;
     } on Failure catch (f) {
       return f.message;
-    } on Object {
-      return 'The script could not be written. Try again.';
+    } on Object catch (e) {
+      // The plan's refusal says when the limit resets; the generic line
+      // would invite a retry that is refused the same way.
+      return PlanRefusal.fromError(e)?.displayMessage() ??
+          'The script could not be written. Try again.';
     }
   }
 }

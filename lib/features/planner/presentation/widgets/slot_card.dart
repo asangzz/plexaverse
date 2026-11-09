@@ -258,7 +258,7 @@ class SlotCard extends StatelessWidget {
               runSpacing: ZaveSpace.sm,
               children: <Widget>[
                 // Only on a post day. `format` is populated on every day so
-                // the server's XP pre-gate can index it before the plan is
+                // the server's plan pre-gate can index it before the plan is
                 // fetched, but on a script or a newsletter it describes a
                 // LinkedIn shape we never send — drawing it claims the day
                 // produces a text post.

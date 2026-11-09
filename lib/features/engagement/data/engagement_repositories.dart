@@ -6,6 +6,7 @@ import '../../../core/config/env.dart';
 import '../../../core/network/api_paths.dart';
 import '../../../core/network/dio_client.dart';
 import '../../../core/network/failure.dart';
+import '../../../core/plan/plan_refusal.dart';
 import '../../plexa/data/fake_day_session.dart';
 import '../domain/engagement_repository.dart';
 
@@ -28,7 +29,7 @@ class ApiEngagementRepository implements EngagementRepository {
   ///
   /// ## No "new set" on mobile
   ///
-  /// The web sends `{ topic, force }` and prices a regenerate at ~50 XP.
+  /// The web sends `{ topic, force }` for a regenerate.
   /// `generateComments()` in the service does honour `options.force`, but the
   /// mobile route at `app/api/mobile/v1/ai/comments/route.ts` calls it as
   /// `generateComments(me.sub, body?.topic)` — it never forwards a force flag.
@@ -69,8 +70,8 @@ class ApiEngagementRepository implements EngagementRepository {
   /// The body is empty on purpose. The route accepts an optional `profession`
   /// override, but overriding it from the client would let this screen aim a
   /// batch at a profession the profile does not claim — and the server's
-  /// `PROFILE_INCOMPLETE` guard exists precisely to stop XP being spent on a
-  /// profile that cannot produce a useful list.
+  /// `PROFILE_INCOMPLETE` guard exists precisely to stop a generation being
+  /// counted against the plan for a profile that cannot produce a useful list.
   ///
   /// Same missing-`force` story as [generateComments]: the mobile route passes
   /// only `{ profession }` to `findConnections`, so a fresh set cannot be asked
@@ -225,11 +226,20 @@ class ApiEngagementRepository implements EngagementRepository {
         ? failure.statusCode
         : (failure is ClientFailure ? failure.statusCode : null);
 
-    if (code == 'INSUFFICIENT_XP' || status == 402) {
+    final PlanRefusal? refusal = PlanRefusal.fromDioException(e);
+    if (refusal != null) {
       return EngagementFailure(
-        EngagementBlock.insufficientXp,
-        message: message,
+        refusal.isLimit
+            ? EngagementBlock.limitReached
+            : EngagementBlock.needsPlan,
+        message: refusal.displayMessage(),
+        refusal: refusal,
       );
+    }
+    // A bare 402 with no recognisable code: wallet XP is gone, so a plan is
+    // the only thing it can be asking for.
+    if (status == 402) {
+      return EngagementFailure(EngagementBlock.needsPlan, message: message);
     }
     if (code == 'PROFILE_INCOMPLETE') {
       return EngagementFailure(

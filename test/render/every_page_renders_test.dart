@@ -23,7 +23,7 @@ import 'package:plexaverse/features/home/presentation/pages/home_page.dart';
 import 'package:plexaverse/features/missions/presentation/pages/about_odyssey_page.dart';
 import 'package:plexaverse/features/missions/presentation/pages/banner_blueprint_page.dart';
 import 'package:plexaverse/features/missions/presentation/pages/headline_hook_page.dart';
-import 'package:plexaverse/features/missions/presentation/pages/season_complete_page.dart';
+import 'package:plexaverse/features/missions/presentation/pages/journey_complete_page.dart';
 import 'package:plexaverse/features/persona/presentation/pages/persona_page.dart';
 import 'package:plexaverse/features/planner/presentation/pages/planner_page.dart';
 import 'package:plexaverse/features/plexa/presentation/pages/plexa_journey_page.dart';
@@ -92,7 +92,7 @@ void main() {
     'About Odyssey': () => const AboutOdysseyPage(),
     'Headline Hook': () => const HeadlineHookPage(),
     'Banner Blueprint': () => const BannerBlueprintPage(),
-    'Season Complete': () => const SeasonCompletePage(),
+    'Journey Complete': () => const JourneyCompletePage(),
     'Company analytics': () => const CompanyAnalyticsPage(),
     'Company inbox': () => const CompanyInboxPage(),
     'Company advocacy': () => const CompanyAdvocacyPage(),

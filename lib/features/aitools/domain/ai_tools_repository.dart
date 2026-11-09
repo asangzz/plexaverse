@@ -38,15 +38,14 @@ abstract class AiToolsRepository {
   /// `GET /festive/templates`.
   Future<FestiveGallery> fetchFestiveTemplates({String? category});
 
-  /// `POST /festive/generate` — 800 XP. Returns the poster as a data URI.
+  /// `POST /festive/generate` — paid by the plan. Returns the poster as a
+  /// data URI.
   Future<FestivePoster> generateFestivePoster({
     required String templateId,
     required FestiveCustomizations customizations,
   });
 
-  /// `POST /ai/headshot` — 1200 XP on mobile (the web's copy still says 1000;
-  /// the server's `AI_GENERATE_HEADSHOT` is the number that is actually
-  /// charged, so the app quotes the server).
+  /// `POST /ai/headshot` — paid by the plan, subject to its headshot limit.
   ///
   /// Needs at least [minHeadshotPhotos] reference photos as data URIs.
   Future<HeadshotResult> generateHeadshots({

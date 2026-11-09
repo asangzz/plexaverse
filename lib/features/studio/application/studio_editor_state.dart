@@ -37,8 +37,8 @@ class StudioEditorState {
   /// The image layer currently having a replacement generated, or null.
   ///
   /// On the design and not on the swap sheet, because the sheet is a modal
-  /// the user can dismiss and `POST /ai/image` costs XP. When the flag lived
-  /// on the sheet, a dismissal mid-generation threw the image away after it
+  /// the user can dismiss and `POST /ai/image` uses the plan. When the flag
+  /// lived on the sheet, a dismissal mid-generation threw the image away after it
   /// had been paid for, and the sheet reopened looking idle while the call
   /// was still running. Per-element rather than a bare bool so a second
   /// layer's sheet is not disabled by the first layer's work.

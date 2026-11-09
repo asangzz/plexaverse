@@ -19,8 +19,11 @@ mixin _$ComposeStatus {
  String? get progress;/// A message to show the user. Rendered in amber, never red — Zave has no
 /// red, and a failed generation is "needs attention", not a destructive
 /// state.
- String? get error;/// The server answered 402 INSUFFICIENT_XP. Distinct from [error] because
-/// the remedy is different: the user has to top up, not retry.
+ String? get error;/// The plan refused the request (HTTP 402: no plan, or a limit used up).
+/// Distinct from [error] because the remedy is different: a plan or a
+/// wait, not a retry. The pre-plan field name is kept because renaming a
+/// freezed field needs a codegen run; the refusal itself is on
+/// `ComposeActions.refusal`.
  bool get insufficientXp;/// Set once a submission lands, and cleared the moment the user edits
 /// again.
  ComposeOutcome? get outcome;/// What the in-flight submission is TRYING to be.
@@ -242,8 +245,11 @@ class _ComposeStatus extends ComposeStatus {
 /// red, and a failed generation is "needs attention", not a destructive
 /// state.
 @override final  String? error;
-/// The server answered 402 INSUFFICIENT_XP. Distinct from [error] because
-/// the remedy is different: the user has to top up, not retry.
+/// The plan refused the request (HTTP 402: no plan, or a limit used up).
+/// Distinct from [error] because the remedy is different: a plan or a
+/// wait, not a retry. The pre-plan field name is kept because renaming a
+/// freezed field needs a codegen run; the refusal itself is on
+/// `ComposeActions.refusal`.
 @override@JsonKey() final  bool insufficientXp;
 /// Set once a submission lands, and cleared the moment the user edits
 /// again.

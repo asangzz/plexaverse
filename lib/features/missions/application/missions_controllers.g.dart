@@ -142,12 +142,12 @@ final class BannerTemplatesProvider
 
 String _$bannerTemplatesHash() => r'32975a3b215a7cb4a7624dace6564655f07dda4d';
 
-/// The Season 1 recap numbers.
+/// The finished journey's recap numbers (journey-complete screen).
 
 @ProviderFor(seasonRecap)
 final seasonRecapProvider = SeasonRecapProvider._();
 
-/// The Season 1 recap numbers.
+/// The finished journey's recap numbers (journey-complete screen).
 
 final class SeasonRecapProvider
     extends
@@ -157,7 +157,7 @@ final class SeasonRecapProvider
           FutureOr<SeasonRecap>
         >
     with $FutureModifier<SeasonRecap>, $FutureProvider<SeasonRecap> {
-  /// The Season 1 recap numbers.
+  /// The finished journey's recap numbers (journey-complete screen).
   SeasonRecapProvider._()
     : super(
         from: null,

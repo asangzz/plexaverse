@@ -1,5 +1,6 @@
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
+import '../../../core/plan/plan_refusal.dart';
 import '../data/studio_repositories.dart';
 import '../domain/ai_designer.dart';
 import '../domain/studio_design.dart';
@@ -72,7 +73,8 @@ class StudioEditor extends _$StudioEditor {
   /// false when nothing was swapped.
   ///
   /// **The in-flight flag and the failure both live in [state], not in the
-  /// swap sheet.** `POST /ai/image` costs XP and takes tens of seconds, and
+  /// swap sheet.** `POST /ai/image` uses the plan and takes tens of seconds,
+  /// and
   /// the sheet is dismissible throughout; when the sheet owned this, leaving
   /// it mid-call discarded an image the user had already paid for and left
   /// the design untouched. Here the image lands on the design whether or not
@@ -109,8 +111,13 @@ class StudioEditor extends _$StudioEditor {
       if (!ref.mounted) return false;
       swapImage(elementId, uri);
       return true;
-    } on Object {
-      _setSwapError('That image did not come back. It may be an XP balance.');
+    } on Object catch (e) {
+      // A plan refusal says why and, for a limit, when it is back — the
+      // generic line would invite a retry refused the same way.
+      _setSwapError(
+        PlanRefusal.fromError(e)?.displayMessage() ??
+            'That image did not come back. Try again.',
+      );
       return false;
     } finally {
       // The user can pop the design page mid-call, which disposes this
@@ -274,15 +281,15 @@ class AiDesigner extends _$AiDesigner {
           design: reply.design,
         ),
       ];
-    } on Object {
+    } on Object catch (e) {
       state = <AiDesignerTurn>[
         ...history,
         AiDesignerTurn(
           id: 'a-$stamp',
           role: AiDesignerRole.assistant,
           content:
-              'That did not come back. It may be an XP balance, or the '
-              'designer may be busy — try again.',
+              PlanRefusal.fromError(e)?.displayMessage() ??
+              'That did not come back. The designer may be busy — try again.',
           failed: true,
         ),
       ];

@@ -158,7 +158,7 @@ class _AiDesignerSheetState extends ConsumerState<AiDesignerSheet> {
 ///
 /// Speakers are told apart by ALIGNMENT and a kicker, not by colour. The web
 /// paints its user bubble in brand indigo, which Zave cannot copy: blue here
-/// is the XP path and nothing else, and tinting a chat bubble with it would
+/// is the upgrade path and nothing else, and tinting a chat bubble with it would
 /// claim a meaning it does not have. Nor is the selected-chip inversion
 /// (solid white, ink letters) right — that means "selected", and a message is
 /// not a selection.

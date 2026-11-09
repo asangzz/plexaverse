@@ -83,7 +83,8 @@ class LevelsPanel extends StatelessWidget {
         Text(_subline(status, visible.length), style: ZaveType.bodyMuted),
         SizedBox(height: ZaveSpace.xl),
 
-        if (visible.isNotEmpty) _StepStrip(steps: visible, onStart: onStart),
+        if (visible.isNotEmpty)
+          _StepStrip(steps: visible, day: level.steps, onStart: onStart),
       ],
     );
   }
@@ -149,9 +150,18 @@ class _CompletionBar extends StatelessWidget {
 /// Height comes from [IntrinsicHeight] rather than a constant: titles are one
 /// or two lines depending on the day, and the tallest sets the row.
 class _StepStrip extends StatelessWidget {
-  const _StepStrip({required this.steps, required this.onStart});
+  const _StepStrip({
+    required this.steps,
+    required this.day,
+    required this.onStart,
+  });
 
+  /// The steps to draw — on a completed day, only the missed ones.
   final List<RoadmapStep> steps;
+
+  /// Every step of the day, in order. Numbers come from here, not from
+  /// [steps], so a missed step keeps the number it had while the day was live.
+  final List<RoadmapStep> day;
   final ValueChanged<String> onStart;
 
   /// Narrow enough that the next card always shows at the right edge. A strip
@@ -200,14 +210,15 @@ class _StepStrip extends StatelessWidget {
           : isNow
           ? 'Now'
           : 'To do',
-      // A step with no reward has no number to show, and `+0` is worse than
-      // nothing.
-      value: step.xpReward > 0 ? '+${step.xpReward}' : '—',
-      unit: step.xpReward > 0 ? 'XP' : null,
+      // The step's place in the day. This was the step's XP reward ("+50
+      // XP"); roadmap steps award nothing since wallet XP was retired, and a
+      // card promising points that never arrive is worse than a plain
+      // ordinal.
+      value: '${day.indexOf(step) + 1}',
       // The illustration says what the TASK is, not what the number is.
       //
       // Every card used to carry the same rising wedge, scaled by the step's
-      // XP against the day's biggest — which made a row of tasks look like a
+      // reward against the day's biggest — which made a row of tasks look like a
       // row of measurements of the same thing, and said "this task is
       // growing", which is not a fact about anything. A post now looks like
       // written lines, a comment like two bubbles. Same ramp, same stroke,

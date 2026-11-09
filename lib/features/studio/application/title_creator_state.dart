@@ -1,5 +1,6 @@
 import 'package:flutter/foundation.dart';
 
+import '../../../core/plan/plan_refusal.dart';
 import '../domain/title_creator.dart';
 
 /// Which of the three steps the Title Creator is on.
@@ -20,6 +21,7 @@ class TitleCreatorState {
     this.result,
     this.busy = false,
     this.error,
+    this.refusal,
   });
 
   final TitleStep step;
@@ -40,6 +42,12 @@ class TitleCreatorState {
   /// Shown in amber, never red.
   final String? error;
 
+  /// Set when the plan refused the headline (no plan, or today's limit
+  /// used). Kept apart from [error] so the page can open the plan sheet —
+  /// the only route to pricing — instead of inviting a retry the server
+  /// would refuse the same way. Cleared together with [error].
+  final PlanRefusal? refusal;
+
   TitleCreatorState copyWith({
     TitleStep? step,
     String? headline,
@@ -48,6 +56,7 @@ class TitleCreatorState {
     TitleSuggestion? result,
     bool? busy,
     String? error,
+    PlanRefusal? refusal,
     bool clearError = false,
     bool clearResult = false,
   }) => TitleCreatorState(
@@ -58,5 +67,6 @@ class TitleCreatorState {
     result: clearResult ? null : (result ?? this.result),
     busy: busy ?? this.busy,
     error: clearError ? null : (error ?? this.error),
+    refusal: clearError ? null : (refusal ?? this.refusal),
   );
 }

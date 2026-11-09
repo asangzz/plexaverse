@@ -12,11 +12,12 @@ import '../../domain/pricing.dart';
 /// Company — and paints the card background, border, glow, tick marks and CTA
 /// gradient with it. Zave's first rule is that **colour only ever names a
 /// status**, and "which plan you are looking at" is not a status. So both cards
-/// are ordinary glass at the same fill step, and the only colour on them is:
+/// are ordinary glass at the same fill step, and the only colour on them is
+/// blue on the CTA — [ZaveColors.blue] is the upgrade path.
 ///
-///   • amber on the XP line — amber means points, everywhere in this app;
-///   • blue on the CTA — [ZaveColors.blue] is the XP / upgrade path and buying
-///     XP is the only thing it exists for.
+/// The card no longer carries an XP figure. A plan used to credit 11,000 wallet
+/// XP; since 10 Nov 2026 it pays for every AI feature directly, up to the
+/// allowances listed once under the cards.
 ///
 /// Depth is the fill step, never a shadow, so the web's `0 20px 60px` glow and
 /// its top hairline gradient are dropped rather than approximated.
@@ -87,17 +88,15 @@ class PlanCard extends StatelessWidget {
           Text(pricing.taxNote, style: ZaveType.caption),
 
           SizedBox(height: ZaveSpace.lg),
+          // How it is paid. This screen only opens subscription mandates, so
+          // the card says so; a 30-day pass is sold on the web.
           Row(
             children: <Widget>[
-              ZavePill(
-                label: '+${groupedNumber(plan.xp)} XP',
-                color: ZaveColors.amber,
-                leading: const ZaveDot(ZaveColors.amber),
-              ),
+              const ZavePill(label: 'Monthly plan', color: ZaveColors.ink62),
               SizedBox(width: ZaveSpace.md),
               Flexible(
                 child: Text(
-                  '~34 days of automation',
+                  'Cancel any time',
                   style: ZaveType.caption,
                   maxLines: 2,
                 ),
@@ -141,8 +140,7 @@ class PlanCard extends StatelessWidget {
           // ── CTA ──
           ZaveButton.brand(
             label:
-                'Get ${groupedNumber(plan.xp)} XP · ${pricing.symbol}'
-                '${groupedNumber(price)}',
+                'Subscribe · ${pricing.symbol}${groupedNumber(price)} a month',
             onPressed: onCheckout,
             expand: true,
           ),

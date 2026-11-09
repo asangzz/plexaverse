@@ -3,16 +3,15 @@ import 'package:freezed_annotation/freezed_annotation.dart';
 part 'studio_design.freezed.dart';
 part 'studio_design.g.dart';
 
-/// Whether Studio is unlocked, and what it costs.
+/// Whether Studio is open to this user.
 ///
 /// Mirrors `StudioAccessStatus` in the web's `lib/services/studio.service.ts`.
-/// The unlock is a one-time XP purchase recorded as an `XPTransaction`, so
-/// `hasAccess` is derived from the ledger rather than stored as a flag — which
-/// is why the client must ask rather than infer it from a preference.
+/// Studio comes with every plan, so `hasAccess` is the plan check — derived
+/// server-side, which is why the client must ask rather than infer it.
 ///
-/// The web hard-codes "Unlock for 2,000 XP" in its copy; [requiredXp] comes
-/// from the server instead, because the figure is an admin-tunable XP constant
-/// and a hard-coded price is the kind of thing that silently goes wrong.
+/// [currentXp] and [requiredXp] are always 0 since wallet XP was retired; the
+/// server keeps sending them only so older builds keep parsing. Nothing here
+/// reads them.
 @freezed
 abstract class StudioAccess with _$StudioAccess {
   const StudioAccess._();
@@ -25,12 +24,6 @@ abstract class StudioAccess with _$StudioAccess {
 
   factory StudioAccess.fromJson(Map<String, dynamic> json) =>
       _$StudioAccessFromJson(json);
-
-  /// The user could unlock right now.
-  bool get canAfford => currentXp >= requiredXp;
-
-  /// How much more XP is needed. Zero once affordable.
-  int get shortfall => canAfford ? 0 : requiredXp - currentXp;
 }
 
 /// The result of `POST /studio/access`.
@@ -229,9 +222,7 @@ abstract class StudioDesignData with _$StudioDesignData {
       canvas: canvas is Map<String, dynamic>
           ? StudioCanvas.fromJson(canvas)
           : const StudioCanvas(),
-      elements: rawElements
-          .map(StudioElement.fromJson)
-          .toList(growable: false),
+      elements: rawElements.map(StudioElement.fromJson).toList(growable: false),
       selectedIds: selected is List
           ? selected.whereType<String>().toList(growable: false)
           : const <String>[],

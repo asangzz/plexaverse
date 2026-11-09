@@ -9,7 +9,7 @@ part 'settings_entities.g.dart';
 /// which is why Settings' Account section can show a name, an email and an
 /// avatar without a second fetch. On mobile there is no session cookie, so
 /// `/auth/me` is that fetch — and it is deliberately a live read rather than a
-/// token decode: `role`, `xpBalance` and the subscription state all change
+/// token decode: `role` and the subscription state both change
 /// without the access token being re-issued.
 @freezed
 abstract class AccountIdentity with _$AccountIdentity {
@@ -23,7 +23,6 @@ abstract class AccountIdentity with _$AccountIdentity {
     /// The server sends the avatar under `image`; the app calls it what it is.
     @JsonKey(name: 'image') String? avatarUrl,
     @Default('user') String role,
-    @Default(0) int xpBalance,
   }) = _AccountIdentity;
 
   factory AccountIdentity.fromJson(Map<String, dynamic> json) =>
@@ -42,30 +41,70 @@ abstract class AccountIdentity with _$AccountIdentity {
 /// Billing state, as `GET /auth/me` returns its `subscription` object.
 ///
 /// `status` and `paymentMode` are denormalised onto the User row by the
-/// Razorpay webhook, so they are current the moment the webhook lands; only
-/// `currentPeriodEnd` comes from the joined Subscription row.
+/// Razorpay subscription webhook; only `currentPeriodEnd` comes from the joined
+/// Subscription row.
+///
+/// **`status` is not the whole answer to "does this user have a plan".** The
+/// server decides that in `resolveEntitlement()` (web `lib/entitlements.ts`),
+/// which also counts a 30-day pass and given plan time (the referral month,
+/// an admin grant). Neither of those ever writes `status`, so a pass holder
+/// reads `status: 'inactive'` here while every AI feature works for them.
+/// `entitled`, `entitlementReason` and `accessEndsAt` carry the server's real
+/// answer; they are optional because `/auth/me` does not send them yet, and
+/// until it does the UI must not assert "no plan" from `status` alone.
 @freezed
 abstract class SubscriptionState with _$SubscriptionState {
   const SubscriptionState._();
 
   const factory SubscriptionState({
-    /// `'active'` while the plan is paid up. Anything else — including null for
-    /// an account that has never paid — is treated as inactive.
+    /// `'active'` while a recurring subscription is paid up. Null for an
+    /// account that never subscribed, `'inactive'` / `'cancelled'` otherwise.
     String? status,
 
-    /// `'subscription'` (autopay mandate) or `'onetime'` (a single XP top-up).
+    /// `'subscription'` (autopay mandate) or `'onetime'` (the 30-day pass:
+    /// paid once, 30 days of the plan, no renewal).
     String? paymentMode,
     DateTime? currentPeriodEnd,
+
+    /// The server's entitlement verdict. Null when the server did not say
+    /// (every build of `/auth/me` before it exposes `resolveEntitlement`).
+    bool? entitled,
+
+    /// `subscription_active` | `recent_purchase` | `granted` |
+    /// `never_subscribed` | `lapsed`, as `EntitlementReason` on the server.
+    String? entitlementReason,
+
+    /// When the current access ends, for a pass or given plan time.
+    DateTime? accessEndsAt,
   }) = _SubscriptionState;
 
   factory SubscriptionState.fromJson(Map<String, dynamic> json) =>
       _$SubscriptionStateFromJson(json);
 
-  bool get isActive => status == 'active';
+  /// The server's verdict when it sent one; otherwise the recurring status,
+  /// which is the only kind of plan the old payload can show.
+  bool get isActive => entitled ?? status == 'active';
+
+  /// True when we cannot tell whether the user has a plan: the server sent no
+  /// verdict and the recurring status is not active. A pass or a given month
+  /// looks exactly like this, so the UI must hedge rather than say "no plan".
+  bool get isUnknown => entitled == null && status != 'active';
+
+  /// The plan is a pass or given time rather than a recurring subscription.
+  bool get isGranted => entitlementReason == 'granted';
 
   /// True when the plan renews on its own. The web shows "cancel anytime"
-  /// copy only on this branch.
-  bool get isRecurring => paymentMode == 'subscription';
+  /// copy only on this branch. A known non-subscription reason wins over a
+  /// stale `paymentMode`: a lapsed subscriber holding a pass is not renewing.
+  bool get isRecurring {
+    if (entitlementReason != null) {
+      return entitlementReason == 'subscription_active';
+    }
+    return paymentMode == 'subscription';
+  }
+
+  /// When access ends, for anything that does not renew.
+  DateTime? get endsAt => accessEndsAt ?? currentPeriodEnd;
 }
 
 /// The whole `/auth/me` payload.
@@ -263,21 +302,6 @@ abstract class GeoPricing with _$GeoPricing {
   /// country's is not, and saying so is the difference between a correct
   /// price and a surprise at checkout.
   String get taxNote => isIndia ? 'incl. 18% GST' : '18% GST excluded';
-}
-
-/// The XP balance from `GET /user/xp`.
-///
-/// The endpoint also returns the last twenty transactions and the XP config
-/// map; Settings needs neither, so they are not modelled here. The ledger
-/// belongs to whichever screen actually renders it.
-@freezed
-abstract class XpSummary with _$XpSummary {
-  const XpSummary._();
-
-  const factory XpSummary({@Default(0) int balance}) = _XpSummary;
-
-  factory XpSummary.fromJson(Map<String, dynamic> json) =>
-      _$XpSummaryFromJson(json);
 }
 
 /// The outcome of a browser hand-off started from Settings (LinkedIn, Slack,

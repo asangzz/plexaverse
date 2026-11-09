@@ -64,7 +64,7 @@ class _ZaveStyleguidePageState extends State<ZaveStyleguidePage> {
             ('green · done', ZaveColors.green),
             ('mint', ZaveColors.mint),
             ('amber · waiting', ZaveColors.amber),
-            ('blue · XP', ZaveColors.blue),
+            ('blue · upgrade', ZaveColors.blue),
             ('peri · links', ZaveColors.peri),
             ('sched · queued', ZaveColors.scheduled),
             ('ink · on white', ZaveColors.ink),
@@ -111,7 +111,7 @@ class _ZaveStyleguidePageState extends State<ZaveStyleguidePage> {
           _section('06', 'Buttons'),
           Text(
             'Solid white is the one primary action on a screen. Blue is only '
-            'the XP / upgrade path. Everything is a full pill.',
+            'the plan / upgrade path. Everything is a full pill.',
             style: ZaveType.bodyMuted,
           ),
           SizedBox(height: ZaveSpace.lg),
@@ -126,7 +126,7 @@ class _ZaveStyleguidePageState extends State<ZaveStyleguidePage> {
                 onPressed: () {},
               ),
               ZaveButton(label: 'Cancel', onPressed: () {}),
-              ZaveButton.brand(label: 'Get XP', onPressed: () {}),
+              ZaveButton.brand(label: 'Upgrade', onPressed: () {}),
               ZaveButton(label: 'Disabled', onPressed: null),
               ZaveButton(label: 'Saving', busy: true, onPressed: () {}),
               ZaveIconButton(icon: const Icon(AppIcons.more), onPressed: () {}),

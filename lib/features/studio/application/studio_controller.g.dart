@@ -8,33 +8,36 @@ part of 'studio_controller.dart';
 
 // GENERATED CODE - DO NOT MODIFY BY HAND
 // ignore_for_file: type=lint, type=warning
-/// Whether Studio is unlocked.
+/// Whether Studio is open to this user.
 ///
-/// Every Studio surface watches this, so it is the one place the XP gate is
-/// decided. Kept as its own controller rather than folded into the library so
-/// that unlocking re-renders the gate without re-fetching the design list —
-/// and so the list's own failure cannot be mistaken for "you don't have
-/// access", which is the confusing failure this split exists to prevent.
+/// Every Studio surface watches this, so it is the one place the gate is
+/// decided. Studio comes with every plan (10 Nov 2026 — the one-time XP
+/// unlock is gone), so `hasAccess` is the plan check. Kept as its own
+/// controller rather than folded into the library so the list's own failure
+/// cannot be mistaken for "you don't have access", which is the confusing
+/// failure this split exists to prevent.
 
 @ProviderFor(StudioAccessController)
 final studioAccessControllerProvider = StudioAccessControllerProvider._();
 
-/// Whether Studio is unlocked.
+/// Whether Studio is open to this user.
 ///
-/// Every Studio surface watches this, so it is the one place the XP gate is
-/// decided. Kept as its own controller rather than folded into the library so
-/// that unlocking re-renders the gate without re-fetching the design list —
-/// and so the list's own failure cannot be mistaken for "you don't have
-/// access", which is the confusing failure this split exists to prevent.
+/// Every Studio surface watches this, so it is the one place the gate is
+/// decided. Studio comes with every plan (10 Nov 2026 — the one-time XP
+/// unlock is gone), so `hasAccess` is the plan check. Kept as its own
+/// controller rather than folded into the library so the list's own failure
+/// cannot be mistaken for "you don't have access", which is the confusing
+/// failure this split exists to prevent.
 final class StudioAccessControllerProvider
     extends $AsyncNotifierProvider<StudioAccessController, StudioAccess> {
-  /// Whether Studio is unlocked.
+  /// Whether Studio is open to this user.
   ///
-  /// Every Studio surface watches this, so it is the one place the XP gate is
-  /// decided. Kept as its own controller rather than folded into the library so
-  /// that unlocking re-renders the gate without re-fetching the design list —
-  /// and so the list's own failure cannot be mistaken for "you don't have
-  /// access", which is the confusing failure this split exists to prevent.
+  /// Every Studio surface watches this, so it is the one place the gate is
+  /// decided. Studio comes with every plan (10 Nov 2026 — the one-time XP
+  /// unlock is gone), so `hasAccess` is the plan check. Kept as its own
+  /// controller rather than folded into the library so the list's own failure
+  /// cannot be mistaken for "you don't have access", which is the confusing
+  /// failure this split exists to prevent.
   StudioAccessControllerProvider._()
     : super(
         from: null,
@@ -55,15 +58,16 @@ final class StudioAccessControllerProvider
 }
 
 String _$studioAccessControllerHash() =>
-    r'fb59f80e32e37f633e2d46c637266ba8bf03298e';
+    r'0683e07b71c7c1183102f0690b900763b76fe099';
 
-/// Whether Studio is unlocked.
+/// Whether Studio is open to this user.
 ///
-/// Every Studio surface watches this, so it is the one place the XP gate is
-/// decided. Kept as its own controller rather than folded into the library so
-/// that unlocking re-renders the gate without re-fetching the design list —
-/// and so the list's own failure cannot be mistaken for "you don't have
-/// access", which is the confusing failure this split exists to prevent.
+/// Every Studio surface watches this, so it is the one place the gate is
+/// decided. Studio comes with every plan (10 Nov 2026 — the one-time XP
+/// unlock is gone), so `hasAccess` is the plan check. Kept as its own
+/// controller rather than folded into the library so the list's own failure
+/// cannot be mistaken for "you don't have access", which is the confusing
+/// failure this split exists to prevent.
 
 abstract class _$StudioAccessController extends $AsyncNotifier<StudioAccess> {
   FutureOr<StudioAccess> build();

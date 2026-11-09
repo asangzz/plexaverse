@@ -6,6 +6,7 @@ import '../../../core/config/env.dart';
 import '../../../core/network/api_paths.dart';
 import '../../../core/network/dio_client.dart';
 import '../../../core/network/failure.dart';
+import '../../../core/plan/plan_refusal.dart';
 import '../domain/compose_draft.dart';
 import '../domain/compose_models.dart';
 import '../domain/compose_repository.dart';
@@ -30,19 +31,29 @@ class ApiComposeRepository implements ComposeRepository {
   /// This is the whole reason the application layer can `on ComposeFailure
   /// catch (e)` and show one amber card: without it, each controller method
   /// would have to know that a `DioException` carries a [Failure] on `.error`,
-  /// and the 402 branch would end up duplicated at five call sites.
+  /// and the plan-refusal branch would end up duplicated at five call sites.
   Future<T> _guard<T>(Future<T> Function() run) async {
     try {
       return await run();
     } on DioException catch (e) {
+      // The plan gate first: its 402 carries details (when a limit resets)
+      // that the generic [Failure] mapping drops.
+      final PlanRefusal? refusal = PlanRefusal.fromDioException(e);
       final Object? inner = e.error;
+      if (refusal != null) {
+        return Future<T>.error(
+          ComposeFailure(
+            refusal.displayMessage(),
+            refusal: refusal,
+            code: inner is Failure ? inner.errorCode : null,
+          ),
+        );
+      }
       if (inner is Failure) {
-        final String? code = inner.errorCode;
         return Future<T>.error(
           ComposeFailure(
             inner.message ?? _defaultMessage(inner),
-            insufficientXp: code == 'INSUFFICIENT_XP',
-            code: code,
+            code: inner.errorCode,
           ),
         );
       }

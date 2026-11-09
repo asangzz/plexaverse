@@ -6,6 +6,7 @@ import '../../../core/config/env.dart';
 import '../../../core/network/api_paths.dart';
 import '../../../core/network/dio_client.dart';
 import '../../../core/network/failure.dart';
+import '../../../core/plan/plan_refusal.dart';
 import '../domain/ai_tool_failure.dart';
 import '../domain/ai_tools_repository.dart';
 import '../domain/festive_template.dart';
@@ -30,19 +31,29 @@ class ApiAiToolsRepository implements AiToolsRepository {
   /// This is the whole reason the three controllers can `on AiToolFailure
   /// catch (e)` and render one amber card: without it, each of them would have
   /// to know that a `DioException` carries a [Failure] on `.error`, and the
-  /// 402 branch would be duplicated at four call sites.
+  /// plan-refusal branch would be duplicated at four call sites.
   Future<T> _guard<T>(Future<T> Function() run) async {
     try {
       return await run();
     } on DioException catch (e) {
+      // The plan gate first: its 402 carries details (when a limit resets)
+      // that the generic [Failure] mapping drops.
+      final PlanRefusal? refusal = PlanRefusal.fromDioException(e);
       final Object? inner = e.error;
+      if (refusal != null) {
+        return Future<T>.error(
+          AiToolFailure(
+            refusal.displayMessage(),
+            refusal: refusal,
+            code: inner is Failure ? inner.errorCode : null,
+          ),
+        );
+      }
       if (inner is Failure) {
-        final String? code = inner.errorCode;
         return Future<T>.error(
           AiToolFailure(
             inner.message ?? _defaultMessage(inner),
-            insufficientXp: code == 'INSUFFICIENT_XP',
-            code: code,
+            code: inner.errorCode,
           ),
         );
       }
@@ -65,7 +76,7 @@ class ApiAiToolsRepository implements AiToolsRepository {
     // someone to check a connection that demonstrably worked.
     TimeoutFailure() =>
       'That took longer than expected. It may still have gone through — '
-      'check before trying again.',
+          'check before trying again.',
     AuthFailure() => 'Your session expired. Sign in again.',
     NotFoundFailure() => 'That is no longer available.',
     ValidationFailure() => 'Some details were rejected. Check and try again.',
