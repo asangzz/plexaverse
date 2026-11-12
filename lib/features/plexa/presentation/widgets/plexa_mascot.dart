@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:video_player/video_player.dart';
 
 import 'plexa_clips.dart';
+import 'retire_video.dart';
 
 /// Plexa, the cockatiel, playing whichever clip the screen asks for.
 ///
@@ -168,7 +169,8 @@ class _PlexaMascotState extends State<PlexaMascot> {
   @override
   void dispose() {
     for (final VideoPlayerController player in _players.values) {
-      unawaited(player.dispose());
+      // Not a bare dispose(): see retireVideo.
+      retireVideo(player);
     }
     super.dispose();
   }

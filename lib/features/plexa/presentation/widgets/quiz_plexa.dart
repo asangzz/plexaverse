@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:video_player/video_player.dart';
 
 import 'plexa_moments.dart';
+import 'retire_video.dart';
 
 export 'plexa_moments.dart' show QuizMood;
 
@@ -232,7 +233,9 @@ class _QuizPlexaState extends State<QuizPlexa> {
         in _players.entries) {
       final VoidCallback? tick = _ticks[e.key];
       if (tick != null) e.value.removeListener(tick);
-      unawaited(e.value.dispose());
+      // Not a bare dispose(): leaving as a reaction ends would dispose it
+      // under the plugin's own end-of-clip seek. See retireVideo.
+      retireVideo(e.value);
     }
     super.dispose();
   }

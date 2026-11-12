@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:video_player/video_player.dart';
 
 import 'plexa_moments.dart';
+import 'retire_video.dart';
 
 export 'plexa_moments.dart' show PlexaMomentClip;
 
@@ -137,6 +138,7 @@ class _PlexaMomentState extends State<PlexaMoment> {
       setState(() => _ended = true);
       // The still is the frame it ended on, so the player has nothing left
       // to show — let its decoder go once the still has replaced it.
+      // retireVideo waits out the plugin's own end-of-clip seek first.
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (_player == player) _release();
       });
@@ -144,13 +146,14 @@ class _PlexaMomentState extends State<PlexaMoment> {
   }
 
   /// Lets the current player go. The [VideoPlayer] drawing it leaves the
-  /// tree in the same frame, before the controller's own async dispose ends.
+  /// tree in the same frame, before the controller is disposed (see
+  /// [retireVideo] for why that waits).
   void _release() {
     final VideoPlayerController? player = _player;
     if (player == null) return;
     _player = null;
     player.removeListener(_onTick);
-    unawaited(player.dispose());
+    retireVideo(player);
   }
 
   @override
