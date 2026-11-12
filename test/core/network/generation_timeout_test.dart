@@ -79,6 +79,24 @@ void main() {
       }
     });
 
+    test('the contest and placement model calls qualify too', () {
+      // None of these says "ai" in its path. Opening the lesson writes the
+      // day's personal questions; the comment level and the connect targets
+      // are GETs that build the day on first open; writing is graded.
+      for (final String path in <String>[
+        '/contest/lesson',
+        '/contest/tasks/comment',
+        '/contest/tasks/connect',
+        '/placement/writing',
+      ]) {
+        expect(
+          through(path).receiveTimeout,
+          NetworkConfig.generationReceiveTimeout,
+          reason: '$path runs a model and would be cut off at 30s',
+        );
+      }
+    });
+
     test('an ordinary read keeps the short budget', () {
       // The long budget is not a free upgrade: a dashboard fetch that hangs
       // for two minutes is a worse experience than one that fails in thirty.
@@ -87,6 +105,12 @@ void main() {
         '/posts',
         '/user/preferences',
         '/linkedin/accounts',
+        // The contest's plain reads stay fast: the overview, the path and the
+        // board come back from the database alone.
+        '/contest',
+        '/contest/path',
+        '/contest/board',
+        '/placement',
       ]) {
         expect(
           through(path).receiveTimeout,

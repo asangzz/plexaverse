@@ -479,41 +479,41 @@ abstract class _$ConnectionsController extends $AsyncNotifier<ConnectionBatch> {
   }
 }
 
-/// Claiming the roadmap step's XP.
+/// Completing the roadmap step.
 ///
 /// Its own notifier rather than a flag on either batch controller, because the
 /// write is about the ROADMAP, not about the batch: it must survive a batch
 /// refresh, and it invalidates [engagementProgressProvider] so the step comes
 /// back marked complete without a second round of guessing on the client.
 ///
-/// Not optimistic. Awarding XP in the UI before the server has recorded it is
-/// the one thing a gamified surface must never get wrong — a step that looks
+/// Not optimistic. Marking a step done in the UI before the server has
+/// recorded it is the one thing a gamified surface must never get wrong — a step that looks
 /// claimed but was not is a support ticket, and the write is a single fast POST.
 
 @ProviderFor(StepCompletion)
 final stepCompletionProvider = StepCompletionProvider._();
 
-/// Claiming the roadmap step's XP.
+/// Completing the roadmap step.
 ///
 /// Its own notifier rather than a flag on either batch controller, because the
 /// write is about the ROADMAP, not about the batch: it must survive a batch
 /// refresh, and it invalidates [engagementProgressProvider] so the step comes
 /// back marked complete without a second round of guessing on the client.
 ///
-/// Not optimistic. Awarding XP in the UI before the server has recorded it is
-/// the one thing a gamified surface must never get wrong — a step that looks
+/// Not optimistic. Marking a step done in the UI before the server has
+/// recorded it is the one thing a gamified surface must never get wrong — a step that looks
 /// claimed but was not is a support ticket, and the write is a single fast POST.
 final class StepCompletionProvider
     extends $AsyncNotifierProvider<StepCompletion, bool> {
-  /// Claiming the roadmap step's XP.
+  /// Completing the roadmap step.
   ///
   /// Its own notifier rather than a flag on either batch controller, because the
   /// write is about the ROADMAP, not about the batch: it must survive a batch
   /// refresh, and it invalidates [engagementProgressProvider] so the step comes
   /// back marked complete without a second round of guessing on the client.
   ///
-  /// Not optimistic. Awarding XP in the UI before the server has recorded it is
-  /// the one thing a gamified surface must never get wrong — a step that looks
+  /// Not optimistic. Marking a step done in the UI before the server has
+  /// recorded it is the one thing a gamified surface must never get wrong — a step that looks
   /// claimed but was not is a support ticket, and the write is a single fast POST.
   StepCompletionProvider._()
     : super(
@@ -536,15 +536,15 @@ final class StepCompletionProvider
 
 String _$stepCompletionHash() => r'4695bf45c4533cf2061a1ad38870234360d9d61d';
 
-/// Claiming the roadmap step's XP.
+/// Completing the roadmap step.
 ///
 /// Its own notifier rather than a flag on either batch controller, because the
 /// write is about the ROADMAP, not about the batch: it must survive a batch
 /// refresh, and it invalidates [engagementProgressProvider] so the step comes
 /// back marked complete without a second round of guessing on the client.
 ///
-/// Not optimistic. Awarding XP in the UI before the server has recorded it is
-/// the one thing a gamified surface must never get wrong — a step that looks
+/// Not optimistic. Marking a step done in the UI before the server has
+/// recorded it is the one thing a gamified surface must never get wrong — a step that looks
 /// claimed but was not is a support ticket, and the write is a single fast POST.
 
 abstract class _$StepCompletion extends $AsyncNotifier<bool> {

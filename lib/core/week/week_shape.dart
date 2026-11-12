@@ -56,11 +56,10 @@ enum DayKind {
 
   /// What this day produces, in the words the user sees.
   ///
-  /// Mirrors `madeThing` in the web's `learn.service.ts`. The Learn player
-  /// called all three a "post" — "Write my post" on a Wednesday — which was
-  /// wrong before it was confusing, because only two of the five climbable
-  /// days become a Post at all. `rest` falls to "post" only because nothing
-  /// is ever written on a rest day and the string is never reached.
+  /// Calling all three a "post" — "Write my post" on a Wednesday — is wrong
+  /// before it is confusing, because only two of the five working days become
+  /// a Post at all. `rest` falls to "post" only because nothing is ever
+  /// written on a rest day and the string is never reached.
   String get madeThing => switch (this) {
     DayKind.videoScript => 'script',
     DayKind.article => 'newsletter',

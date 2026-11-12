@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 
 import '../../../../core/responsive/screen_util.dart';
 import '../../../../core/ui/zave/zave_kit.dart';
@@ -7,7 +8,15 @@ import '../../domain/roadmap_planets.dart';
 import '../roadmap_status_ui.dart';
 import 'planet_node.dart';
 
-/// The 66-day solar system: a vertical scroll from the sun to the Milky Way.
+/// The journey's solar system: a vertical scroll from the sun to the Milky
+/// Way.
+///
+/// ## A calendar, not a control
+///
+/// Since 12 Nov 2026 a day opens nothing. The day's work moved to the
+/// contest's daily path, so the rows are markers — behind, today, ahead
+/// ([roadmapDayStatus]) — and scrolling only moves the orbit of the planet the
+/// centred day belongs to. The timeline opens on today.
 ///
 /// ## How the sticky planet is done
 ///
@@ -23,8 +32,18 @@ import 'planet_node.dart';
 /// stickyTop = max(segmentTop, min(scrollOffset, segmentBottom - viewportH))
 /// ```
 ///
-/// The overlay ignores pointers, so taps still land on the day rows underneath
-/// — which is the web's z-order too (rows are `z-index: 11`, the globe is 10).
+/// The overlay ignores pointers; nothing under it takes a tap any more either,
+/// but the scroll has to reach the column beneath.
+///
+/// ## Rows are placed by INDEX, never by day number
+///
+/// The rows are a window (today − 13 … today + 7, see [buildRoadmap]), so
+/// the first row is day 1 only for the first fortnight of a journey. Every
+/// offset here is counted from the window's first day. This used to compute
+/// `(day − 1) × row`, which held while the arc was 66 days and unwindowed;
+/// from day 15 it opened the timeline past today (from day 21, on the
+/// window's last row), and drew each planet as many rows below its days as
+/// the window had skipped — off the screen entirely.
 ///
 /// ## Where the heights come from
 ///
@@ -44,19 +63,17 @@ import 'planet_node.dart';
 class RoadmapTimeline extends StatefulWidget {
   const RoadmapTimeline({
     required this.levels,
-    required this.selectedDay,
-    required this.onSelectDay,
+    required this.today,
     required this.topInset,
     super.key,
   });
 
+  /// The windowed days, in order and without gaps. Never empty.
   final List<RoadmapLevel> levels;
 
-  /// The day the mission panel is showing. The timeline scrolls it to the
-  /// centre when it changes from outside.
-  final int selectedDay;
-
-  final ValueChanged<int> onSelectDay;
+  /// Today's day of the journey. Every status is read against it, and the
+  /// timeline opens on it.
+  final int today;
 
   /// Height of the sticky header above this widget. The timeline is a
   /// fixed-height instrument rather than a document, so it starts BELOW the
@@ -76,6 +93,11 @@ class _RoadmapTimelineState extends State<RoadmapTimeline> {
   double _viewport = 0;
   bool _placed = false;
 
+  /// The day nearest the viewport's centre once a scroll settles. Drives the
+  /// orbit of its planet and nothing else — the web's `activeLevelId`, which
+  /// "follows the scroll" and opens nothing.
+  late int _centredDay = widget.today;
+
   @override
   void dispose() {
     _scroll.dispose();
@@ -85,15 +107,22 @@ class _RoadmapTimelineState extends State<RoadmapTimeline> {
   @override
   void didUpdateWidget(RoadmapTimeline oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (oldWidget.selectedDay != widget.selectedDay &&
-        _centredDay() != widget.selectedDay) {
-      _scrollToDay(widget.selectedDay, animate: true);
+    // The day turned over while the screen was open (or a refresh moved it):
+    // follow today, as opening the screen would.
+    if (oldWidget.today != widget.today) {
+      _centredDay = widget.today;
+      _scrollToIndex(_indexOfDay(widget.today), animate: true);
     }
   }
 
-  /// Content-space offset that puts day [day]'s row in the viewport's middle.
-  double _offsetForDay(int day) =>
-      (_spacer + (day - 1) * _rowHeight + _rowHeight / 2 - _viewport / 2).clamp(
+  /// Row index of [day] in the window, clamped to it — a today past the end
+  /// of the journey parks on the last row rather than off the end.
+  int _indexOfDay(int day) =>
+      (day - widget.levels.first.id).clamp(0, widget.levels.length - 1);
+
+  /// Content-space offset that puts row [index] in the viewport's middle.
+  double _offsetForIndex(int index) =>
+      (_spacer + index * _rowHeight + _rowHeight / 2 - _viewport / 2).clamp(
         0.0,
         _maxScroll,
       );
@@ -103,18 +132,18 @@ class _RoadmapTimelineState extends State<RoadmapTimeline> {
 
   double get _offset => _scroll.hasClients ? _scroll.offset : 0;
 
-  /// Which day is nearest the viewport's centre right now. The web picks the
+  /// Which row is nearest the viewport's centre right now. The web picks the
   /// row whose centre is closest; so does this.
-  int _centredDay() {
-    if (_rowHeight <= 0) return widget.selectedDay;
+  int _centredIndex() {
+    if (_rowHeight <= 0) return _indexOfDay(_centredDay);
     final double raw =
         (_offset + _viewport / 2 - _spacer - _rowHeight / 2) / _rowHeight;
-    return (raw.round() + 1).clamp(1, widget.levels.length);
+    return raw.round().clamp(0, widget.levels.length - 1);
   }
 
-  void _scrollToDay(int day, {required bool animate}) {
+  void _scrollToIndex(int index, {required bool animate}) {
     if (!_scroll.hasClients || _rowHeight <= 0) return;
-    final double target = _offsetForDay(day);
+    final double target = _offsetForIndex(index);
     if ((target - _offset).abs() < 1) return;
     if (animate) {
       _scroll.animateTo(
@@ -130,13 +159,14 @@ class _RoadmapTimelineState extends State<RoadmapTimeline> {
   /// Snap-to-nearest once the fling has settled.
   ///
   /// The web relies on CSS `scroll-snap-type: y mandatory` and listens for
-  /// `scrollend` to pick the selected day. Flutter has no scroll snapping at
+  /// `scrollend` to name the centred day. Flutter has no scroll snapping at
   /// half-viewport granularity, so the settle handler does both jobs: it names
   /// the centred day and eases it exactly onto centre.
   bool _onScrollEnd(ScrollEndNotification notification) {
-    final int day = _centredDay();
-    if (day != widget.selectedDay) widget.onSelectDay(day);
-    _scrollToDay(day, animate: true);
+    final int index = _centredIndex();
+    final int day = widget.levels[index].id;
+    if (day != _centredDay) setState(() => _centredDay = day);
+    _scrollToIndex(index, animate: true);
     return false;
   }
 
@@ -160,7 +190,9 @@ class _RoadmapTimelineState extends State<RoadmapTimeline> {
             // that reads as the screen moving under you, so this places the
             // viewport before the first frame is seen.
             WidgetsBinding.instance.addPostFrameCallback((_) {
-              if (mounted) _scrollToDay(widget.selectedDay, animate: false);
+              if (mounted) {
+                _scrollToIndex(_indexOfDay(widget.today), animate: false);
+              }
             });
           }
 
@@ -184,7 +216,10 @@ class _RoadmapTimelineState extends State<RoadmapTimeline> {
                           left: 0,
                           right: 0,
                           child: Center(
-                            child: _ProgressionLine(levels: widget.levels),
+                            child: _ProgressionLine(
+                              levels: widget.levels,
+                              today: widget.today,
+                            ),
                           ),
                         ),
                         Positioned(
@@ -199,7 +234,7 @@ class _RoadmapTimelineState extends State<RoadmapTimeline> {
                           top: ZaveSpace.section + ZaveSpace.xxl,
                           left: 0,
                           right: 0,
-                          child: const _ThematicHeader(),
+                          child: _ThematicHeader(today: widget.today),
                         ),
                         for (int i = 0; i < widget.levels.length; i++)
                           Positioned(
@@ -209,8 +244,10 @@ class _RoadmapTimelineState extends State<RoadmapTimeline> {
                             height: _rowHeight,
                             child: _DayRow(
                               level: widget.levels[i],
-                              onTap: () =>
-                                  widget.onSelectDay(widget.levels[i].id),
+                              status: roadmapDayStatus(
+                                widget.levels[i].id,
+                                widget.today,
+                              ),
                             ),
                           ),
                       ],
@@ -225,7 +262,8 @@ class _RoadmapTimelineState extends State<RoadmapTimeline> {
                     builder: (BuildContext context, Widget? _) =>
                         _PlanetOverlay(
                           levels: widget.levels,
-                          selectedDay: widget.selectedDay,
+                          today: widget.today,
+                          centredDay: _centredDay,
                           rowHeight: _rowHeight,
                           spacer: _spacer,
                           viewport: _viewport,
@@ -246,7 +284,8 @@ class _RoadmapTimelineState extends State<RoadmapTimeline> {
 class _PlanetOverlay extends StatelessWidget {
   const _PlanetOverlay({
     required this.levels,
-    required this.selectedDay,
+    required this.today,
+    required this.centredDay,
     required this.rowHeight,
     required this.spacer,
     required this.viewport,
@@ -254,7 +293,8 @@ class _PlanetOverlay extends StatelessWidget {
   });
 
   final List<RoadmapLevel> levels;
-  final int selectedDay;
+  final int today;
+  final int centredDay;
   final double rowHeight;
   final double spacer;
   final double viewport;
@@ -275,7 +315,10 @@ class _PlanetOverlay extends StatelessWidget {
       firstDay = lastDay + 1;
       if (segment.isEmpty) continue;
 
-      final double segmentTop = spacer + (segment.first.id - 1) * rowHeight;
+      // Counted from the window's first row, not from day 1 — see the class
+      // doc on RoadmapTimeline.
+      final double segmentTop =
+          spacer + (segment.first.id - levels.first.id) * rowHeight;
       final double segmentBottom = segmentTop + segment.length * rowHeight;
 
       // `position: sticky; top: 0`, written out.
@@ -287,11 +330,11 @@ class _PlanetOverlay extends StatelessWidget {
       final double centreY = stickyTop + viewport / 2 - offset;
       if (centreY < -viewport || centreY > viewport * 2) continue;
 
-      // The day whose orbit fraction the ring shows: the selected one when it
+      // The day whose orbit fraction the ring shows: the centred one when it
       // is inside this segment, otherwise the segment's first day — exactly
       // the web's `activeInSegment ?? segmentLevels[0]`.
       final RoadmapLevel display = segment.firstWhere(
-        (RoadmapLevel l) => l.id == selectedDay,
+        (RoadmapLevel l) => l.id == centredDay,
         orElse: () => segment.first,
       );
 
@@ -321,107 +364,102 @@ class _PlanetOverlay extends StatelessWidget {
   // the wrong sphere.
   double _planetRowHeight(String key) => (planetVisual(key).ring + 40).r;
 
-  /// One status for the whole leg.
-  ///
-  /// The web reduces the segment the same way and in this order: every day
-  /// locked → locked; every day done → completed; any day today → active;
-  /// otherwise missed. Order matters — a leg with one missed day and one live
-  /// day reads as ACTIVE, because the live day is the one the user can still
-  /// act on.
+  /// One status for the whole leg, reduced as the web reduces it: every day
+  /// ahead → locked; every day behind → completed; otherwise the leg holds
+  /// today and is active. The window is contiguous and always contains today,
+  /// so a drawn leg is one of the three.
   LevelStatus _segmentStatus(List<RoadmapLevel> segment) {
-    if (segment.every((RoadmapLevel l) => l.status == LevelStatus.locked)) {
+    LevelStatus of(RoadmapLevel l) => roadmapDayStatus(l.id, today);
+    if (segment.every((RoadmapLevel l) => of(l) == LevelStatus.locked)) {
       return LevelStatus.locked;
     }
-    if (segment.every((RoadmapLevel l) => l.status == LevelStatus.completed)) {
+    if (segment.every((RoadmapLevel l) => of(l) == LevelStatus.completed)) {
       return LevelStatus.completed;
     }
-    if (segment.any((RoadmapLevel l) => l.status == LevelStatus.active)) {
-      return LevelStatus.active;
-    }
-    return LevelStatus.missed;
+    return LevelStatus.active;
   }
 }
 
 /// One day: a right-aligned status word and day line, stopping clear of the
-/// planet. The whole row is the tap target for selecting that day.
+/// planet.
+///
+/// A marker, not a control. It took the tap that chose which day's missions
+/// the sheet showed; the missions are the contest's now, so there is nothing
+/// for a tap to open.
 class _DayRow extends StatelessWidget {
-  const _DayRow({required this.level, required this.onTap});
+  const _DayRow({required this.level, required this.status});
 
   final RoadmapLevel level;
-  final VoidCallback onTap;
+  final LevelStatus status;
 
   @override
   Widget build(BuildContext context) {
-    final LevelStatus status = level.status;
     final Color signal = roadmapStatusColor(status);
     final String? label = roadmapStatusLabel(status);
-    final bool emphasised =
-        status == LevelStatus.active || status == LevelStatus.missed;
+    final bool emphasised = status == LevelStatus.active;
     final ctx = planetContextForDay(level.id);
 
-    return GestureDetector(
-      onTap: onTap,
-      behavior: HitTestBehavior.opaque,
-      child: Semantics(
-        button: true,
-        selected: status == LevelStatus.active,
-        label: 'Day ${level.id}, ${level.subtitle}',
-        child: Row(
-          children: <Widget>[
-            Expanded(
-              child: AnimatedOpacity(
-                duration: ZaveMotion.fast,
-                curve: ZaveMotion.curve,
-                opacity: roadmapRowOpacity(status),
-                child: Padding(
-                  // The web's mobile `pr-[60px]` — three Zave gutters, which
-                  // is exactly 60 and keeps the text clear of the widest
-                  // planet (Jupiter's 148px ring).
-                  padding: EdgeInsets.only(right: ZaveSpace.gutter * 3),
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    crossAxisAlignment: CrossAxisAlignment.end,
-                    children: <Widget>[
-                      if (label != null) ...<Widget>[
-                        Text(
-                          label.toUpperCase(),
-                          textAlign: TextAlign.right,
-                          style: ZaveType.spaceGrotesk(
-                            size: _statusLabelSize,
-                            color: signal,
-                            tracking: 0.10 * _statusLabelSize,
-                          ),
-                        ),
-                        SizedBox(height: ZaveSpace.xs),
-                      ],
+    return Semantics(
+      selected: emphasised,
+      label: 'Day ${level.id}, ${level.subtitle}',
+      child: Row(
+        children: <Widget>[
+          Expanded(
+            child: AnimatedOpacity(
+              duration: ZaveMotion.fast,
+              curve: ZaveMotion.curve,
+              opacity: roadmapRowOpacity(status),
+              child: Padding(
+                // The web's mobile `pr-[60px]` — three Zave gutters, which
+                // is exactly 60 and keeps the text clear of the widest
+                // planet (Jupiter's 148px ring).
+                padding: EdgeInsets.only(right: ZaveSpace.gutter * 3),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: <Widget>[
+                    if (label != null) ...<Widget>[
                       Text(
-                        'Day ${ctx.dayInPlanet} of ${ctx.totalDays} — '
-                                '${level.subtitle}'
-                            .toUpperCase(),
+                        label.toUpperCase(),
                         textAlign: TextAlign.right,
-                        style: ZaveType.kicker.copyWith(
-                          fontSize: emphasised
-                              ? _dayLineLargeSize.sp
-                              : _dayLineSize.sp,
-                          fontWeight: emphasised
-                              ? FontWeight.w600
-                              : FontWeight.w400,
-                          letterSpacing: 0.02 * _dayLineSize,
-                          color: status == LevelStatus.locked
-                              ? ZaveColors.ink35
-                              : signal,
+                        style: ZaveType.spaceGrotesk(
+                          size: _statusLabelSize,
+                          // TODAY in its status colour; TRAVELLED quiet,
+                          // so the green day line under it carries the
+                          // state — the web's grey `#a8abb3` label.
+                          color: emphasised ? signal : ZaveColors.ink62,
+                          tracking: 0.10 * _statusLabelSize,
                         ),
                       ),
+                      SizedBox(height: ZaveSpace.xs),
                     ],
-                  ),
+                    Text(
+                      'Day ${ctx.dayInPlanet} of ${ctx.totalDays} — '
+                              '${level.subtitle}'
+                          .toUpperCase(),
+                      textAlign: TextAlign.right,
+                      style: ZaveType.kicker.copyWith(
+                        fontSize: emphasised
+                            ? _dayLineLargeSize.sp
+                            : _dayLineSize.sp,
+                        fontWeight: emphasised
+                            ? FontWeight.w600
+                            : FontWeight.w400,
+                        letterSpacing: 0.02 * _dayLineSize,
+                        color: status == LevelStatus.locked
+                            ? ZaveColors.ink35
+                            : signal,
+                      ),
+                    ),
+                  ],
                 ),
               ),
             ),
-            // The right half is the planet's; the row leaves it empty.
-            const Expanded(child: SizedBox.shrink()),
-          ],
-        ),
+          ),
+          // The right half is the planet's; the row leaves it empty.
+          const Expanded(child: SizedBox.shrink()),
+        ],
       ),
     );
   }
@@ -444,22 +482,25 @@ const double _dayLineLargeSize = 9;
 /// `Array.findLastIndex`, which crashes on iOS 15.0–15.3 and took the whole
 /// dashboard down with it; the scan is kept here for symmetry, not necessity.
 class _ProgressionLine extends StatelessWidget {
-  const _ProgressionLine({required this.levels});
+  const _ProgressionLine({required this.levels, required this.today});
 
   final List<RoadmapLevel> levels;
+  final int today;
 
   @override
   Widget build(BuildContext context) {
+    LevelStatus statusAt(int i) => roadmapDayStatus(levels[i].id, today);
+
     int lastCompleted = -1;
     for (int i = levels.length - 1; i >= 0; i--) {
-      if (levels[i].status == LevelStatus.completed) {
+      if (statusAt(i) == LevelStatus.completed) {
         lastCompleted = i;
         break;
       }
     }
     int activeIdx = -1;
     for (int i = 0; i < levels.length; i++) {
-      if (levels[i].status == LevelStatus.active) {
+      if (statusAt(i) == LevelStatus.active) {
         activeIdx = i;
         break;
       }
@@ -469,7 +510,7 @@ class _ProgressionLine extends StatelessWidget {
     final double green = lastCompleted == -1
         ? 0
         : (lastCompleted / span).clamp(0.0, 1.0);
-    // `(activeIdx + 1) / span` reaches 66/65 on the very last day, and a
+    // `(activeIdx + 1) / span` passes 1.0 when today is the last row, and a
     // gradient stop above 1.0 throws rather than clamping itself.
     final double mint = activeIdx == -1
         ? green
@@ -555,12 +596,22 @@ class _Sun extends StatelessWidget {
   }
 }
 
-/// What the journey is, said once, at the top.
+/// What the journey is, said once, at the top: the phase today falls in and
+/// the follower mark it is working toward.
+///
+/// The web's thematic header, word for word. This used to read "Your 66-day
+/// plan — Show up a little every day — comment, connect, and post", which was
+/// wrong twice over: the journey is a thousand days, and the roadmap no longer
+/// asks for a daily comment or connection.
 class _ThematicHeader extends StatelessWidget {
-  const _ThematicHeader();
+  const _ThematicHeader({required this.today});
+
+  final int today;
 
   @override
   Widget build(BuildContext context) {
+    final RoadmapPhase phase = phaseForDay(today);
+
     return Row(
       children: <Widget>[
         // `left: calc(50% + 20px)` — half the width, then one gutter.
@@ -574,7 +625,7 @@ class _ThematicHeader extends StatelessWidget {
               mainAxisSize: MainAxisSize.min,
               children: <Widget>[
                 Text(
-                  'Your 66-day plan',
+                  phase.name,
                   style: ZaveType.spaceGrotesk(
                     size: 22,
                     weight: FontWeight.w800,
@@ -583,8 +634,11 @@ class _ThematicHeader extends StatelessWidget {
                 ),
                 SizedBox(height: ZaveSpace.xs),
                 Text(
-                  'Show up a little every day — comment, connect, and post on the\n'
-                  'days your week posts — to grow on LinkedIn.',
+                  // `ROADMAP_TOTAL_DAYS` ungrouped and the target grouped,
+                  // exactly as the web prints them.
+                  'Day $today of $roadmapTotalDays — next checkpoint '
+                  '${NumberFormat.decimalPattern('en_US').format(phase.followerTarget)}'
+                  ' followers.',
                   // The web sets this in Manrope; Zave's rule is that Urbanist
                   // reads and Manrope names, and this is a sentence you read —
                   // so it takes the reading face.

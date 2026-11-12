@@ -339,12 +339,12 @@ class _ResultStep extends ConsumerWidget {
     );
   }
 
-  /// Closes the roadmap step and goes home, which is what the web does
-  /// (`router.refresh()` then `router.push('/dashboard')`).
+  /// Closes the roadmap step and goes to the roadmap, which is what the web
+  /// does (`router.refresh()` then `router.push('/roadmap')`).
   ///
   /// The roadmap lives in the home slice, so its provider is invalidated by
-  /// hand here — without that the dashboard would still show the step as
-  /// outstanding until the user pulled to refresh.
+  /// hand here — without that the step would still read as outstanding to
+  /// the engagement screens until the next refresh.
   Future<void> _complete(BuildContext context, WidgetRef ref) async {
     try {
       await ref.read(titleCreatorControllerProvider.notifier).completeQuest();
@@ -354,7 +354,7 @@ class _ResultStep extends ConsumerWidget {
     }
     if (!context.mounted) return;
     ref.invalidate(roadmapProgressControllerProvider);
-    context.go(ZaveRoutes.dashboard);
+    context.go(ZaveRoutes.roadmap);
   }
 }
 

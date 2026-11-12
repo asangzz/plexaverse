@@ -46,13 +46,16 @@ class NetworkConfig {
     '/persona/chat',
     '/persona/harvest',
     '/onboarding/derive-audience',
-    // Learn. Both of these are model calls wearing ordinary clothes:
-    // `/learn/unit` is a GET that BUILDS the day's ladder on first open, and
-    // `/learn/action` runs the whole brand-post pipeline for the draft level.
-    // Under the default read timeout the first open of a day and the only
-    // button that writes the post would both fail on a slow week.
-    '/learn/unit',
-    '/learn/action',
+    // The contest and placement calls that run a model without saying so in
+    // their path. Opening today's lesson writes the personal questions; the
+    // comment level and the connect targets are GETs that BUILD the day on
+    // first open; the placement's writing task is graded by a model. Under
+    // the default read timeout each would fail exactly on the day it was
+    // slow, and the lesson's would fail the day's first open.
+    '/contest/lesson',
+    '/contest/tasks/comment',
+    '/contest/tasks/connect',
+    '/placement/writing',
   ];
 
   /// Whether [path] is served by a model call and so needs

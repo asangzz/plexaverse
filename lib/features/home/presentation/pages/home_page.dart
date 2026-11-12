@@ -7,24 +7,35 @@ import '../../../../core/router/zave_destinations.dart';
 import '../../../../core/router/zave_routes.dart';
 import '../../../../core/ui/app_icons.dart';
 import '../../../../core/ui/zave/zave_kit.dart';
-import '../../../plexa/presentation/plexa_day_sheet.dart';
 import '../../../preferences/application/preferences_controller.dart';
 import '../../../missions/application/journey_controller.dart';
 import '../../../preferences/domain/user_preferences.dart';
+import '../../application/connections_controller.dart';
 import '../../application/home_controllers.dart';
 import '../../domain/roadmap_level.dart';
+import '../../domain/roadmap_progress.dart';
+import '../widgets/connection_checkpoint.dart';
 import '../widgets/follower_checkpoint.dart';
 import '../widgets/home_states.dart';
-import '../widgets/levels_panel.dart';
 import '../widgets/roadmap_timeline.dart';
 
-/// **Home** — the web's `/dashboard`.
+/// **The roadmap** — the web's `/roadmap`, "LinkedIn Personal Branding
+/// Roadmap".
 ///
-/// The landing surface, and the screen the product is actually about: the
-/// 1000-day journey's planet timeline with its mission sheet, at the user's
-/// day of their CURRENT journey. There is one mode. The old Season 2 "black
-/// hole" loop is gone from the product, and a user on journey 2 or later is
-/// simply at their own roadmap day on the same view.
+/// Still called `HomePage` because it was home until the contest took that
+/// place (web, 11 Nov 2026); the router decides where it is mounted, and
+/// renaming the class would only move that decision into a diff.
+///
+/// The 1000-day journey's planet timeline over a sheet of check-ins, at the
+/// user's day of their CURRENT journey. There is one mode. The old Season 2
+/// "black hole" loop is gone from the product, and a user on journey 2 or
+/// later is simply at their own roadmap day on the same view.
+///
+/// **It hands out no daily missions** (web, 12 Nov 2026). The day's comment,
+/// connection and post moved to the contest's daily path, so the "Open Plexa"
+/// day chat and the missions panel are gone, a day row opens nothing, and the
+/// sheet holds the two numbers the long view runs on: followers, and the
+/// weekly connection count.
 ///
 /// Day 1000 is a finish line. When the journey is finished this screen still
 /// renders normally, and offers the journey-complete screen once per app
@@ -34,7 +45,7 @@ import '../widgets/roadmap_timeline.dart';
 /// used to fire an eight-query dashboard fetch here whose result was never
 /// drawn, and blocked first paint on it; it was removed, and re-adding one on
 /// mobile would re-import the same mistake. What this screen asks the server
-/// for is the roadmap and the preferences — nothing else.
+/// for is the roadmap, the preferences and the two check-ins — nothing else.
 ///
 /// The wallet XP pill that sat in the top-right corner is gone with wallet XP
 /// itself: the plan pays for AI features now, and "XP" means only the contest
@@ -85,7 +96,7 @@ class _HomeBody extends ConsumerWidget {
 /// Offers the journey-complete screen once per app session when the journey
 /// is finished.
 ///
-/// The web's `/dashboard` redirects a finished user to `/journey-complete`
+/// The web's `/roadmap` redirects a finished user to `/journey-complete`
 /// until they press "Keep going for now", which sets a session cookie. The app
 /// does the same with [journeyCompletePromptProvider], and marks it as soon as
 /// it pushes — back is also "not now", and a home that re-pushed after every
@@ -132,76 +143,64 @@ class _JourneyFinishLineState extends ConsumerState<_JourneyFinishLine> {
   Widget build(BuildContext context) => widget.child;
 }
 
-/// Opens a task's screen.
+/// Opens the planner.
 ///
-/// The link is a web route path verbatim (`/planner?slot=3`, `/comments`,
-/// `/roadmap/headline-hook`). That is the whole point of the byte-identical
-/// route table: the roadmap does not need a translation layer, and a task that
-/// works on the web works here.
-void _start(BuildContext context, String link) {
-  if (link.isEmpty) return;
-
-  // A tab route SWITCHES; everything else pushes.
-  //
-  // This pushed unconditionally, so "Open planner" put a second PlannerPage on
-  // the Plan branch's own stack — back went from the planner to an identical
-  // planner. It was invisible while nothing drew a back button; the moment
-  // ZaveScaffold started showing one, the duplicate had an arrow pointing at
-  // its own twin.
-  //
-  // Compared on the PATH, because roadmap links carry query strings
-  // (`/planner?slot=3`) and those are still that tab, not a new screen. `go`
-  // keeps the query and switches the branch rather than stacking.
-  final String path = Uri.parse(link).path;
-  if (tabRoutes.contains(path)) {
-    context.go(link);
+/// A tab route SWITCHES; everything else pushes. This pushed unconditionally,
+/// so "Open planner" put a second PlannerPage on the Plan branch's own stack —
+/// back went from the planner to an identical planner. It was invisible while
+/// nothing drew a back button; the moment ZaveScaffold started showing one,
+/// the duplicate had an arrow pointing at its own twin. Asked of the tab table
+/// rather than assumed, because which screens are shell branches is the
+/// router's decision, not this screen's.
+void _openPlanner(BuildContext context) {
+  if (tabRoutes.contains(ZaveRoutes.planner)) {
+    context.go(ZaveRoutes.planner);
   } else {
-    context.push(link);
+    context.push(ZaveRoutes.planner);
   }
 }
 
-/// The journey — the planet timeline over a draggable mission sheet.
+/// The journey — the planet timeline over a draggable check-in sheet.
 class _JourneyBody extends ConsumerWidget {
   const _JourneyBody({required this.topInset});
 
   final double topInset;
 
   /// The web's mobile split: a `58vh` scroll column with a sheet over it,
-  /// expanding to `82vh`. Kept as ratios rather than viewport heights so they
-  /// survive whatever chrome the shell puts above and below.
+  /// `40vh` collapsed and `82vh` expanded. Kept as ratios rather than viewport
+  /// heights so they survive whatever chrome the shell puts above and below.
   ///
-  /// The collapsed size is 0.56 rather than the web's 0.40, and the extra is
-  /// spent on one thing: a whole step card, numeral included.
-  ///
-  /// The live step is now the screen's action — there is no button repeating
-  /// it — so a card you have to drag the sheet open to read is an action in a
-  /// drawer. What the extra covers is the empty stretch of timeline between
-  /// the orbit and the sheet, which was carrying nothing.
+  /// The collapsed size was 0.56 while the sheet led with the day's step card,
+  /// which was the screen's action and had to be readable without a drag. The
+  /// two check-ins are all the sheet holds now, as on the web, so it is the
+  /// web's 0.40 again and the timeline gets its space back.
   static const double _timelineFraction = 0.58;
-  static const double _sheetCollapsed = 0.56;
+  static const double _sheetCollapsed = 0.40;
   static const double _sheetExpanded = 0.82;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final AsyncValue<RoadmapProgress> progress = ref.watch(
+      roadmapProgressControllerProvider,
+    );
     final AsyncValue<List<RoadmapLevel>> levels = ref.watch(
       roadmapLevelsProvider,
     );
-    final AsyncValue<int> activeDay = ref.watch(activeRoadmapDayProvider);
 
     // A VALUE beats a refresh. `isLoading` was checked first, and that is what
-    // made the timeline flicker: `activeRoadmapDay` watches the selected day,
-    // so every scroll that names a new day rebuilds it into a loading state —
-    // and this returned the skeleton, destroying RoadmapTimeline, its
-    // ScrollController and its scroll position, then rebuilding it a frame
-    // later at the new day. On screen that is a white card flashing over the
-    // planet and the timeline jumping instead of scrolling.
+    // made the timeline flicker: every rebuild of a provider this screen
+    // watches passes through a loading state — and this returned the
+    // skeleton, destroying RoadmapTimeline, its ScrollController and its
+    // scroll position, then rebuilding it a frame later. On screen that is a
+    // white card flashing over the planet and the timeline jumping instead of
+    // scrolling.
     //
     // A dependency rebuild KEEPS the previous data: the state is
     // `AsyncLoading(value: …)` with `hasValue` true. So there is a day to draw
     // the whole time, and the skeleton is only for when there genuinely is
     // not one.
-    if (!levels.hasValue || !activeDay.hasValue) {
-      if (levels.hasError || activeDay.hasError) {
+    if (!levels.hasValue || !progress.hasValue) {
+      if (levels.hasError || progress.hasError) {
         return HomeError(
           topInset: topInset,
           onRetry: () =>
@@ -223,11 +222,7 @@ class _JourneyBody extends ConsumerWidget {
       );
     }
 
-    final int selected = activeDay.requireValue;
-    final RoadmapLevel level = days.firstWhere(
-      (RoadmapLevel l) => l.id == selected,
-      orElse: () => days.first,
-    );
+    final int today = progress.requireValue.currentDay;
 
     return LayoutBuilder(
       builder: (BuildContext context, BoxConstraints constraints) {
@@ -242,10 +237,8 @@ class _JourneyBody extends ConsumerWidget {
               height: height * _timelineFraction,
               child: RoadmapTimeline(
                 levels: days,
-                selectedDay: selected,
+                today: today,
                 topInset: topInset,
-                onSelectDay: (int day) =>
-                    ref.read(selectedRoadmapDayProvider.notifier).select(day),
               ),
             ),
             DraggableScrollableSheet(
@@ -254,13 +247,14 @@ class _JourneyBody extends ConsumerWidget {
               maxChildSize: _sheetExpanded,
               snap: true,
               builder: (BuildContext context, ScrollController controller) =>
-                  _MissionSheet(
-                    level: level,
+                  _CheckInSheet(
+                    today: today,
                     controller: controller,
                     onRefresh: () async {
                       ref
                           .read(roadmapProgressControllerProvider.notifier)
                           .refresh();
+                      ref.invalidate(connectionSummaryProvider);
                       await ref.read(roadmapProgressControllerProvider.future);
                     },
                   ),
@@ -272,7 +266,7 @@ class _JourneyBody extends ConsumerWidget {
   }
 }
 
-/// The mission surface, as a sheet.
+/// The check-ins, as a sheet.
 ///
 /// The web renders this as a sticky right-hand card on desktop and a fixed
 /// 40vh/82vh sheet on mobile, expanding once its content is scrolled. A
@@ -284,14 +278,15 @@ class _JourneyBody extends ConsumerWidget {
 /// — the button would slide under the sheet as it opens — so it rides at the
 /// top of the sheet's own content instead, which is where it reads in the same
 /// order.
-class _MissionSheet extends StatelessWidget {
-  const _MissionSheet({
-    required this.level,
+class _CheckInSheet extends StatelessWidget {
+  const _CheckInSheet({
+    required this.today,
     required this.controller,
     required this.onRefresh,
   });
 
-  final RoadmapLevel level;
+  /// Today's day of the journey. The follower card reads its phase off it.
+  final int today;
   final ScrollController controller;
   final Future<void> Function() onRefresh;
 
@@ -338,39 +333,27 @@ class _MissionSheet extends StatelessWidget {
                 ),
               ),
               SizedBox(height: ZaveSpace.lg),
-              // Open Plexa is the primary of the two: it is the day's work,
-              // where the planner is the week's shape. The web mounts the
-              // same chat on its roadmap for the same reason.
-              //
-              // A sheet, not a route. The roadmap stays underneath it, which
-              // is what the web does and what makes closing the chat feel
-              // like putting something down rather than going back.
-              ZaveButton.primary(
-                label: 'Open Plexa',
-                icon: const Icon(AppIcons.sparkle),
+              // The roadmap's one way into the work: the week's shape lives in
+              // the planner, and the day's tasks live in the contest. Full
+              // width, as the web's phone panel draws it.
+              ZaveButton(
+                label: 'Open planner',
+                icon: const Icon(AppIcons.calendar),
+                trailing: const Icon(AppIcons.forward),
                 expand: true,
-                onPressed: () => showPlexaDay(context),
+                onPressed: () => _openPlanner(context),
               ),
+              SizedBox(height: ZaveSpace.xl),
+              // The arc's two instruments. The phase checkpoints ARE follower
+              // counts, and this is the only way one can reach us — so
+              // without it the roadmap names a target it cannot measure the
+              // user against.
+              FollowerCheckpoint(currentDay: today),
               SizedBox(height: ZaveSpace.md),
-              Align(
-                alignment: Alignment.centerRight,
-                child: ZaveButton(
-                  label: 'Open planner',
-                  trailing: const Icon(AppIcons.forward),
-                  onPressed: () => _start(context, '/planner'),
-                ),
-              ),
-              SizedBox(height: ZaveSpace.xl),
-              // Above the day's missions, where the number means something.
-              // The phase checkpoints ARE follower counts, and this is the
-              // only way one can reach us — so without it the roadmap names a
-              // target it cannot measure the user against.
-              FollowerCheckpoint(currentDay: level.id),
-              SizedBox(height: ZaveSpace.xl),
-              LevelsPanel(
-                level: level,
-                onStart: (String link) => _start(context, link),
-              ),
+              // Asked weekly, and standing where the day's missions used to:
+              // connection growth is where the contest's connect and invite
+              // tasks show up over time.
+              const ConnectionCheckpoint(),
             ],
           ),
         ),

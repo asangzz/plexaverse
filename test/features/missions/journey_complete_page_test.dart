@@ -35,11 +35,16 @@ void main() {
   late _RecordingStart start;
   late GoRouter router;
 
-  /// Home underneath, the page pushed over it — the way the app reaches it.
+  /// The roadmap underneath, the page pushed over it — the way the app
+  /// reaches it.
   ///
   /// [deepLink] opens the page as the first location instead, with nothing
-  /// under it, the way a notification or `/season-complete` does. Home is
-  /// then [_GatedHome], which offers the page the way the real home does.
+  /// under it, the way a notification or `/season-complete` does. The roadmap
+  /// is then [_GatedHome], which offers the page the way the real one does.
+  ///
+  /// Hosted at `/roadmap`, because that is where every way off this page
+  /// goes — the web's `router.push('/roadmap')`. `HOME` on screen means "the
+  /// page the user is sent back to", whatever that page is called.
   Future<ProviderContainer> pump(
     WidgetTester tester,
     UserPreferences prefs, {
@@ -57,10 +62,10 @@ void main() {
     router = GoRouter(
       initialLocation: deepLink
           ? ZaveRoutes.journeyComplete
-          : ZaveRoutes.dashboard,
+          : ZaveRoutes.roadmap,
       routes: <RouteBase>[
         GoRoute(
-          path: ZaveRoutes.dashboard,
+          path: ZaveRoutes.roadmap,
           builder: (_, _) => deepLink
               ? const _GatedHome()
               : const Scaffold(body: Text('HOME')),
@@ -224,8 +229,8 @@ void main() {
     await tester.binding.handlePopRoute();
     await tester.pumpAndSettle();
     // Nothing under a cold deep link: the app is backgrounded, and coming
-    // back lands on home.
-    router.go(ZaveRoutes.dashboard);
+    // back lands on the roadmap.
+    router.go(ZaveRoutes.roadmap);
     await tester.pumpAndSettle();
 
     expect(find.text('HOME'), findsOneWidget);
@@ -240,6 +245,24 @@ void main() {
     expect(find.text('JOURNEY 2'), findsOneWidget);
     expect(find.text('Day 42 of 1,000'), findsOneWidget);
     expect(find.text('Start a new journey'), findsNothing);
+  });
+
+  testWidgets('a cold deep link mid-journey leaves for the roadmap', (
+    WidgetTester tester,
+  ) async {
+    // Nothing to pop under a notification, so the way off is a `go` — and it
+    // must name the roadmap, which is where the web sends it. `/dashboard` is
+    // the contest's redirect now.
+    await pump(tester, running, deepLink: true);
+
+    await tapButton(tester, find.text('Back to the roadmap'));
+    await tester.pumpAndSettle();
+
+    expect(
+      router.routerDelegate.currentConfiguration.uri.path,
+      ZaveRoutes.roadmap,
+    );
+    expect(find.text('HOME'), findsOneWidget);
   });
 }
 

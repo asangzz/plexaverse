@@ -55,7 +55,13 @@ class ApiPaths {
   static const String linkGoogle = '/user/link-google';
 
   /// GET / PATCH — the DPDP s6 consent ledger. GET answers
-  /// `{noticeVersion, consents[]}`; PATCH takes `{purpose, granted}`.
+  /// `{noticeVersion, consents[]}`; PATCH takes `{purpose, granted, source?}`.
+  ///
+  /// `source` is where the user was asked: `settings` (the default) or
+  /// `in_context`, for a card on the screen that needs the consent — the
+  /// placement test's writing step asks for `assessment_grading` there. The
+  /// ledger is the evidence of how consent was given, so a card must not be
+  /// recorded as a settings toggle.
   static const String userConsent = '/user/consent';
 
   /// GET — DPDP s11. Everything held about the user, including the identities
@@ -157,6 +163,16 @@ class ApiPaths {
   /// GET returns roadmap progress; POST records a completed step.
   static const String roadmapProgress = '/roadmap/progress';
 
+  /// The roadmap's weekly connections check-in. GET answers
+  /// `{reading, growth, history}`; POST `{count}` answers `{id}`.
+  ///
+  /// `count` is a whole number from 0 to 30,000 (LinkedIn's cap) and nothing
+  /// else may ride with it: 400 VALIDATION_FAILED otherwise. LinkedIn gives no
+  /// app a member's connection count, so the number is only ever what the
+  /// user typed — and its growth is where the contest's connect and invite
+  /// tasks show up. Free.
+  static const String reachConnections = '/reach/connections';
+
   // ── Plexa ───────────────────────────────────────────────────────────────
   /// The day's missions as one conversation.
   ///
@@ -177,33 +193,6 @@ class ApiPaths {
   // Added to the mobile API by the web-alignment work; there was no planner
   // surface on mobile before, so the Plan tab had nothing to call.
   /// GET the week plan (?week=&season=); PATCH one slot.
-  /// The week as a climbable path. See [learnUnit] for the expensive one.
-  static const String learn = '/learn';
-
-  /// One day's ladder.
-  ///
-  /// A GET that COSTS MONEY on first open: the server generates the whole
-  /// ladder with a model call before it can answer. Never prefetch it, never
-  /// retry it automatically, never refetch it on resume.
-  static const String learnUnit = '/learn/unit';
-
-  /// Grade ONE question, without writing anything.
-  ///
-  /// Called on every Check: the quiz is one question to a screen and the
-  /// learner is told whether they were right before the next one appears. A
-  /// READ — replaying it can neither advance progress nor bank an answer,
-  /// because [learnLevel] re-grades everything at the end of the level.
-  static const String learnAnswer = '/learn/answer';
-
-  /// Bank a level. Graded server-side, always.
-  ///
-  /// Answers 422 OUT_OF_HEARTS when the five-mistake budget is spent, and
-  /// writes nothing — the level is retaken from the top.
-  static const String learnLevel = '/learn/level';
-
-  /// The three levels finished by doing: draft, visual, review.
-  static const String learnAction = '/learn/action';
-
   static const String planner = '/planner';
 
   /// GET the week's article (Thursday's); POST to record that the user published it
@@ -257,6 +246,161 @@ class ApiPaths {
 
   /// POST `{planId, slotIndex}` — rewrites one day's title. Free.
   static const String plannerRegenerateTitle = '/planner/regenerate-title';
+
+  // ── Contest ─────────────────────────────────────────────────────────────
+  // The Business English contest: the daily path, its lesson and its LinkedIn
+  // tasks. Each is the twin of the web's `/api/contest/**` route of the same
+  // name and answers with the web's body inside `data` — so the DTOs mirror
+  // the web's types one to one — and the web's refusal codes in `error.code`.
+  //
+  // READ `Failure.errorCode` BEFORE THE FAILURE'S CLASS. The statuses are the
+  // web's too, and the interceptor files a 403 under AuthFailure and a 429 or
+  // 503 under NetworkFailure; none of these refusals is either. NOT_ENTERED
+  // ("join first") is 403 on the lesson routes and 404 on the task routes —
+  // the web's own inconsistency, kept so both platforms speak one vocabulary.
+  //
+  // These routes were added to the web repo by the same effort as this
+  // section. Push that commit first, or every constant here is a 404.
+
+  /// GET `{overview}` — the current contest and the user's entry in it.
+  /// `overview` is null when there is no contest, and that is still a 200.
+  static const String contest = '/contest';
+
+  /// POST `{showName: bool}` — joins the running contest; answers `{ok}`.
+  ///
+  /// `showName` is the leaderboard consent (`contest_leaderboard`), recorded
+  /// server-side when true, so it must be a literal bool the user ticked:
+  /// anything else is 400 VALIDATION_FAILED. 409 NOT_RUNNING when there is
+  /// nothing to join.
+  static const String contestJoin = '/contest/join';
+
+  /// GET `?limit=` — the board, bare inside `data`:
+  /// `{revealed, revealsOn, revealDay, rows, viewer, self}`.
+  ///
+  /// Until the reveal it carries no other entrant and no rank, not even the
+  /// viewer's own; the server decides that, so never compute a rank here.
+  static const String contestBoard = '/contest/board';
+
+  /// GET `{path}` — this week's days and their levels, with each level's
+  /// state and points.
+  ///
+  /// A level's `href` is a WEB path. Route on its `kind` (and `claim`), and
+  /// read `href` only as "this level opens".
+  static const String contestPath = '/contest/path';
+
+  /// GET `{quiz}` — today's lesson as it stands; `quiz.status` says why there
+  /// is none (no contest, not joined, not started, ended, no lesson today).
+  ///
+  /// POST — opens today's lesson, answering the same `{quiz}`. The day's
+  /// first open writes the personal questions with a model call, so await it
+  /// before the first answer: an answer that lands first fixes the day to the
+  /// set questions alone. 409 NOT_RUNNING, 403 NOT_ENTERED.
+  static const String contestLesson = '/contest/lesson';
+
+  /// POST `{day, itemId, value}` — one answer; answers `{result}` with the
+  /// verdict, the right option, the explanation and the points.
+  ///
+  /// `value` is the option's TEXT, never its index. 409 NOT_TODAY and
+  /// STALE_QUIZ both mean "reload today's lesson" (the day rolled over, or the
+  /// level changed); 409 NOT_RUNNING / CONFLICT, 403 NOT_ENTERED, 404 NO_QUIZ,
+  /// 400 VALIDATION_FAILED.
+  static const String contestQuizAnswer = '/contest/quiz/answer';
+
+  /// GET `{level}` — today's comment level.
+  ///
+  /// A GET that WRITES: the day's first open builds the level with a model
+  /// call. Never call it while the path says the level is locked. Not running
+  /// and not entered come back as a 200 with a reason, not as refusals.
+  static const String contestTaskComment = '/contest/tasks/comment';
+
+  /// POST `{words}` — the bank words picked for the blanks, in order; answers
+  /// `{result}`. Only the first submission can pay.
+  ///
+  /// 400 VALIDATION_FAILED; 409 NOT_RUNNING / WRONG_DAY / LOCKED / NOT_OPEN /
+  /// ALREADY_DONE / CONFLICT; 404 NOT_ENTERED.
+  static const String contestTaskCommentAnswer =
+      '/contest/tasks/comment/answer';
+
+  /// GET `{view}` — today's "post 5 valuable comments" task.
+  ///
+  /// POST `{link}` — one LinkedIn comment link; answers `{result}`. Each
+  /// comment pays its share as it lands. 400 VALIDATION_FAILED / BAD_URL;
+  /// 409 NOT_RUNNING / WRONG_DAY / LOCKED / REVOKED / ALREADY_DONE /
+  /// DUPLICATE_URL / CONFLICT; 404 NOT_ENTERED.
+  static const String contestTaskFeedComments = '/contest/tasks/feed-comments';
+
+  /// GET — today's leaders to connect with, bare inside `data` as
+  /// `{connections, profession, cached?}`: the same shape as [aiConnections].
+  /// A model call on the day's first ask, then the day's batch replayed. The
+  /// plan gate is lifted on a contest connect day; on any other it refuses
+  /// as [aiConnections] does — a 402, read with `PlanRefusal` — and 400
+  /// PROFILE_INCOMPLETE on a generic profession.
+  ///
+  /// POST — marks the task done; answers `{result}` (`alreadyDone` on a
+  /// repeat). 409 NOT_RUNNING / WRONG_DAY / LOCKED; 404 NOT_ENTERED.
+  static const String contestTaskConnect = '/contest/tasks/connect';
+
+  /// POST multipart, field `screenshot` — the week's sent-invitations
+  /// screenshot, an image of at most 8 MB; answers `{result}`. Pays on upload
+  /// and is audited after.
+  ///
+  /// Never through [uploadImage]: that is a public bucket with a lossy
+  /// re-encode, and proofs belong in the private one. Send an `image/*`
+  /// content type or it is 400 INVALID_IMAGE. 413 TOO_LARGE; 400
+  /// VALIDATION_FAILED; 409 WRONG_DAY / ALREADY_DONE / REVOKED / LOCKED /
+  /// CONFLICT / NOT_RUNNING; 404 NOT_ENTERED; 503 STORAGE_UNAVAILABLE. There
+  /// is no GET: the task's state comes from its level on [contestPath].
+  static const String contestTaskInvites = '/contest/tasks/invites';
+
+  /// GET `{view}` — this planner week, day by day.
+  ///
+  /// POST — "I've planned this week"; answers `{result}`. 409 NOT_READY until
+  /// the week exists in the Planner; 409 NOT_RUNNING / WRONG_DAY / LOCKED;
+  /// 404 NOT_ENTERED.
+  static const String contestTaskPlan = '/contest/tasks/plan';
+
+  /// POST `{kind, occurrence, postUrl}` — claims the article or a video by the
+  /// link of the post the user published; answers `{result}`. Waits for an
+  /// admin's approval.
+  ///
+  /// 400 VALIDATION_FAILED / BAD_URL; 409 NOT_RUNNING / ALREADY_DONE /
+  /// TOO_EARLY / NOT_READY / LOCKED / DUPLICATE_URL / CONFLICT; 404
+  /// NOT_ENTERED.
+  static const String contestTaskClaim = '/contest/tasks/claim';
+
+  // ── Placement ───────────────────────────────────────────────────────────
+  // The placement test that sets the lesson level. Same vocabulary rule as the
+  // contest above: read the code first.
+
+  /// GET `{status}` — the band lessons are written at, the latest result,
+  /// any attempt in progress and whether Start works now. May settle an
+  /// attempt that has closed, so it is a read with a side effect.
+  static const String placement = '/placement';
+
+  /// POST — starts an attempt; answers `{step}`.
+  ///
+  /// 429 COOLDOWN carries `nextRetakeAt` in `error.details`, which the
+  /// interceptor drops: read it off the raw response body.
+  static const String placementStart = '/placement/start';
+
+  /// POST `{attemptId, itemId, value}` — one answer, `value` being the
+  /// option's TEXT; answers the next `{step}` and never says right or wrong.
+  /// 400 VALIDATION_FAILED; 404 NOT_FOUND; 409 ALREADY_COMPLETE.
+  static const String placementAnswer = '/placement/answer';
+
+  /// POST `{attemptId}` — the result of an attempt whose objective parts are
+  /// done, as `{result}`; "Skip writing" lands here. No model call. 409
+  /// NOT_READY before those parts are done; 404 NOT_FOUND; 400.
+  static const String placementFinish = '/placement/finish';
+
+  /// POST `{attemptId, text}` — the optional writing task, graded by a model;
+  /// answers `{result}`.
+  ///
+  /// 403 CONSENT_REQUIRED (checked first) until `assessment_grading` is
+  /// granted through [userConsent]. 503 GRADING_UNAVAILABLE is retryable: the
+  /// text was not stored, so keep the draft. 409 NOT_READY /
+  /// ALREADY_COMPLETE; 404 NOT_FOUND; 400.
+  static const String placementWriting = '/placement/writing';
 
   // ── Posts ───────────────────────────────────────────────────────────────
   static const String posts = '/posts';

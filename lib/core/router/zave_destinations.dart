@@ -36,9 +36,21 @@ class ZaveDestination {
 const List<ZaveDestination> zaveDestinations = <ZaveDestination>[
   // ── Overview ──
   ZaveDestination(
-    label: 'Home',
-    route: ZaveRoutes.dashboard,
-    icon: AppIcons.home,
+    // The signed-in home since 11 Nov 2026, and where the English lesson
+    // lives — the contest's daily path. The web's `IconTarget`.
+    label: 'Contest',
+    route: ZaveRoutes.contest,
+    icon: AppIcons.bullseye,
+    visibility: NavVisibility.both,
+    group: 'Overview',
+  ),
+  ZaveDestination(
+    // The 1000-day roadmap — what "Home" showed until the contest took the
+    // home slot. The web's tooltip names it in full: "LinkedIn Personal
+    // Branding Roadmap".
+    label: 'Roadmap',
+    route: ZaveRoutes.roadmap,
+    icon: AppIcons.roadmap,
     visibility: NavVisibility.both,
     group: 'Overview',
   ),
@@ -119,17 +131,6 @@ const List<ZaveDestination> zaveDestinations = <ZaveDestination>[
 
   // ── Management ──
   ZaveDestination(
-    // The written half of Business English: this week's posts, climbed as
-    // levels. The web sits it directly above the spoken page because they
-    // are two halves of one thing; this app has no spoken page yet, so it
-    // leads Management instead.
-    label: 'Learn',
-    route: ZaveRoutes.learn,
-    icon: AppIcons.book,
-    visibility: NavVisibility.both,
-    group: 'Management',
-  ),
-  ZaveDestination(
     label: 'Persona',
     route: ZaveRoutes.persona,
     icon: AppIcons.face,
@@ -166,20 +167,23 @@ const List<ZaveDestination> zaveDestinations = <ZaveDestination>[
   ),
 ];
 
-/// The four routes that get their own shell BRANCH, in branch order.
+/// The five routes that get their own shell BRANCH, in branch order.
 ///
-/// They were the bottom bar's four tabs; the bar is gone and every destination
-/// now lives in the More sheet. These four keep a branch anyway, and the
-/// distinction is state, not navigation: a branch is an entry in the shell's
-/// IndexedStack, so its page stays built and keeps its scroll position,
-/// filters and in-progress edits while you are elsewhere. They also preload,
-/// so none of them opens on a skeleton — see `app_router.dart`.
+/// Four of them were the bottom bar's tabs; the bar is gone and every
+/// destination now lives in the More sheet. These keep a branch anyway, and
+/// the distinction is state, not navigation: a branch is an entry in the
+/// shell's IndexedStack, so its page stays built and keeps its scroll
+/// position, filters and in-progress edits while you are elsewhere. They also
+/// preload, so none of them opens on a skeleton — see `app_router.dart`.
 ///
-/// These four earn it because they are the ones a user returns to within a
-/// session: Home is the habit surface, Plan is the week, Calendar is the
-/// schedule, Posts is the library. Everything else is pushed over the shell
-/// and rebuilt on each visit, which is the right trade for a screen you open
-/// once and leave.
+/// These five earn it because they are the ones a user returns to within a
+/// session: the Contest is the daily habit and the home, the Roadmap is the
+/// journey it sits on, Plan is the week, Calendar is the schedule, Posts is
+/// the library. Everything else is pushed over the shell and rebuilt on each
+/// visit, which is the right trade for a screen you open once and leave.
+///
+/// The first entry is where a signed-in user lands. It is the web's home since
+/// 11 Nov 2026, when `/dashboard` began forwarding to the contest.
 ///
 /// **The name is kept deliberately.** `ZaveShellHost` indexes this list to
 /// name the current route, the order must match the branch order in
@@ -187,7 +191,8 @@ const List<ZaveDestination> zaveDestinations = <ZaveDestination>[
 /// `branchRoutes` would be more accurate and would touch every one of those
 /// call sites for a word. If you do rename it, rename it everywhere in one go.
 const List<String> tabRoutes = <String>[
-  ZaveRoutes.dashboard,
+  ZaveRoutes.contest,
+  ZaveRoutes.roadmap,
   ZaveRoutes.planner,
   ZaveRoutes.calendar,
   ZaveRoutes.posts,
@@ -218,4 +223,4 @@ List<ZaveDestination> visibleDestinations({
 // `moreDestinations` lived here — visibleDestinations minus the bar's four.
 // It went with the bar. The sheet is now handed `visibleDestinations` whole,
 // because it is the only way to anywhere: subtracting the four branch routes
-// would have made Home, Plan, Calendar and Posts unreachable.
+// would have made every branch route unreachable.

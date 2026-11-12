@@ -7,22 +7,20 @@ import '../domain/roadmap_level.dart';
 ///
 /// ## The one mapping in this feature that had to be re-decided
 ///
-/// The web roadmap carries a palette of its own — `#acffa4` completed,
-/// `#5bffd3` active, `#ff4d4d` missed, `#44484f` locked — predating Zave and
-/// unreachable from it. Zave's governing rule is that **colour only ever names
-/// a status**, and it already has names for three of these four:
+/// The web roadmap carries a palette of its own — `#acffa4` behind,
+/// `#5bffd3` today, `#44484f` ahead — predating Zave and unreachable from it.
+/// Zave's governing rule is that **colour only ever names a status**, and it
+/// already has a name for each:
 ///
 /// | web        | here                | why                                    |
 /// |------------|---------------------|----------------------------------------|
-/// | `#acffa4`  | [ZaveColors.green]  | done, published                        |
+/// | `#acffa4`  | [ZaveColors.green]  | done — a day travelled                 |
 /// | `#5bffd3`  | [ZaveColors.mint]   | green that stays legible on dark        |
-/// | `#ff4d4d`  | [ZaveColors.amber]  | **Zave has no red** — see below         |
 /// | `#44484f`  | [ZaveColors.ink35]  | the faintest legible step; inert        |
 ///
-/// **Zave has no red at all**, deliberately: a missed day is not a failure
-/// state, it is an unfinished one, and the system's word for "waiting, needs
-/// attention" is amber. Reintroducing red here would be the single loudest
-/// thing on the screen and would say something the product does not mean.
+/// There used to be a fourth, a missed day, painted amber because Zave has
+/// no red. It went with the daily missions (12 Nov 2026): a status now comes
+/// from the date alone, and a date cannot be missed.
 ///
 /// The planets themselves are exempt from this table — a planet is a depiction
 /// of a planet, not UI chrome, and Mars is allowed to be red. See
@@ -30,27 +28,23 @@ import '../domain/roadmap_level.dart';
 Color roadmapStatusColor(LevelStatus status) => switch (status) {
   LevelStatus.completed => ZaveColors.green,
   LevelStatus.active => ZaveColors.mint,
-  // Amber, not red. Zave has no red.
-  LevelStatus.missed => ZaveColors.amber,
   LevelStatus.locked => ZaveColors.ink35,
 };
 
 /// The status word beside a day row. Copy is the web's, exactly.
 ///
-/// A locked day says nothing — the web renders no label for it, because a day
+/// A day ahead says nothing — the web renders no label for it, because a day
 /// you have not reached has no state worth naming.
 String? roadmapStatusLabel(LevelStatus status) => switch (status) {
-  LevelStatus.completed => 'Completed',
-  LevelStatus.active => 'In Progress',
-  LevelStatus.missed => 'Steps Missed',
+  LevelStatus.completed => 'Travelled',
+  LevelStatus.active => 'Today',
   LevelStatus.locked => null,
 };
 
-/// How prominent a day row reads. The web's `labelOpacity`, unchanged: a locked
-/// day recedes, today and a missed day are full strength, everything else sits
-/// between.
+/// How prominent a day row reads. The web's `labelOpacity`, unchanged: a day
+/// ahead recedes, today is full strength, a day behind sits between.
 double roadmapRowOpacity(LevelStatus status) => switch (status) {
   LevelStatus.locked => 0.38,
-  LevelStatus.active || LevelStatus.missed => 1,
+  LevelStatus.active => 1,
   LevelStatus.completed => 0.65,
 };

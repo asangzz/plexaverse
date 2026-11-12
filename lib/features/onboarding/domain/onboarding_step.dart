@@ -150,14 +150,13 @@ enum OnboardingStep {
     OnboardingStep.brand => <String>[
       'Personal brand, or a company page you manage?',
     ],
-    // The XP figure survives HERE and nowhere else — this is the one screen
-    // where it can change what the user does next.
+    // No welcome bonus to promise: wallet XP was retired on 10 Nov 2026, and
+    // connecting pays nothing. The reason to connect is what it lets Plexa
+    // do, so that is all this says.
     OnboardingStep.connect => <String>[
       company
-          ? 'Connect LinkedIn so I can load the company pages you manage. '
-                '+$kRegistrationXpLabel XP on connect.'
-          : "I'll publish on your behalf and learn from your existing posts. "
-                '+$kRegistrationXpLabel XP on connect.',
+          ? 'Connect LinkedIn so I can load the company pages you manage.'
+          : "I'll publish on your behalf and learn from your existing posts.",
     ],
     OnboardingStep.companyPage => <String>['Which page do you want to grow?'],
     // The only step with two lines: the second is a procedure the user has to
@@ -195,10 +194,6 @@ enum OnboardingStep {
     ],
   };
 }
-
-/// The welcome bonus credited on the first LinkedIn connect — the web's
-/// `REGISTRATION_XP` (2500), formatted as `toLocaleString()` prints it.
-const String kRegistrationXpLabel = '2,500';
 
 /// Where this step's control lives. See [OnboardingStep.lane].
 enum OnboardingLane { reply, panel }

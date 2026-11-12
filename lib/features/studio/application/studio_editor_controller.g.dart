@@ -86,7 +86,7 @@ final class StudioEditorProvider
   }
 }
 
-String _$studioEditorHash() => r'601ecdc5323becc2567fff061ca77032eafb0c32';
+String _$studioEditorHash() => r'81726d729bf2296970e1aab4be3338ed8f37fd48';
 
 /// One design, open for light editing.
 ///

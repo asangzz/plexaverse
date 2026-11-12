@@ -67,15 +67,22 @@ class CompanyPostsController extends _$CompanyPostsController {
     );
   }
 
-  /// Toggles "featured for advocacy" on one post.
+  /// Toggles "featured for advocacy" on one post. Returns the failure
+  /// message, or null when the server stored the flag.
   ///
   /// Optimistic, and reconciled from the flag the SERVER stored rather than
   /// the one we asked for: the star is the only thing telling the user whether
-  /// their team can see this post to amplify, and a star that lies is worse
-  /// than a star that takes a moment.
-  Future<void> setAdvocacy(String postId, bool isAdvocated) async {
+  /// the post is on their advocacy feed, and a star that lies is worse than a
+  /// star that takes a moment.
+  ///
+  /// A refusal is said, not just reverted (web 857b2b3). Only the caller's
+  /// own page's posts can be featured: another account's post is 404, and one
+  /// a second Plexaverse account already features for the same page is 409.
+  /// A star that silently flicked back would read as a flaky tap, so the
+  /// server's sentence comes back for the screen to show.
+  Future<String?> setAdvocacy(String postId, bool isAdvocated) async {
     final List<CompanyPostItem>? current = state.value;
-    if (current == null) return;
+    if (current == null) return null;
 
     state = AsyncData<List<CompanyPostItem>>(
       _withAdvocacy(current, postId, isAdvocated),
@@ -89,14 +96,18 @@ class CompanyPostsController extends _$CompanyPostsController {
             isAdvocated: isAdvocated,
             // The web features a post for a week. The value is the product
             // decision, not a default — an indefinite feature would leave the
-            // team feed full of last quarter's posts.
+            // advocacy feed full of last quarter's posts.
             expiryDays: isAdvocated ? 7 : null,
           );
       state = AsyncData<List<CompanyPostItem>>(
         _withAdvocacy(current, postId, applied),
       );
-    } on Object {
+      return null;
+    } on Object catch (e) {
       ref.invalidateSelf();
+      return e is CompanyUnavailable && e.message != null
+          ? e.message
+          : "Couldn't change that. Try again.";
     }
   }
 
@@ -379,7 +390,7 @@ abstract class AdvocacyState with _$AdvocacyState {
   bool isReshared(String id) => reshared.contains(id);
 }
 
-/// The global advocacy feed.
+/// The user's own advocacy feed: the unexpired posts they featured.
 @riverpod
 class AdvocacyController extends _$AdvocacyController {
   /// The web sends this exact sentence with every reshare. It is a product

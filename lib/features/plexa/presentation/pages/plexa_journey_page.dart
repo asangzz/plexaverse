@@ -32,10 +32,7 @@ import '../widgets/plexa_mascot.dart';
 ///
 /// ## The welcome bonus
 ///
-/// The web's `OnboardingClient` celebrates the one-time "+2,500 XP" when it
-/// has just landed, and holds Plexa while it does (see [PlexaMascot.hold]).
-/// The bonus is credited on the first LinkedIn connect — for a company brand,
-/// when its page is saved — so the celebration usually arrives mid-chat.
+/// There is none since 10 Nov 2026, when wallet XP was retired.
 ///
 /// ## The flying bird
 ///

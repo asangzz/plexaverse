@@ -23,11 +23,11 @@ import 'follower_series_chart.dart';
 ///
 /// ## Why it is a strip and not a dialog
 ///
-/// The job a user comes to this screen to do is "tell me what to do today". A
+/// The job a user comes to this screen to do is "where am I on the journey". A
 /// dialog in front of that gets dismissed, and a dismissed prompt teaches the
-/// habit of dismissing it. One strip above the day's missions is present the
-/// moment they land, answerable in one gesture, and never hides the thing they
-/// came for. The web makes the same call for the same reason.
+/// habit of dismissing it. One strip under the timeline is present the moment
+/// they land, answerable in one gesture, and never hides the thing they came
+/// for. The web makes the same call for the same reason.
 ///
 /// ## Why it does not go away when answered
 ///
@@ -98,8 +98,8 @@ class _FollowerCheckpointState extends ConsumerState<FollowerCheckpoint> {
 
     // Nothing at all while it loads, and nothing on failure. This strip is an
     // instrument on somebody else's screen — the roadmap renders perfectly
-    // without it, and a skeleton or an error card above the day's missions
-    // would cost more attention than the number is worth.
+    // without it, and a skeleton or an error card under the timeline would
+    // cost more attention than the number is worth.
     final PersonaSnapshot? snapshot = persona.value;
     if (snapshot == null) return const SizedBox.shrink();
 

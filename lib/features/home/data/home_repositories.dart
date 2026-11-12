@@ -43,8 +43,10 @@ class ApiHomeRepository implements HomeRepository {
 ///
 /// Shaped as a mid-journey user, because that is what nearly every
 /// real user is: day 12, the first four days fully done, day 11 half-missed,
-/// and an AI post waiting for approval — so the panel exercises `completed`,
-/// `missed`, `active` and `locked` without anyone having to fake a date.
+/// and an AI post waiting for approval. The roadmap draws none of the steps
+/// any more — it is a calendar, behind / today / ahead — but `/comments` and
+/// `/connections` still find today's step here, so the step history stays
+/// realistic rather than empty.
 class FakeHomeRepository implements HomeRepository {
   FakeHomeRepository();
 
@@ -66,7 +68,7 @@ class FakeHomeRepository implements HomeRepository {
         // Days 5–10 finished on the three dailies.
         for (int day = 5; day <= 10; day++)
           for (int step = 1; step <= 3; step++) '$day-$step',
-        // Day 11 half-done — a missed day, so the amber state is reachable.
+        // Day 11 half-done.
         '11-1',
         // Today: the comment task is already in.
         '$_currentDay-2',

@@ -33,34 +33,3 @@ Future<List<RoadmapLevel>> roadmapLevels(Ref ref) async {
   );
   return buildRoadmap(progress);
 }
-
-/// Which day the mission panel is showing.
-///
-/// Null means "follow the roadmap" — the active day, or day 1 when nothing is
-/// active. The user overrides it by tapping a day row or scrolling one to the
-/// centre of the timeline, exactly as the web's scroll-snap selection does.
-@riverpod
-class SelectedRoadmapDay extends _$SelectedRoadmapDay {
-  @override
-  int? build() => null;
-
-  void select(int day) {
-    if (state != day) state = day;
-  }
-}
-
-/// The day the panel actually renders: the user's selection if they made one,
-/// otherwise the roadmap's own active day.
-@riverpod
-Future<int> activeRoadmapDay(Ref ref) async {
-  final int? selected = ref.watch(selectedRoadmapDayProvider);
-  if (selected != null) return selected;
-
-  final List<RoadmapLevel> levels = await ref.watch(
-    roadmapLevelsProvider.future,
-  );
-  for (final RoadmapLevel level in levels) {
-    if (level.status == LevelStatus.active) return level.id;
-  }
-  return levels.isEmpty ? 1 : levels.first.id;
-}

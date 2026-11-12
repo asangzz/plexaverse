@@ -199,9 +199,18 @@ class _PostHeader extends StatelessWidget {
               ZaveSwitch(
                 value: post.isAdvocated,
                 semanticLabel: 'Feature for advocacy',
-                onChanged: (bool next) => ref
-                    .read(companyPostsControllerProvider.notifier)
-                    .setAdvocacy(post.id, next),
+                // The server refuses a post another account already features
+                // (409) or one that is gone (404). Its sentence is shown, or
+                // the switch would flick back with nothing to say why.
+                onChanged: (bool next) async {
+                  final String? failure = await ref
+                      .read(companyPostsControllerProvider.notifier)
+                      .setAdvocacy(post.id, next);
+                  if (failure == null || !context.mounted) return;
+                  ScaffoldMessenger.of(context)
+                    ..hideCurrentSnackBar()
+                    ..showSnackBar(SnackBar(content: Text(failure)));
+                },
               ),
             ],
           ),

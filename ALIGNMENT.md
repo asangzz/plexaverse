@@ -51,6 +51,23 @@ with the old UI**, which is why most of the high-severity rows below say
 
 ---
 
+## The contest pass (12 Nov 2026)
+
+The web's 1–12 Nov work, mirrored. **Push and deploy the web first**: every
+row below calls a `/api/mobile/v1` route that the same pass added on the web,
+and an app that reaches a server without them gets Next's HTML 404.
+
+| Area | Was | Now |
+|---|---|---|
+| **Contest** | missing — the web's signed-in home since 11 Nov had no mobile surface | `/contest` is the app's home (shell branch 0). The path, dispatched on a node's KIND and never its `href`; the join card; the board, hidden until the last ten days; the lesson player; the comment level; feed comments; Connect (contest mode of `/connections`); Saturday's invites; Sunday's plan; the article and video claims. Refusals keep the web's codes, and the app reads the code before the status — a 403 NOT_ENTERED is "join first", not a sign-out |
+| **Placement** | missing | `/placement`: intro → questions (no verdict, no colour) → optional writing under its own consent, recorded `in_context` → result. A band move re-reads the contest's overview and board, as the web's `invalidateBand` does |
+| **Roadmap** | stale — Home was the roadmap with daily missions and Open Plexa | `/roadmap` (shell branch 1): a calendar of the journey with the follower and the weekly connections check-ins, as the web's since 12 Nov. No daily missions; the Open Plexa day chat is deleted. `/dashboard` only forwards to `/contest` |
+| **Learn** | broken — the web deleted the server routes (`c283ba9`), so the screen read an HTML 404 | slice deleted; `/learn` forwards to `/contest`, and `no_learn_route_test` fails the build on any other `/learn` |
+| **Old addresses** | — | `/dashboard` → `/contest`, `/learn` → `/contest`, `/contest/quiz` → `/contest/lesson`, each resolved through the real router in `contest_deep_link_test`, along with the lesson reminder's `/contest/lesson` and every level the path can open |
+| **Branding** | — | no "100 days", no "<n>-day contest", no day counted "of" the length in the contest or placement slices: `no_100_day_branding_test`, the web guard's patterns |
+
+---
+
 ## Still open
 
 Ordered by damage. Re-verified against both repos after the Open Plexa rebuild;

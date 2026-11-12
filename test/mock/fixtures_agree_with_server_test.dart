@@ -9,8 +9,6 @@ import 'package:plexaverse/features/planner/data/planner_repositories.dart';
 import 'package:plexaverse/features/planner/domain/plan_slot.dart';
 import 'package:plexaverse/features/planner/domain/planner_repository.dart';
 import 'package:plexaverse/features/planner/domain/weekly_article.dart';
-import 'package:plexaverse/features/plexa/data/plexa_repositories.dart';
-import 'package:plexaverse/features/plexa/domain/plexa_day.dart';
 import 'package:plexaverse/features/posts/data/post_library_repositories.dart';
 import 'package:plexaverse/features/posts/domain/post_library_repository.dart';
 
@@ -31,6 +29,20 @@ import 'package:plexaverse/features/posts/domain/post_library_repository.dart';
 /// The rule, already written into `fake_day_session.dart`: a fixture that
 /// cannot demonstrate the behaviour it stands in for is worse than no
 /// fixture, because it teaches the wrong thing confidently.
+///
+/// ## The slices that hold their own
+///
+/// The contest, placement and connection-count fakes were written with their
+/// agreement tests beside them, each held to the server's own shapes and
+/// test cases, and they stay there rather than being copied in here:
+///
+///   * `test/features/contest/contest_fake_agrees_test.dart`
+///   * `test/features/placement/placement_fake_agrees_test.dart`
+///   * `test/features/home/connections_fake_agrees_test.dart`
+///
+/// Open Plexa's day used to be held against the engagement fakes here. It
+/// left the app with the roadmap's daily missions; the shared day row it
+/// pinned is still covered by `test/features/engagement/day_session_test.dart`.
 void main() {
   group('the planner fake', () {
     test('a future week has NO plan, which is a state the server has', () {
@@ -173,44 +185,6 @@ void main() {
       expect(
         await repo.findConnections().then((ConnectionBatch b) => b.cached),
         isTrue,
-      );
-    });
-  });
-
-  group('Open Plexa and the engagement screens', () {
-    test('describe the SAME day, item for item', () async {
-      // They share one `plexa_day` row, and that sharing is the feature:
-      // clearing an item on one surface has to show up on the other. Open
-      // Plexa carried 2 Top Voices, 1 comment draft and 1 connection against
-      // the engagement fakes' 5, 3 and 5 — so they could never be caught
-      // disagreeing, because disagreeing was their normal state.
-      final PlexaDay day = await FakePlexaRepository().fetchDay();
-      final FakeEngagementRepository eng = FakeEngagementRepository();
-
-      final int tv = day.items
-          .where((DayItem i) => i.id.startsWith('tv:'))
-          .length;
-      final int nw = day.items
-          .where((DayItem i) => i.id.startsWith('nw:'))
-          .length;
-      final int cn = day.items
-          .where((DayItem i) => i.id.startsWith('cn:'))
-          .length;
-
-      expect(tv, (await eng.fetchTopVoices()).posts.length);
-      expect(nw, (await eng.generateComments()).comments.length);
-      expect(cn, (await eng.findConnections()).connections.length);
-    });
-
-    test('ready is derived from what is there, not asserted', () async {
-      final PlexaDay day = await FakePlexaRepository().fetchDay();
-      expect(
-        day.ready.comments,
-        day.items.any((DayItem i) => i.id.startsWith('nw:')),
-      );
-      expect(
-        day.ready.topVoices,
-        day.items.any((DayItem i) => i.id.startsWith('tv:')),
       );
     });
   });

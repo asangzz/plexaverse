@@ -52,8 +52,13 @@ class StudioEditor extends _$StudioEditor {
     );
   }
 
-  /// Points an image layer at a pasted URL, rejecting anything that is not
-  /// one. Returns false when the URL was refused.
+  /// Points an image layer at a pasted `https://` URL, rejecting anything
+  /// else. Returns false when the URL was refused.
+  ///
+  /// https only, as the server's renderer is (web 92f6aa2): a design's images
+  /// are fetched from inside our network, so the renderer takes nothing but
+  /// https from a public host. A plain `http://` image used to be accepted
+  /// here, saved, and then drawn as an empty placeholder.
   ///
   /// The check is here rather than in the sheet because "is this a thing we
   /// can send" is a decision about the edit, not about the box it was typed
@@ -61,7 +66,12 @@ class StudioEditor extends _$StudioEditor {
   /// reference URL on the controller and refuses it with this same sentence.
   bool swapImageFromUrl(String elementId, String url) {
     final String trimmed = url.trim();
-    if (!trimmed.startsWith('http://') && !trimmed.startsWith('https://')) {
+    final Uri? uri = Uri.tryParse(trimmed);
+    if (uri != null && uri.scheme == 'http' && uri.host.isNotEmpty) {
+      _setSwapError('Use an https:// link. Images on plain http do not show.');
+      return false;
+    }
+    if (uri == null || uri.scheme != 'https' || uri.host.isEmpty) {
       _setSwapError('That does not look like an image URL.');
       return false;
     }

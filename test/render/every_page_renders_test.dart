@@ -4,6 +4,7 @@ import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_riverpod/misc.dart' show Override;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 
@@ -17,6 +18,14 @@ import 'package:plexaverse/features/company/presentation/pages/company_analytics
 import 'package:plexaverse/features/company/presentation/pages/company_banner_page.dart';
 import 'package:plexaverse/features/company/presentation/pages/company_inbox_page.dart';
 import 'package:plexaverse/features/compose/presentation/pages/compose_page.dart';
+import 'package:plexaverse/features/contest/data/contest_repositories.dart';
+import 'package:plexaverse/features/contest/presentation/pages/contest_claim_page.dart';
+import 'package:plexaverse/features/contest/presentation/pages/contest_comment_page.dart';
+import 'package:plexaverse/features/contest/presentation/pages/contest_feed_comments_page.dart';
+import 'package:plexaverse/features/contest/presentation/pages/contest_invites_page.dart';
+import 'package:plexaverse/features/contest/presentation/pages/contest_lesson_page.dart';
+import 'package:plexaverse/features/contest/presentation/pages/contest_page.dart';
+import 'package:plexaverse/features/contest/presentation/pages/contest_plan_page.dart';
 import 'package:plexaverse/features/engagement/presentation/pages/comments_page.dart';
 import 'package:plexaverse/features/engagement/presentation/pages/connections_page.dart';
 import 'package:plexaverse/features/home/presentation/pages/home_page.dart';
@@ -25,6 +34,7 @@ import 'package:plexaverse/features/missions/presentation/pages/banner_blueprint
 import 'package:plexaverse/features/missions/presentation/pages/headline_hook_page.dart';
 import 'package:plexaverse/features/missions/presentation/pages/journey_complete_page.dart';
 import 'package:plexaverse/features/persona/presentation/pages/persona_page.dart';
+import 'package:plexaverse/features/placement/presentation/pages/placement_page.dart';
 import 'package:plexaverse/features/planner/presentation/pages/planner_page.dart';
 import 'package:plexaverse/features/plexa/presentation/pages/plexa_journey_page.dart';
 import 'package:plexaverse/features/posts/presentation/pages/post_detail_page.dart';
@@ -73,7 +83,19 @@ void main() {
   /// Every page the app can show. Constructed, not routed — a route needs a
   /// session and a redirect chain, and what is under test is the layout.
   final Map<String, Widget Function()> pages = <String, Widget Function()>{
-    'Home': () => const HomePage(),
+    'Contest': () => const ContestPage(),
+    'Contest (not joined)': () => const ContestPage(),
+    'Contest (no contest)': () => const ContestPage(),
+    'Contest lesson': () => const ContestLessonPage(),
+    'Comment level': () => const ContestCommentPage(),
+    'Feed comments': () => const ContestFeedCommentsPage(),
+    'Contest invites': () => const ContestInvitesPage(),
+    'Contest plan': () => const ContestPlanPage(),
+    // The mock Wednesday's open video claim.
+    'Contest claim': () =>
+        const ContestClaimPage(kind: 'video', occurrence: '6:1:2'),
+    'Placement': () => const PlacementPage(),
+    'Roadmap': () => const HomePage(),
     'Planner': () => const PlannerPage(),
     'Calendar': () => const CalendarPage(),
     'Posts': () => const PostsPage(),
@@ -88,6 +110,7 @@ void main() {
     'Compose': () => const ComposePage(),
     'Comments': () => const CommentsPage(),
     'Connections': () => const ConnectionsPage(),
+    'Connections (contest)': () => const ConnectionsPage(fromContest: true),
     'Auth': () => const AuthPage(),
     'About Odyssey': () => const AboutOdysseyPage(),
     'Headline Hook': () => const HeadlineHookPage(),
@@ -97,6 +120,22 @@ void main() {
     'Company inbox': () => const CompanyInboxPage(),
     'Company advocacy': () => const CompanyAdvocacyPage(),
     'Company banner': () => const CompanyBannerPage(),
+  };
+
+  /// The pages whose state the mock flavour does not open on. The contest's
+  /// fake serves a running entrant; its other states are scenarios, and the
+  /// home has a different screen for each.
+  final Map<String, List<Override>> overridesFor = <String, List<Override>>{
+    'Contest (not joined)': <Override>[
+      contestRepositoryProvider.overrideWithValue(
+        FakeContestRepository(scenario: FakeContestScenario.notJoined),
+      ),
+    ],
+    'Contest (no contest)': <Override>[
+      contestRepositoryProvider.overrideWithValue(
+        FakeContestRepository(scenario: FakeContestScenario.noContest),
+      ),
+    ],
   };
 
   for (final MapEntry<String, Size> size in sizes.entries) {
@@ -123,7 +162,10 @@ void main() {
             ProviderScope(
               // Resolves every repository to its in-memory fake, so the page
               // gets the same shaped data the mock flavour shows.
-              overrides: [envProvider.overrideWithValue(Env.mock)],
+              overrides: <Override>[
+                envProvider.overrideWithValue(Env.mock),
+                ...?overridesFor[page.key],
+              ],
               child: MaterialApp.router(routerConfig: router),
             ),
           );

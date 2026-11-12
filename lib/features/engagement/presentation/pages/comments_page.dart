@@ -329,15 +329,14 @@ class CommentsPage extends ConsumerWidget {
     _leave(context);
   }
 
-  /// Back to wherever the user came from, which is the roadmap in every real
-  /// path into this screen. A deep link straight to `/comments` has nothing to
-  /// pop, so it lands on the dashboard — the web's own destination after a
-  /// finished step.
+  /// Back to wherever the user came from. A deep link straight to
+  /// `/comments` has nothing to pop, so it lands on the roadmap — the web's
+  /// own destination after a finished step (`router.push('/roadmap')`).
   static void _leave(BuildContext context) {
     if (context.canPop()) {
       context.pop();
     } else {
-      context.go(ZaveRoutes.dashboard);
+      context.go(ZaveRoutes.roadmap);
     }
   }
 

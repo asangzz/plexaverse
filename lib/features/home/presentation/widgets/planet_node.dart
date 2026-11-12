@@ -649,8 +649,8 @@ class _OrbitRingPainter extends CustomPainter {
 /// name pinned to its right.
 ///
 /// [status] is the segment's status, already reduced to one value by the
-/// timeline — a segment reads `completed` only when every day in it is done,
-/// `active` when any day is today, and so on.
+/// timeline — a segment reads `completed` only when every day in it is
+/// behind today, `locked` when every day is ahead, and `active` otherwise.
 class PlanetNode extends StatefulWidget {
   const PlanetNode({
     required this.planetKey,
@@ -753,10 +753,7 @@ class _PlanetNodeState extends State<PlanetNode>
             Positioned.fill(
               child: _OrbitDot(
                 fraction: widget.fraction,
-                color: widget.status == LevelStatus.missed
-                    // Amber for missed — Zave has no red.
-                    ? ZaveColors.amber
-                    : ZaveColors.mint,
+                color: ZaveColors.mint,
               ),
             ),
           Positioned(
@@ -804,7 +801,6 @@ class _PlanetNodeState extends State<PlanetNode>
         final double glow = switch (widget.status) {
           LevelStatus.active => 15 + 20 * _pulse.value,
           LevelStatus.completed => 15,
-          LevelStatus.missed => 20,
           LevelStatus.locked => 0,
         };
 

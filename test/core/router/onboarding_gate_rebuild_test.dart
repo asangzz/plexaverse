@@ -67,10 +67,10 @@ void main() {
   );
 
   test(
-    'a DATA value DOES survive the rebuild, and the home screen needs it',
+    'a DATA value DOES survive the rebuild, and the roadmap screen needs it',
     () async {
-      // The counterpart, and the opposite answer. `activeRoadmapDay` watches the
-      // selected day, so every scroll of the roadmap rebuilds it — and the home
+      // The counterpart, and the opposite answer. Every rebuild of a provider
+      // the roadmap screen watches passes through a loading state — and the
       // screen used to check `isLoading` and return its skeleton, destroying the
       // timeline, its ScrollController and its scroll position, then rebuilding
       // a frame later. On screen that was a white card flashing over the planet

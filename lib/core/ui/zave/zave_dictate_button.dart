@@ -49,7 +49,7 @@ class ZaveDictateButton extends ConsumerStatefulWidget {
   final String fieldId;
 
   /// Called with the full text after each update, for callers that mirror
-  /// the field into their own state (the Learn player does).
+  /// the field into their own state.
   final ValueChanged<String>? onChanged;
 
   /// Null draws the bare microphone; a string draws a labelled pill.

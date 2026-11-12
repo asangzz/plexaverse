@@ -1,7 +1,9 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:plexaverse/core/router/app_router.dart';
+import 'package:plexaverse/core/router/route_paths.dart';
 import 'package:plexaverse/core/router/zave_destinations.dart';
+import 'package:plexaverse/core/router/zave_routes.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 /// Every shell branch preloads.
@@ -59,6 +61,26 @@ void main() {
       branchesOf(router.configuration.routes),
       hasLength(tabRoutes.length),
     );
+  });
+
+  test('each branch is its tabRoutes entry, in the same order', () {
+    // ZaveShellHost names the current route as `tabRoutes[currentIndex]`, and
+    // goes to a destination by its index in the same list. A branch out of
+    // order opens the wrong screen from the sheet and highlights another.
+    final List<StatefulShellBranch> branches = branchesOf(
+      router.configuration.routes,
+    );
+    for (int i = 0; i < branches.length; i++) {
+      final GoRoute root = branches[i].routes.whereType<GoRoute>().first;
+      expect(root.path, tabRoutes[i], reason: 'branch $i');
+    }
+  });
+
+  test('the contest is the first branch, where a signed-in user lands', () {
+    // The web's home since 11 Nov 2026 (`/dashboard` forwards to it), with
+    // the roadmap that used to be home right behind it.
+    expect(tabRoutes.take(2), <String>[ZaveRoutes.contest, ZaveRoutes.roadmap]);
+    expect(RoutePaths.home, tabRoutes.first);
   });
 
   test('every branch preloads, so no screen opens on a skeleton', () {

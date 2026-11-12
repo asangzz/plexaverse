@@ -84,15 +84,27 @@ abstract class CompanyRepository {
 
   /// Toggles the local "featured for advocacy" flag on a post.
   ///
-  /// No LinkedIn call happens: advocacy is Plexaverse state that surfaces the
-  /// post on the team feed. Returns the flag the server stored.
+  /// No LinkedIn write happens: advocacy is Plexaverse state that puts the
+  /// post on the user's own advocacy feed. Returns the flag the server
+  /// stored.
+  ///
+  /// Only a post the user's own company page published can be featured
+  /// (web 857b2b3). Anyone else's, or a URN nobody holds, is 404 NOT_FOUND —
+  /// the same answer for both, so the endpoint reveals nothing about other
+  /// accounts — and a post a second Plexaverse account already features for
+  /// the same page is 409 CONFLICT. Both throw [CompanyUnavailable] carrying
+  /// the server's sentence.
   Future<bool> setAdvocacy({
     required String postId,
     required bool isAdvocated,
     int? expiryDays,
   });
 
-  /// The global advocacy feed — every unexpired featured post, across the team.
+  /// The user's own advocacy feed — every unexpired post THEY featured.
+  ///
+  /// It was one global feed until web 857b2b3: with no team model in the
+  /// schema, "the team" was in practice every company's posts, strangers'
+  /// included.
   Future<List<AdvocacyPost>> fetchAdvocacyFeed();
 
   /// Reshares a featured post to the user's PERSONAL feed. Returns the XP

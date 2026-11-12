@@ -1,6 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:plexaverse/core/access/feature_access.dart';
 import 'package:plexaverse/core/router/zave_destinations.dart';
+import 'package:plexaverse/core/router/zave_routes.dart';
 
 /// Nothing the web offers is unreachable on mobile.
 ///
@@ -42,6 +43,36 @@ void main() {
       );
     }
   }
+
+  test('the contest and the roadmap are rows for everyone', () {
+    // Both are `visibility: 'both'` in the web sidebar. The contest is the
+    // home, and the roadmap is where Home's journey went: a brand or role that
+    // lost either would have no way to the screen it used to open on.
+    for (final BrandType? brand in <BrandType?>[null, ...BrandType.values]) {
+      for (final String? role in <String?>[null, 'user', 'admin']) {
+        final List<ZaveDestination> rows = visibleDestinations(
+          role: role,
+          brandType: brand,
+        );
+        String? labelOf(String route) => rows
+            .where((ZaveDestination d) => d.route == route)
+            .map((ZaveDestination d) => d.label)
+            .firstOrNull;
+
+        expect(labelOf(ZaveRoutes.contest), 'Contest', reason: '$brand/$role');
+        expect(labelOf(ZaveRoutes.roadmap), 'Roadmap', reason: '$brand/$role');
+      }
+    }
+  });
+
+  test('Home is gone from the sheet, as it is from the web sidebar', () {
+    // /dashboard only forwards to the contest now. A row for it would be a
+    // second "Contest" that never highlights.
+    expect(
+      zaveDestinations.map((ZaveDestination d) => d.route),
+      isNot(contains(ZaveRoutes.dashboard)),
+    );
+  });
 
   test('a null brand still reaches every branch route', () {
     // Preferences have not resolved yet. The shell withholds brand-specific

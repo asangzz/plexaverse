@@ -27,6 +27,13 @@ import '../../features/company/presentation/pages/company_analytics_page.dart';
 import '../../features/company/presentation/pages/company_banner_page.dart';
 import '../../features/company/presentation/pages/company_inbox_page.dart';
 import '../../features/compose/presentation/pages/compose_page.dart';
+import '../../features/contest/presentation/pages/contest_claim_page.dart';
+import '../../features/contest/presentation/pages/contest_comment_page.dart';
+import '../../features/contest/presentation/pages/contest_feed_comments_page.dart';
+import '../../features/contest/presentation/pages/contest_invites_page.dart';
+import '../../features/contest/presentation/pages/contest_lesson_page.dart';
+import '../../features/contest/presentation/pages/contest_page.dart';
+import '../../features/contest/presentation/pages/contest_plan_page.dart';
 import '../../features/engagement/presentation/pages/comments_page.dart';
 import '../../features/engagement/presentation/pages/connections_page.dart';
 import '../../features/home/presentation/pages/home_page.dart';
@@ -35,8 +42,8 @@ import '../../features/missions/presentation/pages/about_odyssey_page.dart';
 import '../../features/missions/presentation/pages/banner_blueprint_page.dart';
 import '../../features/missions/presentation/pages/headline_hook_page.dart';
 import '../../features/missions/presentation/pages/journey_complete_page.dart';
-import '../../features/learn/presentation/pages/learn_page.dart';
 import '../../features/persona/presentation/pages/persona_page.dart';
+import '../../features/placement/presentation/pages/placement_page.dart';
 import '../../features/planner/presentation/pages/planner_page.dart';
 import '../../features/plexa/presentation/pages/plexa_journey_page.dart';
 import '../../features/posts/presentation/pages/post_detail_page.dart';
@@ -67,23 +74,29 @@ part 'app_router.g.dart';
 ///   /unlock      — biometric re-auth for a locked signed-in session
 ///   /styleguide  — the Zave reference (public)
 ///
-///   ── the signed-in shell (bottom bar) ──
-///   /dashboard   — the journey roadmap
+///   ── the signed-in shell (its branches; the More sheet reaches them) ──
+///   /contest     — the contest: the daily path and the standings (home)
+///   /roadmap     — the 1000-day journey
 ///   /planner     — the week
 ///   /calendar    — the month
 ///   /posts       — the library
 ///
-///   ── pushed over the shell (no bottom bar) ──
-///   /create · /company-post · /posts/:id · /schedules · /persona · /learn ·
-///   /settings · /accounts
+///   ── pushed over the shell ──
+///   /create · /company-post · /posts/:id · /schedules · /persona ·
+///   /settings · /accounts · /placement · the contest's levels:
+///   /contest/{lesson,comment,feed-comments,invites,plan,claim}
 ///
-/// The four shell branches match [tabRoutes]; the bottom bar is built from the
-/// same list, so the bar and the router cannot disagree.
+///   ── old addresses, kept as redirects ──
+///   /dashboard → /contest · /learn → /contest ·
+///   /contest/quiz → /contest/lesson · /season-complete → /journey-complete
+///
+/// The five shell branches match [tabRoutes], so the shell host and the router
+/// cannot disagree about which branch is which.
 ///
 /// `refreshListenable` re-runs the guard whenever the tenant, auth gate, app
 /// lock or onboarding state changes, or the network layer forces a sign-out.
 
-/// Root navigator — routes parented here cover the bottom bar.
+/// Root navigator — routes parented here cover the floating buttons.
 final GlobalKey<NavigatorState> _rootNavigatorKey = GlobalKey<NavigatorState>(
   debugLabel: 'root',
 );
@@ -146,25 +159,42 @@ GoRouter appRouter(Ref ref) {
       // 400-500ms against the mock's own latency, and worse against the real
       // backend, which is in Tokyo.
       //
-      // Preloading builds all four at shell construction, so their fetches run
-      // in parallel while the user is still reading Home, and the data is
-      // there before the tab is ever tapped. The IndexedStack then keeps them
-      // alive, so this cost is paid once per launch rather than once per tab.
+      // Preloading builds all five at shell construction, so their fetches run
+      // in parallel while the user is still on the contest, and the data is
+      // there before the branch is ever opened. The IndexedStack then keeps
+      // them alive, so this cost is paid once per launch rather than once per
+      // visit.
       //
-      // It is not free: four tabs fetch at sign-in instead of on demand, which
-      // is four requests a user who never leaves Home did not need. That is
-      // the right trade for a bottom bar — these are the four surfaces the
-      // product expects someone to touch daily, and go_router's own note calls
-      // branch preloading's primary purpose exactly this.
+      // It is not free: five branches fetch at sign-in instead of on demand,
+      // and a user who never leaves the contest did not need four of them.
+      // That is the right trade here — these are the surfaces the product
+      // expects someone to touch daily, and go_router's own note calls branch
+      // preloading's primary purpose exactly this. The roadmap was already a
+      // preloaded branch (it was the home); the contest is the one new fetch.
       StatefulShellRoute.indexedStack(
         builder: (_, _, navigationShell) =>
             ZaveShellHost(navigationShell: navigationShell),
         branches: <StatefulShellBranch>[
+          // The signed-in home since the web's 11 Nov 2026: the contest.
           StatefulShellBranch(
             preload: true,
             routes: <RouteBase>[
               GoRoute(
-                path: ZaveRoutes.dashboard,
+                path: ZaveRoutes.contest,
+                pageBuilder: (context, state) => NoTransitionPage<void>(
+                  key: state.pageKey,
+                  child: const ContestPage(),
+                ),
+              ),
+            ],
+          ),
+          // The 1000-day journey — what /dashboard showed until the contest
+          // took the home slot.
+          StatefulShellBranch(
+            preload: true,
+            routes: <RouteBase>[
+              GoRoute(
+                path: ZaveRoutes.roadmap,
                 pageBuilder: (context, state) => NoTransitionPage<void>(
                   key: state.pageKey,
                   child: const HomePage(),
@@ -211,8 +241,29 @@ GoRouter appRouter(Ref ref) {
         ],
       ),
 
+      // The web's signed-in landing, and where onboarding finishes. On the web
+      // it checks onboarding and sends the user on to the contest; the
+      // onboarding half is the guard's here, so this only forwards. Old links
+      // and delivered notifications still name it.
+      GoRoute(
+        path: ZaveRoutes.dashboard,
+        parentNavigatorKey: _rootNavigatorKey,
+        redirect: (_, _) => ZaveRoutes.contest,
+      ),
+
+      // The English lesson moved into the contest's daily path (web, 10 Nov
+      // 2026), and the web's middleware forwards /learn to the contest. Stored
+      // notifications and old links still name it. The path is a literal: the
+      // route constant went with the screen, and no_learn_route_test allows
+      // this redirect and nothing else.
+      GoRoute(
+        path: '/learn',
+        parentNavigatorKey: _rootNavigatorKey,
+        redirect: (_, _) => ZaveRoutes.contest,
+      ),
+
       // ── Full-screen routes, parented to the root navigator so they cover
-      // the bottom bar. Horizontal-slide entrance.
+      // the floating buttons. Horizontal-slide entrance.
       // Compose. Two paths, one widget: it derives company mode from
       // preferences, mirroring the web's two nav items both labelled "Write".
       // `onOpenSettings` is what turns the composer's "no LinkedIn account
@@ -237,7 +288,6 @@ GoRouter appRouter(Ref ref) {
         ),
       ),
       _fullScreen(ZaveRoutes.schedules, const SchedulesPage()),
-      _fullScreen(ZaveRoutes.learn, const LearnPage()),
       _fullScreen(ZaveRoutes.persona, const PersonaPage()),
       _fullScreen(ZaveRoutes.settings, const SettingsPage()),
       _fullScreen(
@@ -263,7 +313,18 @@ GoRouter appRouter(Ref ref) {
           ),
         ),
       ),
-      _fullScreen(ZaveRoutes.connections, const ConnectionsPage()),
+      // /connections?from=contest is the contest's Connect level: the same
+      // sprint, finished into the contest instead of the roadmap.
+      GoRoute(
+        path: ZaveRoutes.connections,
+        parentNavigatorKey: _rootNavigatorKey,
+        pageBuilder: (context, state) => CupertinoPage<void>(
+          key: state.pageKey,
+          child: ConnectionsPage(
+            fromContest: state.uri.queryParameters['from'] == 'contest',
+          ),
+        ),
+      ),
       _fullScreen(ZaveRoutes.topics, const TopicsPage()),
       _fullScreen(ZaveRoutes.pricing, const PricingPage()),
       _fullScreen(ZaveRoutes.journeyComplete, const JourneyCompletePage()),
@@ -274,6 +335,40 @@ GoRouter appRouter(Ref ref) {
         parentNavigatorKey: _rootNavigatorKey,
         redirect: (_, _) => ZaveRoutes.journeyComplete,
       ),
+      // ── The contest's levels, opened from the path by a node's KIND. Each
+      // draws its own way back to the path.
+      _fullScreen(ZaveRoutes.contestLesson, const ContestLessonPage()),
+      // The daily quiz's old address. It grew into today's lesson; sent
+      // emails and notifications still point here.
+      GoRoute(
+        path: ZaveRoutes.contestQuiz,
+        parentNavigatorKey: _rootNavigatorKey,
+        redirect: (_, _) => ZaveRoutes.contestLesson,
+      ),
+      _fullScreen(ZaveRoutes.contestComment, const ContestCommentPage()),
+      _fullScreen(
+        ZaveRoutes.contestFeedComments,
+        const ContestFeedCommentsPage(),
+      ),
+      _fullScreen(ZaveRoutes.contestInvites, const ContestInvitesPage()),
+      _fullScreen(ZaveRoutes.contestPlan, const ContestPlanPage()),
+      // Which piece is claimed is the query, as the path's node built it. The
+      // occurrence is opaque and goes back to the server as it came.
+      GoRoute(
+        path: ZaveRoutes.contestClaim,
+        parentNavigatorKey: _rootNavigatorKey,
+        pageBuilder: (context, state) => CupertinoPage<void>(
+          key: state.pageKey,
+          child: ContestClaimPage(
+            kind: state.uri.queryParameters['kind'] ?? '',
+            occurrence: state.uri.queryParameters['occurrence'] ?? '',
+          ),
+        ),
+      ),
+      // The placement test that sets the lesson level — from the join card,
+      // and from the lesson when no level is set.
+      _fullScreen(ZaveRoutes.placement, const PlacementPage()),
+
       _fullScreen(ZaveRoutes.roadmapAboutOdyssey, const AboutOdysseyPage()),
       _fullScreen(ZaveRoutes.roadmapHeadlineHook, const HeadlineHookPage()),
       _fullScreen(

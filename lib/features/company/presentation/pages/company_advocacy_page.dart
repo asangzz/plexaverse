@@ -16,9 +16,9 @@ import '../widgets/company_states.dart';
 /// A feed of company posts flagged for advocacy; resharing one to your own
 /// LinkedIn feed widens the company's reach. It used to earn 50 wallet XP;
 /// wallet XP is retired (the plan pays for AI now), so a reshare pays nothing
-/// and the copy no longer promises it. The feed is GLOBAL on purpose — every teammate
-/// sees the same set, which is what makes it a team surface rather than a
-/// personal queue.
+/// and the copy no longer promises it. The feed holds only the posts THIS
+/// user featured (web 857b2b3): it was meant as a team surface, but with no
+/// team in the schema a global feed was every company's posts.
 ///
 /// Nav visibility is `admin`, so this is hidden from every end user in v1 and
 /// reachable only by deep link. The screen is built anyway: the gate is a nav

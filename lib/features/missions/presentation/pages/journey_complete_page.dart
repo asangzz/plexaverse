@@ -24,8 +24,8 @@ import '../widgets/mission_chrome.dart';
 /// endless four-week loop is gone from the product; `/season-complete` still
 /// routes here because old notifications and shipped deep links name it.
 ///
-/// Reached two ways: home pushes it once per app session when it sees a
-/// finished journey ([journeyCompletePromptProvider]), and deep links.
+/// Reached two ways: the roadmap pushes it once per app session when it sees
+/// a finished journey ([journeyCompletePromptProvider]), and deep links.
 class JourneyCompletePage extends ConsumerStatefulWidget {
   const JourneyCompletePage({super.key});
 
@@ -38,12 +38,13 @@ class _JourneyCompletePageState extends ConsumerState<JourneyCompletePage> {
   @override
   void initState() {
     super.initState();
-    // Being shown IS the offer, however the user then leaves. Home marks this
-    // before it pushes, but a deep link or the `/season-complete` redirect
-    // opens the page without home, and the system back or the iOS edge swipe
-    // never reach [_leave]. Unmarked, home would push the page straight back
-    // the moment it mounts, and back would seem to fail once. After the
-    // frame, because a provider cannot be written while the tree builds.
+    // Being shown IS the offer, however the user then leaves. The roadmap
+    // marks this before it pushes, but a deep link or the `/season-complete`
+    // redirect opens the page without it, and the system back or the iOS edge
+    // swipe never reach [_leave]. Unmarked, the roadmap would push the page
+    // straight back the moment it mounts, and back would seem to fail once.
+    // After the frame, because a provider cannot be written while the tree
+    // builds.
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) {
         ref.read(journeyCompletePromptProvider.notifier).markHandled();
@@ -79,16 +80,17 @@ class _JourneyCompletePageState extends ConsumerState<JourneyCompletePage> {
   }
 }
 
-/// Back to home, and do not offer this screen again this session.
+/// Back to the roadmap, and do not offer this screen again this session.
 ///
-/// Pops when there is something to pop to (the normal case: home pushed this),
-/// and goes home otherwise (a cold deep link has no stack under it).
+/// Pops when there is something to pop to (the normal case: the roadmap
+/// pushed this), and goes to the roadmap otherwise (a cold deep link has no
+/// stack under it) — the web's `router.push('/roadmap')`.
 void _leave(BuildContext context, WidgetRef ref) {
   ref.read(journeyCompletePromptProvider.notifier).markHandled();
   if (context.canPop()) {
     context.pop();
   } else {
-    context.go(ZaveRoutes.dashboard);
+    context.go(ZaveRoutes.roadmap);
   }
 }
 
@@ -270,8 +272,8 @@ class _StartCardState extends ConsumerState<_StartCard> {
       return;
     }
     // Started, or already started by an earlier tap or another device —
-    // either way the user is on a new journey now, and home is where it
-    // begins.
+    // either way the user is on a new journey now, and the roadmap is where
+    // it begins (the web's `router.replace('/roadmap')`).
     ref.read(journeyCompletePromptProvider.notifier).markHandled();
     messenger
       ..hideCurrentSnackBar()
@@ -280,7 +282,7 @@ class _StartCardState extends ConsumerState<_StartCard> {
           content: Text('Your new journey starts today.', style: ZaveType.body),
         ),
       );
-    if (mounted) context.go(ZaveRoutes.dashboard);
+    if (mounted) context.go(ZaveRoutes.roadmap);
   }
 
   @override
@@ -339,8 +341,8 @@ class _StartCardState extends ConsumerState<_StartCard> {
 /// A deep link that arrived while the journey is still running — an old
 /// notification, or a link opened after a new journey already started.
 ///
-/// The web redirects these to the dashboard. Saying so is kinder than a
-/// silent bounce, and offering the start here would only be refused.
+/// The web redirects these to the roadmap. Saying so is kinder than a silent
+/// bounce, and offering the start here would only be refused.
 class _NotFinished extends ConsumerWidget {
   const _NotFinished({required this.preferences});
 
@@ -370,7 +372,7 @@ class _NotFinished extends ConsumerWidget {
         ),
         SizedBox(height: ZaveSpace.xl),
         ZaveButton.primary(
-          label: 'Back to home',
+          label: 'Back to the roadmap',
           expand: true,
           onPressed: () => _leave(context, ref),
         ),

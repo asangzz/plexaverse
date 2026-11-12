@@ -22,12 +22,13 @@ import 'zave_more_sheet.dart';
 ///
 /// **The whole tree is in the sheet now, not the leftovers.** The sheet is
 /// handed [visibleDestinations] rather than `moreDestinations`, because with
-/// no bar there is nothing else to reach Home, Plan, Calendar or Posts with.
+/// no bar there is nothing else to reach the Contest, the Roadmap, Plan,
+/// Calendar or Posts with.
 /// That is the property that keeps the app honest — no destination the web
 /// offers this user is unreachable here — and it used to be split across two
 /// surfaces that had to be kept covering it between them.
 ///
-/// The four shell BRANCHES are unchanged: they still exist, still preload and
+/// The shell BRANCHES are unchanged: they still exist, still preload and
 /// still keep their state in an IndexedStack. [tabRoutes] names them. They are
 /// simply no longer drawn as tabs.
 class ZaveShell extends StatelessWidget {

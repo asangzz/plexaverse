@@ -8,9 +8,11 @@ import 'zave_routes.dart';
 /// (splash / onboarding / login / unlock / home) rather than hard-coding
 /// paths, while there is still exactly ONE place a path is defined.
 ///
-/// Note [home] is `/dashboard`, not `/home`: the app's landing route is the
+/// Note [home] is `/contest`, not `/home`: the app's landing route is the
 /// web's, so a signed-in user and a deep link both resolve the same way on
-/// both platforms.
+/// both platforms. The web lands on `/dashboard`, which forwards there; the
+/// app goes straight to it, and keeps `/dashboard` as the same redirect for
+/// old links.
 class RoutePaths {
   const RoutePaths._();
 
@@ -19,8 +21,9 @@ class RoutePaths {
   static const String login = ZaveRoutes.login;
   static const String unlock = ZaveRoutes.unlock;
 
-  /// Post-auth landing. The web's `/dashboard`.
-  static const String home = ZaveRoutes.dashboard;
+  /// Post-auth landing: the contest, where the web's `/dashboard` sends a
+  /// signed-in user since 11 Nov 2026.
+  static const String home = ZaveRoutes.contest;
 
   static const String styleguide = ZaveRoutes.styleguide;
 

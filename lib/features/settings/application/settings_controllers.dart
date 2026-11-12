@@ -138,9 +138,10 @@ class WhatsAppController extends _$WhatsAppController {
 
 /// What is in flight, and what last failed.
 ///
-/// Mirrors [LearnBusy]'s shape for the same reason: the row has to disable
-/// four different controls while any one of them is running, and show one
-/// sentence when one of them refuses.
+/// One in-flight flag and one sentence for the whole row, held on the
+/// controller rather than the widget: the row has to disable four different
+/// controls while any one of them is running, and show one sentence when one
+/// of them refuses.
 class WhatsAppBusy {
   const WhatsAppBusy({this.busy = false, this.error});
 

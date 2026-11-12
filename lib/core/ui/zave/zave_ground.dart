@@ -152,11 +152,12 @@ class ZaveScaffold extends StatelessWidget {
     // a title, a leading or actions — so a screen that draws its own big h2
     // inside the scroll view got no header, and therefore nowhere to put one.
     //
-    // `canPop` is the whole condition, and it is the right one: the four shell
-    // branches sit at the root of their navigator and answer false, so Home,
-    // Plan, Calendar and Posts do not sprout a back arrow. Anything pushed
-    // over them answers true. A page that wants something else in that slot
-    // still passes its own `leading` and keeps it.
+    // `canPop` is the whole condition, and it is the right one: the shell
+    // branches sit at the root of their navigator and answer false, so the
+    // Contest, the Roadmap, Plan, Calendar and Posts do not sprout a back
+    // arrow. Anything pushed over them answers true. A page that wants
+    // something else in that slot still passes its own `leading` and keeps
+    // it.
     final bool canPop = Navigator.of(context).canPop();
     final Widget? effectiveLeading =
         leading ??

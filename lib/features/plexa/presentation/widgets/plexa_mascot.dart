@@ -63,11 +63,11 @@ class PlexaMascot extends StatefulWidget {
 
   /// Show the clip's last frame and load no video at all.
   ///
-  /// For screens where Plexa is scenery rather than a performance — the
-  /// Learn path is thirty nodes long, and a looping video parked in it would
-  /// play for the whole time the user is reading a lesson list. The still is
-  /// the same frame the clip ends on, so a screen that later switches to the
-  /// live mascot does not jump.
+  /// For screens where Plexa is scenery rather than a performance — a long
+  /// list the user reads for minutes, where a video parked beside it would
+  /// play for the whole time they are reading. The still is the same frame
+  /// the clip ends on, so a screen that later switches to the live mascot
+  /// does not jump.
   final bool still;
 
   /// Don't start the current clip yet — the web's `hold`. Plexa stays off

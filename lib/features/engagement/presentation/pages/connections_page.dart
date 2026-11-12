@@ -1,12 +1,28 @@
+import 'dart:ui' show ImageFilter;
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart' show Clipboard, ClipboardData;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../../core/plan/plan_limit_sheet.dart';
+import '../../../../core/plan/plan_refusal.dart';
 import '../../../../core/router/zave_routes.dart';
 import '../../../../core/ui/app_icons.dart';
 import '../../../../core/ui/widgets/open_link.dart';
 import '../../../../core/ui/zave/zave_kit.dart';
+import '../../../contest/application/connect_controllers.dart';
+import '../../../contest/application/contest_controllers.dart';
+import '../../../contest/domain/contest_repository.dart'
+    show
+        ContestPlanRefused,
+        ContestProfileIncomplete,
+        PathNodeKind,
+        contestMessage;
+import '../../../contest/presentation/widgets/contest_kit.dart'
+    show LockedNotice;
+import '../../../contest/presentation/widgets/sheet/contest_sheet.dart'
+    show SheetAlert;
 import '../../application/engagement_controllers.dart';
 import '../../domain/engagement_repository.dart';
 import '../widgets/connection_card.dart';
@@ -48,11 +64,27 @@ import '../widgets/mission_header.dart';
 /// The progress denominator is the batch length, not the roadmap step's number.
 /// That asymmetry with `/comments` is the web's own — see
 /// [ConnectionBatch.targetCount].
+///
+/// ## Contest mode
+///
+/// [fromContest] is the contest path's Monday and Thursday level, "Connect
+/// with leaders" — the web's `/connections?from=contest`. The same cards and
+/// notes, but the targets come from the contest's own route (free for an
+/// entrant on those days, one set a day) and the finish pays the contest task
+/// — never the roadmap step — then goes back to the path. It waits its turn
+/// like every other level: while today's earlier levels are open the page
+/// says which comes first instead of loading targets, or the learner could
+/// send every request and only then be refused at the finish.
 class ConnectionsPage extends ConsumerWidget {
-  const ConnectionsPage({super.key});
+  const ConnectionsPage({super.key, this.fromContest = false});
+
+  /// Opened from the contest path. See the class doc.
+  final bool fromContest;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    if (fromContest) return const _ContestConnectGate();
+
     final AsyncValue<ConnectionBatch> batch = ref.watch(
       connectionsControllerProvider,
     );
@@ -252,11 +284,13 @@ class ConnectionsPage extends ConsumerWidget {
     _leave(context);
   }
 
+  /// Back where the step came from: the roadmap, as the web's finish and
+  /// back button both go (`/roadmap`).
   static void _leave(BuildContext context) {
     if (context.canPop()) {
       context.pop();
     } else {
-      context.go(ZaveRoutes.dashboard);
+      context.go(ZaveRoutes.roadmap);
     }
   }
 
@@ -308,4 +342,350 @@ class _NothingGenerated extends StatelessWidget {
     title: 'No targets came back',
     body: 'Pull down to ask again. Nothing was charged.',
   );
+}
+
+// ── Contest mode ────────────────────────────────────────────────────────────
+
+/// What the contest's description says under the title. The web's own words.
+const String _contestLead =
+    'Send each request with its note, then finish to collect your contest XP.';
+
+/// Back to the contest — where the level was opened, and where Finish goes.
+Widget _backToContest(BuildContext context) => ZaveIconButton(
+  icon: const Icon(AppIcons.back),
+  tooltip: 'Back to the contest',
+  onPressed: () => context.go(ZaveRoutes.contest),
+);
+
+/// The level's gate, read off the path before anything else.
+///
+/// Today's targets are not asked for until the path says the level is open:
+/// the GET may spend the day's model call, and a learner who sent every
+/// request while the level was locked would only learn it at the finish
+/// (409 LOCKED). A path that FAILED to load is not a reason to wait — the
+/// page opens and the server's own gate still holds.
+class _ContestConnectGate extends ConsumerWidget {
+  const _ContestConnectGate();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final TodayLock lock = ref.watch(
+      todayLockProvider(PathNodeKind.connectLeaders),
+    );
+    final String? locked = lock.locked;
+    if (!lock.pending && locked == null) return const _ContestConnections();
+    return ZaveScaffold(
+      title: 'Connect with leaders',
+      leading: _backToContest(context),
+      body: ZaveScrollView(
+        children: <Widget>[
+          if (locked != null)
+            LockedNotice(detail: locked)
+          else
+            const EngagementSkeleton(rows: 4),
+        ],
+      ),
+    );
+  }
+}
+
+/// The open level: today's leaders, the notes, and "Finish and collect XP".
+class _ContestConnections extends ConsumerWidget {
+  const _ContestConnections();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final AsyncValue<ConnectionBatch> batch = ref.watch(
+      contestConnectTargetsProvider,
+    );
+    final ContestConnectBusy finish = ref.watch(contestConnectActionsProvider);
+
+    // Off a contest Monday or Thursday the plan gate applies, and its refusal
+    // opens the plan sheet once, as it lands — the card below has no way to
+    // the limit's reset time.
+    ref.listen<AsyncValue<ConnectionBatch>>(contestConnectTargetsProvider, (
+      AsyncValue<ConnectionBatch>? previous,
+      AsyncValue<ConnectionBatch> next,
+    ) {
+      final Object? error = next.error;
+      if (error is ContestPlanRefused &&
+          previous?.error is! ContestPlanRefused) {
+        PlanLimitSheet.show(context, error.refusal);
+      }
+    });
+
+    final ConnectionBatch? data = batch.value;
+    final int sent = data?.sentCount ?? 0;
+    final int target = data?.targetCount ?? 5;
+    final bool ready = data != null && !data.isEmpty && sent >= target;
+
+    return ZaveScaffold(
+      title: 'Connect with leaders',
+      leading: _backToContest(context),
+      bottomBar: data == null
+          ? null
+          : _ContestFinishBar(
+              done: sent,
+              total: target,
+              busy: finish.busy,
+              note: ready ? null : _sendMore(target - sent),
+              error: finish.error,
+              locked: finish.locked,
+              onFinish: ready ? () => _finish(context, ref) : null,
+            ),
+      body: RefreshIndicator(
+        color: ZaveColors.white,
+        backgroundColor: ZaveColors.deep,
+        onRefresh: () async {
+          // The day's set is replayed, never replaced: there is no new set
+          // to ask for in the contest.
+          ref.invalidate(contestConnectTargetsProvider);
+          try {
+            await ref.read(contestConnectTargetsProvider.future);
+          } on Object {
+            // The page shows the failure itself.
+          }
+        },
+        child: batch.when(
+          loading: () => const ZaveScrollView(
+            children: <Widget>[EngagementSkeleton(rows: 4)],
+          ),
+          error: (Object error, StackTrace _) => ZaveScrollView(
+            children: <Widget>[
+              Text(_contestLead, style: ZaveType.lead),
+              SizedBox(height: ZaveSpace.xl),
+              EngagementBlocked(
+                failure: _asFailure(error),
+                onRetry: () => ref.invalidate(contestConnectTargetsProvider),
+                onSeePlans: () => context.push(ZaveRoutes.pricing),
+                onCompleteProfile: () => context.push(ZaveRoutes.settings),
+              ),
+            ],
+          ),
+          data: (ConnectionBatch value) => _body(context, ref, value, sent),
+        ),
+      ),
+    );
+  }
+
+  Widget _body(
+    BuildContext context,
+    WidgetRef ref,
+    ConnectionBatch batch,
+    int sent,
+  ) {
+    final ContestConnectTargets targets = ref.read(
+      contestConnectTargetsProvider.notifier,
+    );
+    return ZaveScrollView(
+      children: <Widget>[
+        Text(_contestLead, style: ZaveType.lead),
+        SizedBox(height: ZaveSpace.xl),
+        if (batch.profession.isNotEmpty) ...<Widget>[
+          Text('AIMED AT', style: ZaveType.kicker),
+          SizedBox(height: ZaveSpace.sm),
+          Text(batch.profession, style: ZaveType.h3),
+          SizedBox(height: ZaveSpace.lg),
+        ],
+        Text(
+          '$sent / ${batch.targetCount} sent — send each request on LinkedIn.',
+          style: ZaveType.bodyMuted,
+        ),
+        // No "new set" control: the contest's set is one a day.
+        if (batch.cached) ...<Widget>[
+          SizedBox(height: ZaveSpace.sm),
+          const CachedBatchNote(),
+        ],
+        SizedBox(height: ZaveSpace.xl),
+        if (batch.isEmpty)
+          const _NothingGenerated()
+        else
+          for (int i = 0; i < batch.connections.length; i++) ...<Widget>[
+            ConnectionCard(
+              key: ValueKey<int>(i),
+              index: i,
+              target: batch.connections[i],
+              onCopyNote: () async {
+                await Clipboard.setData(
+                  ClipboardData(text: batch.connections[i].note),
+                );
+                targets.markSent(i);
+                if (!context.mounted) return;
+                await ConnectionsPage._openSearch(
+                  context,
+                  ref,
+                  batch.connections[i],
+                  clipboardHoldsTheNote: true,
+                );
+              },
+              onOpenSearch: () => ConnectionsPage._openSearch(
+                context,
+                ref,
+                batch.connections[i],
+              ),
+            ),
+            SizedBox(height: ZaveSpace.md),
+          ],
+        SizedBox(height: ZaveSpace.lg),
+        const FreePlanRuleCard(),
+        SizedBox(height: ZaveSpace.md),
+        const HowItWorksCard(
+          steps: <String>[
+            'Copy & open LinkedIn — the note goes to your clipboard and '
+                'LinkedIn opens on a search for that role.',
+            'Find a Premium account in the results — the gold badge.',
+            'Connect, add a note, paste, send.',
+          ],
+          handoff:
+              'Find people opens the same search without copying, so you can '
+              'look around before a request counts as sent.',
+        ),
+      ],
+    );
+  }
+
+  /// Pays the contest task — a repeat is harmless — and goes back to the
+  /// path, which must now show the level done.
+  Future<void> _finish(BuildContext context, WidgetRef ref) async {
+    final bool ok = await ref
+        .read(contestConnectActionsProvider.notifier)
+        .complete();
+    if (!ok || !context.mounted) return;
+    context.go(ZaveRoutes.contest);
+  }
+
+  static String _sendMore(int left) => left == 1
+      ? 'Send one more request to finish.'
+      : 'Send $left more requests to finish.';
+
+  /// The contest's refusals of the targets, as the card both habit screens
+  /// already draw: the plan, an empty profile, or anything else.
+  static EngagementFailure _asFailure(Object error) => switch (error) {
+    ContestPlanRefused(:final PlanRefusal refusal) => EngagementFailure(
+      refusal.needsPlan
+          ? EngagementBlock.needsPlan
+          : EngagementBlock.limitReached,
+      message: refusal.message,
+      refusal: refusal,
+    ),
+    ContestProfileIncomplete(:final String message) => EngagementFailure(
+      EngagementBlock.profileIncomplete,
+      message: message,
+    ),
+    _ => EngagementFailure(
+      EngagementBlock.unavailable,
+      message: contestMessage(error),
+    ),
+  };
+}
+
+/// The sticky bar with the level's one action, "Finish and collect XP".
+///
+/// [FinishStepBar]'s layout — the count, the dots, the line under them —
+/// with the contest's button and the contest's refusal under it. Its own
+/// widget rather than a label on that one because a refused finish here has
+/// a cure the roadmap step never has: the way back to the path.
+class _ContestFinishBar extends StatelessWidget {
+  const _ContestFinishBar({
+    required this.done,
+    required this.total,
+    required this.busy,
+    required this.onFinish,
+    this.note,
+    this.error,
+    this.locked = false,
+  });
+
+  final int done;
+  final int total;
+  final bool busy;
+
+  /// Null disables the button: not every note is copied yet.
+  final VoidCallback? onFinish;
+  final String? note;
+
+  /// The server's refusal of the last finish, in its own words.
+  final String? error;
+
+  /// That refusal was the gate: an earlier level of today is still open.
+  final bool locked;
+
+  @override
+  Widget build(BuildContext context) {
+    final String? refused = error;
+    return ClipRect(
+      child: BackdropFilter(
+        filter: ImageFilter.blur(
+          sigmaX: ZaveSurface.headerBlurSigma,
+          sigmaY: ZaveSurface.headerBlurSigma,
+        ),
+        child: DecoratedBox(
+          decoration: const BoxDecoration(
+            color: ZaveGlass.headerFill,
+            border: Border(
+              top: BorderSide(color: ZaveGlass.headerBorder, width: 1),
+            ),
+          ),
+          child: SafeArea(
+            top: false,
+            child: Padding(
+              padding: EdgeInsets.fromLTRB(
+                ZaveSpace.gutter,
+                ZaveSpace.lg,
+                ZaveSpace.gutter,
+                ZaveSpace.lg,
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: <Widget>[
+                  Row(
+                    children: <Widget>[
+                      Text(
+                        '$done / $total sent',
+                        style: ZaveType.label.copyWith(
+                          color: done >= total
+                              ? ZaveColors.mint
+                              : ZaveColors.ink62,
+                        ),
+                      ),
+                      SizedBox(width: ZaveSpace.md),
+                      Expanded(
+                        child: Wrap(
+                          spacing: ZaveSpace.sm,
+                          runSpacing: ZaveSpace.sm,
+                          alignment: WrapAlignment.end,
+                          children: <Widget>[
+                            for (int i = 0; i < total; i++)
+                              ZaveDot(
+                                i < done ? ZaveColors.green : ZaveColors.ink35,
+                              ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                  if (note != null) ...<Widget>[
+                    SizedBox(height: ZaveSpace.sm),
+                    Text(note!, style: ZaveType.caption),
+                  ],
+                  if (refused != null) ...<Widget>[
+                    SizedBox(height: ZaveSpace.sm),
+                    SheetAlert(message: refused, backToPath: locked),
+                  ],
+                  SizedBox(height: ZaveSpace.md),
+                  ZaveButton.primary(
+                    label: 'Finish and collect XP',
+                    expand: true,
+                    busy: busy,
+                    onPressed: onFinish,
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
 }

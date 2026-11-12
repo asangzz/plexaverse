@@ -217,10 +217,10 @@ void main() {
     final List<String> lines = state().messages
         .map((ChatMessage m) => m.text)
         .toList();
+    // No XP promise: connecting pays nothing since wallet XP was retired.
     expect(
       lines.last,
-      "I'll publish on your behalf and learn from your existing posts. "
-      '+2,500 XP on connect.',
+      "I'll publish on your behalf and learn from your existing posts.",
     );
 
     await act(tester, () => chat().connectLinkedin());

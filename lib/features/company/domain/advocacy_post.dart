@@ -20,8 +20,7 @@ abstract class AdvocacyAccount with _$AdvocacyAccount {
 ///
 /// Distinct from `CompanyPostStats`: those come live from LinkedIn's share
 /// statistics, these are the snapshot we last persisted. The advocacy feed
-/// reads OUR row because it lists posts across the whole team, including ones
-/// this user's company token cannot query.
+/// reads OUR row, so listing it costs no LinkedIn call per post.
 @freezed
 abstract class AdvocacyMetrics with _$AdvocacyMetrics {
   const factory AdvocacyMetrics({
@@ -38,9 +37,11 @@ abstract class AdvocacyMetrics with _$AdvocacyMetrics {
 
 /// One post featured for employee advocacy.
 ///
-/// **The feed is global on purpose.** `listAdvocatedPosts()` filters on
-/// `isAdvocated` and expiry only — not on user — so every teammate sees the
-/// same set to amplify. That is the whole point of the surface.
+/// **The feed is the user's own.** `listAdvocatedPosts(userId)` reads only
+/// the caller's rows (web 857b2b3). It used to filter on `isAdvocated` and
+/// expiry alone, but nothing in the schema links users to a team, so "every
+/// teammate" was in practice every company's featured posts, strangers'
+/// included.
 ///
 /// The mobile route returns the raw row, which means the field names differ
 /// from the web page's: the body is `content` (not `text`) and the numbers are

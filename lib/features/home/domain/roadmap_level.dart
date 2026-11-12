@@ -1,11 +1,18 @@
-/// The 66-day roadmap: its days, its tasks, and how progress is applied to it.
+/// The 1000-day roadmap: its days, its tasks, and how progress is applied to
+/// them.
 ///
 /// A direct port of the web's `lib/roadmap-data.ts` (`getBaseRoadmap`) plus the
-/// progress-application pass that lives inside `GamifiedRoadmap.tsx`. The two
-/// are fused into [buildRoadmap] here because nothing in this app ever wants
-/// the base roadmap on its own.
+/// progress fold that used to live inside `GamifiedRoadmap.tsx`. The two are
+/// fused into [buildRoadmap] here because nothing in this app ever wants the
+/// base roadmap on its own.
 ///
-/// **The roadmap is synthetic.** All 66 days always exist; the server sends
+/// **The roadmap no longer draws the tasks.** Since the contest's daily path
+/// took the day's work over (web, 12 Nov 2026) the roadmap is a calendar of
+/// the journey, and a day's place on it is [roadmapDayStatus] — the date and
+/// nothing else. The step table stays because `/comments` and `/connections`
+/// still find and credit today's step through it (`EngagementMission`).
+///
+/// **The roadmap is synthetic.** Every day always exists; the server sends
 /// only which day it is and which steps are done. That is why this screen has
 /// no empty state — there is no such thing as "no roadmap".
 library;
@@ -16,12 +23,20 @@ import '../../../core/week/week_shape.dart';
 import 'roadmap_planets.dart';
 import 'roadmap_progress.dart';
 
-/// Where a day stands.
+/// Where a day sits relative to today — nothing more.
 ///
-/// Derived exactly as the web derives it, including the part that surprises
-/// people: a day that is unlocked, not finished and not today is **missed**,
-/// not "pending". The roadmap is a streak, and it says so.
-enum LevelStatus { completed, active, missed, locked }
+/// Until 12 Nov 2026 a day's status came from its missions, and a past day
+/// with one undone was "missed". The roadmap hands out no missions now, so
+/// there is nothing to miss: days behind are travelled, today is today, days
+/// ahead are ahead.
+enum LevelStatus { completed, active, locked }
+
+/// The web's `dayStatus`, unchanged.
+LevelStatus roadmapDayStatus(int day, int today) {
+  if (day < today) return LevelStatus.completed;
+  if (day == today) return LevelStatus.active;
+  return LevelStatus.locked;
+}
 
 /// One task on one day.
 class RoadmapStep {
@@ -48,6 +63,10 @@ class RoadmapStep {
 
   final String title;
   final String description;
+
+  /// Always 0. Mission XP went with wallet XP (10 Nov 2026) and the web's
+  /// table carries 0 on every step; the field stays because the step's shape
+  /// is the web's, and `EngagementMission` copies it through.
   final int xpReward;
 
   /// A web-identical route path (the same strings `ZaveRoutes` carries). The
@@ -88,7 +107,11 @@ class RoadmapStep {
   );
 }
 
-/// One day of the 66.
+/// One day of the journey.
+///
+/// It deliberately has no status of its own. A status read off [steps] is
+/// the old missions verdict ("Steps Missed", "In Progress"); the roadmap's is
+/// [roadmapDayStatus], which needs only the day and today.
 class RoadmapLevel {
   const RoadmapLevel({
     required this.id,
@@ -97,7 +120,7 @@ class RoadmapLevel {
     required this.steps,
   });
 
-  /// The day number, 1..66.
+  /// The day number, 1..1000.
   final int id;
 
   /// The plain-English progression label under the day ("Finding your voice").
@@ -105,24 +128,6 @@ class RoadmapLevel {
 
   final bool isUnlocked;
   final List<RoadmapStep> steps;
-
-  /// The web's `getLevelStatus`, unchanged.
-  LevelStatus get status {
-    if (!isUnlocked) return LevelStatus.locked;
-    if (steps.isNotEmpty && steps.every((RoadmapStep s) => s.isCompleted)) {
-      return LevelStatus.completed;
-    }
-    if (steps.any((RoadmapStep s) => s.isCurrent)) return LevelStatus.active;
-    return LevelStatus.missed;
-  }
-
-  int get doneCount => steps.where((RoadmapStep s) => s.isCompleted).length;
-
-  /// `levelCompletion` — rounded percentage, 0 when the day has no tasks.
-  int get completionPercent {
-    if (steps.isEmpty) return 0;
-    return (doneCount / steps.length * 100).round();
-  }
 }
 
 // ── Copy tables, ported verbatim ────────────────────────────────────────────
@@ -401,7 +406,7 @@ List<RoadmapLevel> buildRoadmap(RoadmapProgress progress, {DateTime? now}) {
           key: 'publish-post',
           title: 'Publish a post',
           description: 'Write and publish a post to grow your authority.',
-          xpReward: 100,
+          xpReward: 0,
           moduleLink: postCreateRoute,
         ),
       RoadmapStep(
@@ -411,7 +416,7 @@ List<RoadmapLevel> buildRoadmap(RoadmapProgress progress, {DateTime? now}) {
         description: isCompany
             ? 'Reply to comments coming into your Company Page inbox.'
             : 'Leave helpful comments on recent posts to get noticed.',
-        xpReward: 50,
+        xpReward: 0,
         moduleLink: isCompany ? '/company-auto-comment' : '/comments',
       ),
       // A Company Page cannot send connection requests, so step 3 is dropped
@@ -422,7 +427,7 @@ List<RoadmapLevel> buildRoadmap(RoadmapProgress progress, {DateTime? now}) {
           key: 'connect',
           title: 'Send connection requests',
           description: 'Send connection requests to grow your network.',
-          xpReward: 50,
+          xpReward: 0,
           moduleLink: '/connections',
         ),
       if (day - 1 < extras.length)
@@ -431,7 +436,7 @@ List<RoadmapLevel> buildRoadmap(RoadmapProgress progress, {DateTime? now}) {
           key: extras[day - 1].key,
           title: extras[day - 1].title,
           description: extras[day - 1].description,
-          xpReward: 100,
+          xpReward: 0,
           moduleLink: extras[day - 1].link,
         ),
       if (reachAnchor != null &&
@@ -444,7 +449,7 @@ List<RoadmapLevel> buildRoadmap(RoadmapProgress progress, {DateTime? now}) {
           description:
               'Download your LinkedIn analytics (one button, top right) and '
               'upload it — Plexa reads the rest.',
-          xpReward: 100,
+          xpReward: 0,
           moduleLink: '/persona?focus=reach',
         ),
     ];
@@ -530,15 +535,3 @@ List<RoadmapLevel> buildRoadmap(RoadmapProgress progress, {DateTime? now}) {
 
   return levels;
 }
-
-/// "Three small things." reads better than "3 small things." — the Zave voice.
-String countWord(int n) => switch (n) {
-  0 => 'Zero',
-  1 => 'One',
-  2 => 'Two',
-  3 => 'Three',
-  4 => 'Four',
-  5 => 'Five',
-  6 => 'Six',
-  _ => '$n',
-};

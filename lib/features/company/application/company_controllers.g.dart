@@ -93,7 +93,7 @@ final class CompanyPostsControllerProvider
 }
 
 String _$companyPostsControllerHash() =>
-    r'6cf805890a1b0d7efeb35d941d10bd2908e455cc';
+    r'2d0791d2a12a845232eac42e199fe8f37c0919a4';
 
 /// The company page's recent posts. Shared by Analytics and the Inbox.
 
@@ -244,15 +244,15 @@ abstract class _$InboxController extends $AsyncNotifier<InboxState> {
   }
 }
 
-/// The global advocacy feed.
+/// The user's own advocacy feed: the unexpired posts they featured.
 
 @ProviderFor(AdvocacyController)
 final advocacyControllerProvider = AdvocacyControllerProvider._();
 
-/// The global advocacy feed.
+/// The user's own advocacy feed: the unexpired posts they featured.
 final class AdvocacyControllerProvider
     extends $AsyncNotifierProvider<AdvocacyController, AdvocacyState> {
-  /// The global advocacy feed.
+  /// The user's own advocacy feed: the unexpired posts they featured.
   AdvocacyControllerProvider._()
     : super(
         from: null,
@@ -275,7 +275,7 @@ final class AdvocacyControllerProvider
 String _$advocacyControllerHash() =>
     r'dff5028f926de76e8bd099a9e967cc70e31ca9db';
 
-/// The global advocacy feed.
+/// The user's own advocacy feed: the unexpired posts they featured.
 
 abstract class _$AdvocacyController extends $AsyncNotifier<AdvocacyState> {
   FutureOr<AdvocacyState> build();

@@ -50,7 +50,7 @@ Future<Failure> _failureFor(Object? body, int status) async {
     ..httpClientAdapter = _CannedAdapter(body, status)
     ..interceptors.add(ErrorInterceptor());
   try {
-    await dio.get<dynamic>('/learn/level');
+    await dio.get<dynamic>('/planner/generate-post');
     fail('a $status should not resolve');
   } on DioException catch (e) {
     final Object? failure = e.error;

@@ -587,32 +587,85 @@ class AppIcons {
     fontPackage: _pkg,
   ); // arrowRight
 
-  // ── Learn: the levels of a day's climb ────────────────────────────────
+  // ── Words and work ────────────────────────────────────────────────────
   //
-  // Only three are new. The other four levels reuse glyphs the app already
-  // has — a draft is [create], a poster is [image], a read-back is [eye] —
-  // because a level is one of those things, not a new kind of thing.
+  // What a lesson is about: the words, a line someone wrote, the work it
+  // describes. They came in with the old Learn levels and outlived them,
+  // because an English lesson still covers the same three things.
 
-  /// The vocabulary level: terms this week's topic needs.
+  /// Words: vocabulary, reading.
   static const IconData book = IconData(
     0xf02d,
     fontFamily: _family,
     fontPackage: _pkg,
   ); // book
 
-  /// The hook level: the opening line.
+  /// A line someone wrote — an opening hook, a quoted sentence.
   static const IconData quote = IconData(
     0xf10d,
     fontFamily: _family,
     fontPackage: _pkg,
   ); // quoteLeft
 
-  /// The substance level: what the user actually did at work.
+  /// Work: a role, or what the user actually did at it.
   static const IconData briefcase = IconData(
     0xf0b1,
     fontFamily: _family,
     fontPackage: _pkg,
   ); // briefcase
+
+  // ── The contest ───────────────────────────────────────────────────────
+  //
+  // Most of the path's glyphs were already here, because a level is one of
+  // those things: the lesson is [star], connecting is [linkedInIn], a comment
+  // is [comment] and five of them are [forum], the invites screenshot is
+  // [camera], planning the week is [sparkle], a video is [play], the article
+  // is [article], XP is [bolt] and the week's reward is [trophy]. These are
+  // the ones it added, read off the bundled font_awesome_flutter like the
+  // rest — `app_icons_codepoints_test.dart` holds them to it.
+
+  /// The streak. The web draws a flame beside the day count.
+  static const IconData fire = IconData(
+    0xf06d,
+    fontFamily: _family,
+    fontPackage: _pkg,
+  ); // fire
+
+  /// A finalist's place on the board.
+  static const IconData medal = IconData(
+    0xf5a2,
+    fontFamily: _family,
+    fontPackage: _pkg,
+  ); // medal
+
+  /// The entrants — how many people are in the contest.
+  static const IconData userGroup = IconData(
+    0xf500,
+    fontFamily: _family,
+    fontPackage: _pkg,
+  ); // userGroup
+
+  /// The contest in the nav. The web's `IconTarget`.
+  static const IconData bullseye = IconData(
+    0xf140,
+    fontFamily: _family,
+    fontPackage: _pkg,
+  ); // bullseye
+
+  /// Today's chest, after the day's last lesson part. The glyph [empty]
+  /// draws, under the name a chest goes by.
+  static const IconData chest = IconData(
+    0xf49e,
+    fontFamily: _family,
+    fontPackage: _pkg,
+  ); // boxOpen
+
+  /// The 1000-day roadmap in the nav — a map, as the web's `IconRoadmap` is.
+  static const IconData roadmap = IconData(
+    0xf279,
+    fontFamily: _family,
+    fontPackage: _pkg,
+  ); // map
 
   /// Every icon in the vocabulary with its semantic name — drives the style
   /// guide's icon gallery so the set stays self-documenting.
@@ -708,5 +761,11 @@ class AppIcons {
     'book': book,
     'quote': quote,
     'briefcase': briefcase,
+    'fire': fire,
+    'medal': medal,
+    'userGroup': userGroup,
+    'bullseye': bullseye,
+    'chest': chest,
+    'roadmap': roadmap,
   };
 }

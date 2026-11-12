@@ -2,6 +2,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:plexaverse/core/router/auth_gate.dart';
 import 'package:plexaverse/core/router/redirect.dart';
 import 'package:plexaverse/core/router/route_paths.dart';
+import 'package:plexaverse/core/router/zave_routes.dart';
 
 /// `redirectDecision` is a pure function and its doc comment calls it
 /// "exhaustively testable". It had no tests, and that is how the onboarding
@@ -258,6 +259,37 @@ void main() {
       );
       expect(
         target(location: RoutePaths.splash, gate: null, isResolving: true),
+        RedirectTarget.stay,
+      );
+    });
+  });
+
+  group('home is the contest', () {
+    test('the post-auth landing is /contest, not /dashboard', () {
+      // The web's `/dashboard` checks onboarding and forwards to `/contest`
+      // (11 Nov 2026). The guard checks onboarding itself, so it lands there
+      // directly; `/dashboard` survives only as a redirect in the router.
+      expect(RoutePaths.home, ZaveRoutes.contest);
+    });
+
+    test('a finished sign-in, unlock or setup lands on it', () {
+      for (final String from in <String>[
+        RoutePaths.login,
+        RoutePaths.splash,
+        RoutePaths.onboarding,
+        RoutePaths.unlock,
+      ]) {
+        expect(
+          target(location: from, gate: signedIn),
+          RedirectTarget.home,
+          reason: from,
+        );
+      }
+    });
+
+    test('and the guard leaves a signed-in user on it', () {
+      expect(
+        target(location: ZaveRoutes.contest, gate: signedIn),
         RedirectTarget.stay,
       );
     });

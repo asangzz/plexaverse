@@ -13,6 +13,7 @@ import '../../../../core/ui/zave/zave_kit.dart';
 import '../../../posts/application/post_library_controllers.dart';
 import '../../../posts/domain/library_post.dart';
 import '../../application/planner_controller.dart';
+import '../../domain/display_phase.dart';
 import '../../domain/plan_slot.dart';
 import '../../domain/planner_repository.dart';
 import '../../domain/video_script.dart';
@@ -538,7 +539,8 @@ class _WeekHeader extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final String? topic = plan?.topic ?? state.upcomingTopic;
-    final String? phase = plan?.phase ?? state.upcomingPhase;
+    // A retired Season 2 phase name on an old row is hidden, not shown.
+    final String? phase = displayPhase(plan?.phase ?? state.upcomingPhase);
     // The week being VIEWED. `plan` is null for any week the Saturday run
     // has not reached, so falling back to `currentWeekNumber` put "Week 3"
     // above week 9's locked preview — the heading contradicting the card
@@ -1762,7 +1764,7 @@ class _WeekAnalytics extends StatelessWidget {
                   width: tileWidth,
                   child: ZaveStatCard(
                     label: 'Week',
-                    sublabel: plan.phase ?? 'of your journey',
+                    sublabel: displayPhase(plan.phase) ?? 'of your journey',
                     value: '${plan.weekNumber}',
                     filled: true,
                   ),
