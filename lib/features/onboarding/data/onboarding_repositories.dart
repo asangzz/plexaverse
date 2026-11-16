@@ -43,6 +43,29 @@ class ApiOnboardingRepository implements OnboardingRepository {
   }
 
   @override
+  Future<PlanHolder> fetchPlanHolder() async {
+    try {
+      final response = await _client.get<Map<String, dynamic>>(ApiPaths.me);
+      final Map<String, dynamic>? data = response.data;
+      final Object? user = data?['user'];
+      final Object? sub = data?['subscription'];
+      final Map<dynamic, dynamic> s = sub is Map
+          ? sub
+          : const <String, dynamic>{};
+      // `entitled` is resolveEntitlement's verdict, which counts the free
+      // month, a pass and given time. A server that could not work it out
+      // leaves it off, and only a live recurring status is then trusted.
+      final Object? entitled = s['entitled'];
+      return PlanHolder(
+        hasPlan: entitled is bool ? entitled : s['status'] == 'active',
+        email: user is Map ? user['email'] as String? : null,
+      );
+    } on Object {
+      return const PlanHolder(hasPlan: false);
+    }
+  }
+
+  @override
   Future<ParsedCv> parseCv(PickedFile pdf) async {
     final Map<String, dynamic> body = await _upload(
       ApiPaths.aiParseCv,
@@ -183,7 +206,6 @@ class ApiOnboardingRepository implements OnboardingRepository {
     }
   }
 
-
   @override
   Future<void> completeOnboarding(Map<String, dynamic> patch) async {
     try {
@@ -266,6 +288,13 @@ class FakeOnboardingRepository implements OnboardingRepository {
     return 'Asha Mehta';
   }
 
+  /// No plan, so the mock walks through the plan step.
+  @override
+  Future<PlanHolder> fetchPlanHolder() async {
+    await Future<void>.delayed(const Duration(milliseconds: 120));
+    return const PlanHolder(hasPlan: false, email: 'asha@example.com');
+  }
+
   @override
   Future<ParsedCv> parseCv(PickedFile pdf) async {
     await Future<void>.delayed(const Duration(milliseconds: 1200));
@@ -317,7 +346,6 @@ class FakeOnboardingRepository implements OnboardingRepository {
     await Future<void>.delayed(const Duration(milliseconds: 300));
     return null;
   }
-
 
   @override
   Future<void> completeOnboarding(Map<String, dynamic> patch) async {

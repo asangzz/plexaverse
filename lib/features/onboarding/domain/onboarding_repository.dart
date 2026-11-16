@@ -42,6 +42,14 @@ abstract class OnboardingRepository {
   /// Null falls back to "there", as the web does with no session name.
   Future<String?> fetchDisplayName();
 
+  /// `GET /auth/me`, read again at the plan step: does this account already
+  /// have a plan, and the email to prefill the payment sheet with.
+  ///
+  /// Never throws. A failed read is "no plan" — the step is then asked, and
+  /// the worst case is a question; skipping it on a guess would put someone
+  /// into the product with nothing paying for it.
+  Future<PlanHolder> fetchPlanHolder();
+
   /// `POST /ai/parse-cv` — the LinkedIn profile PDF, read.
   Future<ParsedCv> parseCv(PickedFile pdf);
 
@@ -90,4 +98,16 @@ abstract class OnboardingRepository {
   ///
   /// Every step swallows its own failure: none may block the handover.
   Future<void> seedAfterOnboarding(OnboardingAnswers answers);
+}
+
+/// What the plan step needs to know about the account before it asks.
+class PlanHolder {
+  const PlanHolder({required this.hasPlan, this.email});
+
+  /// The server's entitlement verdict — a subscription (free month included),
+  /// a 30-day pass, or given plan time. An account that has one is not asked
+  /// again: a second checkout opens a second mandate beside the first.
+  final bool hasPlan;
+
+  final String? email;
 }

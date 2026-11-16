@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../../core/access/company_brand.dart';
 import '../../../../core/ui/app_icons.dart';
 import '../../../../core/ui/zave/zave_kit.dart';
 import '../../../auth/application/sign_out_controller.dart';
@@ -9,6 +10,7 @@ import '../../application/onboarding_controller.dart';
 import '../../domain/onboarding_repository.dart';
 import '../widgets/chat_lane.dart';
 import '../widgets/onboarding_chrome.dart';
+import '../widgets/plan_panel.dart';
 import '../widgets/reply_lane.dart';
 import '../widgets/role_picker.dart';
 import '../widgets/tone_panel.dart';
@@ -157,6 +159,7 @@ class _OnboardingChatBodyState extends ConsumerState<OnboardingChatBody> {
                 child: OnboardingProgress(
                   percent: chat.step.progressPercent(
                     company: chat.answers.brand == BrandChoice.company,
+                    brandStep: ref.watch(companyBrandOpenProvider),
                   ),
                 ),
               ),
@@ -290,6 +293,14 @@ class _DockControl extends ConsumerWidget {
               onTap: () => controller().skipConnect(),
             ),
         ],
+      ),
+      OnboardingStep.plan => PlanPanel(
+        offer: chat.planOffer,
+        failed: chat.planOfferFailed,
+        busy: chat.planBusy,
+        error: chat.planError,
+        onStart: () => controller().startPlan(),
+        onRetry: () => controller().retryPlanOffer(),
       ),
       OnboardingStep.companyPage => CompanyPagePanel(
         load: controller().companyPages,

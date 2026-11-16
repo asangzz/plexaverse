@@ -12,10 +12,11 @@ part 'pricing.g.dart';
 /// prevent. The shared model that would justify one copy is `preferences/`,
 /// which is domain-only by design; pricing is not that.
 ///
-/// The country is decided by the DEVICE LOCALE, not by an IP lookup — the
-/// mobile route takes `?country=` precisely so the client can answer that
-/// question itself, and an IP guess on a phone is wrong as often as it is
-/// right (roaming, VPN, carrier egress abroad).
+/// The pricing screen passes the DEVICE LOCALE's country. The onboarding plan
+/// step passes none and lets the server read the edge's IP country, as the
+/// web does — there the region picks the payment instrument, not just the
+/// figure, and a phone's locale is a language setting that reads "US" for
+/// plenty of people in India (see the route's own comment).
 @freezed
 abstract class PlanPricing with _$PlanPricing {
   const PlanPricing._();
@@ -32,6 +33,13 @@ abstract class PlanPricing with _$PlanPricing {
     /// How many minor units make one major unit. Razorpay charges in paise /
     /// cents, so the checkout amount is `price * subunitMultiplier`.
     @Default(100) int subunitMultiplier,
+
+    /// What an AUTOPAY subscriber is charged, per plan id, always in rupees —
+    /// the server's `getSubscriptionAmountInr`. Not [personalPrice], which is
+    /// a one-time pass in the local currency: a screen offering autopay that
+    /// priced it from that would promise "$10" and debit ₹798. Empty from a
+    /// server older than the field.
+    @Default(<String, int>{}) Map<String, int> subscriptionAmountInr,
   }) = _PlanPricing;
 
   factory PlanPricing.fromJson(Map<String, dynamic> json) =>

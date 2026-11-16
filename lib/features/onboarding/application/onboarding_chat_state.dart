@@ -1,5 +1,6 @@
 import 'package:freezed_annotation/freezed_annotation.dart';
 
+import '../../pricing/domain/plan_offer.dart';
 import '../domain/onboarding_repository.dart';
 
 part 'onboarding_chat_state.freezed.dart';
@@ -48,6 +49,23 @@ abstract class OnboardingChatState with _$OnboardingChatState {
     /// The connected LinkedIn profile's name, for the web's
     /// "Connected as {name}" line.
     String? linkedinName,
+
+    /// What the plan step offers. Null until the region and the autopay
+    /// switch have both been read — the button stays disabled until then,
+    /// because a guess here does not fail, it succeeds at the wrong price.
+    PlanOffer? planOffer,
+
+    /// The region or the autopay switch could not be read. The step offers a
+    /// retry and nothing else: starting without them could put the user on
+    /// the wrong plan.
+    @Default(false) bool planOfferFailed,
+
+    /// The Razorpay sheet is open, or its result is being verified.
+    @Default(false) bool planBusy,
+
+    /// Why the last attempt did not finish, in one sentence. Not set when the
+    /// sheet was simply closed.
+    String? planError,
     @Default(false) bool finaliseError,
 
     /// The preferences write succeeded. The page watches this and hands over to

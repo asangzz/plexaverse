@@ -1,7 +1,10 @@
 import 'dart:async';
 
+import 'package:flutter/foundation.dart' show kReleaseMode;
 import 'package:razorpay_flutter/razorpay_flutter.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
+
+import '../config/env.dart';
 
 part 'checkout.g.dart';
 
@@ -138,5 +141,44 @@ class RazorpayCheckout implements CheckoutService {
   }
 }
 
+/// The sheet in the `mock` flavour: answers "paid" at once.
+///
+/// The mock backend has no Razorpay account, and the real sheet given a fake
+/// key fails inside the SDK with nothing to show for it — which would leave
+/// the onboarding plan step, which has no skip, as a wall in the mock build.
+/// Its fake repository accepts any signature, exactly as it accepts any
+/// upload. A release build can never resolve this (see [checkout]).
+class MockCheckout implements CheckoutService {
+  const MockCheckout();
+
+  @override
+  Future<CheckoutResult> open({
+    required String keyId,
+    required String name,
+    required String description,
+    int? amountInPaise,
+    String? orderId,
+    String? subscriptionId,
+    String? email,
+    String? contact,
+  }) async {
+    await Future<void>.delayed(const Duration(milliseconds: 600));
+    return CheckoutPaid(
+      paymentId: 'pay_mock',
+      orderId: orderId,
+      subscriptionId: subscriptionId,
+      signature: 'sig_mock',
+    );
+  }
+}
+
 @Riverpod(keepAlive: true)
-CheckoutService checkout(Ref ref) => const RazorpayCheckout();
+CheckoutService checkout(Ref ref) {
+  final bool useFake = ref.watch(useFakeBackendProvider);
+  assert(
+    !(kReleaseMode && useFake),
+    'useFakeBackend must be false in release builds.',
+  );
+  if (useFake && !kReleaseMode) return const MockCheckout();
+  return const RazorpayCheckout();
+}

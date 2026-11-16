@@ -7,45 +7,51 @@ import 'package:plexaverse/features/onboarding/domain/onboarding_step.dart';
 /// and the one write that ends it. The step ORDER is pinned by
 /// onboarding_flow_test.dart, which drives the controller end to end.
 void main() {
-  /// The milestones each path counts — the web's `progressPct` order lists.
-  const List<OnboardingStep> personal = <OnboardingStep>[
-    OnboardingStep.welcome,
-    OnboardingStep.brand,
-    OnboardingStep.connect,
-    OnboardingStep.cvUpload,
-    OnboardingStep.styleChoice,
-    OnboardingStep.finish,
-  ];
-  const List<OnboardingStep> company = <OnboardingStep>[
-    OnboardingStep.welcome,
-    OnboardingStep.brand,
-    OnboardingStep.connect,
-    OnboardingStep.companyPage,
-    OnboardingStep.companyLogo,
-    OnboardingStep.posterStyle,
-    OnboardingStep.companyDoc,
-    OnboardingStep.styleChoice,
-    OnboardingStep.finish,
+  /// The milestones each path counts — the web's `progressPct` order lists,
+  /// with the brand question only while the company brand is open.
+  List<OnboardingStep> path({required bool company, required bool brand}) =>
+      <OnboardingStep>[
+        OnboardingStep.welcome,
+        if (brand) OnboardingStep.brand,
+        OnboardingStep.connect,
+        OnboardingStep.plan,
+        if (company) ...<OnboardingStep>[
+          OnboardingStep.companyPage,
+          OnboardingStep.companyLogo,
+          OnboardingStep.posterStyle,
+          OnboardingStep.companyDoc,
+        ] else
+          OnboardingStep.cvUpload,
+        OnboardingStep.styleChoice,
+        OnboardingStep.finish,
+      ];
+
+  const List<(bool, bool)> variants = <(bool, bool)>[
+    (false, false),
+    (false, true),
+    (true, false),
+    (true, true),
   ];
 
   group('progress', () {
-    test('both paths reach 100% at finish', () {
-      expect(OnboardingStep.finish.progressPercent(company: false), 100);
-      expect(OnboardingStep.finish.progressPercent(company: true), 100);
+    test('every path reaches 100% at finish', () {
+      for (final (bool c, bool b) in variants) {
+        expect(
+          OnboardingStep.finish.progressPercent(company: c, brandStep: b),
+          100,
+        );
+      }
     });
 
     test('matches the web: (index + 1) / path length, never below 5%', () {
-      for (final (bool c, List<OnboardingStep> path)
-          in <(bool, List<OnboardingStep>)>[
-            (false, personal),
-            (true, company),
-          ]) {
-        for (int i = 0; i < path.length; i++) {
-          final int expected = ((i + 1) / path.length * 100).round();
+      for (final (bool c, bool b) in variants) {
+        final List<OnboardingStep> steps = path(company: c, brand: b);
+        for (int i = 0; i < steps.length; i++) {
+          final int expected = ((i + 1) / steps.length * 100).round();
           expect(
-            path[i].progressPercent(company: c),
+            steps[i].progressPercent(company: c, brandStep: b),
             expected < 5 ? 5 : expected,
-            reason: '${path[i]} on company=$c',
+            reason: '${steps[i]} on company=$c brand=$b',
           );
         }
       }
@@ -54,21 +60,36 @@ void main() {
     test('a branch step reports the milestone it belongs to', () {
       // The web's resolvedStep: the bar neither jumps nor stalls on them.
       expect(
-        OnboardingStep.currentRole.progressPercent(company: false),
-        OnboardingStep.cvUpload.progressPercent(company: false),
+        OnboardingStep.currentRole.progressPercent(
+          company: false,
+          brandStep: false,
+        ),
+        OnboardingStep.cvUpload.progressPercent(
+          company: false,
+          brandStep: false,
+        ),
       );
       expect(
-        OnboardingStep.companyDetails.progressPercent(company: true),
-        OnboardingStep.companyDoc.progressPercent(company: true),
+        OnboardingStep.companyDetails.progressPercent(
+          company: true,
+          brandStep: false,
+        ),
+        OnboardingStep.companyDoc.progressPercent(
+          company: true,
+          brandStep: false,
+        ),
       );
-      for (final bool c in <bool>[false, true]) {
+      for (final (bool c, bool b) in variants) {
         for (final OnboardingStep s in <OnboardingStep>[
           OnboardingStep.styleScreenshots,
           OnboardingStep.styleWrite,
         ]) {
           expect(
-            s.progressPercent(company: c),
-            OnboardingStep.styleChoice.progressPercent(company: c),
+            s.progressPercent(company: c, brandStep: b),
+            OnboardingStep.styleChoice.progressPercent(
+              company: c,
+              brandStep: b,
+            ),
           );
         }
       }

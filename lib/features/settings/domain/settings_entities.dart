@@ -70,8 +70,9 @@ abstract class SubscriptionState with _$SubscriptionState {
     /// (every build of `/auth/me` before it exposes `resolveEntitlement`).
     bool? entitled,
 
-    /// `subscription_active` | `recent_purchase` | `granted` |
-    /// `never_subscribed` | `lapsed`, as `EntitlementReason` on the server.
+    /// `subscription_active` | `subscription_trial` | `recent_purchase` |
+    /// `granted` | `never_subscribed` | `lapsed`, as `EntitlementReason` on
+    /// the server.
     String? entitlementReason,
 
     /// When the current access ends, for a pass or given plan time.
@@ -93,12 +94,18 @@ abstract class SubscriptionState with _$SubscriptionState {
   /// The plan is a pass or given time rather than a recurring subscription.
   bool get isGranted => entitlementReason == 'granted';
 
-  /// True when the plan renews on its own. The web shows "cancel anytime"
-  /// copy only on this branch. A known non-subscription reason wins over a
-  /// stale `paymentMode`: a lapsed subscriber holding a pass is not renewing.
+  /// Inside the free first month: autopay is registered and the first charge
+  /// has not fallen yet (Razorpay's `authenticated`). Recurring, but nothing
+  /// has been paid — so it is neither "Active" with a renewal date nor a pass.
+  bool get isTrial => entitlementReason == 'subscription_trial';
+
+  /// True when the plan renews on its own — it shows a renewal date. A known
+  /// non-subscription reason wins over a stale `paymentMode`: a lapsed
+  /// subscriber holding a pass is not renewing.
   bool get isRecurring {
     if (entitlementReason != null) {
-      return entitlementReason == 'subscription_active';
+      return entitlementReason == 'subscription_active' ||
+          entitlementReason == 'subscription_trial';
     }
     return paymentMode == 'subscription';
   }

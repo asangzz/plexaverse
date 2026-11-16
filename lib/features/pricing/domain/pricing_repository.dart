@@ -1,7 +1,9 @@
 import 'allowance.dart';
+import 'plan_offer.dart';
 import 'pricing.dart';
 
 export 'allowance.dart';
+export 'plan_offer.dart';
 export 'pricing.dart';
 
 /// Thrown when a pricing read cannot be satisfied.
@@ -13,29 +15,13 @@ class PricingUnavailable implements Exception {
   const PricingUnavailable();
 }
 
-/// Seam between the Pricing screen and the mobile API.
+/// Seam between the plan screens (Pricing, and onboarding's plan step) and the
+/// mobile API.
 ///
-/// ## What is deliberately absent: checkout
-///
-/// There is no `startCheckout`. Both money routes exist
-/// (`POST /subscription/create`, `POST /payment/create-order`) and both return
-/// a Razorpay order/subscription id that is worthless without the Razorpay
-/// **checkout SDK** to hand it to. The app does not ship `razorpay_flutter`
-/// and this slice may not add a dependency, so creating an order here would
-/// take the user's money-intent and drop it on the floor — a charge that never
-/// opens, or worse, an order row with no payment against it.
-///
-/// So the screen renders the plans and says plainly that checkout happens on
-/// the web. That is the same call the Settings slice made for Slack and Google
-/// Calendar: a button that cannot finish what it starts is worse than an honest
-/// sentence. See the summary for the dependency this needs.
-///
-/// ## What is absent because the ROUTE is absent
-///
-/// The web decides subscribe-vs-one-time from `GET /api/payment/config`
-/// (`{indiaAutopay, intlAutopay}`). There is no mobile mirror of it, so this
-/// app cannot tell a user whether their region is billed monthly or per
-/// purchase. The price is therefore labelled neutrally rather than `/month`.
+/// Checkout is the server half only — create the mandate or the order, then
+/// verify what the Razorpay sheet returned. The sheet itself is
+/// `core/platform/checkout.dart`, and the three are run in order by
+/// `PlanCheckout`.
 abstract class PricingRepository {
   /// Localised plan prices. [countryCode] is the device's region; the server
   /// defaults to `IN` when it is absent or unrecognised.
@@ -83,6 +69,24 @@ abstract class PricingRepository {
     required String subscriptionId,
     required String signature,
   });
+
+  /// `GET /payment/config` — whether autopay can complete in each region.
+  Future<PaymentConfig> fetchPaymentConfig();
+
+  /// `POST /payment/create-order` — a one-time 30-day pass, for where autopay
+  /// cannot complete. Priced by the server from [countryCode].
+  Future<OrderIntent> createOrder({
+    required String planType,
+    required String countryCode,
+  });
+
+  /// `POST /payment/verify` — the pass's signature, checked by the server.
+  /// Returns true when the server accepted it.
+  Future<bool> verifyOrder({
+    required String orderId,
+    required String paymentId,
+    required String signature,
+  });
 }
 
 /// What the payment sheet needs to open.
@@ -100,6 +104,25 @@ class CheckoutIntent {
   /// the caller must refuse to open a sheet it cannot identify rather than
   /// send an empty key and get an opaque SDK error.
   final String? keyId;
+  final int amount;
+  final String currency;
+}
+
+/// What the payment sheet needs for a one-time pass.
+class OrderIntent {
+  const OrderIntent({
+    required this.orderId,
+    required this.keyId,
+    required this.amount,
+    required this.currency,
+  });
+
+  final String orderId;
+
+  /// Absent when Razorpay is not configured — see [CheckoutIntent.keyId].
+  final String? keyId;
+
+  /// In the currency's minor unit (paise, cents), as the sheet takes it.
   final int amount;
   final String currency;
 }

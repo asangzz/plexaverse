@@ -135,9 +135,19 @@ class BillingSection extends ConsumerWidget {
               subscription.isRecurring
                   ? 'Renews on '
                         '${DateFormat.yMMMd().format(subscription.currentPeriodEnd!)}'
-                        ' · cancel anytime'
                   : 'Active until '
                         '${DateFormat.yMMMd().format(subscription.endsAt!)}',
+              style: ZaveType.caption,
+            ),
+          ],
+
+          // The free month's one condition. The product offers no way to
+          // cancel (owner's call, 17 Nov 2026), but a mandate can still be
+          // cancelled at the bank or UPI app — and then the month is over.
+          if (subscription.isTrial) ...<Widget>[
+            SizedBox(height: ZaveSpace.md),
+            Text(
+              'Cancelling the autopay ends your free month straight away.',
               style: ZaveType.caption,
             ),
           ],
@@ -190,7 +200,9 @@ class _StatusPill extends StatelessWidget {
       // Saying which kind of active this is tells the user whether they will
       // be charged again: a 30-day pass and given plan time do not renew.
       final String label;
-      if (subscription.isRecurring) {
+      if (subscription.isTrial) {
+        label = 'Free month';
+      } else if (subscription.isRecurring) {
         label = 'Active';
       } else if (subscription.isGranted) {
         label = 'Plan time given';

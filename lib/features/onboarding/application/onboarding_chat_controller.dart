@@ -3,7 +3,11 @@ import 'dart:math' as math;
 
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
+import '../../../core/access/company_brand.dart';
 import '../../preferences/application/preferences_controller.dart';
+import '../../pricing/application/plan_checkout.dart';
+import '../../pricing/data/pricing_repositories.dart';
+import '../../pricing/domain/pricing_repository.dart';
 import '../../settings/data/settings_repositories.dart';
 import '../../settings/domain/settings_repository.dart';
 import '../data/onboarding_repositories.dart';
@@ -74,6 +78,11 @@ class OnboardingChatController extends _$OnboardingChatController {
   /// than duplicating it — see [connectLinkedin].
   SettingsRepository get _settings => ref.read(settingsRepositoryProvider);
 
+  PricingRepository get _pricing => ref.read(pricingRepositoryProvider);
+
+  /// Prefilled into the payment sheet. Read with the plan check.
+  String? _planEmail;
+
   /// True while the state this code is about to write is still the state the
   /// screen is showing.
   bool _current(int generation) => !_disposed && generation == _generation;
@@ -131,6 +140,10 @@ class OnboardingChatController extends _$OnboardingChatController {
   Future<void> _enter(OnboardingStep next) async {
     _generation += 1;
     state = state.copyWith(step: next, isBotTyping: false);
+    if (next == OnboardingStep.plan) {
+      await _offerPlan();
+      return;
+    }
     final List<String> lines = next == OnboardingStep.companyDetails
         ? <String>[companyDetailsAsk(state.answers.companyDoc)]
         : next.botLines(
@@ -189,6 +202,17 @@ class OnboardingChatController extends _$OnboardingChatController {
   Future<void> acknowledgeWelcome() async {
     if (state.step != OnboardingStep.welcome) return;
     _echoUser("I'm ready");
+    // The brand question is only asked while the company brand is open to new
+    // signups. Closed, there is nothing to choose — and the answer is set here
+    // rather than left to the default, as on the web, so the finish writes
+    // `personal` outright.
+    if (!ref.read(companyBrandOpenProvider)) {
+      state = state.copyWith(
+        answers: state.answers.copyWith(brand: BrandChoice.personal),
+      );
+      await _enter(OnboardingStep.connect);
+      return;
+    }
     await _enter(OnboardingStep.brand);
   }
 
@@ -256,11 +280,9 @@ class OnboardingChatController extends _$OnboardingChatController {
       name == null ? 'Connected' : 'Connected as $name',
       badge: 'LinkedIn linked',
     );
-    await _enter(
-      state.answers.isCompany
-          ? OnboardingStep.companyPage
-          : OnboardingStep.cvUpload,
-    );
+    // The plan is asked here — after the connect, before anything is built on
+    // the user's behalf. It decides where they go next.
+    await _enter(OnboardingStep.plan);
   }
 
   /// "I'll connect later" — offered only after a failed attempt. The one
@@ -269,11 +291,139 @@ class OnboardingChatController extends _$OnboardingChatController {
   Future<void> skipConnect() async {
     if (state.step != OnboardingStep.connect || !state.connectFailed) return;
     _echoUser("I'll connect later", badge: 'Skipped');
-    await _enter(
-      state.answers.isCompany
-          ? OnboardingStep.companyPage
-          : OnboardingStep.cvUpload,
+    // Skipping the connect does not skip the plan: nothing after this point
+    // is worth building for someone who has not got one.
+    await _enter(OnboardingStep.plan);
+  }
+
+  // ── Plan ──────────────────────────────────────────────────────────────────
+
+  /// Where the chat goes once the plan is settled.
+  OnboardingStep get _afterPlan => state.answers.isCompany
+      ? OnboardingStep.companyPage
+      : OnboardingStep.cvUpload;
+
+  /// What Plexa says on the plan step.
+  ///
+  /// Free first, where it is free — the fact that decides whether the next
+  /// sentence gets read at all. The web's line ends "nothing is charged until
+  /// day 30", which its own plan step contradicts a line later: the bank's
+  /// ₹5 mandate check IS a charge, refunded. So this names the day of the
+  /// first payment instead. Where autopay is not offered there is no free
+  /// month to lead with, and the line says only why the ask exists.
+  static String planAsk(PlanOffer? offer) => offer != null && offer.recurring
+      ? 'One thing before I start writing: your first month is free. Set up '
+            'autopay now and your first payment is on day $kFreeFirstMonthDays.'
+      : "One thing before I start writing: your plan — it's what pays for "
+            'the posts I write and publish for you.';
+
+  /// Enters the plan step: is it needed, and what does it offer?
+  ///
+  /// An account that already has a plan — a free month started on an earlier
+  /// run, a pass, a referral month — goes straight past it. The web asks
+  /// again, and its checkout then opens a SECOND mandate beside the first.
+  Future<void> _offerPlan() async {
+    final int generation = _generation;
+    state = state.copyWith(
+      isBotTyping: true,
+      planOffer: null,
+      planOfferFailed: false,
+      planBusy: false,
+      planError: null,
     );
+    final PlanHolder holder = await _repo.fetchPlanHolder();
+    if (!_current(generation)) return;
+    if (holder.hasPlan) {
+      state = state.copyWith(isBotTyping: false);
+      await _enter(_afterPlan);
+      return;
+    }
+    _planEmail = holder.email;
+    final PlanOffer? offer = await _loadPlanOffer();
+    if (!_current(generation)) return;
+    state = state.copyWith(planOffer: offer, planOfferFailed: offer == null);
+    await _sendBot(planAsk(offer));
+  }
+
+  /// Where they are and whether autopay works there — both, or neither.
+  ///
+  /// Null on any failure, never a fallback to India: that fallback is the bug
+  /// the web's plan step shipped with. It does not fail; it succeeds,
+  /// quietly, at the wrong price and on the wrong instrument.
+  Future<PlanOffer?> _loadPlanOffer() async {
+    try {
+      // No country: the server reads the edge's, as the web does — see
+      // `PlanPricing`.
+      final (PlanPricing pricing, PaymentConfig config) = await (
+        _pricing.fetchPricing(),
+        _pricing.fetchPaymentConfig(),
+      ).wait;
+      return PlanOffer.decide(
+        pricing: pricing,
+        config: config,
+        planType: state.answers.isCompany ? 'company' : 'personal',
+      );
+    } on Object {
+      return null;
+    }
+  }
+
+  /// "Try again" after the region could not be read.
+  Future<void> retryPlanOffer() async {
+    if (state.step != OnboardingStep.plan || !state.planOfferFailed) return;
+    final int generation = _generation;
+    state = state.copyWith(planOfferFailed: false);
+    final PlanOffer? offer = await _loadPlanOffer();
+    if (!_current(generation)) return;
+    state = state.copyWith(planOffer: offer, planOfferFailed: offer == null);
+  }
+
+  /// The one control on the plan step. There is no skip.
+  Future<void> startPlan() async {
+    final PlanOffer? offer = state.planOffer;
+    if (state.step != OnboardingStep.plan || offer == null || state.planBusy) {
+      return;
+    }
+    final int generation = _generation;
+    state = state.copyWith(planBusy: true, planError: null);
+
+    final PlanCheckout checkout = ref.read(planCheckoutProvider);
+    final PlanCheckoutOutcome outcome = offer.recurring
+        ? await checkout.subscribe(
+            planType: offer.planType,
+            countryCode: offer.countryCode,
+            email: _planEmail,
+          )
+        : await checkout.payForMonth(
+            planType: offer.planType,
+            countryCode: offer.countryCode,
+            email: _planEmail,
+          );
+    if (!_current(generation)) return;
+
+    switch (outcome) {
+      case PlanCheckoutDismissed():
+        state = state.copyWith(planBusy: false);
+      case PlanCheckoutFailed(:final String message):
+        state = state.copyWith(planBusy: false, planError: message);
+      case PlanCheckoutDone():
+        state = state.copyWith(planBusy: false);
+        // The thread says what actually happened. On the autopay path that is
+        // a mandate, not a payment; on the pass it is a payment.
+        if (offer.recurring) {
+          _echoUser('Autopay set up', badge: 'Free month started');
+        } else {
+          _echoUser('Paid for this month', badge: 'Plan active');
+        }
+        await _enter(_afterPlan);
+      case PlanCheckoutAlreadyActive():
+        // The server knows of a live mandate this screen did not (set up on
+        // the web, or on another device, since the step opened). The plan is
+        // there; nothing was bought just now.
+        state = state.copyWith(planBusy: false);
+        _echoUser('I already have a plan', badge: 'Plan active');
+        await _enter(_afterPlan);
+    }
   }
 
   // ── Company page ──────────────────────────────────────────────────────────

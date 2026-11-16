@@ -143,6 +143,61 @@ class ApiPricingRepository implements PricingRepository {
     return response.data?['success'] == true ||
         response.data?['verified'] == true;
   }
+
+  @override
+  Future<PaymentConfig> fetchPaymentConfig() async {
+    try {
+      final response = await _client.get<Map<String, dynamic>>(
+        ApiPaths.paymentConfig,
+      );
+      final Map<String, dynamic>? data = response.data;
+      if (data == null) throw const PricingUnavailable();
+      return PaymentConfig.fromJson(data);
+    } on PricingUnavailable {
+      rethrow;
+    } on Object {
+      throw const PricingUnavailable();
+    }
+  }
+
+  @override
+  Future<OrderIntent> createOrder({
+    required String planType,
+    required String countryCode,
+  }) async {
+    final response = await _client.post<Map<String, dynamic>>(
+      ApiPaths.paymentCreateOrder,
+      data: <String, dynamic>{'planId': planType, 'countryCode': countryCode},
+    );
+    final Map<String, dynamic>? data = response.data;
+    final String? orderId = data?['orderId'] as String?;
+    if (data == null || orderId == null || orderId.isEmpty) {
+      throw StateError('payment/create-order returned no order');
+    }
+    return OrderIntent(
+      orderId: orderId,
+      keyId: data['keyId'] as String?,
+      amount: (data['amount'] as num?)?.toInt() ?? 0,
+      currency: (data['currency'] as String?) ?? 'INR',
+    );
+  }
+
+  @override
+  Future<bool> verifyOrder({
+    required String orderId,
+    required String paymentId,
+    required String signature,
+  }) async {
+    final response = await _client.post<Map<String, dynamic>>(
+      ApiPaths.paymentVerify,
+      data: <String, dynamic>{
+        'razorpayOrderId': orderId,
+        'razorpayPaymentId': paymentId,
+        'razorpaySignature': signature,
+      },
+    );
+    return response.data?['success'] == true;
+  }
 }
 
 /// In-memory [PricingRepository] for the `mock` flavor.
@@ -163,7 +218,11 @@ class FakePricingRepository implements PricingRepository {
   @override
   Future<PlanPricing> fetchPricing({String? countryCode}) async {
     await Future<void>.delayed(_latency);
-    return const PlanPricing(personalPrice: 299, companyPrice: 1199);
+    return const PlanPricing(
+      personalPrice: 399,
+      companyPrice: 1199,
+      subscriptionAmountInr: <String, int>{'personal': 399, 'company': 1199},
+    );
   }
 
   @override
@@ -219,12 +278,12 @@ class FakePricingRepository implements PricingRepository {
     String? countryCode,
   }) async {
     await Future<void>.delayed(_latency);
-    // No keyId: the mock must exercise the "Razorpay not configured" branch
-    // rather than hand the sheet a fake key and get an opaque SDK error.
+    // A key, so the plan can be bought in the mock flavour: its sheet is
+    // `MockCheckout`, which never reaches Razorpay with it.
     return const CheckoutIntent(
       subscriptionId: 'sub_mock',
-      keyId: null,
-      amount: 29900,
+      keyId: 'rzp_test_mock',
+      amount: 39900,
       currency: 'INR',
     );
   }
@@ -233,6 +292,36 @@ class FakePricingRepository implements PricingRepository {
   Future<bool> verifySubscription({
     required String paymentId,
     required String subscriptionId,
+    required String signature,
+  }) async {
+    await Future<void>.delayed(_latency);
+    return true;
+  }
+
+  @override
+  Future<PaymentConfig> fetchPaymentConfig() async {
+    await Future<void>.delayed(_latency);
+    return const PaymentConfig(indiaAutopay: true, intlAutopay: false);
+  }
+
+  @override
+  Future<OrderIntent> createOrder({
+    required String planType,
+    required String countryCode,
+  }) async {
+    await Future<void>.delayed(_latency);
+    return const OrderIntent(
+      orderId: 'order_mock',
+      keyId: 'rzp_test_mock',
+      amount: 1000,
+      currency: 'USD',
+    );
+  }
+
+  @override
+  Future<bool> verifyOrder({
+    required String orderId,
+    required String paymentId,
     required String signature,
   }) async {
     await Future<void>.delayed(_latency);

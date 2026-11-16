@@ -15,6 +15,11 @@ _PlanPricing _$PlanPricingFromJson(Map<String, dynamic> json) => _PlanPricing(
   companyPrice: (json['companyPrice'] as num?)?.toInt() ?? 0,
   isIndia: json['isIndia'] as bool? ?? true,
   subunitMultiplier: (json['subunitMultiplier'] as num?)?.toInt() ?? 100,
+  subscriptionAmountInr:
+      (json['subscriptionAmountInr'] as Map<String, dynamic>?)?.map(
+        (k, e) => MapEntry(k, (e as num).toInt()),
+      ) ??
+      const <String, int>{},
 );
 
 Map<String, dynamic> _$PlanPricingToJson(_PlanPricing instance) =>
@@ -27,4 +32,5 @@ Map<String, dynamic> _$PlanPricingToJson(_PlanPricing instance) =>
       'companyPrice': instance.companyPrice,
       'isIndia': instance.isIndia,
       'subunitMultiplier': instance.subunitMultiplier,
+      'subscriptionAmountInr': instance.subscriptionAmountInr,
     };

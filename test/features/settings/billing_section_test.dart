@@ -66,6 +66,11 @@ void main() {
     expect(text, contains('Plan'));
     expect(text, contains('Active'));
     expect(text.any((String l) => l.startsWith('Renews on')), isTrue);
+    // The product offers no cancellation, so nothing promises one.
+    expect(
+      text.any((String l) => l.toLowerCase().contains('cancel any')),
+      isFalse,
+    );
     expect(text, contains('What your plan includes'));
     expectNoXp(text);
   });
@@ -83,6 +88,31 @@ void main() {
     );
     expect(text, contains('30-day pass'));
     expect(text.any((String l) => l.startsWith('Active until')), isTrue);
+    expectNoXp(text);
+  });
+
+  testWidgets('the free first month reads as itself, never as a pass', (
+    WidgetTester tester,
+  ) async {
+    // What onboarding's plan step leaves behind: a mandate, no charge yet,
+    // so Razorpay's status is `authenticated` and there is no period end.
+    final List<String> text = await pump(
+      tester,
+      const SubscriptionState(
+        status: 'authenticated',
+        paymentMode: 'subscription',
+        entitled: true,
+        entitlementReason: 'subscription_trial',
+      ),
+    );
+    expect(text, contains('Free month'));
+    expect(text, isNot(contains('30-day pass')));
+    // No cancel option is offered; what cancelling at the bank costs is said.
+    expect(
+      text,
+      contains('Cancelling the autopay ends your free month straight away.'),
+    );
+    expect(text, contains('What your plan includes'));
     expectNoXp(text);
   });
 

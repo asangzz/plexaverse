@@ -96,7 +96,7 @@ class PlanCard extends StatelessWidget {
               SizedBox(width: ZaveSpace.md),
               Flexible(
                 child: Text(
-                  'Cancel any time',
+                  'Renews every month',
                   style: ZaveType.caption,
                   maxLines: 2,
                 ),

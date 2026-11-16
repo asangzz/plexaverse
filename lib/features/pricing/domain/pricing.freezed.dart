@@ -17,7 +17,12 @@ mixin _$PlanPricing {
 
  String get countryCode; String get countryName; String get currency; String get symbol; int get personalPrice; int get companyPrice; bool get isIndia;/// How many minor units make one major unit. Razorpay charges in paise /
 /// cents, so the checkout amount is `price * subunitMultiplier`.
- int get subunitMultiplier;
+ int get subunitMultiplier;/// What an AUTOPAY subscriber is charged, per plan id, always in rupees —
+/// the server's `getSubscriptionAmountInr`. Not [personalPrice], which is
+/// a one-time pass in the local currency: a screen offering autopay that
+/// priced it from that would promise "$10" and debit ₹798. Empty from a
+/// server older than the field.
+ Map<String, int> get subscriptionAmountInr;
 /// Create a copy of PlanPricing
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
@@ -30,16 +35,16 @@ $PlanPricingCopyWith<PlanPricing> get copyWith => _$PlanPricingCopyWithImpl<Plan
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is PlanPricing&&(identical(other.countryCode, countryCode) || other.countryCode == countryCode)&&(identical(other.countryName, countryName) || other.countryName == countryName)&&(identical(other.currency, currency) || other.currency == currency)&&(identical(other.symbol, symbol) || other.symbol == symbol)&&(identical(other.personalPrice, personalPrice) || other.personalPrice == personalPrice)&&(identical(other.companyPrice, companyPrice) || other.companyPrice == companyPrice)&&(identical(other.isIndia, isIndia) || other.isIndia == isIndia)&&(identical(other.subunitMultiplier, subunitMultiplier) || other.subunitMultiplier == subunitMultiplier));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is PlanPricing&&(identical(other.countryCode, countryCode) || other.countryCode == countryCode)&&(identical(other.countryName, countryName) || other.countryName == countryName)&&(identical(other.currency, currency) || other.currency == currency)&&(identical(other.symbol, symbol) || other.symbol == symbol)&&(identical(other.personalPrice, personalPrice) || other.personalPrice == personalPrice)&&(identical(other.companyPrice, companyPrice) || other.companyPrice == companyPrice)&&(identical(other.isIndia, isIndia) || other.isIndia == isIndia)&&(identical(other.subunitMultiplier, subunitMultiplier) || other.subunitMultiplier == subunitMultiplier)&&const DeepCollectionEquality().equals(other.subscriptionAmountInr, subscriptionAmountInr));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
-int get hashCode => Object.hash(runtimeType,countryCode,countryName,currency,symbol,personalPrice,companyPrice,isIndia,subunitMultiplier);
+int get hashCode => Object.hash(runtimeType,countryCode,countryName,currency,symbol,personalPrice,companyPrice,isIndia,subunitMultiplier,const DeepCollectionEquality().hash(subscriptionAmountInr));
 
 @override
 String toString() {
-  return 'PlanPricing(countryCode: $countryCode, countryName: $countryName, currency: $currency, symbol: $symbol, personalPrice: $personalPrice, companyPrice: $companyPrice, isIndia: $isIndia, subunitMultiplier: $subunitMultiplier)';
+  return 'PlanPricing(countryCode: $countryCode, countryName: $countryName, currency: $currency, symbol: $symbol, personalPrice: $personalPrice, companyPrice: $companyPrice, isIndia: $isIndia, subunitMultiplier: $subunitMultiplier, subscriptionAmountInr: $subscriptionAmountInr)';
 }
 
 
@@ -50,7 +55,7 @@ abstract mixin class $PlanPricingCopyWith<$Res>  {
   factory $PlanPricingCopyWith(PlanPricing value, $Res Function(PlanPricing) _then) = _$PlanPricingCopyWithImpl;
 @useResult
 $Res call({
- String countryCode, String countryName, String currency, String symbol, int personalPrice, int companyPrice, bool isIndia, int subunitMultiplier
+ String countryCode, String countryName, String currency, String symbol, int personalPrice, int companyPrice, bool isIndia, int subunitMultiplier, Map<String, int> subscriptionAmountInr
 });
 
 
@@ -67,7 +72,7 @@ class _$PlanPricingCopyWithImpl<$Res>
 
 /// Create a copy of PlanPricing
 /// with the given fields replaced by the non-null parameter values.
-@pragma('vm:prefer-inline') @override $Res call({Object? countryCode = null,Object? countryName = null,Object? currency = null,Object? symbol = null,Object? personalPrice = null,Object? companyPrice = null,Object? isIndia = null,Object? subunitMultiplier = null,}) {
+@pragma('vm:prefer-inline') @override $Res call({Object? countryCode = null,Object? countryName = null,Object? currency = null,Object? symbol = null,Object? personalPrice = null,Object? companyPrice = null,Object? isIndia = null,Object? subunitMultiplier = null,Object? subscriptionAmountInr = null,}) {
   return _then(_self.copyWith(
 countryCode: null == countryCode ? _self.countryCode : countryCode // ignore: cast_nullable_to_non_nullable
 as String,countryName: null == countryName ? _self.countryName : countryName // ignore: cast_nullable_to_non_nullable
@@ -77,7 +82,8 @@ as String,personalPrice: null == personalPrice ? _self.personalPrice : personalP
 as int,companyPrice: null == companyPrice ? _self.companyPrice : companyPrice // ignore: cast_nullable_to_non_nullable
 as int,isIndia: null == isIndia ? _self.isIndia : isIndia // ignore: cast_nullable_to_non_nullable
 as bool,subunitMultiplier: null == subunitMultiplier ? _self.subunitMultiplier : subunitMultiplier // ignore: cast_nullable_to_non_nullable
-as int,
+as int,subscriptionAmountInr: null == subscriptionAmountInr ? _self.subscriptionAmountInr : subscriptionAmountInr // ignore: cast_nullable_to_non_nullable
+as Map<String, int>,
   ));
 }
 
@@ -162,10 +168,10 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String countryCode,  String countryName,  String currency,  String symbol,  int personalPrice,  int companyPrice,  bool isIndia,  int subunitMultiplier)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String countryCode,  String countryName,  String currency,  String symbol,  int personalPrice,  int companyPrice,  bool isIndia,  int subunitMultiplier,  Map<String, int> subscriptionAmountInr)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _PlanPricing() when $default != null:
-return $default(_that.countryCode,_that.countryName,_that.currency,_that.symbol,_that.personalPrice,_that.companyPrice,_that.isIndia,_that.subunitMultiplier);case _:
+return $default(_that.countryCode,_that.countryName,_that.currency,_that.symbol,_that.personalPrice,_that.companyPrice,_that.isIndia,_that.subunitMultiplier,_that.subscriptionAmountInr);case _:
   return orElse();
 
 }
@@ -183,10 +189,10 @@ return $default(_that.countryCode,_that.countryName,_that.currency,_that.symbol,
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String countryCode,  String countryName,  String currency,  String symbol,  int personalPrice,  int companyPrice,  bool isIndia,  int subunitMultiplier)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String countryCode,  String countryName,  String currency,  String symbol,  int personalPrice,  int companyPrice,  bool isIndia,  int subunitMultiplier,  Map<String, int> subscriptionAmountInr)  $default,) {final _that = this;
 switch (_that) {
 case _PlanPricing():
-return $default(_that.countryCode,_that.countryName,_that.currency,_that.symbol,_that.personalPrice,_that.companyPrice,_that.isIndia,_that.subunitMultiplier);case _:
+return $default(_that.countryCode,_that.countryName,_that.currency,_that.symbol,_that.personalPrice,_that.companyPrice,_that.isIndia,_that.subunitMultiplier,_that.subscriptionAmountInr);case _:
   throw StateError('Unexpected subclass');
 
 }
@@ -203,10 +209,10 @@ return $default(_that.countryCode,_that.countryName,_that.currency,_that.symbol,
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String countryCode,  String countryName,  String currency,  String symbol,  int personalPrice,  int companyPrice,  bool isIndia,  int subunitMultiplier)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String countryCode,  String countryName,  String currency,  String symbol,  int personalPrice,  int companyPrice,  bool isIndia,  int subunitMultiplier,  Map<String, int> subscriptionAmountInr)?  $default,) {final _that = this;
 switch (_that) {
 case _PlanPricing() when $default != null:
-return $default(_that.countryCode,_that.countryName,_that.currency,_that.symbol,_that.personalPrice,_that.companyPrice,_that.isIndia,_that.subunitMultiplier);case _:
+return $default(_that.countryCode,_that.countryName,_that.currency,_that.symbol,_that.personalPrice,_that.companyPrice,_that.isIndia,_that.subunitMultiplier,_that.subscriptionAmountInr);case _:
   return null;
 
 }
@@ -218,7 +224,7 @@ return $default(_that.countryCode,_that.countryName,_that.currency,_that.symbol,
 @JsonSerializable()
 
 class _PlanPricing extends PlanPricing {
-  const _PlanPricing({this.countryCode = 'IN', this.countryName = 'India', this.currency = 'INR', this.symbol = '₹', this.personalPrice = 0, this.companyPrice = 0, this.isIndia = true, this.subunitMultiplier = 100}): super._();
+  const _PlanPricing({this.countryCode = 'IN', this.countryName = 'India', this.currency = 'INR', this.symbol = '₹', this.personalPrice = 0, this.companyPrice = 0, this.isIndia = true, this.subunitMultiplier = 100, final  Map<String, int> subscriptionAmountInr = const <String, int>{}}): _subscriptionAmountInr = subscriptionAmountInr,super._();
   factory _PlanPricing.fromJson(Map<String, dynamic> json) => _$PlanPricingFromJson(json);
 
 @override@JsonKey() final  String countryCode;
@@ -231,6 +237,23 @@ class _PlanPricing extends PlanPricing {
 /// How many minor units make one major unit. Razorpay charges in paise /
 /// cents, so the checkout amount is `price * subunitMultiplier`.
 @override@JsonKey() final  int subunitMultiplier;
+/// What an AUTOPAY subscriber is charged, per plan id, always in rupees —
+/// the server's `getSubscriptionAmountInr`. Not [personalPrice], which is
+/// a one-time pass in the local currency: a screen offering autopay that
+/// priced it from that would promise "$10" and debit ₹798. Empty from a
+/// server older than the field.
+ final  Map<String, int> _subscriptionAmountInr;
+/// What an AUTOPAY subscriber is charged, per plan id, always in rupees —
+/// the server's `getSubscriptionAmountInr`. Not [personalPrice], which is
+/// a one-time pass in the local currency: a screen offering autopay that
+/// priced it from that would promise "$10" and debit ₹798. Empty from a
+/// server older than the field.
+@override@JsonKey() Map<String, int> get subscriptionAmountInr {
+  if (_subscriptionAmountInr is EqualUnmodifiableMapView) return _subscriptionAmountInr;
+  // ignore: implicit_dynamic_type
+  return EqualUnmodifiableMapView(_subscriptionAmountInr);
+}
+
 
 /// Create a copy of PlanPricing
 /// with the given fields replaced by the non-null parameter values.
@@ -245,16 +268,16 @@ Map<String, dynamic> toJson() {
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is _PlanPricing&&(identical(other.countryCode, countryCode) || other.countryCode == countryCode)&&(identical(other.countryName, countryName) || other.countryName == countryName)&&(identical(other.currency, currency) || other.currency == currency)&&(identical(other.symbol, symbol) || other.symbol == symbol)&&(identical(other.personalPrice, personalPrice) || other.personalPrice == personalPrice)&&(identical(other.companyPrice, companyPrice) || other.companyPrice == companyPrice)&&(identical(other.isIndia, isIndia) || other.isIndia == isIndia)&&(identical(other.subunitMultiplier, subunitMultiplier) || other.subunitMultiplier == subunitMultiplier));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is _PlanPricing&&(identical(other.countryCode, countryCode) || other.countryCode == countryCode)&&(identical(other.countryName, countryName) || other.countryName == countryName)&&(identical(other.currency, currency) || other.currency == currency)&&(identical(other.symbol, symbol) || other.symbol == symbol)&&(identical(other.personalPrice, personalPrice) || other.personalPrice == personalPrice)&&(identical(other.companyPrice, companyPrice) || other.companyPrice == companyPrice)&&(identical(other.isIndia, isIndia) || other.isIndia == isIndia)&&(identical(other.subunitMultiplier, subunitMultiplier) || other.subunitMultiplier == subunitMultiplier)&&const DeepCollectionEquality().equals(other._subscriptionAmountInr, _subscriptionAmountInr));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
-int get hashCode => Object.hash(runtimeType,countryCode,countryName,currency,symbol,personalPrice,companyPrice,isIndia,subunitMultiplier);
+int get hashCode => Object.hash(runtimeType,countryCode,countryName,currency,symbol,personalPrice,companyPrice,isIndia,subunitMultiplier,const DeepCollectionEquality().hash(_subscriptionAmountInr));
 
 @override
 String toString() {
-  return 'PlanPricing(countryCode: $countryCode, countryName: $countryName, currency: $currency, symbol: $symbol, personalPrice: $personalPrice, companyPrice: $companyPrice, isIndia: $isIndia, subunitMultiplier: $subunitMultiplier)';
+  return 'PlanPricing(countryCode: $countryCode, countryName: $countryName, currency: $currency, symbol: $symbol, personalPrice: $personalPrice, companyPrice: $companyPrice, isIndia: $isIndia, subunitMultiplier: $subunitMultiplier, subscriptionAmountInr: $subscriptionAmountInr)';
 }
 
 
@@ -265,7 +288,7 @@ abstract mixin class _$PlanPricingCopyWith<$Res> implements $PlanPricingCopyWith
   factory _$PlanPricingCopyWith(_PlanPricing value, $Res Function(_PlanPricing) _then) = __$PlanPricingCopyWithImpl;
 @override @useResult
 $Res call({
- String countryCode, String countryName, String currency, String symbol, int personalPrice, int companyPrice, bool isIndia, int subunitMultiplier
+ String countryCode, String countryName, String currency, String symbol, int personalPrice, int companyPrice, bool isIndia, int subunitMultiplier, Map<String, int> subscriptionAmountInr
 });
 
 
@@ -282,7 +305,7 @@ class __$PlanPricingCopyWithImpl<$Res>
 
 /// Create a copy of PlanPricing
 /// with the given fields replaced by the non-null parameter values.
-@override @pragma('vm:prefer-inline') $Res call({Object? countryCode = null,Object? countryName = null,Object? currency = null,Object? symbol = null,Object? personalPrice = null,Object? companyPrice = null,Object? isIndia = null,Object? subunitMultiplier = null,}) {
+@override @pragma('vm:prefer-inline') $Res call({Object? countryCode = null,Object? countryName = null,Object? currency = null,Object? symbol = null,Object? personalPrice = null,Object? companyPrice = null,Object? isIndia = null,Object? subunitMultiplier = null,Object? subscriptionAmountInr = null,}) {
   return _then(_PlanPricing(
 countryCode: null == countryCode ? _self.countryCode : countryCode // ignore: cast_nullable_to_non_nullable
 as String,countryName: null == countryName ? _self.countryName : countryName // ignore: cast_nullable_to_non_nullable
@@ -292,7 +315,8 @@ as String,personalPrice: null == personalPrice ? _self.personalPrice : personalP
 as int,companyPrice: null == companyPrice ? _self.companyPrice : companyPrice // ignore: cast_nullable_to_non_nullable
 as int,isIndia: null == isIndia ? _self.isIndia : isIndia // ignore: cast_nullable_to_non_nullable
 as bool,subunitMultiplier: null == subunitMultiplier ? _self.subunitMultiplier : subunitMultiplier // ignore: cast_nullable_to_non_nullable
-as int,
+as int,subscriptionAmountInr: null == subscriptionAmountInr ? _self._subscriptionAmountInr : subscriptionAmountInr // ignore: cast_nullable_to_non_nullable
+as Map<String, int>,
   ));
 }
 

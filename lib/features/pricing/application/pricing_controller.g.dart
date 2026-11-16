@@ -233,30 +233,27 @@ abstract class _$ReferralController extends $AsyncNotifier<ReferralSummary> {
   }
 }
 
-/// Buying a plan: create the mandate, open the sheet, verify the result.
+/// Buying a plan from the Pricing screen.
 ///
-/// The three steps are one controller because they are one act, and the
-/// middle one is the only part that happens on the device. What the sheet
-/// returns is a CLAIM — the server checks the signature before anything is
-/// activated, so a device that lies gets nothing.
+/// The create → sheet → verify sequence is [PlanCheckout]'s, shared with the
+/// onboarding plan step; this only turns its outcome into the screen's
+/// message and refreshes what a new plan changes.
 
 @ProviderFor(CheckoutController)
 final checkoutControllerProvider = CheckoutControllerProvider._();
 
-/// Buying a plan: create the mandate, open the sheet, verify the result.
+/// Buying a plan from the Pricing screen.
 ///
-/// The three steps are one controller because they are one act, and the
-/// middle one is the only part that happens on the device. What the sheet
-/// returns is a CLAIM — the server checks the signature before anything is
-/// activated, so a device that lies gets nothing.
+/// The create → sheet → verify sequence is [PlanCheckout]'s, shared with the
+/// onboarding plan step; this only turns its outcome into the screen's
+/// message and refreshes what a new plan changes.
 final class CheckoutControllerProvider
     extends $NotifierProvider<CheckoutController, void> {
-  /// Buying a plan: create the mandate, open the sheet, verify the result.
+  /// Buying a plan from the Pricing screen.
   ///
-  /// The three steps are one controller because they are one act, and the
-  /// middle one is the only part that happens on the device. What the sheet
-  /// returns is a CLAIM — the server checks the signature before anything is
-  /// activated, so a device that lies gets nothing.
+  /// The create → sheet → verify sequence is [PlanCheckout]'s, shared with the
+  /// onboarding plan step; this only turns its outcome into the screen's
+  /// message and refreshes what a new plan changes.
   CheckoutControllerProvider._()
     : super(
         from: null,
@@ -285,14 +282,13 @@ final class CheckoutControllerProvider
 }
 
 String _$checkoutControllerHash() =>
-    r'01588ce739841561175d6ce0e8645ecf796d693b';
+    r'ec7528f9afb88d5d79111d48411e09d7e24e4b2a';
 
-/// Buying a plan: create the mandate, open the sheet, verify the result.
+/// Buying a plan from the Pricing screen.
 ///
-/// The three steps are one controller because they are one act, and the
-/// middle one is the only part that happens on the device. What the sheet
-/// returns is a CLAIM — the server checks the signature before anything is
-/// activated, so a device that lies gets nothing.
+/// The create → sheet → verify sequence is [PlanCheckout]'s, shared with the
+/// onboarding plan step; this only turns its outcome into the screen's
+/// message and refreshes what a new plan changes.
 
 abstract class _$CheckoutController extends $Notifier<void> {
   void build();

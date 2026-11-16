@@ -7,18 +7,29 @@
 /// ## The two paths
 ///
 /// ```
-/// personal: welcome → brand → connect → cvUpload ─┬──────────────→ styleChoice ┬→ styleScreenshots ┬→ finish
-///                                                  └→ currentRole ─┘            └→ styleWrite ───────┘
-///                                                     (CV skipped)
+/// personal: welcome → (brand) → connect → plan → cvUpload ─┬──────────────→ styleChoice ┬→ styleScreenshots ┬→ finish
+///                                                            └→ currentRole ─┘            └→ styleWrite ───────┘
+///                                                               (CV skipped)
 ///
-/// company:  welcome → brand → connect → companyPage → companyLogo → posterStyle → companyDoc ┬──────────────────→ styleChoice → …
-///                                                                                              └→ companyDetails ─┘
-///                                                                                       (doc skipped or too thin)
+/// company:  welcome → (brand) → connect → plan → companyPage → companyLogo → posterStyle → companyDoc ┬──────────────────→ styleChoice → …
+///                                                                                                       └→ companyDetails ─┘
+///                                                                                                (doc skipped or too thin)
 /// ```
 ///
-/// LinkedIn comes second, straight after the brand, on both paths: a company
-/// brand cannot pick a page before it, and every later step is worth less to a
-/// user who cannot publish.
+/// LinkedIn comes straight after the welcome on both paths: a company brand
+/// cannot pick a page before it, and every later step is worth less to a user
+/// who cannot publish.
+///
+/// **The brand question is not asked while the company brand is closed**
+/// (`company_brand.dart`, the web's `canStartCompanyBrand()`): a question with
+/// one answer is not a question. Everyone is a personal brand, and the company
+/// path waits, intact, for the day it reopens.
+///
+/// **The plan comes straight after the connect, and there is no skip.** By
+/// then the user has done the one thing that proves intent; everything after
+/// it — the CV, the voice, the audience — exists to feed a posting engine, and
+/// building that for someone who will not be a customer only earns the right
+/// to wall it off later. An account that already has a plan is not asked.
 ///
 /// ## What the web has that is not here
 ///
@@ -34,6 +45,12 @@ enum OnboardingStep {
   /// `connect-linkedin`. Required — there is no skip, on either platform: a
   /// successful connect is the only way forward.
   connect,
+
+  /// The plan: an autopay mandate with a free first month in India, a 30-day
+  /// pass everywhere else. Required — the web's `PlanStep`. Skipped only for
+  /// an account that already has a plan, which the web does not do: there a
+  /// second run of the chat opens a second mandate beside the first.
+  plan,
 
   /// Company only: which LinkedIn page to grow.
   companyPage,
@@ -99,28 +116,25 @@ enum OnboardingStep {
   ///
   /// Each path counts only its own milestones; the branch steps report the
   /// milestone they belong to, so the bar neither jumps nor stalls on them.
-  /// Never below 5%, so step one still looks like progress.
-  int progressPercent({required bool company}) {
-    final List<OnboardingStep> order = company
-        ? const <OnboardingStep>[
-            OnboardingStep.welcome,
-            OnboardingStep.brand,
-            OnboardingStep.connect,
-            OnboardingStep.companyPage,
-            OnboardingStep.companyLogo,
-            OnboardingStep.posterStyle,
-            OnboardingStep.companyDoc,
-            OnboardingStep.styleChoice,
-            OnboardingStep.finish,
-          ]
-        : const <OnboardingStep>[
-            OnboardingStep.welcome,
-            OnboardingStep.brand,
-            OnboardingStep.connect,
-            OnboardingStep.cvUpload,
-            OnboardingStep.styleChoice,
-            OnboardingStep.finish,
-          ];
+  /// Never below 5%, so step one still looks like progress. [brandStep] is
+  /// whether the brand question is asked at all — a step that is never shown
+  /// must not hold back the bar.
+  int progressPercent({required bool company, required bool brandStep}) {
+    final List<OnboardingStep> order = <OnboardingStep>[
+      OnboardingStep.welcome,
+      if (brandStep) OnboardingStep.brand,
+      OnboardingStep.connect,
+      OnboardingStep.plan,
+      if (company) ...const <OnboardingStep>[
+        OnboardingStep.companyPage,
+        OnboardingStep.companyLogo,
+        OnboardingStep.posterStyle,
+        OnboardingStep.companyDoc,
+      ] else
+        OnboardingStep.cvUpload,
+      OnboardingStep.styleChoice,
+      OnboardingStep.finish,
+    ];
     final OnboardingStep resolved = switch (this) {
       OnboardingStep.styleScreenshots ||
       OnboardingStep.styleWrite => OnboardingStep.styleChoice,
@@ -139,6 +153,8 @@ enum OnboardingStep {
   /// Say only what the control cannot: why the ask exists, and what it
   /// changes."* [companyDetails] is absent: its line depends on which fields
   /// are missing, so the controller writes it (see `companyDetailsAsk`).
+  /// Nor is [plan]: its line depends on the offer, which is not known until
+  /// the region has been read (see `OnboardingChatController.planAsk`).
   List<String> botLines({
     required String firstName,
     required bool company,
@@ -158,6 +174,7 @@ enum OnboardingStep {
           ? 'Connect LinkedIn so I can load the company pages you manage.'
           : "I'll publish on your behalf and learn from your existing posts.",
     ],
+    OnboardingStep.plan => const <String>[],
     OnboardingStep.companyPage => <String>['Which page do you want to grow?'],
     // The only step with two lines: the second is a procedure the user has to
     // leave the app to follow, and nothing in the dock can carry it.
