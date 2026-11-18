@@ -3549,4 +3549,276 @@ $PostClaimCopyWith<$Res> get claim {
 }
 }
 
+
+/// @nodoc
+mixin _$SkipResult {
+
+/// The node skipped, as sent.
+ String get nodeId;/// It was already skipped (a repeat, or another device): nothing new was
+/// written. Still a success.
+ bool get alreadySkipped;
+/// Create a copy of SkipResult
+/// with the given fields replaced by the non-null parameter values.
+@JsonKey(includeFromJson: false, includeToJson: false)
+@pragma('vm:prefer-inline')
+$SkipResultCopyWith<SkipResult> get copyWith => _$SkipResultCopyWithImpl<SkipResult>(this as SkipResult, _$identity);
+
+  /// Serializes this SkipResult to a JSON map.
+  Map<String, dynamic> toJson();
+
+
+@override
+bool operator ==(Object other) {
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is SkipResult&&(identical(other.nodeId, nodeId) || other.nodeId == nodeId)&&(identical(other.alreadySkipped, alreadySkipped) || other.alreadySkipped == alreadySkipped));
+}
+
+@JsonKey(includeFromJson: false, includeToJson: false)
+@override
+int get hashCode => Object.hash(runtimeType,nodeId,alreadySkipped);
+
+@override
+String toString() {
+  return 'SkipResult(nodeId: $nodeId, alreadySkipped: $alreadySkipped)';
+}
+
+
+}
+
+/// @nodoc
+abstract mixin class $SkipResultCopyWith<$Res>  {
+  factory $SkipResultCopyWith(SkipResult value, $Res Function(SkipResult) _then) = _$SkipResultCopyWithImpl;
+@useResult
+$Res call({
+ String nodeId, bool alreadySkipped
+});
+
+
+
+
+}
+/// @nodoc
+class _$SkipResultCopyWithImpl<$Res>
+    implements $SkipResultCopyWith<$Res> {
+  _$SkipResultCopyWithImpl(this._self, this._then);
+
+  final SkipResult _self;
+  final $Res Function(SkipResult) _then;
+
+/// Create a copy of SkipResult
+/// with the given fields replaced by the non-null parameter values.
+@pragma('vm:prefer-inline') @override $Res call({Object? nodeId = null,Object? alreadySkipped = null,}) {
+  return _then(_self.copyWith(
+nodeId: null == nodeId ? _self.nodeId : nodeId // ignore: cast_nullable_to_non_nullable
+as String,alreadySkipped: null == alreadySkipped ? _self.alreadySkipped : alreadySkipped // ignore: cast_nullable_to_non_nullable
+as bool,
+  ));
+}
+
+}
+
+
+/// Adds pattern-matching-related methods to [SkipResult].
+extension SkipResultPatterns on SkipResult {
+/// A variant of `map` that fallback to returning `orElse`.
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case final Subclass value:
+///     return ...;
+///   case _:
+///     return orElse();
+/// }
+/// ```
+
+@optionalTypeArgs TResult maybeMap<TResult extends Object?>(TResult Function( _SkipResult value)?  $default,{required TResult orElse(),}){
+final _that = this;
+switch (_that) {
+case _SkipResult() when $default != null:
+return $default(_that);case _:
+  return orElse();
+
+}
+}
+/// A `switch`-like method, using callbacks.
+///
+/// Callbacks receives the raw object, upcasted.
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case final Subclass value:
+///     return ...;
+///   case final Subclass2 value:
+///     return ...;
+/// }
+/// ```
+
+@optionalTypeArgs TResult map<TResult extends Object?>(TResult Function( _SkipResult value)  $default,){
+final _that = this;
+switch (_that) {
+case _SkipResult():
+return $default(_that);case _:
+  throw StateError('Unexpected subclass');
+
+}
+}
+/// A variant of `map` that fallback to returning `null`.
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case final Subclass value:
+///     return ...;
+///   case _:
+///     return null;
+/// }
+/// ```
+
+@optionalTypeArgs TResult? mapOrNull<TResult extends Object?>(TResult? Function( _SkipResult value)?  $default,){
+final _that = this;
+switch (_that) {
+case _SkipResult() when $default != null:
+return $default(_that);case _:
+  return null;
+
+}
+}
+/// A variant of `when` that fallback to an `orElse` callback.
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case Subclass(:final field):
+///     return ...;
+///   case _:
+///     return orElse();
+/// }
+/// ```
+
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String nodeId,  bool alreadySkipped)?  $default,{required TResult orElse(),}) {final _that = this;
+switch (_that) {
+case _SkipResult() when $default != null:
+return $default(_that.nodeId,_that.alreadySkipped);case _:
+  return orElse();
+
+}
+}
+/// A `switch`-like method, using callbacks.
+///
+/// As opposed to `map`, this offers destructuring.
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case Subclass(:final field):
+///     return ...;
+///   case Subclass2(:final field2):
+///     return ...;
+/// }
+/// ```
+
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String nodeId,  bool alreadySkipped)  $default,) {final _that = this;
+switch (_that) {
+case _SkipResult():
+return $default(_that.nodeId,_that.alreadySkipped);case _:
+  throw StateError('Unexpected subclass');
+
+}
+}
+/// A variant of `when` that fallback to returning `null`
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case Subclass(:final field):
+///     return ...;
+///   case _:
+///     return null;
+/// }
+/// ```
+
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String nodeId,  bool alreadySkipped)?  $default,) {final _that = this;
+switch (_that) {
+case _SkipResult() when $default != null:
+return $default(_that.nodeId,_that.alreadySkipped);case _:
+  return null;
+
+}
+}
+
+}
+
+/// @nodoc
+@JsonSerializable()
+
+class _SkipResult implements SkipResult {
+  const _SkipResult({this.nodeId = '', this.alreadySkipped = false});
+  factory _SkipResult.fromJson(Map<String, dynamic> json) => _$SkipResultFromJson(json);
+
+/// The node skipped, as sent.
+@override@JsonKey() final  String nodeId;
+/// It was already skipped (a repeat, or another device): nothing new was
+/// written. Still a success.
+@override@JsonKey() final  bool alreadySkipped;
+
+/// Create a copy of SkipResult
+/// with the given fields replaced by the non-null parameter values.
+@override @JsonKey(includeFromJson: false, includeToJson: false)
+@pragma('vm:prefer-inline')
+_$SkipResultCopyWith<_SkipResult> get copyWith => __$SkipResultCopyWithImpl<_SkipResult>(this, _$identity);
+
+@override
+Map<String, dynamic> toJson() {
+  return _$SkipResultToJson(this, );
+}
+
+@override
+bool operator ==(Object other) {
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is _SkipResult&&(identical(other.nodeId, nodeId) || other.nodeId == nodeId)&&(identical(other.alreadySkipped, alreadySkipped) || other.alreadySkipped == alreadySkipped));
+}
+
+@JsonKey(includeFromJson: false, includeToJson: false)
+@override
+int get hashCode => Object.hash(runtimeType,nodeId,alreadySkipped);
+
+@override
+String toString() {
+  return 'SkipResult(nodeId: $nodeId, alreadySkipped: $alreadySkipped)';
+}
+
+
+}
+
+/// @nodoc
+abstract mixin class _$SkipResultCopyWith<$Res> implements $SkipResultCopyWith<$Res> {
+  factory _$SkipResultCopyWith(_SkipResult value, $Res Function(_SkipResult) _then) = __$SkipResultCopyWithImpl;
+@override @useResult
+$Res call({
+ String nodeId, bool alreadySkipped
+});
+
+
+
+
+}
+/// @nodoc
+class __$SkipResultCopyWithImpl<$Res>
+    implements _$SkipResultCopyWith<$Res> {
+  __$SkipResultCopyWithImpl(this._self, this._then);
+
+  final _SkipResult _self;
+  final $Res Function(_SkipResult) _then;
+
+/// Create a copy of SkipResult
+/// with the given fields replaced by the non-null parameter values.
+@override @pragma('vm:prefer-inline') $Res call({Object? nodeId = null,Object? alreadySkipped = null,}) {
+  return _then(_SkipResult(
+nodeId: null == nodeId ? _self.nodeId : nodeId // ignore: cast_nullable_to_non_nullable
+as String,alreadySkipped: null == alreadySkipped ? _self.alreadySkipped : alreadySkipped // ignore: cast_nullable_to_non_nullable
+as bool,
+  ));
+}
+
+
+}
+
 // dart format on

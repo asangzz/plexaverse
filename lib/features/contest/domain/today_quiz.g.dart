@@ -124,6 +124,12 @@ _TodayQuiz _$TodayQuizFromJson(Map<String, dynamic> json) => _TodayQuiz(
       ? null
       : FinishBonus.fromJson(json['finishBonus'] as Map<String, dynamic>),
   scoringPaused: json['scoringPaused'] as bool? ?? false,
+  dayKey: json['dayKey'] as String?,
+  skippedParts:
+      (json['skippedParts'] as List<dynamic>?)
+          ?.map((e) => (e as num).toInt())
+          .toList() ??
+      const <int>[],
 );
 
 Map<String, dynamic> _$TodayQuizToJson(_TodayQuiz instance) =>
@@ -143,6 +149,8 @@ Map<String, dynamic> _$TodayQuizToJson(_TodayQuiz instance) =>
       'score': instance.score?.toJson(),
       'finishBonus': instance.finishBonus?.toJson(),
       'scoringPaused': instance.scoringPaused,
+      'dayKey': instance.dayKey,
+      'skippedParts': instance.skippedParts,
     };
 
 const _$QuizStatusEnumMap = {

@@ -286,6 +286,10 @@ class ApiPaths {
   ///
   /// A level's `href` is a WEB path. Route on its `kind` (and `claim`), and
   /// read `href` only as "this level opens".
+  ///
+  /// A level may be `skipped` (passed over today with [contestSkip]: still
+  /// open, passable in the gate, paid if done), and at most one node — the
+  /// open level — carries `canSkip: true`.
   static const String contestPath = '/contest/path';
 
   /// GET `{quiz}` — today's lesson as it stands; `quiz.status` says why there
@@ -304,6 +308,11 @@ class ApiPaths {
   /// STALE_QUIZ both mean "reload today's lesson" (the day rolled over, or the
   /// level changed); 409 NOT_RUNNING / CONFLICT, 403 NOT_ENTERED, 404 NO_QUIZ,
   /// 400 VALIDATION_FAILED.
+  ///
+  /// Answer in `questions[]` order WITHIN a part. A skipped part may be
+  /// answered beside the open one, but a question in a part that is still
+  /// `locked` (an earlier part neither finished nor skipped) is 409 LOCKED,
+  /// "Finish or skip Lesson part X of N first." A replay is never refused.
   static const String contestQuizAnswer = '/contest/quiz/answer';
 
   /// GET `{level}` — today's comment level.
@@ -367,6 +376,26 @@ class ApiPaths {
   /// TOO_EARLY / NOT_READY / LOCKED / DUPLICATE_URL / CONFLICT; 404
   /// NOT_ENTERED.
   static const String contestTaskClaim = '/contest/tasks/claim';
+
+  /// POST `{nodeId}` — skips today's CURRENT level: the path node marked
+  /// `canSkip`, its id exactly as the path gave it. Answers
+  /// `{result: {nodeId, alreadySkipped}}`; a repeat is a 200 with
+  /// `alreadySkipped: true`. Pays nothing and moves no XP — re-read the path
+  /// and the lesson after it.
+  ///
+  /// 400 VALIDATION_FAILED (missing, or not on today's path); 409 WRONG_DAY
+  /// (the day rolled over) / ALREADY_DONE / NOT_OPEN (nothing to do there, or
+  /// not the current level) / LOCKED ("Finish or skip … first.") /
+  /// NOT_RUNNING; 404 NOT_ENTERED; 500 INTERNAL.
+  static const String contestSkip = '/contest/skip';
+
+  /// GET `{consistency}` — the consistency meter (owner, 17 Nov 2026):
+  /// `state` off | no_contest | not_joined | no_tasks | measuring; `percent`
+  /// (floored) is contest XP earned ÷ XP on offer over the caller's billing
+  /// window, with `earned`, `available`, `pending`, `unaudited`, `toLine`,
+  /// `today` and `days[]` keyed in the contest's timezone. A read; no price
+  /// is promised in this phase. 401; 500 INTERNAL.
+  static const String contestConsistency = '/contest/consistency';
 
   // ── Placement ───────────────────────────────────────────────────────────
   // The placement test that sets the lesson level. Same vocabulary rule as the

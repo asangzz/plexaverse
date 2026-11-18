@@ -144,6 +144,33 @@ void main() {
     }
   });
 
+  test('a skipped lesson part opens the lesson on that part', () {
+    final PathNode skipped = PathNode(
+      id: '2026-11-11:lesson:2',
+      kind: PathNodeKind.lesson,
+      state: PathNodeState.skipped,
+      href: '/contest/lesson?part=2',
+      part: const NodePart(index: 2, total: 3),
+    );
+    final Widget page = pageAt(contestLevelRoute(skipped)!);
+    expect(page, isA<ContestLessonPage>());
+    expect((page as ContestLessonPage).part, 2);
+    // A plain visit, and a part the lesson does not have, ask for none.
+    expect(
+      (pageAt(ZaveRoutes.contestLesson) as ContestLessonPage).part,
+      isNull,
+    );
+    expect(
+      (pageAt('${ZaveRoutes.contestLesson}?part=7') as ContestLessonPage).part,
+      isNull,
+    );
+    expect(contestLessonPartOf('2'), 2);
+    expect(contestLessonPartOf('0'), isNull);
+    expect(contestLessonPartOf('-1'), isNull);
+    expect(contestLessonPartOf('2x'), isNull);
+    expect(contestLessonPartOf(null), isNull);
+  });
+
   test('the claim level reads which piece from the query', () {
     final Widget page = pageAt(contestClaimRoute(ClaimKind.video, '6:1:2')!);
     expect(page, isA<ContestClaimPage>());

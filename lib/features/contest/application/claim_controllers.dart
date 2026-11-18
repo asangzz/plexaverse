@@ -61,7 +61,7 @@ ClaimLevel claimLevelOf(ContestPath? path, ClaimKind kind, String occurrence) {
   return ClaimLevel(
     claim: path?.claimFor(kind, occurrence),
     lockedDetail: node?.state == PathNodeState.locked
-        ? (node?.detail ?? 'Finish today’s earlier levels first')
+        ? (node?.detail ?? 'Finish or skip today’s earlier levels first')
         : null,
   );
 }

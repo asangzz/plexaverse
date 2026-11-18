@@ -13,6 +13,7 @@ import '../../application/invites_controllers.dart';
 import '../../domain/contest_repository.dart';
 import '../widgets/contest_kit.dart';
 import '../widgets/sheet/contest_sheet.dart';
+import '../widgets/skip_level.dart';
 
 /// `/contest/invites` — Saturday's level: send the week's invitations, then
 /// prove it with one screenshot. The web's `InvitesUpload`.
@@ -140,9 +141,21 @@ class ContestInvitesPage extends ConsumerWidget {
           ),
           SizedBox(height: ZaveSpace.lg),
           _UploadPanel(resend: true, points: points, lastWeek: lastWeek),
+          if (!lastWeek)
+            const ContestSkipLevel(kind: PathNodeKind.weeklyInvites),
         ],
       ),
-      PathNodeState.today => _UploadPanel(
+      PathNodeState.today => Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: <Widget>[
+          _UploadPanel(resend: false, points: points, lastWeek: lastWeek),
+          if (!lastWeek)
+            const ContestSkipLevel(kind: PathNodeKind.weeklyInvites),
+        ],
+      ),
+      // Skipped today: still open until the day ends, and paid on upload as
+      // usual.
+      PathNodeState.skipped => _UploadPanel(
         resend: false,
         points: points,
         lastWeek: lastWeek,

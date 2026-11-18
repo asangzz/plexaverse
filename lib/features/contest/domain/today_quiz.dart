@@ -203,6 +203,16 @@ abstract class TodayQuiz with _$TodayQuiz {
     /// An answer given NOW earns nothing, ever. Says nothing about answers
     /// already given — each carries what the ledger paid it.
     @Default(false) bool scoringPaused,
+
+    /// Today's contest day key (`YYYY-MM-DD`, the contest's timezone), sent
+    /// only while `ready`: a lesson part's node id — what Skip is keyed on —
+    /// is `<dayKey>:lesson:<k>`. Null from a server before Skip, and then the
+    /// player offers no "Skip this part".
+    String? dayKey,
+
+    /// Lesson parts (1-based, sorted) skipped today. Each stays open beside
+    /// the next part until the day ends.
+    @Default(<int>[]) List<int> skippedParts,
   }) = _TodayQuiz;
 
   factory TodayQuiz.fromJson(Map<String, dynamic> json) =>
@@ -224,9 +234,8 @@ abstract class TodayQuiz with _$TodayQuiz {
   /// The first question in lesson order with no answer, or null once every
   /// one has one.
   ///
-  /// The server accepts any unanswered question, but the path's parts and
-  /// checkpoints count answers as filling the run in order — so the player
-  /// answers strictly from here.
+  /// Within a part, questions are answered in order; a skipped part stays
+  /// open beside the next one (`lessonPartStates`).
   int? get firstUnansweredIndex {
     for (int i = 0; i < questions.length; i++) {
       if (answerFor(questions[i].id) == null) return i;

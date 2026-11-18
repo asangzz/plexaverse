@@ -25,14 +25,16 @@ FakeContestRepository _fake([
   FakeContestScenario scenario = FakeContestScenario.running,
 ]) => FakeContestRepository(scenario: scenario, latency: Duration.zero);
 
-/// The states that let the next level of today open (`PASSABLE_STATES`).
+/// The states that let the next level of today open (`PASSABLE_STATES`) —
+/// `skipped` among them since Skip (17 Nov 2026).
 bool _passable(PathNodeState s) => switch (s) {
   PathNodeState.done ||
   PathNodeState.approved ||
   PathNodeState.pending ||
   PathNodeState.revoked ||
   PathNodeState.unavailable ||
-  PathNodeState.missed => true,
+  PathNodeState.missed ||
+  PathNodeState.skipped => true,
   _ => false,
 };
 
@@ -55,11 +57,19 @@ void _expectServerShaped(ContestPath path, TodayQuiz quiz) {
       if (n.kind == PathNodeKind.connectLeaders && isFinished(n.state)) {
         expect(n.href, isNull, reason: 'a finished connect never reopens');
       }
+      // A skipped part opens on itself (`?part=k`).
       if (n.isLesson && n.href != null) {
         expect(<PathNodeState>[
           PathNodeState.today,
           PathNodeState.done,
+          PathNodeState.skipped,
         ], contains(n.state));
+        expect(
+          n.href,
+          n.state == PathNodeState.skipped
+              ? '/contest/lesson?part=${n.part!.index}'
+              : '/contest/lesson',
+        );
       }
       if (n.kind.isClaim) {
         expect(n.claim, isNotNull);
@@ -68,9 +78,12 @@ void _expectServerShaped(ContestPath path, TodayQuiz quiz) {
             PathNodeState.today,
             PathNodeState.rejected,
             PathNodeState.pending,
+            PathNodeState.skipped,
           ], contains(n.state));
         }
       }
+      // Skip lives on today only.
+      if (!d.isToday) expect(n.canSkip, isFalse, reason: n.id);
       if (n.kind == PathNodeKind.planWeek) expect(n.points, 0);
       if (n.href != null) expect(canOpen(n), isTrue, reason: n.id);
     }
@@ -94,6 +107,26 @@ void _expectServerShaped(ContestPath path, TodayQuiz quiz) {
       );
     }
     if (!_passable(n.state)) blocked = true;
+  }
+  // At most one level can be skipped: the first open one, with nothing
+  // holding the chain before it.
+  final List<PathNode> skippable = today.nodes
+      .where((PathNode n) => n.canSkip)
+      .toList();
+  expect(skippable.length, lessThanOrEqualTo(1));
+  if (skippable.isNotEmpty) {
+    final int i = today.nodes.indexOf(skippable.single);
+    expect(<PathNodeState>[
+      PathNodeState.today,
+      PathNodeState.rejected,
+    ], contains(skippable.single.state));
+    for (int j = 0; j < i; j++) {
+      expect(
+        _passable(today.nodes[j].state),
+        isTrue,
+        reason: today.nodes[j].id,
+      );
+    }
   }
   // Today's parts are the same cut the player makes of the same lesson.
   if (quiz.isReady && quiz.started == true) {
@@ -265,7 +298,9 @@ void main() {
           isA<ContestLocked>().having(
             (ContestLocked e) => e.message,
             'message',
-            'Finish Lesson part 3 of 3 first.',
+            // The nearest earlier level still holding the chain — the locked
+            // part 3 — in the server's "finish or skip" words.
+            'Finish or skip Lesson part 3 of 3 first.',
           ),
         ),
       );
@@ -625,6 +660,226 @@ void main() {
     });
   });
 
+  group('skip', () {
+    // The running fixture: Wednesday 2026-11-11, part 1 done, two of part 2
+    // answered, part 3 locked, everything after it locked behind it.
+    const String today = '2026-11-11';
+
+    PathNode nodeOf(ContestPath p, String id) =>
+        p.today!.nodes.firstWhere((PathNode n) => n.id == id);
+
+    test('the open part is the one Skip may be pressed on', () async {
+      final FakeContestRepository repo = _fake();
+      final ContestPath p = await repo.fetchPath();
+      _expectServerShaped(p, await repo.fetchTodayQuiz());
+      expect(nodeOf(p, '$today:lesson:2').canSkip, isTrue);
+      expect(p.today!.nodes.where((PathNode n) => n.canSkip), hasLength(1));
+      final TodayQuiz q = await repo.fetchTodayQuiz();
+      expect(q.dayKey, today);
+      expect(q.skippedParts, isEmpty);
+    });
+
+    test('skipping the open part keeps it open on itself, opens the next '
+        'and moves START', () async {
+      final FakeContestRepository repo = _fake();
+      final SkipResult r = await repo.skipLevel('$today:lesson:2');
+      expect(r.nodeId, '$today:lesson:2');
+      expect(r.alreadySkipped, isFalse);
+
+      final ContestPath p = await repo.fetchPath();
+      final TodayQuiz q = await repo.fetchTodayQuiz();
+      _expectServerShaped(p, q);
+      final PathNode two = nodeOf(p, '$today:lesson:2');
+      expect(two.state, PathNodeState.skipped);
+      expect(two.href, '/contest/lesson?part=2');
+      expect(two.detail, 'You skipped this · 2 of 5 answered');
+      expect(two.canSkip, isFalse);
+      expect(contestLevelRoute(two), '${ZaveRoutes.contestLesson}?part=2');
+      final PathNode three = nodeOf(p, '$today:lesson:3');
+      expect(three.state, PathNodeState.today);
+      expect(three.canSkip, isTrue);
+      expect(currentNodeId(p.days), '$today:lesson:3');
+      expect(openLevelOf(p.days)!.id, '$today:lesson:3');
+      expect(q.skippedParts, <int>[2]);
+      // Behind the part now open, in the server's words.
+      expect(
+        nodeOf(p, '$today:comment').detail,
+        'Unlocks after Lesson part 3 of 3',
+      );
+    });
+
+    test('a repeat is a success that writes nothing', () async {
+      final FakeContestRepository repo = _fake();
+      await repo.skipLevel('$today:lesson:2');
+      final SkipResult again = await repo.skipLevel('$today:lesson:2');
+      expect(again.alreadySkipped, isTrue);
+    });
+
+    test('refusals, in the server’s order and words', () async {
+      final FakeContestRepository repo = _fake();
+      await expectLater(
+        repo.skipLevel('2026-11-10:comment'),
+        throwsA(
+          isA<ContestWrongDay>().having(
+            (ContestWrongDay e) => e.message,
+            'message',
+            'That day is over. Reload the path for today’s.',
+          ),
+        ),
+      );
+      await expectLater(
+        repo.skipLevel('$today:nothing'),
+        throwsA(
+          isA<ContestInvalid>().having(
+            (ContestInvalid e) => e.message,
+            'message',
+            'That level is not on today’s path.',
+          ),
+        ),
+      );
+      await expectLater(
+        repo.skipLevel('$today:lesson:1'),
+        throwsA(isA<ContestAlreadyDone>()),
+      );
+      await expectLater(
+        repo.skipLevel('$today:comment'),
+        throwsA(
+          isA<ContestLocked>().having(
+            (ContestLocked e) => e.message,
+            'message',
+            'Finish or skip Lesson part 3 of 3 first.',
+          ),
+        ),
+      );
+    });
+
+    test('a locked part refuses an answer; a skipped part takes one beside '
+        'the open part', () async {
+      final FakeContestRepository repo = _fake();
+      TodayQuiz q = await repo.fetchTodayQuiz();
+      // Part 3 starts at question 10 of 15, behind the open part 2.
+      await expectLater(
+        repo.answerQuiz(
+          day: q.day!,
+          itemId: q.questions[10].id,
+          value: q.questions[10].options.first,
+        ),
+        throwsA(
+          isA<ContestLocked>().having(
+            (ContestLocked e) => e.message,
+            'message',
+            'Finish or skip Lesson part 2 of 3 first.',
+          ),
+        ),
+      );
+
+      await repo.skipLevel('$today:lesson:2');
+      q = await repo.fetchTodayQuiz();
+      // The open part 3 first, then the skipped part 2 beside it.
+      await repo.answerQuiz(
+        day: q.day!,
+        itemId: q.questions[10].id,
+        value: q.questions[10].options.first,
+      );
+      await repo.answerQuiz(
+        day: q.day!,
+        itemId: q.questions[7].id,
+        value: q.questions[7].options.first,
+      );
+      final ContestPath p = await repo.fetchPath();
+      expect(
+        nodeOf(p, '$today:lesson:2').detail,
+        'You skipped this · 3 of 5 answered',
+      );
+      expect(nodeOf(p, '$today:lesson:3').detail, '1 of 5 answered');
+    });
+
+    test('a skipped part finished is done, and the day pays only once every '
+        'part is', () async {
+      final FakeContestRepository repo = _fake();
+      final int streak = (await repo.fetchOverview())!.entry!.streak;
+      await repo.skipLevel('$today:lesson:2');
+      TodayQuiz q = await repo.fetchTodayQuiz();
+      // Part 3 in full.
+      for (int i = 10; i < 15; i++) {
+        final QuizAnswerResult r = await repo.answerQuiz(
+          day: q.day!,
+          itemId: q.questions[i].id,
+          value: q.questions[i].options.first,
+        );
+        expect(r.completed, isFalse);
+      }
+      ContestPath p = await repo.fetchPath();
+      expect(nodeOf(p, '$today:lesson:3').state, PathNodeState.done);
+      expect(isLessonDone(p.today), isFalse);
+      // The skipped part 2 passes the gate, so the comment is open now.
+      expect(openLevelOf(p.days)!.id, '$today:comment');
+      expect((await repo.fetchOverview())!.entry!.streak, streak);
+
+      q = await repo.fetchTodayQuiz();
+      QuizAnswerResult? last;
+      for (int i = 7; i < 10; i++) {
+        last = await repo.answerQuiz(
+          day: q.day!,
+          itemId: q.questions[i].id,
+          value: q.questions[i].options.first,
+        );
+      }
+      expect(last!.completed, isTrue);
+      expect((await repo.fetchOverview())!.entry!.streak, streak + 1);
+      p = await repo.fetchPath();
+      _expectServerShaped(p, await repo.fetchTodayQuiz());
+      expect(nodeOf(p, '$today:lesson:2').state, PathNodeState.done);
+      expect(isLessonDone(p.today), isTrue);
+    });
+
+    test(
+      'a skipped task stays open, passes the gate, and pays if done',
+      () async {
+        final FakeContestRepository repo = _fake();
+        await repo.skipLevel('$today:lesson:2');
+        await repo.skipLevel('$today:lesson:3');
+        ContestPath p = await repo.fetchPath();
+        // Every part left is skipped: the comment is the open level.
+        expect(openLevelOf(p.days)!.id, '$today:comment');
+        expect(nodeOf(p, '$today:comment').canSkip, isTrue);
+
+        await repo.skipLevel('$today:comment');
+        p = await repo.fetchPath();
+        _expectServerShaped(p, await repo.fetchTodayQuiz());
+        final PathNode comment = nodeOf(p, '$today:comment');
+        expect(comment.state, PathNodeState.skipped);
+        expect(comment.detail, 'You skipped this');
+        expect(comment.href, isNotNull);
+        expect(stateWord(comment.state), 'Skipped, still open today');
+        expect(actionWord(comment), 'Start +40 XP');
+        expect(contestLevelRoute(comment), ZaveRoutes.contestComment);
+        expect(currentNodeId(p.days), '$today:feed_comments');
+
+        // Done after all: it pays as usual, and the skip no longer shows.
+        await repo.fetchCommentLevel();
+        final CommentSubmitResult r = await repo.submitComment(<String>[
+          'reminder',
+          'decision',
+          'approvals',
+        ]);
+        expect(r.pointsApplied, 40);
+        p = await repo.fetchPath();
+        expect(nodeOf(p, '$today:comment').state, PathNodeState.done);
+      },
+    );
+
+    test('a level behind the open one cannot be skipped', () async {
+      final FakeContestRepository repo = _fake();
+      await repo.skipLevel('$today:lesson:2');
+      // The open part 3 is the one; the feed comments behind it are locked.
+      await expectLater(
+        repo.skipLevel('$today:feed_comments'),
+        throwsA(isA<ContestLocked>()),
+      );
+    });
+  });
+
   group('what the fake sends, the wire can carry', () {
     for (final FakeContestScenario s in FakeContestScenario.values) {
       test(s.name, () async {
@@ -744,39 +999,44 @@ void main() {
       },
     );
 
-    test(
-      'a refresh re-reads the standing, the path, the board and the lesson',
-      () async {
-        final _Counting repo = _Counting();
-        final ProviderContainer c = container(repo);
-        c.listen(contestOverviewProvider, (_, _) {});
-        c.listen(contestPathProvider, (_, _) {});
-        c.listen(contestBoardProvider(50), (_, _) {});
-        c.listen(todayQuizProvider, (_, _) {});
-        await c.read(contestOverviewProvider.future);
-        await c.read(contestPathProvider.future);
-        await c.read(contestBoardProvider(50).future);
-        await c.read(todayQuizProvider.future);
-        expect(repo.reads, <String, int>{
-          'overview': 1,
-          'path': 1,
-          'board': 1,
-          'quiz': 1,
-        });
+    // The consistency meter joined the refresh (17 Nov 2026): it counts
+    // what the path pays, as the web's `refreshStanding` re-reads it.
+    test('a refresh re-reads the standing, the path, the board, the lesson and '
+        'the consistency meter', () async {
+      final _Counting repo = _Counting();
+      final ProviderContainer c = container(repo);
+      c.listen(contestOverviewProvider, (_, _) {});
+      c.listen(contestPathProvider, (_, _) {});
+      c.listen(contestBoardProvider(50), (_, _) {});
+      c.listen(todayQuizProvider, (_, _) {});
+      c.listen(contestConsistencyProvider, (_, _) {});
+      await c.read(contestOverviewProvider.future);
+      await c.read(contestPathProvider.future);
+      await c.read(contestBoardProvider(50).future);
+      await c.read(todayQuizProvider.future);
+      await c.read(contestConsistencyProvider.future);
+      expect(repo.reads, <String, int>{
+        'overview': 1,
+        'path': 1,
+        'board': 1,
+        'quiz': 1,
+        'consistency': 1,
+      });
 
-        refreshContestStanding(c.invalidate);
-        await c.read(contestOverviewProvider.future);
-        await c.read(contestPathProvider.future);
-        await c.read(contestBoardProvider(50).future);
-        await c.read(todayQuizProvider.future);
-        expect(repo.reads, <String, int>{
-          'overview': 2,
-          'path': 2,
-          'board': 2,
-          'quiz': 2,
-        });
-      },
-    );
+      refreshContestStanding(c.invalidate);
+      await c.read(contestOverviewProvider.future);
+      await c.read(contestPathProvider.future);
+      await c.read(contestBoardProvider(50).future);
+      await c.read(todayQuizProvider.future);
+      await c.read(contestConsistencyProvider.future);
+      expect(repo.reads, <String, int>{
+        'overview': 2,
+        'path': 2,
+        'board': 2,
+        'quiz': 2,
+        'consistency': 2,
+      });
+    });
   });
 }
 
@@ -797,6 +1057,12 @@ class _Counting extends FakeContestRepository {
   Future<ContestPath> fetchPath() {
     _count('path');
     return super.fetchPath();
+  }
+
+  @override
+  Future<ConsistencyView> fetchConsistency() {
+    _count('consistency');
+    return super.fetchConsistency();
   }
 
   @override

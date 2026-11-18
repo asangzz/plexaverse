@@ -5,6 +5,7 @@ import '../../../../../core/responsive/screen_util.dart';
 import '../../../../../core/ui/app_icons.dart';
 import '../../../../../core/ui/zave/zave_kit.dart';
 import '../../../domain/contest_words.dart';
+import '../contest_kit.dart';
 import 'lesson_shell.dart';
 
 /// The pause between two parts of today's lesson — the web's
@@ -30,6 +31,8 @@ class CheckpointView extends StatelessWidget {
     required this.progress,
     required this.onContinue,
     required this.onQuit,
+    this.onSkipNext,
+    this.skipping = false,
     super.key,
   });
 
@@ -50,6 +53,15 @@ class CheckpointView extends StatelessWidget {
   final double progress;
   final VoidCallback onContinue;
   final VoidCallback onQuit;
+
+  /// Skip the next part (17 Nov 2026): a quiet link under "Keep going",
+  /// which stays the one green pill. Null when the next part cannot be
+  /// skipped right now (not the open one, a skip in flight, the double-tap
+  /// guard cooling down, or a server before Skip).
+  final VoidCallback? onSkipNext;
+
+  /// The skip is being sent.
+  final bool skipping;
 
   @override
   Widget build(BuildContext context) {
@@ -138,7 +150,13 @@ class CheckpointView extends StatelessWidget {
                 ),
               ),
             ),
-            _Foot(onContinue: onContinue, onQuit: onQuit),
+            _Foot(
+              onContinue: onContinue,
+              onQuit: onQuit,
+              nextPart: part + 1,
+              onSkipNext: onSkipNext,
+              skipping: skipping,
+            ),
           ],
         ),
       ),
@@ -189,10 +207,19 @@ class _PartCircle extends StatelessWidget {
 /// Keep going, and the way back to the path under it — on a phone the web
 /// stacks them in that order.
 class _Foot extends StatelessWidget {
-  const _Foot({required this.onContinue, required this.onQuit});
+  const _Foot({
+    required this.onContinue,
+    required this.onQuit,
+    required this.nextPart,
+    this.onSkipNext,
+    this.skipping = false,
+  });
 
   final VoidCallback onContinue;
   final VoidCallback onQuit;
+  final int nextPart;
+  final VoidCallback? onSkipNext;
+  final bool skipping;
 
   @override
   Widget build(BuildContext context) {
@@ -251,6 +278,13 @@ class _Foot extends StatelessWidget {
                 ),
               ),
             ),
+            if (onSkipNext != null || skipping)
+              Center(
+                child: ContestTextLink(
+                  label: skipping ? 'Skipping…' : 'Skip part $nextPart',
+                  onTap: skipping ? null : onSkipNext,
+                ),
+              ),
             SizedBox(height: ZaveSpace.sm),
             Center(
               child: Semantics(

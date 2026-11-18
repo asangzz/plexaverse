@@ -67,8 +67,9 @@ List<ContestRule> contestRules(ContestInfo c) {
           'a fake one loses that XP and the same again as a penalty. Sunday, '
           'the first day of the week: plan this week in the Planner — nothing '
           'to share that day. The day a video or your article goes out: '
-          'share its link. Levels open one after another. Post links pay '
-          'once we have checked them.',
+          'share its link. Levels open one after another. Skip one to move '
+          'on: it stays open until the day ends, and pays only if you come '
+          'back to it. Post links pay once we have checked them.',
     ),
     const ContestRule(
       'The leaderboard opens for the last $kLeaderboardRevealDays days',

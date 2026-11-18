@@ -170,6 +170,10 @@ class FakeContestWorld {
 
   final Map<String, _ClaimRow> _claimRows = <String, _ClaimRow>{};
 
+  /// Today's skipped node ids — `contest_level_skips`. Skips only ever
+  /// affect their own day, and every fixture's today is fixed.
+  final Set<String> _skipped = <String>{};
+
   void _seed() {
     switch (scenario) {
       case FakeContestScenario.noContest:
@@ -249,6 +253,138 @@ class FakeContestWorld {
       postUrl:
           'https://www.linkedin.com/posts/your-name_how-i-say-no-to-a-deadline-activity-7392000000000000000-wxyz',
       rejectReason: 'The link opens a different post.',
+    );
+  }
+
+  // ── The consistency meter ────────────────────────────────────────────────
+
+  /// `GET /contest/consistency` — the meter over an IST calendar month.
+  ///
+  /// The days before today are a fixed history (the server rebuilds them
+  /// from rows this fake does not keep); today is read off this world's own
+  /// path, so finishing or skipping a level moves the figure as the server's
+  /// would. The states follow `getConsistency`: anything on offer is
+  /// measuring; a running contest the learner has not joined is not_joined;
+  /// no counted day and no contest running is no_contest; else no_tasks.
+  ConsistencyView consistency() {
+    final String monthStart = '${_todayKey.substring(0, 8)}01';
+    final DateTime month = _utc(monthStart);
+    final ConsistencyWindow window = ConsistencyWindow(
+      from: _instant(monthStart),
+      to: _instant(_keyOf(DateTime.utc(month.year, month.month + 1))),
+      basis: 'calendar',
+    );
+    if (!_hasContest) {
+      return ConsistencyView(
+        state: ConsistencyState.noContest,
+        window: window,
+        noContestRunning: true,
+      );
+    }
+    if (_running && !_joined) {
+      return ConsistencyView(
+        state: ConsistencyState.notJoined,
+        window: window,
+        joined: false,
+      );
+    }
+    if (_phase == ContestPhase.upcoming) {
+      return ConsistencyView(
+        state: ConsistencyState.noContest,
+        window: window,
+        noContestRunning: true,
+      );
+    }
+
+    final List<ConsistencyDay> days = <ConsistencyDay>[];
+    // A fresh joiner has no history; the ended scenario's is all there is.
+    if (!_fresh) {
+      final (int earned, int available) = switch (scenario) {
+        FakeContestScenario.revealed => (2880, 3200),
+        _ => (1820, 2600),
+      };
+      final String yesterday = _addDays(_todayKey, -1);
+      days.add(
+        ConsistencyDay(dayKey: yesterday, available: available, earned: earned),
+      );
+    }
+
+    ConsistencyToday? today;
+    if (_running) {
+      int available = 0;
+      int earned = 0;
+      int pending = 0;
+      for (final PathNode n in path().today?.nodes ?? const <PathNode>[]) {
+        if (n.state == PathNodeState.unavailable) continue;
+        final int offer = n.isLesson ? n.points : (_rulePoints[n.kind] ?? 0);
+        available += offer;
+        switch (n.state) {
+          case PathNodeState.done || PathNodeState.approved:
+            earned += n.kind == PathNodeKind.feedComments
+                ? _feedPaid.fold(0, (int a, int b) => a + b)
+                : n.points;
+          case PathNodeState.pending:
+            pending += offer;
+          // Each feed comment is paid as it lands and stays earned, so a
+          // part-done level keeps its paid shares when it is skipped too.
+          case PathNodeState.today || PathNodeState.skipped
+              when n.kind == PathNodeKind.feedComments:
+            earned += _feedPaid.fold(0, (int a, int b) => a + b);
+          default:
+            break;
+        }
+      }
+      // Paused days count on neither side.
+      final bool paused = _scoringPaused;
+      days.add(
+        ConsistencyDay(
+          dayKey: _todayKey,
+          available: paused ? 0 : available,
+          earned: paused ? 0 : earned,
+          pending: paused ? 0 : pending,
+          paused: paused,
+          today: true,
+        ),
+      );
+      today = ConsistencyToday(
+        dayKey: _todayKey,
+        earned: paused ? 0 : earned,
+        available: paused ? 0 : available,
+      );
+    }
+
+    const int threshold = 75;
+    final int earned = days.fold(0, (int a, ConsistencyDay d) => a + d.earned);
+    final int available = days.fold(
+      0,
+      (int a, ConsistencyDay d) => a + d.available,
+    );
+    final int pending = days.fold(
+      0,
+      (int a, ConsistencyDay d) => a + d.pending,
+    );
+    final bool measuring = available > 0;
+    final int line = (threshold * available + 99) ~/ 100;
+    return ConsistencyView(
+      state: measuring
+          ? ConsistencyState.measuring
+          : days.isEmpty && !_running
+          ? ConsistencyState.noContest
+          : ConsistencyState.noTasks,
+      threshold: threshold,
+      percent: measuring ? (100 * earned) ~/ available : null,
+      atOrAbove: measuring ? earned * 100 >= threshold * available : null,
+      earned: earned,
+      available: available,
+      pending: pending,
+      toLine: measuring ? (line - earned < 0 ? 0 : line - earned) : 0,
+      countedDays: days.where((ConsistencyDay d) => !d.paused).length,
+      window: window,
+      today: today,
+      joined: _running ? _joined : null,
+      scoringPaused: days.any((ConsistencyDay d) => d.paused),
+      noContestRunning: !_running,
+      days: days,
     );
   }
 
@@ -502,47 +638,65 @@ class FakeContestWorld {
     PathNodeKind.planWeek: 0,
   };
 
-  /// `lessonNodes`: one node per part, the open part `today`, the parts after
-  /// it locked, a past day's unfinished parts missed.
+  /// `lessonNodes`: one node per part, by `lessonPartStates` — which
+  /// questions are answered, and today's skipped parts. The open part is
+  /// `today`, a skipped one `skipped` (opening on itself, `?part=k`), the
+  /// parts after the open one locked, a past day's unfinished parts missed.
   List<PathNode> _lessonNodes(String key) {
     final bool isToday = key == _todayKey;
     final bool past = key.compareTo(_todayKey) < 0;
     final int total = isToday ? _pathQuestionCount : 15;
-    final int answered = isToday ? _answers.length : 0;
     final bool complete = isToday ? _lessonComplete : (past && !_fresh);
-    final List<LessonPart> parts = lessonPartBounds(total);
+    final List<LessonPartView> views = lessonPartStates(
+      total: total,
+      answered: isToday ? _answeredIndexes : const <int>{},
+      skipped: isToday ? skippedPartsOf(_skipped, key) : const <int>{},
+      when: isToday
+          ? LessonWhen.today
+          : (past ? LessonWhen.past : LessonWhen.future),
+      complete: complete,
+    );
     final List<PathNode> nodes = <PathNode>[];
-    bool openFound = false;
-    for (final LessonPart p in parts) {
-      String detail = '${p.size} ${p.size == 1 ? 'question' : 'questions'}';
-      PathNodeState state;
-      if (complete || (isToday && answered >= p.end)) {
-        state = PathNodeState.done;
-      } else if (isToday) {
-        state = openFound ? PathNodeState.locked : PathNodeState.today;
-        if (!openFound) {
-          final int inPart = (answered - p.start).clamp(0, p.size);
-          if (inPart > 0) detail = '$inPart of ${p.size} answered';
-        }
-        openFound = true;
-      } else {
-        state = past ? PathNodeState.missed : PathNodeState.locked;
+    for (final LessonPartView p in views) {
+      final int k = p.index + 1;
+      final String sizeLine =
+          '${p.size} ${p.size == 1 ? 'question' : 'questions'}';
+      final String progress = '${p.answeredInPart} of ${p.size} answered';
+      String detail = sizeLine;
+      if (p.state == LessonPartState.today && p.answeredInPart > 0) {
+        detail = progress;
       }
-      final bool opens =
-          state == PathNodeState.today || state == PathNodeState.done;
+      if (p.state == LessonPartState.skipped) {
+        detail = p.answeredInPart > 0
+            ? 'You skipped this · $progress'
+            : 'You skipped this';
+      }
+      final PathNodeState state = switch (p.state) {
+        LessonPartState.done => PathNodeState.done,
+        LessonPartState.today => PathNodeState.today,
+        LessonPartState.skipped => PathNodeState.skipped,
+        LessonPartState.locked => PathNodeState.locked,
+        LessonPartState.missed => PathNodeState.missed,
+      };
+      final String lesson = _hrefs[PathNodeKind.lesson]!;
       nodes.add(
         PathNode(
-          id: '$key:lesson:${p.index + 1}',
+          id: lessonNodeId(key, k),
           kind: PathNodeKind.lesson,
           state: state,
-          title: 'Lesson · part ${p.index + 1} of ${parts.length}',
+          title: 'Lesson · part $k of ${views.length}',
           // Only the last part pays: finishing the day is the day credit.
-          points: p.index == parts.length - 1 ? 50 : 0,
-          href: opens ? _hrefs[PathNodeKind.lesson] : null,
+          points: p.index == views.length - 1 ? 50 : 0,
+          // A skipped part opens on itself.
+          href: switch (state) {
+            PathNodeState.today || PathNodeState.done => lesson,
+            PathNodeState.skipped => '$lesson?part=$k',
+            _ => null,
+          },
           detail: detail,
           part: NodePart(
-            index: p.index + 1,
-            total: parts.length,
+            index: k,
+            total: views.length,
             start: p.start,
             end: p.end,
           ),
@@ -551,6 +705,26 @@ class FakeContestWorld {
     }
     return nodes;
   }
+
+  /// Today's answered questions by their index in today's lesson — which
+  /// ones, never how many.
+  Set<int> get _answeredIndexes {
+    final List<_Question> qs = _todayQuestions;
+    final Set<String> ids = <String>{for (final _Given a in _answers) a.itemId};
+    return <int>{
+      for (int i = 0; i < qs.length; i++)
+        if (ids.contains(qs[i].idFor(_dayNumber))) i,
+    };
+  }
+
+  /// Today's lesson parts as the answer endpoint reckons them.
+  List<LessonPartView> get _todayParts => lessonPartStates(
+    total: _todayQuestionCount,
+    answered: _answeredIndexes,
+    skipped: skippedPartsOf(_skipped, _todayKey),
+    when: LessonWhen.today,
+    complete: false,
+  );
 
   /// `taskNode`, for today from the state above and for the past from a
   /// fixed history: a week mostly done, with a missed feed task on Monday
@@ -713,41 +887,78 @@ class FakeContestWorld {
     );
   }
 
-  /// `gateDay`: today's first level that is not passable keeps its state;
-  /// every open level after it is locked behind the one before it.
-  static List<PathNode> _gate(List<PathNode> nodes) {
-    bool blocked = false;
+  /// `gateDay(markSkipped(nodes))`: today's skipped task and claim levels
+  /// drawn as `skipped`; then the first level that is not passable keeps its
+  /// state and, when it is open, is the one marked `canSkip`; every open
+  /// level after it is locked behind the nearest earlier level still holding
+  /// the chain.
+  List<PathNode> _gate(List<PathNode> nodes) {
+    final List<PathNode> marked = <PathNode>[
+      for (final PathNode n in nodes) _markSkipped(n),
+    ];
+    PathNode? holder;
+    bool canSkipMarked = false;
     final List<PathNode> out = <PathNode>[];
-    for (int i = 0; i < nodes.length; i++) {
-      final PathNode node = nodes[i];
-      if (blocked &&
-          (node.state == PathNodeState.today ||
-              node.state == PathNodeState.rejected)) {
-        out.add(
-          node.copyWith(
-            state: PathNodeState.locked,
-            href: null,
-            started: false,
-            detail: 'Unlocks after ${levelName(nodes[i - 1])}',
-          ),
+    for (final PathNode node in marked) {
+      PathNode next = node;
+      final bool open =
+          node.state == PathNodeState.today ||
+          node.state == PathNodeState.rejected;
+      final PathNode? h = holder;
+      if (h != null && open) {
+        next = node.copyWith(
+          state: PathNodeState.locked,
+          href: null,
+          started: false,
+          canSkip: false,
+          detail: 'Unlocks after ${levelName(h)}',
         );
-        continue;
+      } else if (h == null && !canSkipMarked && open) {
+        next = node.copyWith(canSkip: true);
+        canSkipMarked = true;
       }
-      if (!_passable(node.state)) blocked = true;
-      out.add(node);
+      if (!_passable(next.state)) holder = next;
+      out.add(next);
     }
     return out;
   }
 
+  /// `markSkipped`: a task or claim node whose id was skipped today and whose
+  /// rows leave it open (today) or sent back (rejected). A state read off the
+  /// level's own rows beats the skip. Lesson parts arrive skip-aware.
+  PathNode _markSkipped(PathNode n) {
+    if (n.isLesson || !_skipped.contains(n.id)) return n;
+    if (n.state != PathNodeState.today && n.state != PathNodeState.rejected) {
+      return n;
+    }
+    final String? keep = n.state == PathNodeState.rejected || n.started
+        ? n.detail
+        : null;
+    return n.copyWith(
+      state: PathNodeState.skipped,
+      detail: keep == null ? 'You skipped this' : 'You skipped this · $keep',
+    );
+  }
+
+  /// `PASSABLE_STATES` in the web's `lib/contest-gate.ts`.
   static bool _passable(PathNodeState s) => switch (s) {
     PathNodeState.done ||
     PathNodeState.approved ||
     PathNodeState.pending ||
     PathNodeState.revoked ||
     PathNodeState.unavailable ||
-    PathNodeState.missed => true,
+    PathNodeState.missed ||
+    PathNodeState.skipped => true,
     _ => false,
   };
+
+  /// `holderOf`: the nearest node before [i] that is not passable.
+  static PathNode? _holderOf(List<PathNode> nodes, int i) {
+    for (int j = i - 1; j >= 0; j--) {
+      if (!_passable(nodes[j].state)) return nodes[j];
+    }
+    return null;
+  }
 
   /// The level an action on [kind] waits on today, by the same gate the path
   /// draws with — `lockedLevel`.
@@ -759,12 +970,64 @@ class FakeContestWorld {
     if (i <= 0) return null;
     final PathNode node = nodes[i];
     if (node.state != PathNodeState.locked || node.isLesson) return null;
-    return levelName(nodes[i - 1]);
+    final PathNode? holder = _holderOf(nodes, i);
+    return holder == null ? null : levelName(holder);
   }
 
   void _assertUnlocked(bool Function(PathNode) match) {
     final String? behind = _lockedBehind(match);
-    if (behind != null) throw ContestLocked('Finish $behind first.');
+    if (behind != null) throw ContestLocked('Finish or skip $behind first.');
+  }
+
+  // ── Skip ─────────────────────────────────────────────────────────────────
+
+  /// `skipLevel`, in the server's order: the node id's shape and day, today's
+  /// gated nodes, then the node's state. A repeat is not an error.
+  SkipResult skip(String nodeId) {
+    if (nodeId.isEmpty || nodeId.length > 200) {
+      throw const ContestInvalid('Missing nodeId.');
+    }
+    _assertEntrant();
+    if (!nodeId.startsWith('$_todayKey:')) {
+      throw const ContestWrongDay(
+        'That day is over. Reload the path for today’s.',
+      );
+    }
+    final List<PathNode> nodes = path().today?.nodes ?? const <PathNode>[];
+    final int i = nodes.indexWhere((PathNode n) => n.id == nodeId);
+    if (i < 0) {
+      throw const ContestInvalid('That level is not on today’s path.');
+    }
+    final PathNode node = nodes[i];
+    switch (node.state) {
+      case PathNodeState.skipped:
+        return SkipResult(nodeId: nodeId, alreadySkipped: true);
+      case PathNodeState.done ||
+          PathNodeState.approved ||
+          PathNodeState.pending ||
+          PathNodeState.revoked:
+        throw const ContestAlreadyDone('That level is already done.');
+      case PathNodeState.unavailable:
+        throw const ContestNotOpen(
+          'There is nothing to do on that level today.',
+        );
+      case PathNodeState.locked:
+        final PathNode? holder = _holderOf(nodes, i);
+        throw ContestLocked(
+          holder == null
+              ? 'Finish or skip today’s earlier levels first.'
+              : 'Finish or skip ${levelName(holder)} first.',
+        );
+      default:
+        break;
+    }
+    if (!node.canSkip) {
+      throw const ContestNotOpen('Only the level you are on can be skipped.');
+    }
+    if (!_skipped.add(nodeId)) {
+      return SkipResult(nodeId: nodeId, alreadySkipped: true);
+    }
+    return SkipResult(nodeId: nodeId);
   }
 
   // ── The planner's pieces, and their claims ───────────────────────────────
@@ -998,6 +1261,8 @@ class FakeContestWorld {
       ),
       finishBonus: const FinishBonus(points: 20, minCorrect: 9),
       scoringPaused: _scoringPaused,
+      dayKey: _todayKey,
+      skippedParts: skippedPartsOf(_skipped, _todayKey).toList()..sort(),
     );
   }
 
@@ -1058,6 +1323,27 @@ class FakeContestWorld {
         scored: a.pointsApplied != null,
         replay: true,
       );
+    }
+    // Within a part in order; a part neither finished nor skipped holds the
+    // parts after it — the server's 409 LOCKED.
+    if (!_lessonComplete) {
+      final int idx = _todayQuestions.indexWhere(
+        (_Question t) => t.idFor(_dayNumber) == itemId,
+      );
+      final List<LessonPartView> parts = _todayParts;
+      for (final LessonPartView p in parts) {
+        if (!p.contains(idx) || p.state != LessonPartState.locked) continue;
+        int open = 0;
+        for (final LessonPartView o in parts) {
+          if (o.state == LessonPartState.today) {
+            open = o.index;
+            break;
+          }
+        }
+        throw ContestLocked(
+          'Finish or skip Lesson part ${open + 1} of ${parts.length} first.',
+        );
+      }
     }
 
     final bool right = value == q.answer;

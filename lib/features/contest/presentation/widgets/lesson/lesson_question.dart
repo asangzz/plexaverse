@@ -6,6 +6,7 @@ import '../../../../../core/ui/zave/zave_kit.dart';
 import '../../../../plexa/presentation/widgets/quiz_plexa.dart';
 import '../../../application/lesson_controllers.dart';
 import '../../../domain/contest_repository.dart';
+import '../../../domain/contest_words.dart';
 import '../../../domain/lesson_parts.dart';
 import '../contest_kit.dart';
 import 'choice_view.dart';
@@ -35,6 +36,7 @@ class LessonQuestion extends StatefulWidget {
     required this.onNext,
     required this.onGo,
     required this.onQuit,
+    this.onSkipPart,
     super.key,
   });
 
@@ -47,6 +49,11 @@ class LessonQuestion extends StatefulWidget {
   final VoidCallback onNext;
   final ValueChanged<int> onGo;
   final VoidCallback onQuit;
+
+  /// "Skip this part", under "Part k of N" — only on the open part's
+  /// question still to answer, with nothing in flight (the page decides).
+  /// Null: no link.
+  final VoidCallback? onSkipPart;
 
   @override
   State<LessonQuestion> createState() => _LessonQuestionState();
@@ -116,7 +123,7 @@ class _LessonQuestionState extends State<LessonQuestion> {
                       questions: questions,
                       answers: run.answers,
                       at: run.at,
-                      firstUnanswered: run.firstUnanswered,
+                      isReachable: run.isReachable,
                       locked: run.isBusy,
                       onGo: widget.onGo,
                     ),
@@ -161,6 +168,17 @@ class _LessonQuestionState extends State<LessonQuestion> {
                                   color: ZaveColors.ink35,
                                 ),
                               ),
+                              if (widget.onSkipPart != null ||
+                                  run.work == LessonWork.skipping)
+                                ContestTextLink(
+                                  label: run.work == LessonWork.skipping
+                                      ? 'Skipping…'
+                                      : kSkipPartLabel,
+                                  fontSize: 13,
+                                  onTap: run.work == LessonWork.skipping
+                                      ? null
+                                      : widget.onSkipPart,
+                                ),
                             ],
                           ),
                         ),

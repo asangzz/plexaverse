@@ -11,6 +11,7 @@ import '../../application/feed_comments_controllers.dart';
 import '../../domain/contest_repository.dart';
 import '../widgets/comment/task_sheet.dart';
 import '../widgets/contest_kit.dart';
+import '../widgets/skip_level.dart';
 import '../widgets/feed/feed_comment_form.dart';
 import '../widgets/feed/feed_panels.dart';
 import '../widgets/feed/feed_words.dart';
@@ -113,6 +114,7 @@ class ContestFeedCommentsPage extends ConsumerWidget {
             ),
           ),
         body,
+        if (open) const ContestSkipLevel(kind: PathNodeKind.feedComments),
         // The form first, so the field is in reach; the why and the bar
         // for "valuable" follow it.
         if (open) ...const <Widget>[FeedWhyPanel(), FeedCountsPanel()],

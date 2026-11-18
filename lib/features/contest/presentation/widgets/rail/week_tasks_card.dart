@@ -156,6 +156,7 @@ class WeekTasksCard extends StatelessWidget {
       PathNodeState.revoked => ('Removed', ContestColors.wrongText),
       PathNodeState.missed => ('Missed', ZaveColors.ink45),
       PathNodeState.unavailable => ('None today', ZaveColors.ink45),
+      PathNodeState.skipped => ('Skipped', ContestColors.peri),
       _ => (
         node.points > 0 ? '+${formatCount(node.points)}' : '',
         ZaveColors.ink45,

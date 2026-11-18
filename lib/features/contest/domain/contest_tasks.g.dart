@@ -357,3 +357,14 @@ Map<String, dynamic> _$ClaimResultToJson(_ClaimResult instance) =>
       'taskId': instance.taskId,
       'claim': instance.claim.toJson(),
     };
+
+_SkipResult _$SkipResultFromJson(Map<String, dynamic> json) => _SkipResult(
+  nodeId: json['nodeId'] as String? ?? '',
+  alreadySkipped: json['alreadySkipped'] as bool? ?? false,
+);
+
+Map<String, dynamic> _$SkipResultToJson(_SkipResult instance) =>
+    <String, dynamic>{
+      'nodeId': instance.nodeId,
+      'alreadySkipped': instance.alreadySkipped,
+    };

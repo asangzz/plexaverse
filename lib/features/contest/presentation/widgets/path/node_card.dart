@@ -28,11 +28,23 @@ import 'path_node.dart';
 ///
 /// [onOpen] is the path's, which dispatches on the level's kind. The card
 /// only decides whether there is anywhere to go ([canOpen]).
+///
+/// ## The current level can be skipped
+///
+/// The one node the server marks `canSkip` (the gate's open level) carries a
+/// quiet "Skip this level" under its button (owner, 17 Nov 2026). It pays
+/// nothing; the level stays open until the day ends. On success the path
+/// closes the card and START moves on; [skipHidden] covers a card opened
+/// again within the double-tap guard's window.
 class NodeCard extends StatelessWidget {
   const NodeCard({
     required this.node,
     required this.dayName,
     required this.onOpen,
+    this.onSkip,
+    this.skipping = false,
+    this.skipError,
+    this.skipHidden = false,
     super.key,
   });
 
@@ -41,6 +53,18 @@ class NodeCard extends StatelessWidget {
   /// "Wed · Day 17" — the kicker's first half.
   final String dayName;
   final VoidCallback onOpen;
+
+  /// Skip this level. Null: no Skip on this card.
+  final VoidCallback? onSkip;
+
+  /// The skip is being sent.
+  final bool skipping;
+
+  /// The server's sentence for a refused skip of this level.
+  final String? skipError;
+
+  /// The double-tap guard is cooling down after a skip: no Skip right now.
+  final bool skipHidden;
 
   /// The card's colour by kind: the lesson's blue, LinkedIn's, the plan's
   /// green.
@@ -146,6 +170,29 @@ class NodeCard extends StatelessWidget {
                     ? 'Locked'
                     : 'Nothing to open',
               ),
+            if (node.canSkip && !skipHidden && onSkip != null) ...<Widget>[
+              const SizedBox(height: 8),
+              SizedBox(
+                width: double.infinity,
+                child: ContestTextLink(
+                  label: skipping ? 'Skipping…' : kSkipLabel,
+                  colour: const Color(0xD9FFFFFF),
+                  textAlign: TextAlign.center,
+                  onTap: skipping ? null : onSkip,
+                ),
+              ),
+            ],
+            if (skipError case final String error) ...<Widget>[
+              const SizedBox(height: 4),
+              Semantics(
+                liveRegion: true,
+                child: Text(
+                  error,
+                  textAlign: TextAlign.center,
+                  style: line.copyWith(fontSize: 13),
+                ),
+              ),
+            ],
           ],
         ),
       ),

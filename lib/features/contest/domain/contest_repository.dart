@@ -1,12 +1,14 @@
 import 'dart:typed_data';
 
 import 'contest_board.dart';
+import 'contest_consistency.dart';
 import 'contest_overview.dart';
 import 'contest_path.dart';
 import 'contest_tasks.dart';
 import 'today_quiz.dart';
 
 export 'contest_board.dart';
+export 'contest_consistency.dart';
 export 'contest_failures.dart';
 export 'contest_overview.dart';
 export 'contest_path.dart';
@@ -138,4 +140,21 @@ abstract class ContestRepository {
     required String occurrence,
     required String postUrl,
   });
+
+  /// `POST /contest/skip` `{nodeId}` — skip today's CURRENT level, the one
+  /// node the path marks `canSkip`. Pays nothing; the level stays open as
+  /// `skipped` until the day ends. A repeat is a success with
+  /// `alreadySkipped`. [ContestInvalid] (not on today's path),
+  /// [ContestWrongDay] (the day rolled over — re-read the path),
+  /// [ContestAlreadyDone], [ContestNotOpen] (nothing to do, or not the
+  /// current level), [ContestLocked] ("Finish or skip … first."),
+  /// [ContestNotRunning], [ContestNotEntered].
+  Future<SkipResult> skipLevel(String nodeId);
+
+  /// `GET /contest/consistency` — the consistency meter: contest XP earned ÷
+  /// XP on offer over the learner's billing window. A pure read. `state`
+  /// off, no_contest or not_joined means show nothing; compare with
+  /// `atOrAbove`, never by re-deriving it from `percent`. No price in this
+  /// phase.
+  Future<ConsistencyView> fetchConsistency();
 }

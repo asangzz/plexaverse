@@ -17,6 +17,7 @@ import '../widgets/contest_section_bar.dart';
 import '../widgets/contest_skeletons.dart';
 import '../widgets/path/path_view.dart';
 import '../widgets/paused_notice.dart';
+import '../widgets/rail/consistency_card.dart';
 import '../widgets/rail/daily_quests.dart';
 import '../widgets/rail/mini_board.dart';
 import '../widgets/rail/prize_card.dart';
@@ -276,26 +277,46 @@ class _Empty extends StatelessWidget {
 
 /// Joined, but not running: before day 1, or after the last day — the final
 /// standings.
-class _JoinedQuiet extends StatefulWidget {
+class _JoinedQuiet extends ConsumerStatefulWidget {
   const _JoinedQuiet({required this.overview, required this.entry});
 
   final ContestOverview overview;
   final ContestEntryView entry;
 
   @override
-  State<_JoinedQuiet> createState() => _JoinedQuietState();
+  ConsumerState<_JoinedQuiet> createState() => _JoinedQuietState();
 }
 
-class _JoinedQuietState extends State<_JoinedQuiet> {
+class _JoinedQuietState extends ConsumerState<_JoinedQuiet> {
   /// When this page was opened — what "just joined" is measured against, as
   /// the web measures it once per visit.
   final DateTime _openedAt = DateTime.now();
+
+  /// The meter's card, for the stats bar's figure to bring into view — the
+  /// web's `#consistency`, a link on this page too.
+  final GlobalKey _consistencyAnchor = GlobalKey(
+    debugLabel: 'contest-quiet-consistency',
+  );
+
+  void _revealConsistency() {
+    final BuildContext? target = _consistencyAnchor.currentContext;
+    if (target == null) return;
+    final bool still = MediaQuery.disableAnimationsOf(context);
+    unawaited(
+      Scrollable.ensureVisible(
+        target,
+        duration: still ? Duration.zero : const Duration(milliseconds: 400),
+        curve: ZaveMotion.curve,
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
     final ContestOverview overview = widget.overview;
     final ContestInfo contest = overview.contest;
     final ContestMoment? moment = quietMoment(overview, _openedAt);
+    final ConsistencyView? meter = watchConsistency(ref);
     final String months = plural(contest.rewardMonths, 'month', 'months');
     final String reward =
         'The top ${formatCount(contest.rewardTopN)} get $months free for the '
@@ -336,9 +357,27 @@ class _JoinedQuietState extends State<_JoinedQuiet> {
               streak: widget.entry.streak,
               total: widget.entry.total,
               rank: widget.entry.rank,
+              consistency: meter?.figure,
+              onConsistencyTap: _revealConsistency,
             ),
           ),
         ),
+        // The meter, when it has something to say — before day 1 it is
+        // no_contest and shows nothing; after the end it still counts the
+        // contest's days in this billing window.
+        if (meter != null && !meter.state.isHidden) ...<Widget>[
+          SizedBox(height: ZaveSpace.xxl),
+          Align(
+            alignment: Alignment.centerLeft,
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 420),
+              child: KeyedSubtree(
+                key: _consistencyAnchor,
+                child: const ConsistencyCard(),
+              ),
+            ),
+          ),
+        ],
         SizedBox(height: ZaveSpace.xxl),
         ContestBoardView(
           entrants: overview.entrants,
@@ -374,8 +413,17 @@ class _RunningState extends ConsumerState<_Running> {
   /// When this page was opened — what "just joined" is measured against.
   final DateTime _openedAt = DateTime.now();
 
-  void _goTo(ContestSection section) {
-    final BuildContext? target = _anchors[section]?.currentContext;
+  /// The consistency meter's card, for the stats bar's figure to bring into
+  /// view — the web's `#consistency`. Not a section-bar stop: the web's
+  /// tabs have none either.
+  final GlobalKey _consistencyAnchor = GlobalKey(
+    debugLabel: 'contest-consistency',
+  );
+
+  void _goTo(ContestSection section) =>
+      _reveal(_anchors[section]?.currentContext);
+
+  void _reveal(BuildContext? target) {
     if (target == null) return;
     final bool still = MediaQuery.disableAnimationsOf(context);
     unawaited(
@@ -397,6 +445,7 @@ class _RunningState extends ConsumerState<_Running> {
       ref.watch(todayQuizProvider).value,
     );
     final ContestMoment? moment = runningMoment(entry, _openedAt);
+    final ConsistencyView? meter = watchConsistency(ref);
 
     // The rail's cards read the path only when it says running; loading,
     // failed or briefly out of step with the overview, they say so in
@@ -435,6 +484,9 @@ class _RunningState extends ConsumerState<_Running> {
                         total: entry.total,
                         rank: entry.rank,
                         dayNumber: overview.dayNumber,
+                        consistency: meter?.figure,
+                        onConsistencyTap: () =>
+                            _reveal(_consistencyAnchor.currentContext),
                       ),
                       if (entry.scoringPaused) ...<Widget>[
                         SizedBox(height: ZaveSpace.gutter),
@@ -456,6 +508,15 @@ class _RunningState extends ConsumerState<_Running> {
                         ),
                       ),
                       SizedBox(height: ZaveSpace.xxl),
+                      // The rail's first card, as on the web; nothing at all
+                      // while it loads, fails or has nothing to say.
+                      if (meter != null && !meter.state.isHidden) ...<Widget>[
+                        KeyedSubtree(
+                          key: _consistencyAnchor,
+                          child: ConsistencyCard(path: ready),
+                        ),
+                        SizedBox(height: ZaveSpace.cardGap),
+                      ],
                       PrizeCard(contest: contest),
                       SizedBox(height: ZaveSpace.cardGap),
                       MiniBoard(

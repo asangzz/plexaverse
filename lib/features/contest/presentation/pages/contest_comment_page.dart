@@ -16,6 +16,7 @@ import '../widgets/comment/comment_words.dart';
 import '../widgets/comment/task_sheet.dart';
 import '../widgets/comment/word_bank.dart';
 import '../widgets/contest_kit.dart';
+import '../widgets/skip_level.dart';
 
 /// **The daily comment level** — the web's `/contest/comment`.
 ///
@@ -200,6 +201,9 @@ class _Player extends ConsumerWidget {
                       used: play.used,
                       onPick: play.frozen ? null : actions.place,
                     ),
+                    // The current level can be skipped (17 Nov 2026); it
+                    // stays open today.
+                    const ContestSkipLevel(kind: PathNodeKind.comment),
                     if (error != null) ...<Widget>[
                       SizedBox(height: ZaveSpace.xl),
                       Semantics(

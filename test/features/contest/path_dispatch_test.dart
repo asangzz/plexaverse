@@ -2,7 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
+import 'package:flutter_riverpod/misc.dart' show Override;
 import 'package:plexaverse/core/ui/app_icons.dart';
+import 'package:plexaverse/features/contest/data/contest_repositories.dart';
 import 'package:plexaverse/features/contest/domain/contest_repository.dart';
 import 'package:plexaverse/features/contest/domain/contest_words.dart';
 import 'package:plexaverse/features/contest/presentation/widgets/contest_kit.dart';
@@ -38,7 +40,11 @@ void main() {
     weekReward: const WeekReward(points: 500),
   );
 
-  Future<GoRouter> pumpPath(WidgetTester tester, ContestPath path) async {
+  Future<GoRouter> pumpPath(
+    WidgetTester tester,
+    ContestPath path, {
+    ContestRepository? repo,
+  }) async {
     tester.view.physicalSize = const Size(375, 667) * 3;
     tester.view.devicePixelRatio = 3;
     addTearDown(tester.view.reset);
@@ -54,7 +60,12 @@ void main() {
     );
     addTearDown(router.dispose);
     await tester.pumpWidget(
-      ProviderScope(child: MaterialApp.router(routerConfig: router)),
+      ProviderScope(
+        overrides: <Override>[
+          if (repo != null) contestRepositoryProvider.overrideWithValue(repo),
+        ],
+        child: MaterialApp.router(routerConfig: router),
+      ),
     );
     await settle(tester);
     return router;
@@ -88,6 +99,31 @@ void main() {
       title: 'Comment on a top voice',
       points: 40,
       href: webOnly,
+    ): Uri.parse(
+      '/contest/comment',
+    ),
+    // Skipped today: still open. A skipped lesson part opens on itself.
+    const PathNode(
+      id: '2026-11-11:lesson:3',
+      kind: PathNodeKind.lesson,
+      state: PathNodeState.skipped,
+      title: 'Lesson · part 3 of 3',
+      points: 50,
+      href: webOnly,
+      detail: 'You skipped this',
+      part: NodePart(index: 3, total: 3, start: 10, end: 15),
+    ): Uri(
+      path: '/contest/lesson',
+      queryParameters: <String, String>{'part': '3'},
+    ),
+    const PathNode(
+      id: '2026-11-11:comment-skipped',
+      kind: PathNodeKind.comment,
+      state: PathNodeState.skipped,
+      title: 'Comment on a top voice',
+      points: 40,
+      href: webOnly,
+      detail: 'You skipped this',
     ): Uri.parse(
       '/contest/comment',
     ),
@@ -366,4 +402,93 @@ void main() {
     expect(find.text('WED · DAY 11 · LESSON'), findsOneWidget);
     expect(find.text('START +50 XP'), findsOneWidget);
   });
+
+  testWidgets('the open level’s card offers Skip; a skip closes the card '
+      'and sends the node’s id', (WidgetTester tester) async {
+    final _SkipRecorder repo = _SkipRecorder();
+    const PathNode open = PathNode(
+      id: '2026-11-11:comment',
+      kind: PathNodeKind.comment,
+      state: PathNodeState.today,
+      title: 'Comment on a top voice',
+      points: 40,
+      href: webOnly,
+      canSkip: true,
+    );
+    await pumpPath(tester, weekOf(const <PathNode>[open]), repo: repo);
+    await tapVisible(tester, find.byType(PathNodeButton).first);
+    final Finder skip = find.descendant(
+      of: find.byType(NodeCard),
+      matching: find.text(kSkipLabel),
+    );
+    expect(skip, findsOneWidget);
+    await tapVisible(tester, skip);
+    expect(repo.skipped, <String>['2026-11-11:comment']);
+    expect(find.byType(NodeCard), findsNothing);
+    // The guard's window passes.
+    await tester.pump(const Duration(seconds: 1));
+  });
+
+  testWidgets('no Skip on a level the server did not mark', (
+    WidgetTester tester,
+  ) async {
+    await pumpPath(
+      tester,
+      weekOf(const <PathNode>[
+        PathNode(
+          id: '2026-11-11:comment',
+          kind: PathNodeKind.comment,
+          state: PathNodeState.today,
+          title: 'Comment on a top voice',
+          href: webOnly,
+        ),
+      ]),
+    );
+    await tapVisible(tester, find.byType(PathNodeButton).first);
+    expect(find.text(kSkipLabel), findsNothing);
+  });
+
+  testWidgets('a skipped level is drawn open, says so, and Starts', (
+    WidgetTester tester,
+  ) async {
+    await pumpPath(
+      tester,
+      weekOf(const <PathNode>[
+        PathNode(
+          id: '2026-11-11:comment',
+          kind: PathNodeKind.comment,
+          state: PathNodeState.skipped,
+          title: 'Comment on a top voice',
+          points: 40,
+          href: webOnly,
+          detail: 'You skipped this',
+        ),
+      ]),
+    );
+    final PathNodeButton node = tester.widget<PathNodeButton>(
+      find.byType(PathNodeButton).first,
+    );
+    // Nothing else is open, so START is back on it.
+    expect(node.current, isTrue);
+    expect(
+      node.semanticsLabel,
+      'Wed, day 11: Comment on a top voice. Skipped, still open today.',
+    );
+    expect(find.byIcon(AppIcons.skip), findsOneWidget);
+    await tapVisible(tester, find.byType(PathNodeButton).first);
+    expect(find.text('START +40 XP'), findsWidgets);
+  });
+}
+
+/// Records skips; everything else is the fake contest.
+class _SkipRecorder extends FakeContestRepository {
+  _SkipRecorder() : super(latency: Duration.zero);
+
+  final List<String> skipped = <String>[];
+
+  @override
+  Future<SkipResult> skipLevel(String nodeId) async {
+    skipped.add(nodeId);
+    return SkipResult(nodeId: nodeId);
+  }
 }

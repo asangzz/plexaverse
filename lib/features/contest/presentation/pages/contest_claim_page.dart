@@ -10,6 +10,7 @@ import '../../application/contest_controllers.dart';
 import '../../domain/contest_repository.dart';
 import '../widgets/contest_kit.dart';
 import '../widgets/sheet/contest_sheet.dart';
+import '../widgets/skip_level.dart';
 
 /// `/contest/claim?kind=&occurrence=` — one post-link claim, as a level of
 /// its posting day. The web's `ClaimLevel`.
@@ -93,7 +94,18 @@ class ContestClaimPage extends ConsumerWidget {
         style: ContestType.meta,
       );
     }
-    return _ClaimRow(claim: claim, lockedDetail: level.lockedDetail);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: <Widget>[
+        _ClaimRow(claim: claim, lockedDetail: level.lockedDetail),
+        ContestSkipLevel(
+          kind: claim.kind == ClaimKind.article
+              ? PathNodeKind.article
+              : PathNodeKind.video,
+          occurrence: claim.occurrence,
+        ),
+      ],
+    );
   }
 }
 

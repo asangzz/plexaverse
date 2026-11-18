@@ -88,7 +88,14 @@ enum PathNodeState {
 
   /// Today, with nothing to do (no post in the learner's topics, a comment
   /// that could not be written). Passed over by the gate.
-  unavailable;
+  unavailable,
+
+  /// Today's level the learner passed over with Skip (owner, 17 Nov 2026).
+  /// It stays open — `href` kept — until the contest day ends, lets the next
+  /// level open (the gate passes it), and pays as usual if done after all.
+  /// Tomorrow it reads [missed]. A state read off the level's own rows (done,
+  /// pending, …) always beats it.
+  skipped;
 
   String get wire => name;
 
@@ -219,6 +226,13 @@ abstract class PathNode with _$PathNode {
 
     /// Claim nodes only.
     NodeClaim? claim,
+
+    /// The one level Skip may be pressed on: today's open level (the gate's
+    /// first node still holding the chain, in state today or rejected). On at
+    /// most one node, and absent everywhere else. Forced false for an
+    /// [PathNodeKind.unknown] kind — a level this build cannot open is not
+    /// one to pass over either.
+    @JsonKey(readValue: _canSkipUnlessUnknown) @Default(false) bool canSkip,
   }) = _PathNode;
 
   factory PathNode.fromJson(Map<String, dynamic> json) =>
@@ -235,6 +249,9 @@ Object? _stateUnlessUnknown(Map<dynamic, dynamic> json, String key) =>
 
 Object? _hrefUnlessUnknown(Map<dynamic, dynamic> json, String key) =>
     _knownKind(json) ? json[key] : null;
+
+Object? _canSkipUnlessUnknown(Map<dynamic, dynamic> json, String key) =>
+    _knownKind(json) && json[key] == true;
 
 /// One day of the shown week. Mirrors `PathDay`.
 @freezed
@@ -409,6 +426,18 @@ abstract class ContestPath with _$ContestPath {
   PathNode? todayNode(PathNodeKind kind) {
     for (final PathNode n in today?.nodes ?? const <PathNode>[]) {
       if (n.kind == kind) return n;
+    }
+    return null;
+  }
+
+  /// Today's level of [kind] — for a claim, the one for [occurrence] (a day
+  /// can hold two pieces); otherwise the first of the kind. What a level's
+  /// own page reads its Skip off.
+  PathNode? todayNodeFor(PathNodeKind kind, {String? occurrence}) {
+    for (final PathNode n in today?.nodes ?? const <PathNode>[]) {
+      if (n.kind != kind) continue;
+      if (occurrence != null && n.claim?.occurrence != occurrence) continue;
+      return n;
     }
     return null;
   }

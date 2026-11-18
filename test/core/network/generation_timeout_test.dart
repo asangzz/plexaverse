@@ -110,6 +110,8 @@ void main() {
         '/contest',
         '/contest/path',
         '/contest/board',
+        // A skip writes one row and re-reads nothing: no model call.
+        '/contest/skip',
         '/placement',
       ]) {
         expect(

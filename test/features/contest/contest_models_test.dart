@@ -238,6 +238,73 @@ void main() {
       expect(PathNodeKind.parse('voice_duel'), PathNodeKind.unknown);
     });
 
+    test('skipped reads as skipped, never locked', () {
+      final PathNode n = PathNode.fromJson(
+        _node(state: 'skipped', href: '/contest/comment'),
+      );
+      expect(n.state, PathNodeState.skipped);
+      expect(n.href, '/contest/comment');
+      expect(PathNodeState.parse('skipped'), PathNodeState.skipped);
+    });
+
+    test('canSkip is read when sent, false when absent, and false for an '
+        'unknown kind whatever the server said', () {
+      expect(
+        PathNode.fromJson(<String, dynamic>{
+          ..._node(),
+          'canSkip': true,
+        }).canSkip,
+        isTrue,
+      );
+      expect(PathNode.fromJson(_node()).canSkip, isFalse);
+      expect(
+        PathNode.fromJson(<String, dynamic>{
+          ..._node(kind: 'voice_duel'),
+          'canSkip': true,
+        }).canSkip,
+        isFalse,
+      );
+      expect(
+        PathNode.fromJson(<String, dynamic>{
+          ..._node(),
+          'canSkip': 'yes',
+        }).canSkip,
+        isFalse,
+      );
+    });
+
+    test('a level’s own page finds its node, a claim by its piece', () {
+      final ContestPath p = ContestPath.fromJson(<String, dynamic>{
+        'status': 'running',
+        'days': <Map<String, dynamic>>[
+          <String, dynamic>{
+            'dayNumber': 11,
+            'dayKey': '2026-11-11',
+            'weekday': 3,
+            'isToday': true,
+            'nodes': <Map<String, dynamic>>[
+              _node(),
+              <String, dynamic>{
+                ..._node(kind: 'video'),
+                'id': '2026-11-11:video:6:1:2',
+                'claim': <String, dynamic>{
+                  'kind': 'video',
+                  'occurrence': '6:1:2',
+                },
+                'canSkip': true,
+              },
+            ],
+          },
+        ],
+      });
+      expect(p.todayNodeFor(PathNodeKind.comment)!.id, '2026-11-11:comment');
+      expect(
+        p.todayNodeFor(PathNodeKind.video, occurrence: '6:1:2')!.canSkip,
+        isTrue,
+      );
+      expect(p.todayNodeFor(PathNodeKind.video, occurrence: '5:1:4'), isNull);
+    });
+
     test('an unknown STATE is locked', () {
       final PathNode n = PathNode.fromJson(_node(state: 'frozen'));
       expect(n.state, PathNodeState.locked);
@@ -406,6 +473,34 @@ void main() {
       expect(replay.weekBonus, isNull);
       expect(replay.scored, isFalse);
       expect(replay.replay, isTrue);
+    });
+  });
+
+  group('skip', () {
+    test('the lesson read carries its day key and skipped parts when ready, '
+        'and defaults without them', () {
+      final TodayQuiz q = TodayQuiz.fromJson(<String, dynamic>{
+        'status': 'ready',
+        'dayKey': '2026-11-18',
+        'skippedParts': <int>[1, 3],
+      });
+      expect(q.dayKey, '2026-11-18');
+      expect(q.skippedParts, <int>[1, 3]);
+      final TodayQuiz old = TodayQuiz.fromJson(<String, dynamic>{
+        'status': 'ready',
+      });
+      expect(old.dayKey, isNull);
+      expect(old.skippedParts, isEmpty);
+    });
+
+    test('a skip’s result', () {
+      final SkipResult r = SkipResult.fromJson(<String, dynamic>{
+        'nodeId': '2026-11-18:lesson:2',
+        'alreadySkipped': true,
+      });
+      expect(r.nodeId, '2026-11-18:lesson:2');
+      expect(r.alreadySkipped, isTrue);
+      expect(SkipResult.fromJson(<String, dynamic>{}).alreadySkipped, isFalse);
     });
   });
 

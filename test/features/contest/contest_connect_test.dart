@@ -10,6 +10,7 @@ import 'package:plexaverse/core/router/zave_routes.dart';
 import 'package:plexaverse/core/ui/zave/zave_kit.dart';
 import 'package:plexaverse/features/contest/data/contest_repositories.dart';
 import 'package:plexaverse/features/contest/domain/contest_repository.dart';
+import 'package:plexaverse/features/contest/domain/contest_words.dart';
 import 'package:plexaverse/features/engagement/data/engagement_repositories.dart';
 import 'package:plexaverse/features/engagement/domain/engagement_repository.dart';
 import 'package:plexaverse/features/engagement/presentation/pages/connections_page.dart';
@@ -107,7 +108,7 @@ void main() {
     expect(
       find.text(
         'Unlocks after Post 5 valuable comments. Levels open one after '
-        'another — finish it first.',
+        'another — finish or skip it first.',
       ),
       findsOneWidget,
     );
@@ -183,7 +184,51 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('the roadmap'), findsOneWidget);
   });
+
+  // Skip (17 Nov 2026) belongs to the contest's connect level, as the web's
+  // SkipLevel sits only in ContestConnectGate. It must show on the LOADED
+  // contest list — not only when the targets fail — and never on the plain
+  // Connections habit screen, where it would skip a contest level from a page
+  // that has nothing to do with the contest.
+  testWidgets('skip shows on the loaded contest list when connect is the '
+      'open level', (WidgetTester tester) async {
+    await _pump(
+      tester,
+      _Contest(_path(PathNodeState.today, canSkip: true)),
+      _Engagement(sent: 0),
+      width: _wide,
+    );
+    for (int i = 0; i < 12; i++) {
+      await tester.drag(find.byType(ListView), const Offset(0, -500));
+      await tester.pump();
+    }
+    expect(find.text(kSkipLabel), findsOneWidget);
+  });
+
+  testWidgets('the plain Connections page never offers the contest skip', (
+    WidgetTester tester,
+  ) async {
+    await _pump(
+      tester,
+      _Contest(_path(PathNodeState.today, canSkip: true)),
+      _Engagement(sent: 0),
+      fromContest: false,
+      width: _wide,
+    );
+    for (int i = 0; i < 12; i++) {
+      await tester.drag(find.byType(ListView), const Offset(0, -500));
+      await tester.pump();
+    }
+    // The bottom of the list is on screen: its last card is drawn.
+    expect(find.text('Connect, add a note, paste, send.'), findsOneWidget);
+    expect(find.text(kSkipLabel, skipOffstage: false), findsNothing);
+  });
 }
+
+/// Wide enough for the free-plan rule card's kicker in the test font, which
+/// draws every glyph a full em wide and overflows a 375-wide phone. The two
+/// skip tests scroll to the foot of the list, past that card.
+const double _wide = 480;
 
 // ── Fixtures ────────────────────────────────────────────────────────────────
 
@@ -228,7 +273,11 @@ final ConnectionBatch _batch = ConnectionBatch(
 );
 
 /// Today, a Monday, with its connect level in [state].
-ContestPath _path(PathNodeState state, {String? detail}) => ContestPath(
+ContestPath _path(
+  PathNodeState state, {
+  String? detail,
+  bool canSkip = false,
+}) => ContestPath(
   status: ContestPathStatus.running,
   dayNumber: 9,
   weekNumber: 2,
@@ -249,6 +298,7 @@ ContestPath _path(PathNodeState state, {String? detail}) => ContestPath(
               ? '/connections?from=contest'
               : null,
           detail: detail,
+          canSkip: canSkip,
         ),
       ],
     ),
@@ -353,8 +403,9 @@ Future<void> _pump(
   ContestRepository contest,
   EngagementRepository engagement, {
   bool fromContest = true,
+  double width = 375,
 }) async {
-  tester.view.physicalSize = const Size(375, 667) * 3;
+  tester.view.physicalSize = Size(width, 667) * 3;
   tester.view.devicePixelRatio = 3;
   addTearDown(tester.view.reset);
   final GoRouter router = GoRouter(

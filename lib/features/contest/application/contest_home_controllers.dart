@@ -2,6 +2,7 @@ import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 import '../data/contest_repositories.dart';
 import '../domain/contest_repository.dart';
+import '../domain/lesson_parts.dart';
 import 'contest_controllers.dart';
 
 part 'contest_home_controllers.g.dart';
@@ -137,11 +138,16 @@ class LessonProgress {
     required this.answered,
     required this.total,
     required this.correct,
+    this.answeredIndexes,
   });
 
   final int answered;
   final int total;
   final int correct;
+
+  /// WHICH questions are answered, by index in lesson order — after a skip
+  /// the answers need not be a prefix, so a part's ring counts these.
+  final Set<int>? answeredIndexes;
 }
 
 /// Null until the lesson is readable: not ready, or no questions yet. The
@@ -152,6 +158,10 @@ LessonProgress? lessonProgressOf(TodayQuiz? quiz) {
   return LessonProgress(
     answered: quiz.answeredCount,
     total: quiz.total,
+    answeredIndexes: answeredIndexesOf(
+      quiz.questions,
+      quiz.answered.map((QuizAnswerView a) => a.itemId),
+    ),
     correct:
         quiz.score?.correct ??
         quiz.answered.where((QuizAnswerView a) => a.correct).length,

@@ -11,8 +11,9 @@ import '../contest_kit.dart';
 ///
 /// Answered ones show ✓ or ✕ and open again, revealed, with their verdict and
 /// explanation: on a resume, or from the score. Questions not reached yet
-/// cannot be opened — one at a time is the format — so only the answered
-/// ones and the first unanswered one take a tap.
+/// cannot be opened — one at a time within a part is the format, and a
+/// skipped part stays open beside the next — so only the answered ones and
+/// each playable part's next to answer take a tap ([isReachable]).
 ///
 /// A shape as well as a colour, so right and wrong part for anyone who
 /// cannot tell green from red.
@@ -21,7 +22,7 @@ class LessonSteps extends StatelessWidget {
     required this.questions,
     required this.answers,
     required this.at,
-    required this.firstUnanswered,
+    required this.isReachable,
     required this.locked,
     required this.onGo,
     super.key,
@@ -30,7 +31,10 @@ class LessonSteps extends StatelessWidget {
   final List<PublicQuizItem> questions;
   final Map<String, LessonAnswer> answers;
   final LessonAt at;
-  final int? firstUnanswered;
+
+  /// Can question i be opened: answered, or the next to answer in a part
+  /// that is open or skipped.
+  final bool Function(int) isReachable;
 
   /// While an answer is being sent: the screen must stay on the question it
   /// belongs to.
@@ -51,8 +55,7 @@ class LessonSteps extends StatelessWidget {
               number: i + 1,
               answer: answers[questions[i].id],
               here: at == AtQuestion(i),
-              reachable:
-                  answers.containsKey(questions[i].id) || i == firstUnanswered,
+              reachable: answers.containsKey(questions[i].id) || isReachable(i),
               onTap: locked ? null : () => onGo(i),
             ),
         ],

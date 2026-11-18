@@ -31,9 +31,17 @@ part of 'lesson_controllers.dart';
 /// ## Answers in order, as text
 ///
 /// [answer] sends the option's TEXT — each learner sees their own order, so
-/// an index would re-point — for the first unanswered question only, and only
-/// while it is the one on screen. The reveal is the reply: a replay shows the
-/// RECORDED answer, never this device's pick.
+/// an index would re-point — for the question on screen, and only while it
+/// is the next to answer in a part that is open or skipped. The reveal is the
+/// reply: a replay shows the RECORDED answer, never this device's pick.
+///
+/// ## A part can be skipped
+///
+/// [skipPart] skips the open part (`POST /contest/skip`); it stays open beside
+/// the next one until the day ends. [request] opens a visit on a skipped
+/// part — a skipped node's own link. A LOCKED refusal (an answer in a part
+/// neither open nor skipped: another device moved on) drops the pin, as
+/// NOT_TODAY does, and the re-read reopens where the parts now say.
 
 @ProviderFor(LessonRun)
 final lessonRunProvider = LessonRunProvider._();
@@ -61,9 +69,17 @@ final lessonRunProvider = LessonRunProvider._();
 /// ## Answers in order, as text
 ///
 /// [answer] sends the option's TEXT — each learner sees their own order, so
-/// an index would re-point — for the first unanswered question only, and only
-/// while it is the one on screen. The reveal is the reply: a replay shows the
-/// RECORDED answer, never this device's pick.
+/// an index would re-point — for the question on screen, and only while it
+/// is the next to answer in a part that is open or skipped. The reveal is the
+/// reply: a replay shows the RECORDED answer, never this device's pick.
+///
+/// ## A part can be skipped
+///
+/// [skipPart] skips the open part (`POST /contest/skip`); it stays open beside
+/// the next one until the day ends. [request] opens a visit on a skipped
+/// part — a skipped node's own link. A LOCKED refusal (an answer in a part
+/// neither open nor skipped: another device moved on) drops the pin, as
+/// NOT_TODAY does, and the re-read reopens where the parts now say.
 final class LessonRunProvider
     extends $NotifierProvider<LessonRun, LessonRunState> {
   /// One visit to today's lesson.
@@ -89,9 +105,17 @@ final class LessonRunProvider
   /// ## Answers in order, as text
   ///
   /// [answer] sends the option's TEXT — each learner sees their own order, so
-  /// an index would re-point — for the first unanswered question only, and only
-  /// while it is the one on screen. The reveal is the reply: a replay shows the
-  /// RECORDED answer, never this device's pick.
+  /// an index would re-point — for the question on screen, and only while it
+  /// is the next to answer in a part that is open or skipped. The reveal is the
+  /// reply: a replay shows the RECORDED answer, never this device's pick.
+  ///
+  /// ## A part can be skipped
+  ///
+  /// [skipPart] skips the open part (`POST /contest/skip`); it stays open beside
+  /// the next one until the day ends. [request] opens a visit on a skipped
+  /// part — a skipped node's own link. A LOCKED refusal (an answer in a part
+  /// neither open nor skipped: another device moved on) drops the pin, as
+  /// NOT_TODAY does, and the re-read reopens where the parts now say.
   LessonRunProvider._()
     : super(
         from: null,
@@ -119,7 +143,7 @@ final class LessonRunProvider
   }
 }
 
-String _$lessonRunHash() => r'f4eccdda17fea8a941fbe8f8e0c52eeba5ecaa7f';
+String _$lessonRunHash() => r'4f052769d4e8b3f2172792d812209ae26481b12e';
 
 /// One visit to today's lesson.
 ///
@@ -144,9 +168,17 @@ String _$lessonRunHash() => r'f4eccdda17fea8a941fbe8f8e0c52eeba5ecaa7f';
 /// ## Answers in order, as text
 ///
 /// [answer] sends the option's TEXT — each learner sees their own order, so
-/// an index would re-point — for the first unanswered question only, and only
-/// while it is the one on screen. The reveal is the reply: a replay shows the
-/// RECORDED answer, never this device's pick.
+/// an index would re-point — for the question on screen, and only while it
+/// is the next to answer in a part that is open or skipped. The reveal is the
+/// reply: a replay shows the RECORDED answer, never this device's pick.
+///
+/// ## A part can be skipped
+///
+/// [skipPart] skips the open part (`POST /contest/skip`); it stays open beside
+/// the next one until the day ends. [request] opens a visit on a skipped
+/// part — a skipped node's own link. A LOCKED refusal (an answer in a part
+/// neither open nor skipped: another device moved on) drops the pin, as
+/// NOT_TODAY does, and the re-read reopens where the parts now say.
 
 abstract class _$LessonRun extends $Notifier<LessonRunState> {
   LessonRunState build();

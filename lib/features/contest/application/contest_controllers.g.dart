@@ -279,6 +279,66 @@ final class TodayQuizProvider
 
 String _$todayQuizHash() => r'0e7056617430f814b15f7faa1509f86ba9da7663';
 
+/// `GET /contest/consistency` — the consistency meter (owner, 17 Nov 2026).
+/// A pure read: contest XP earned ÷ XP on offer this billing month.
+///
+/// Re-read with the standing ([refreshContestStanding]), since the meter
+/// counts what the path pays, and on resume — an admin's review lands no
+/// other way. The card and the stats bar's figure both read this one.
+
+@ProviderFor(contestConsistency)
+final contestConsistencyProvider = ContestConsistencyProvider._();
+
+/// `GET /contest/consistency` — the consistency meter (owner, 17 Nov 2026).
+/// A pure read: contest XP earned ÷ XP on offer this billing month.
+///
+/// Re-read with the standing ([refreshContestStanding]), since the meter
+/// counts what the path pays, and on resume — an admin's review lands no
+/// other way. The card and the stats bar's figure both read this one.
+
+final class ContestConsistencyProvider
+    extends
+        $FunctionalProvider<
+          AsyncValue<ConsistencyView>,
+          ConsistencyView,
+          FutureOr<ConsistencyView>
+        >
+    with $FutureModifier<ConsistencyView>, $FutureProvider<ConsistencyView> {
+  /// `GET /contest/consistency` — the consistency meter (owner, 17 Nov 2026).
+  /// A pure read: contest XP earned ÷ XP on offer this billing month.
+  ///
+  /// Re-read with the standing ([refreshContestStanding]), since the meter
+  /// counts what the path pays, and on resume — an admin's review lands no
+  /// other way. The card and the stats bar's figure both read this one.
+  ContestConsistencyProvider._()
+    : super(
+        from: null,
+        argument: null,
+        retry: null,
+        name: r'contestConsistencyProvider',
+        isAutoDispose: true,
+        dependencies: null,
+        $allTransitiveDependencies: null,
+      );
+
+  @override
+  String debugGetCreateSourceHash() => _$contestConsistencyHash();
+
+  @$internal
+  @override
+  $FutureProviderElement<ConsistencyView> $createElement(
+    $ProviderPointer pointer,
+  ) => $FutureProviderElement(pointer);
+
+  @override
+  FutureOr<ConsistencyView> create(Ref ref) {
+    return contestConsistency(ref);
+  }
+}
+
+String _$contestConsistencyHash() =>
+    r'8363429760f8ba569889985a28a48648e35bcb57';
+
 /// Today's level of [kind], gated or not.
 ///
 /// The comment level's GET writes the day's row and may spend a model call,
@@ -353,7 +413,7 @@ final class TodayLockProvider
   }
 }
 
-String _$todayLockHash() => r'463906f70ab8c30196a9af5140ad2131fe8c5f9e';
+String _$todayLockHash() => r'1a48a61a52a8240f40118cd2ad7c77882c8d0db7';
 
 /// Today's level of [kind], gated or not.
 ///
@@ -463,4 +523,4 @@ final class ContestResumeRefreshProvider
 }
 
 String _$contestResumeRefreshHash() =>
-    r'9a4ee4efdf2f835ebe967c891e7450ab37861bae';
+    r'05245ddfa76e8e36fa5b413ced537cf39ae5c132';

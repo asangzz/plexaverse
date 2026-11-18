@@ -83,7 +83,18 @@ String stateWord(PathNodeState state) => switch (state) {
   PathNodeState.rejected => 'Rejected',
   PathNodeState.revoked => 'Removed after review',
   PathNodeState.unavailable => 'Nothing to do today',
+  PathNodeState.skipped => 'Skipped, still open today',
 };
+
+/// The Skip button on the current level (owner, 17 Nov 2026).
+const String kSkipLabel = 'Skip this level';
+
+/// The Skip link on the lesson's open part.
+const String kSkipPartLabel = 'Skip this part';
+
+/// What a skip means, under the button on a level's own page.
+const String kSkipNote =
+    'It stays open until the day ends. Its XP counts only if you come back to it.';
 
 /// Finished and paid: nothing more for the learner to do on it.
 bool isFinished(PathNodeState state) =>
@@ -121,8 +132,9 @@ bool canOpen(PathNode node) {
   return true;
 }
 
-/// The card's button: START for today's work (CONTINUE once it is part
-/// done), OPEN for anything else that opens.
+/// The card's button: START for today's work — a skipped level included,
+/// since it is still open (CONTINUE once it is part done) — OPEN for
+/// anything else that opens.
 ///
 /// For a level that does not open, the card shows "Locked" for a locked one
 /// and "Nothing to open" for the rest — this returns the first of those for
@@ -130,8 +142,9 @@ bool canOpen(PathNode node) {
 String actionWord(PathNode node) {
   if (node.state == PathNodeState.locked) return 'Locked';
   if (node.state == PathNodeState.today ||
-      node.state == PathNodeState.rejected) {
-    final String verb = node.state == PathNodeState.today && node.started
+      node.state == PathNodeState.rejected ||
+      node.state == PathNodeState.skipped) {
+    final String verb = node.state != PathNodeState.rejected && node.started
         ? 'Continue'
         : 'Start';
     return node.points > 0 ? '$verb +${formatCount(node.points)} XP' : verb;
@@ -139,22 +152,41 @@ String actionWord(PathNode node) {
   return 'Open';
 }
 
-/// The node the START bubble sits on: today's first level still to do. The
-/// server gates today, so there is exactly one — the open lesson part until
-/// the last is done, then the comment, the feed comments, the weekday's own
-/// task and the day's claim.
+/// The node the START bubble sits on: today's open level (or Sunday's late
+/// node once nothing gated is open), else the first skipped one. The server
+/// gates today, so at most one gated level is open — the open lesson part
+/// until the last is done or skipped, then the comment, the feed comments,
+/// the weekday's own task and the day's claim. A skipped level gets START
+/// back only once nothing else is open.
 String? currentNodeId(List<PathDay> days) {
   for (final PathDay day in days) {
     if (!day.isToday) continue;
     for (final PathNode n in day.nodes) {
-      if (n.state == PathNodeState.today || n.state == PathNodeState.rejected) {
-        return n.id;
-      }
+      if (_isOpen(n.state)) return n.id;
+    }
+    for (final PathNode n in day.nodes) {
+      if (n.state == PathNodeState.skipped) return n.id;
     }
     return null;
   }
   return null;
 }
+
+/// Today's open level only — the first today/rejected node, never a skipped
+/// one. Where a skip leads next.
+PathNode? openLevelOf(List<PathDay> days) {
+  for (final PathDay day in days) {
+    if (!day.isToday) continue;
+    for (final PathNode n in day.nodes) {
+      if (_isOpen(n.state)) return n;
+    }
+    return null;
+  }
+  return null;
+}
+
+bool _isOpen(PathNodeState s) =>
+    s == PathNodeState.today || s == PathNodeState.rejected;
 
 /// "Mon · Day 15", "Wed · Day 17 · Today" — the divider above each day.
 /// The path draws it in capitals; the string stays as the web builds it.
@@ -185,11 +217,11 @@ List<PathNode> lessonPartsOf(PathDay? day) => day == null
           if (n.kind == PathNodeKind.lesson) n,
       ];
 
-/// The day's lesson is finished: its LAST part is (the parts are answered
-/// in order).
+/// The day's lesson is finished: every part is, since a part can be skipped
+/// (17 Nov 2026) and the last one can then be done before an earlier one.
 bool isLessonDone(PathDay? day) {
   final List<PathNode> parts = lessonPartsOf(day);
-  return parts.isNotEmpty && isHandedIn(parts.last.state);
+  return parts.isNotEmpty && parts.every((PathNode p) => isHandedIn(p.state));
 }
 
 /// How far through ITS OWN part the learner is (0–1), for the START ring on
@@ -200,10 +232,15 @@ bool isLessonDone(PathDay? day) {
 /// and the lesson read's size can differ for a moment (opening the day
 /// writes its own questions; the path is re-read after). A node from a
 /// server before parts gets the day's fraction.
+///
+/// With [answeredIndexes] (WHICH questions are answered — after a skip the
+/// answers need not be a prefix), the part's progress is its answered
+/// questions over its size; without, the old count rule.
 double partProgress(
   PathNode node, {
   required int answered,
   required int total,
+  Set<int>? answeredIndexes,
 }) {
   if (node.kind != PathNodeKind.lesson || total <= 0) return 0;
   final NodePart? part = node.part;
@@ -221,6 +258,14 @@ double partProgress(
     if (i < 0 || i >= cut.length) return 0;
     s = cut[i].start;
     e = cut[i].end;
+  }
+  final Set<int>? which = answeredIndexes;
+  if (which != null) {
+    int n = 0;
+    for (int i = s; i < e; i++) {
+      if (which.contains(i)) n++;
+    }
+    return (n / (e - s)).clamp(0, 1).toDouble();
   }
   return ((answered - s) / (e - s)).clamp(0, 1).toDouble();
 }

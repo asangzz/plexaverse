@@ -152,6 +152,39 @@ void main() {
       // No lesson to read yet: no "right answers" quest at all.
       expect(lessonProgressOf(const TodayQuiz()), isNull);
     });
+
+    test('a skipped part is not passed, and says it is still open; a skipped '
+        'task says so too', () {
+      PathNode lesson(int i, PathNodeState s) => PathNode(
+        id: 'd:lesson:$i',
+        kind: PathNodeKind.lesson,
+        state: s,
+        title: 'Lesson · part $i of 3',
+      );
+      final List<Quest> quests = questsFor(
+        PathDay(
+          isToday: true,
+          nodes: <PathNode>[
+            lesson(1, PathNodeState.skipped),
+            lesson(2, PathNodeState.done),
+            lesson(3, PathNodeState.done),
+            const PathNode(
+              id: 'd:comment',
+              kind: PathNodeKind.comment,
+              state: PathNodeState.skipped,
+              title: 'Comment on a top voice',
+            ),
+          ],
+        ),
+        null,
+      );
+      // The old "last part done" rule read this as 3/3.
+      expect(quests.first.done, 2);
+      expect(quests.first.goal, 3);
+      expect(quests.first.note, 'A part is skipped, still open today');
+      expect(quests.last.done, 0);
+      expect(quests.last.note, 'Skipped, still open today');
+    });
   });
 
   testWidgets('loading draws the running page’s own shape', (

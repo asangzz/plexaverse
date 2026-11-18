@@ -408,3 +408,26 @@ abstract class ClaimResult with _$ClaimResult {
   factory ClaimResult.fromJson(Map<String, dynamic> json) =>
       _$ClaimResultFromJson(json);
 }
+
+// ── Any level: Skip ─────────────────────────────────────────────────────────
+
+/// `POST /contest/skip` → `{result}`. Mirrors `SkipResult` in the web's
+/// `lib/services/contest-tasks.service.ts`.
+///
+/// A skip pays nothing and moves no XP: the level stays open as `skipped`
+/// until the contest day ends, and the next one opens. Re-read the path (and
+/// the lesson) after it.
+@freezed
+abstract class SkipResult with _$SkipResult {
+  const factory SkipResult({
+    /// The node skipped, as sent.
+    @Default('') String nodeId,
+
+    /// It was already skipped (a repeat, or another device): nothing new was
+    /// written. Still a success.
+    @Default(false) bool alreadySkipped,
+  }) = _SkipResult;
+
+  factory SkipResult.fromJson(Map<String, dynamic> json) =>
+      _$SkipResultFromJson(json);
+}

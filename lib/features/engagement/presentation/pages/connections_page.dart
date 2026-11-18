@@ -23,6 +23,8 @@ import '../../../contest/presentation/widgets/contest_kit.dart'
     show LockedNotice;
 import '../../../contest/presentation/widgets/sheet/contest_sheet.dart'
     show SheetAlert;
+import '../../../contest/presentation/widgets/skip_level.dart'
+    show ContestSkipLevel;
 import '../../application/engagement_controllers.dart';
 import '../../domain/engagement_repository.dart';
 import '../widgets/connection_card.dart';
@@ -460,6 +462,9 @@ class _ContestConnections extends ConsumerWidget {
                 onSeePlans: () => context.push(ZaveRoutes.pricing),
                 onCompleteProfile: () => context.push(ZaveRoutes.settings),
               ),
+              // The current level can be skipped (17 Nov 2026); it stays
+              // open today.
+              const ContestSkipLevel(kind: PathNodeKind.connectLeaders),
             ],
           ),
           data: (ConnectionBatch value) => _body(context, ref, value, sent),
@@ -540,6 +545,10 @@ class _ContestConnections extends ConsumerWidget {
               'Find people opens the same search without copying, so you can '
               'look around before a request counts as sent.',
         ),
+        // The current level can be skipped (17 Nov 2026); it stays open
+        // today. Only here, in the contest's list — never on the plain
+        // Connections habit screen, which has nothing to do with the contest.
+        const ContestSkipLevel(kind: PathNodeKind.connectLeaders),
       ],
     );
   }

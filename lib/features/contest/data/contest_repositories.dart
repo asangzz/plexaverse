@@ -236,6 +236,23 @@ class ApiContestRepository implements ContestRepository {
     });
   }
 
+  @override
+  Future<SkipResult> skipLevel(String nodeId) => _call(() async {
+    final Response<Map<String, dynamic>> r = await _client
+        .post<Map<String, dynamic>>(
+          ApiPaths.contestSkip,
+          data: <String, dynamic>{'nodeId': nodeId},
+        );
+    return SkipResult.fromJson(_inner(_body(r), 'result'));
+  });
+
+  @override
+  Future<ConsistencyView> fetchConsistency() => _call(() async {
+    final Response<Map<String, dynamic>> r = await _client
+        .get<Map<String, dynamic>>(ApiPaths.contestConsistency);
+    return ConsistencyView.fromJson(_inner(_body(r), 'consistency'));
+  });
+
   // ── The seam ─────────────────────────────────────────────────────────────
 
   static Future<T> _call<T>(Future<T> Function() run) async {
@@ -416,6 +433,14 @@ class FakeContestRepository implements ContestRepository {
     (FakeContestWorld w) =>
         w.claim(kind: kind, occurrence: occurrence, postUrl: postUrl),
   );
+
+  @override
+  Future<SkipResult> skipLevel(String nodeId) =>
+      _answer((FakeContestWorld w) => w.skip(nodeId));
+
+  @override
+  Future<ConsistencyView> fetchConsistency() =>
+      _answer((FakeContestWorld w) => w.consistency());
 }
 
 /// Mock ↔ real switch on `useFakeBackend`. A release build can never resolve

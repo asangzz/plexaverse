@@ -573,7 +573,12 @@ mixin _$PathNode {
 /// sent): the button says Continue, and [points] is what is left.
  bool get started;/// Lesson nodes only.
  NodePart? get part;/// Claim nodes only.
- NodeClaim? get claim;
+ NodeClaim? get claim;/// The one level Skip may be pressed on: today's open level (the gate's
+/// first node still holding the chain, in state today or rejected). On at
+/// most one node, and absent everywhere else. Forced false for an
+/// [PathNodeKind.unknown] kind — a level this build cannot open is not
+/// one to pass over either.
+@JsonKey(readValue: _canSkipUnlessUnknown) bool get canSkip;
 /// Create a copy of PathNode
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
@@ -586,16 +591,16 @@ $PathNodeCopyWith<PathNode> get copyWith => _$PathNodeCopyWithImpl<PathNode>(thi
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is PathNode&&(identical(other.id, id) || other.id == id)&&(identical(other.kind, kind) || other.kind == kind)&&(identical(other.state, state) || other.state == state)&&(identical(other.title, title) || other.title == title)&&(identical(other.points, points) || other.points == points)&&(identical(other.href, href) || other.href == href)&&(identical(other.detail, detail) || other.detail == detail)&&(identical(other.started, started) || other.started == started)&&(identical(other.part, part) || other.part == part)&&(identical(other.claim, claim) || other.claim == claim));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is PathNode&&(identical(other.id, id) || other.id == id)&&(identical(other.kind, kind) || other.kind == kind)&&(identical(other.state, state) || other.state == state)&&(identical(other.title, title) || other.title == title)&&(identical(other.points, points) || other.points == points)&&(identical(other.href, href) || other.href == href)&&(identical(other.detail, detail) || other.detail == detail)&&(identical(other.started, started) || other.started == started)&&(identical(other.part, part) || other.part == part)&&(identical(other.claim, claim) || other.claim == claim)&&(identical(other.canSkip, canSkip) || other.canSkip == canSkip));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
-int get hashCode => Object.hash(runtimeType,id,kind,state,title,points,href,detail,started,part,claim);
+int get hashCode => Object.hash(runtimeType,id,kind,state,title,points,href,detail,started,part,claim,canSkip);
 
 @override
 String toString() {
-  return 'PathNode(id: $id, kind: $kind, state: $state, title: $title, points: $points, href: $href, detail: $detail, started: $started, part: $part, claim: $claim)';
+  return 'PathNode(id: $id, kind: $kind, state: $state, title: $title, points: $points, href: $href, detail: $detail, started: $started, part: $part, claim: $claim, canSkip: $canSkip)';
 }
 
 
@@ -606,7 +611,7 @@ abstract mixin class $PathNodeCopyWith<$Res>  {
   factory $PathNodeCopyWith(PathNode value, $Res Function(PathNode) _then) = _$PathNodeCopyWithImpl;
 @useResult
 $Res call({
- String id,@JsonKey(unknownEnumValue: PathNodeKind.unknown) PathNodeKind kind,@JsonKey(readValue: _stateUnlessUnknown, unknownEnumValue: PathNodeState.locked) PathNodeState state, String title, int points,@JsonKey(readValue: _hrefUnlessUnknown) String? href, String? detail, bool started, NodePart? part, NodeClaim? claim
+ String id,@JsonKey(unknownEnumValue: PathNodeKind.unknown) PathNodeKind kind,@JsonKey(readValue: _stateUnlessUnknown, unknownEnumValue: PathNodeState.locked) PathNodeState state, String title, int points,@JsonKey(readValue: _hrefUnlessUnknown) String? href, String? detail, bool started, NodePart? part, NodeClaim? claim,@JsonKey(readValue: _canSkipUnlessUnknown) bool canSkip
 });
 
 
@@ -623,7 +628,7 @@ class _$PathNodeCopyWithImpl<$Res>
 
 /// Create a copy of PathNode
 /// with the given fields replaced by the non-null parameter values.
-@pragma('vm:prefer-inline') @override $Res call({Object? id = null,Object? kind = null,Object? state = null,Object? title = null,Object? points = null,Object? href = freezed,Object? detail = freezed,Object? started = null,Object? part = freezed,Object? claim = freezed,}) {
+@pragma('vm:prefer-inline') @override $Res call({Object? id = null,Object? kind = null,Object? state = null,Object? title = null,Object? points = null,Object? href = freezed,Object? detail = freezed,Object? started = null,Object? part = freezed,Object? claim = freezed,Object? canSkip = null,}) {
   return _then(_self.copyWith(
 id: null == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
 as String,kind: null == kind ? _self.kind : kind // ignore: cast_nullable_to_non_nullable
@@ -635,7 +640,8 @@ as String?,detail: freezed == detail ? _self.detail : detail // ignore: cast_nul
 as String?,started: null == started ? _self.started : started // ignore: cast_nullable_to_non_nullable
 as bool,part: freezed == part ? _self.part : part // ignore: cast_nullable_to_non_nullable
 as NodePart?,claim: freezed == claim ? _self.claim : claim // ignore: cast_nullable_to_non_nullable
-as NodeClaim?,
+as NodeClaim?,canSkip: null == canSkip ? _self.canSkip : canSkip // ignore: cast_nullable_to_non_nullable
+as bool,
   ));
 }
 /// Create a copy of PathNode
@@ -744,10 +750,10 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String id, @JsonKey(unknownEnumValue: PathNodeKind.unknown)  PathNodeKind kind, @JsonKey(readValue: _stateUnlessUnknown, unknownEnumValue: PathNodeState.locked)  PathNodeState state,  String title,  int points, @JsonKey(readValue: _hrefUnlessUnknown)  String? href,  String? detail,  bool started,  NodePart? part,  NodeClaim? claim)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String id, @JsonKey(unknownEnumValue: PathNodeKind.unknown)  PathNodeKind kind, @JsonKey(readValue: _stateUnlessUnknown, unknownEnumValue: PathNodeState.locked)  PathNodeState state,  String title,  int points, @JsonKey(readValue: _hrefUnlessUnknown)  String? href,  String? detail,  bool started,  NodePart? part,  NodeClaim? claim, @JsonKey(readValue: _canSkipUnlessUnknown)  bool canSkip)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _PathNode() when $default != null:
-return $default(_that.id,_that.kind,_that.state,_that.title,_that.points,_that.href,_that.detail,_that.started,_that.part,_that.claim);case _:
+return $default(_that.id,_that.kind,_that.state,_that.title,_that.points,_that.href,_that.detail,_that.started,_that.part,_that.claim,_that.canSkip);case _:
   return orElse();
 
 }
@@ -765,10 +771,10 @@ return $default(_that.id,_that.kind,_that.state,_that.title,_that.points,_that.h
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String id, @JsonKey(unknownEnumValue: PathNodeKind.unknown)  PathNodeKind kind, @JsonKey(readValue: _stateUnlessUnknown, unknownEnumValue: PathNodeState.locked)  PathNodeState state,  String title,  int points, @JsonKey(readValue: _hrefUnlessUnknown)  String? href,  String? detail,  bool started,  NodePart? part,  NodeClaim? claim)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String id, @JsonKey(unknownEnumValue: PathNodeKind.unknown)  PathNodeKind kind, @JsonKey(readValue: _stateUnlessUnknown, unknownEnumValue: PathNodeState.locked)  PathNodeState state,  String title,  int points, @JsonKey(readValue: _hrefUnlessUnknown)  String? href,  String? detail,  bool started,  NodePart? part,  NodeClaim? claim, @JsonKey(readValue: _canSkipUnlessUnknown)  bool canSkip)  $default,) {final _that = this;
 switch (_that) {
 case _PathNode():
-return $default(_that.id,_that.kind,_that.state,_that.title,_that.points,_that.href,_that.detail,_that.started,_that.part,_that.claim);case _:
+return $default(_that.id,_that.kind,_that.state,_that.title,_that.points,_that.href,_that.detail,_that.started,_that.part,_that.claim,_that.canSkip);case _:
   throw StateError('Unexpected subclass');
 
 }
@@ -785,10 +791,10 @@ return $default(_that.id,_that.kind,_that.state,_that.title,_that.points,_that.h
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String id, @JsonKey(unknownEnumValue: PathNodeKind.unknown)  PathNodeKind kind, @JsonKey(readValue: _stateUnlessUnknown, unknownEnumValue: PathNodeState.locked)  PathNodeState state,  String title,  int points, @JsonKey(readValue: _hrefUnlessUnknown)  String? href,  String? detail,  bool started,  NodePart? part,  NodeClaim? claim)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String id, @JsonKey(unknownEnumValue: PathNodeKind.unknown)  PathNodeKind kind, @JsonKey(readValue: _stateUnlessUnknown, unknownEnumValue: PathNodeState.locked)  PathNodeState state,  String title,  int points, @JsonKey(readValue: _hrefUnlessUnknown)  String? href,  String? detail,  bool started,  NodePart? part,  NodeClaim? claim, @JsonKey(readValue: _canSkipUnlessUnknown)  bool canSkip)?  $default,) {final _that = this;
 switch (_that) {
 case _PathNode() when $default != null:
-return $default(_that.id,_that.kind,_that.state,_that.title,_that.points,_that.href,_that.detail,_that.started,_that.part,_that.claim);case _:
+return $default(_that.id,_that.kind,_that.state,_that.title,_that.points,_that.href,_that.detail,_that.started,_that.part,_that.claim,_that.canSkip);case _:
   return null;
 
 }
@@ -800,7 +806,7 @@ return $default(_that.id,_that.kind,_that.state,_that.title,_that.points,_that.h
 @JsonSerializable()
 
 class _PathNode extends PathNode {
-  const _PathNode({this.id = '', @JsonKey(unknownEnumValue: PathNodeKind.unknown) this.kind = PathNodeKind.unknown, @JsonKey(readValue: _stateUnlessUnknown, unknownEnumValue: PathNodeState.locked) this.state = PathNodeState.locked, this.title = '', this.points = 0, @JsonKey(readValue: _hrefUnlessUnknown) this.href, this.detail, this.started = false, this.part, this.claim}): super._();
+  const _PathNode({this.id = '', @JsonKey(unknownEnumValue: PathNodeKind.unknown) this.kind = PathNodeKind.unknown, @JsonKey(readValue: _stateUnlessUnknown, unknownEnumValue: PathNodeState.locked) this.state = PathNodeState.locked, this.title = '', this.points = 0, @JsonKey(readValue: _hrefUnlessUnknown) this.href, this.detail, this.started = false, this.part, this.claim, @JsonKey(readValue: _canSkipUnlessUnknown) this.canSkip = false}): super._();
   factory _PathNode.fromJson(Map<String, dynamic> json) => _$PathNodeFromJson(json);
 
 /// Opaque and stable within the path: `<day>:lesson:<k>`, `<day>:<kind>`,
@@ -827,6 +833,12 @@ class _PathNode extends PathNode {
 @override final  NodePart? part;
 /// Claim nodes only.
 @override final  NodeClaim? claim;
+/// The one level Skip may be pressed on: today's open level (the gate's
+/// first node still holding the chain, in state today or rejected). On at
+/// most one node, and absent everywhere else. Forced false for an
+/// [PathNodeKind.unknown] kind — a level this build cannot open is not
+/// one to pass over either.
+@override@JsonKey(readValue: _canSkipUnlessUnknown) final  bool canSkip;
 
 /// Create a copy of PathNode
 /// with the given fields replaced by the non-null parameter values.
@@ -841,16 +853,16 @@ Map<String, dynamic> toJson() {
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is _PathNode&&(identical(other.id, id) || other.id == id)&&(identical(other.kind, kind) || other.kind == kind)&&(identical(other.state, state) || other.state == state)&&(identical(other.title, title) || other.title == title)&&(identical(other.points, points) || other.points == points)&&(identical(other.href, href) || other.href == href)&&(identical(other.detail, detail) || other.detail == detail)&&(identical(other.started, started) || other.started == started)&&(identical(other.part, part) || other.part == part)&&(identical(other.claim, claim) || other.claim == claim));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is _PathNode&&(identical(other.id, id) || other.id == id)&&(identical(other.kind, kind) || other.kind == kind)&&(identical(other.state, state) || other.state == state)&&(identical(other.title, title) || other.title == title)&&(identical(other.points, points) || other.points == points)&&(identical(other.href, href) || other.href == href)&&(identical(other.detail, detail) || other.detail == detail)&&(identical(other.started, started) || other.started == started)&&(identical(other.part, part) || other.part == part)&&(identical(other.claim, claim) || other.claim == claim)&&(identical(other.canSkip, canSkip) || other.canSkip == canSkip));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
-int get hashCode => Object.hash(runtimeType,id,kind,state,title,points,href,detail,started,part,claim);
+int get hashCode => Object.hash(runtimeType,id,kind,state,title,points,href,detail,started,part,claim,canSkip);
 
 @override
 String toString() {
-  return 'PathNode(id: $id, kind: $kind, state: $state, title: $title, points: $points, href: $href, detail: $detail, started: $started, part: $part, claim: $claim)';
+  return 'PathNode(id: $id, kind: $kind, state: $state, title: $title, points: $points, href: $href, detail: $detail, started: $started, part: $part, claim: $claim, canSkip: $canSkip)';
 }
 
 
@@ -861,7 +873,7 @@ abstract mixin class _$PathNodeCopyWith<$Res> implements $PathNodeCopyWith<$Res>
   factory _$PathNodeCopyWith(_PathNode value, $Res Function(_PathNode) _then) = __$PathNodeCopyWithImpl;
 @override @useResult
 $Res call({
- String id,@JsonKey(unknownEnumValue: PathNodeKind.unknown) PathNodeKind kind,@JsonKey(readValue: _stateUnlessUnknown, unknownEnumValue: PathNodeState.locked) PathNodeState state, String title, int points,@JsonKey(readValue: _hrefUnlessUnknown) String? href, String? detail, bool started, NodePart? part, NodeClaim? claim
+ String id,@JsonKey(unknownEnumValue: PathNodeKind.unknown) PathNodeKind kind,@JsonKey(readValue: _stateUnlessUnknown, unknownEnumValue: PathNodeState.locked) PathNodeState state, String title, int points,@JsonKey(readValue: _hrefUnlessUnknown) String? href, String? detail, bool started, NodePart? part, NodeClaim? claim,@JsonKey(readValue: _canSkipUnlessUnknown) bool canSkip
 });
 
 
@@ -878,7 +890,7 @@ class __$PathNodeCopyWithImpl<$Res>
 
 /// Create a copy of PathNode
 /// with the given fields replaced by the non-null parameter values.
-@override @pragma('vm:prefer-inline') $Res call({Object? id = null,Object? kind = null,Object? state = null,Object? title = null,Object? points = null,Object? href = freezed,Object? detail = freezed,Object? started = null,Object? part = freezed,Object? claim = freezed,}) {
+@override @pragma('vm:prefer-inline') $Res call({Object? id = null,Object? kind = null,Object? state = null,Object? title = null,Object? points = null,Object? href = freezed,Object? detail = freezed,Object? started = null,Object? part = freezed,Object? claim = freezed,Object? canSkip = null,}) {
   return _then(_PathNode(
 id: null == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
 as String,kind: null == kind ? _self.kind : kind // ignore: cast_nullable_to_non_nullable
@@ -890,7 +902,8 @@ as String?,detail: freezed == detail ? _self.detail : detail // ignore: cast_nul
 as String?,started: null == started ? _self.started : started // ignore: cast_nullable_to_non_nullable
 as bool,part: freezed == part ? _self.part : part // ignore: cast_nullable_to_non_nullable
 as NodePart?,claim: freezed == claim ? _self.claim : claim // ignore: cast_nullable_to_non_nullable
-as NodeClaim?,
+as NodeClaim?,canSkip: null == canSkip ? _self.canSkip : canSkip // ignore: cast_nullable_to_non_nullable
+as bool,
   ));
 }
 

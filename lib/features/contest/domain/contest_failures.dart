@@ -41,7 +41,9 @@ final class ContestNotRunning extends ContestRefusal {
 /// LOCKED: today's earlier level is not finished — the path opens one level
 /// at a time. The cure is to re-read the path, which says which.
 final class ContestLocked extends ContestRefusal {
-  const ContestLocked([super.message = 'Finish today’s earlier levels first.']);
+  const ContestLocked([
+    super.message = 'Finish or skip today’s earlier levels first.',
+  ]);
 }
 
 /// STALE_QUIZ: today's questions changed since they were loaded (a placement

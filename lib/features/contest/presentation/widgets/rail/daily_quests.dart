@@ -43,7 +43,8 @@ class Quest {
 /// `questsFor`, pure, for the tests.
 ///
 /// The lesson is counted in parts, so each checkpoint moves the bar, and it
-/// is finished when its LAST part is; the right answers come from the lesson
+/// is finished only when every part is — a skipped part (17 Nov 2026) is not
+/// passed; the right answers come from the lesson
 /// read; every other level of today that has something to do is one quest of
 /// one. A quest is only a way of looking at the day, so it cannot disagree
 /// with the path above it.
@@ -56,11 +57,12 @@ List<Quest> questsFor(PathDay? today, LessonProgress? lesson) {
       Quest(
         id: 'lesson',
         title: 'Finish today’s lesson',
-        done: isLessonDone(today)
-            ? parts.length
-            : parts.where((PathNode n) => isHandedIn(n.state)).length,
+        done: parts.where((PathNode n) => isHandedIn(n.state)).length,
         goal: parts.length,
         icon: QuestIcon.bolt,
+        note: parts.any((PathNode n) => n.state == PathNodeState.skipped)
+            ? 'A part is skipped, still open today'
+            : null,
       ),
     );
   }
@@ -95,6 +97,7 @@ List<Quest> questsFor(PathDay? today, LessonProgress? lesson) {
             detail != null && detail.isNotEmpty
                 ? detail
                 : 'Removed after review',
+          PathNodeState.skipped => 'Skipped, still open today',
           _ => null,
         },
       ),

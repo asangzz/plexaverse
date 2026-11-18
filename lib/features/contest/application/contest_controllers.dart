@@ -56,13 +56,24 @@ Future<BoardResult> contestBoard(Ref ref, int limit) {
 Future<TodayQuiz> todayQuiz(Ref ref) =>
     ref.watch(contestRepositoryProvider).fetchTodayQuiz();
 
+/// `GET /contest/consistency` — the consistency meter (owner, 17 Nov 2026).
+/// A pure read: contest XP earned ÷ XP on offer this billing month.
+///
+/// Re-read with the standing ([refreshContestStanding]), since the meter
+/// counts what the path pays, and on resume — an admin's review lands no
+/// other way. The card and the stats bar's figure both read this one.
+@riverpod
+Future<ConsistencyView> contestConsistency(Ref ref) =>
+    ref.watch(contestRepositoryProvider).fetchConsistency();
+
 /// `ref.invalidate`, from a widget's `WidgetRef` or a controller's `Ref` —
 /// both tear off to this shape, so one helper serves both.
 typedef ContestInvalidate = void Function(ProviderOrFamily provider);
 
 /// Re-read everything a contest write can move: the standing (XP, streak,
-/// rank), the path (the gate, the level's state), the board, and today's
-/// lesson. The web's `refreshStanding`.
+/// rank), the path (the gate, the level's state), the board, today's lesson
+/// and the consistency meter, which counts what the path pays. The web's
+/// `refreshStanding`.
 ///
 /// ```dart
 /// refreshContestStanding(ref.invalidate);
@@ -77,6 +88,7 @@ void refreshContestStanding(ContestInvalidate invalidate) {
   invalidate(contestPathProvider);
   invalidate(contestBoardProvider);
   invalidate(todayQuizProvider);
+  invalidate(contestConsistencyProvider);
 }
 
 /// Whether today's level of a kind waits on an earlier one — read off the
@@ -108,7 +120,7 @@ TodayLock todayLock(Ref ref, PathNodeKind kind) {
   final PathNode? node = path.value?.todayNode(kind);
   return TodayLock(
     locked: node?.state == PathNodeState.locked
-        ? (node?.detail ?? 'Finish today’s earlier levels first')
+        ? (node?.detail ?? 'Finish or skip today’s earlier levels first')
         : null,
     pending: !path.hasValue && !path.hasError,
   );
@@ -123,7 +135,12 @@ TodayLock todayLock(Ref ref, PathNodeKind kind) {
 String? contestLevelRoute(PathNode node) {
   if (!canOpen(node)) return null;
   return switch (node.kind) {
-    PathNodeKind.lesson => ZaveRoutes.contestLesson,
+    // A skipped part opens on itself — the web's `?part=k`.
+    PathNodeKind.lesson => switch ((node.state, node.part)) {
+      (PathNodeState.skipped, final NodePart part) =>
+        '${ZaveRoutes.contestLesson}?part=${part.index}',
+      _ => ZaveRoutes.contestLesson,
+    },
     PathNodeKind.comment => ZaveRoutes.contestComment,
     PathNodeKind.feedComments => ZaveRoutes.contestFeedComments,
     PathNodeKind.weeklyInvites => ZaveRoutes.contestInvites,
@@ -208,6 +225,7 @@ void contestResumeRefresh(Ref ref) {
       ref.invalidate(contestOverviewProvider);
       ref.invalidate(contestPathProvider);
       ref.invalidate(todayQuizProvider);
+      ref.invalidate(contestConsistencyProvider);
     },
   );
   ref.onDispose(listener.dispose);

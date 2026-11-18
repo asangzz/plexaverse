@@ -9,6 +9,7 @@ import '../../../../../core/ui/zave/zave_kit.dart';
 import '../../../../plexa/presentation/widgets/quiz_plexa.dart';
 import '../../../application/contest_controllers.dart';
 import '../../../application/contest_home_controllers.dart';
+import '../../../application/skip_controllers.dart';
 import '../../../domain/contest_dates.dart';
 import '../../../domain/contest_repository.dart';
 import '../../../domain/contest_words.dart';
@@ -128,6 +129,16 @@ class _PathViewState extends ConsumerState<PathView> {
 
   void _close() => ref.read(contestOpenNodeProvider.notifier).close();
 
+  /// Skip the open level. On success the card closes, and the path — re-read
+  /// by the skip — moves START on; [_bringIntoView] follows it.
+  Future<void> _skip(PathNode node) async {
+    final SkipOutcome? outcome = await ref
+        .read(contestSkipActionsProvider.notifier)
+        .skip(node.id);
+    if (outcome == null || !mounted) return;
+    _close();
+  }
+
   void _open(PathNode node) {
     final String? route = contestLevelRoute(node);
     if (route == null) return;
@@ -142,6 +153,8 @@ class _PathViewState extends ConsumerState<PathView> {
     _bringIntoView(current);
 
     final String? openId = ref.watch(contestOpenNodeProvider);
+    final SkipBusy skip = ref.watch(contestSkipActionsProvider);
+    final bool cooling = ref.watch(skipCooldownProvider);
     final double amp = pathAmplitude(context);
     final bool wide = MediaQuery.sizeOf(context).width >= kPathWideWidth;
     final LessonProgress? lesson = widget.lesson;
@@ -168,6 +181,7 @@ class _PathViewState extends ConsumerState<PathView> {
                     node,
                     answered: lesson.answered,
                     total: lesson.total,
+                    answeredIndexes: lesson.answeredIndexes,
                   )
                 : 0,
             expanded: open,
@@ -185,6 +199,10 @@ class _PathViewState extends ConsumerState<PathView> {
                 node: node,
                 dayName: pathDayName(day),
                 onOpen: () => _open(node),
+                onSkip: () => _skip(node),
+                skipping: skip.busyNodeId == node.id,
+                skipError: skip.errorFor(node.id),
+                skipHidden: cooling,
               ),
             ),
           );
@@ -192,7 +210,8 @@ class _PathViewState extends ConsumerState<PathView> {
         if (day.isToday && node.id == lastPart) {
           rows.add(
             LessonChest(
-              open: isFinished(node.state),
+              // Every part, not the last: a part can be skipped.
+              open: isLessonDone(day),
               offset: amp * windAt(step++),
             ),
           );

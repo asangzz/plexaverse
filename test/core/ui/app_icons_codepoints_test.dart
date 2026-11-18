@@ -25,6 +25,8 @@ void main() {
       <String, (IconData, IconData)>{
         // Added for the contest.
         'fire': (AppIcons.fire, FontAwesomeIcons.fire),
+        // The consistency meter's figure (17 Nov 2026).
+        'gauge': (AppIcons.gauge, FontAwesomeIcons.gaugeHigh),
         'medal': (AppIcons.medal, FontAwesomeIcons.medal),
         'userGroup': (AppIcons.userGroup, FontAwesomeIcons.userGroup),
         'bullseye': (AppIcons.bullseye, FontAwesomeIcons.bullseye),
@@ -68,6 +70,7 @@ void main() {
   test('the style guide lists every glyph the contest added', () {
     for (final String name in <String>[
       'fire',
+      'gauge',
       'medal',
       'userGroup',
       'bullseye',

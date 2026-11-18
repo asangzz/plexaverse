@@ -70,6 +70,7 @@ _PathNode _$PathNodeFromJson(Map<String, dynamic> json) => _PathNode(
   claim: json['claim'] == null
       ? null
       : NodeClaim.fromJson(json['claim'] as Map<String, dynamic>),
+  canSkip: _canSkipUnlessUnknown(json, 'canSkip') as bool? ?? false,
 );
 
 Map<String, dynamic> _$PathNodeToJson(_PathNode instance) => <String, dynamic>{
@@ -83,6 +84,7 @@ Map<String, dynamic> _$PathNodeToJson(_PathNode instance) => <String, dynamic>{
   'started': instance.started,
   'part': instance.part?.toJson(),
   'claim': instance.claim?.toJson(),
+  'canSkip': instance.canSkip,
 };
 
 const _$PathNodeKindEnumMap = {
@@ -107,6 +109,7 @@ const _$PathNodeStateEnumMap = {
   PathNodeState.rejected: 'rejected',
   PathNodeState.revoked: 'revoked',
   PathNodeState.unavailable: 'unavailable',
+  PathNodeState.skipped: 'skipped',
 };
 
 _PathDay _$PathDayFromJson(Map<String, dynamic> json) => _PathDay(

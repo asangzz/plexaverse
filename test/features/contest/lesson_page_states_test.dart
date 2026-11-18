@@ -261,6 +261,71 @@ void main() {
       );
     });
 
+    testWidgets('Skip this part: under the part’s kicker, only on the open '
+        'part; it opens the next part, and then the next level', (
+      WidgetTester tester,
+    ) async {
+      await _pump(tester, _running());
+      expect(
+        find.text('VOCABULARY · QUESTION 8 OF 15 · PART 2 OF 3'),
+        findsOneWidget,
+      );
+      expect(find.text(kSkipPartLabel), findsOneWidget);
+
+      await _tap(tester, find.text(kSkipPartLabel));
+      expect(
+        find.text('SAYING IT AT WORK · QUESTION 11 OF 15 · PART 3 OF 3'),
+        findsOneWidget,
+      );
+      // The double-tap guard: no Skip where the finger still is.
+      expect(find.text(kSkipPartLabel), findsNothing);
+      await tester.pump(const Duration(milliseconds: 700));
+      expect(find.text(kSkipPartLabel), findsOneWidget);
+
+      // A skipped part opens again from the steps, at its next question.
+      await _tap(tester, find.bySemanticsLabel('Question 8, to answer'));
+      expect(
+        find.text('VOCABULARY · QUESTION 8 OF 15 · PART 2 OF 3'),
+        findsOneWidget,
+      );
+      expect(find.text(kSkipPartLabel), findsNothing, reason: 'skipped');
+
+      // Back to the open part, and skip it too: nothing in the lesson is
+      // open now, so on to the comment.
+      await _tap(tester, find.bySemanticsLabel('Question 11, to answer'));
+      await _tap(tester, find.text(kSkipPartLabel));
+      expect(find.text('THE COMMENT'), findsOneWidget);
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets('every part left skipped: parked, with each part to come '
+        'back to', (WidgetTester tester) async {
+      final FakeContestRepository repo = _running();
+      await repo.skipLevel('2026-11-11:lesson:2');
+      await repo.skipLevel('2026-11-11:lesson:3');
+      await _pump(tester, repo);
+
+      expect(find.text('Today’s lesson isn’t finished'), findsOneWidget);
+      expect(
+        find.text(
+          'You skipped parts 2 and 3. They’re open until the day ends, and '
+          'your streak needs every question.',
+        ),
+        findsOneWidget,
+      );
+      expect(
+        find.text('Each part pays as usual once you finish it today.'),
+        findsOneWidget,
+      );
+      expect(tester.takeException(), isNull);
+
+      await _tap(tester, find.text('Do part 3 now'));
+      expect(
+        find.text('SAYING IT AT WORK · QUESTION 11 OF 15 · PART 3 OF 3'),
+        findsOneWidget,
+      );
+    });
+
     testWidgets('scoring paused: said over a question still to answer, and '
         'an answer given then reads "Not scored."', (
       WidgetTester tester,
@@ -470,6 +535,10 @@ Future<GoRouter> _pump(
       GoRoute(
         path: ZaveRoutes.pricing,
         builder: (_, _) => const Scaffold(body: Text('PLANS')),
+      ),
+      GoRoute(
+        path: ZaveRoutes.contestComment,
+        builder: (_, _) => const Scaffold(body: Text('THE COMMENT')),
       ),
     ],
   );

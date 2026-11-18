@@ -7,6 +7,7 @@ import '../domain/contest_repository.dart';
 import '../domain/contest_words.dart';
 import '../domain/lesson_parts.dart';
 import 'contest_controllers.dart';
+import 'skip_controllers.dart';
 
 part 'lesson_controllers.g.dart';
 
@@ -52,6 +53,22 @@ final class AtScore extends LessonAt {
 
   @override
   String toString() => 'AtScore';
+}
+
+/// Parked: every part still to do was skipped, and the learner came in
+/// without asking for one (17 Nov 2026). The screen says what is still open
+/// and offers each skipped part.
+final class AtParked extends LessonAt {
+  const AtParked();
+
+  @override
+  bool operator ==(Object other) => other is AtParked;
+
+  @override
+  int get hashCode => 1;
+
+  @override
+  String toString() => 'AtParked';
 }
 
 /// Where the learner asked to be, tagged with the contest day it belongs to.
@@ -108,6 +125,9 @@ enum LessonWork {
 
   /// One answer, and — when it was refused — the read that follows.
   answering,
+
+  /// Skipping the open part (`POST /contest/skip`), and the reads after it.
+  skipping,
 }
 
 // ── An answer as the player shows it ────────────────────────────────────────
@@ -223,6 +243,7 @@ class LessonRunState {
     this.redrawn = false,
     this.work,
     this.problem,
+    this.requestedPart,
   });
 
   /// Null until the lesson is in — and for good when it could not be read.
@@ -243,6 +264,10 @@ class LessonRunState {
   final bool redrawn;
   final LessonWork? work;
   final LessonProblem? problem;
+
+  /// The part (1-based) the visit was opened for — `?part=k`, a skipped
+  /// part's own link. Null for a plain visit.
+  final int? requestedPart;
 
   bool get isBusy => work != null;
 
@@ -269,11 +294,8 @@ class LessonRunState {
   };
 
   /// The first question in lesson order with no answer; null once every one
-  /// has one.
-  ///
-  /// The server takes any unanswered question, but the path's parts count
-  /// answers as filling the day in order — "2 of 5 answered" means the first
-  /// two. So the player answers from here and nowhere else.
+  /// has one. Only "is the day finished": which question can be answered is
+  /// [isReachable]'s, part by part.
   late final int? firstUnanswered = () {
     for (int i = 0; i < questions.length; i++) {
       if (!answers.containsKey(questions[i].id)) return i;
@@ -287,26 +309,97 @@ class LessonRunState {
       questions.isNotEmpty &&
       (firstUnanswered == null || (quiz?.completed ?? false));
 
-  /// Where a fresh visit opens: the first unanswered question, or the score.
-  LessonAt get opening =>
-      finished ? const AtScore() : AtQuestion(firstUnanswered ?? 0);
+  /// The answered questions, by index in lesson order — WHICH ones, never
+  /// how many.
+  late final Set<int> answeredIdx = <int>{
+    for (int i = 0; i < questions.length; i++)
+      if (answers.containsKey(questions[i].id)) i,
+  };
+
+  /// The parts as [skipped] would leave them, by `lessonPartStates` — the
+  /// rule the path and the answer endpoint share.
+  List<LessonPartView> partStatesWith(Set<int> skipped) => lessonPartStates(
+    total: questions.length,
+    answered: answeredIdx,
+    skipped: skipped,
+    when: LessonWhen.today,
+    complete: quiz?.completed ?? false,
+  );
+
+  /// Each part: done, the open one (`today`), skipped (still open beside
+  /// it), or locked.
+  late final List<LessonPartView> partStates = partStatesWith(
+    (quiz?.skippedParts ?? const <int>[]).toSet(),
+  );
+
+  /// The part question [i] is in.
+  LessonPartView? partAt(int i) {
+    for (final LessonPartView p in partStates) {
+      if (p.contains(i)) return p;
+    }
+    return null;
+  }
+
+  /// Question [i] is in a part that can be answered now: the open one or a
+  /// skipped one.
+  bool playable(int i) => switch (partAt(i)?.state) {
+    LessonPartState.today || LessonPartState.skipped => true,
+    _ => false,
+  };
+
+  /// The first unanswered question of [part], or null when it has none.
+  int? firstOpenIn(LessonPart part) {
+    for (int i = part.start; i < part.end && i < questions.length; i++) {
+      if (!answeredIdx.contains(i)) return i;
+    }
+    return null;
+  }
+
+  /// Can question [i] be opened: answered, or the next to answer in a part
+  /// that is open or skipped. Within a part, one at a time is the format.
+  bool isReachable(int i) {
+    if (i < 0 || i >= questions.length) return false;
+    if (answeredIdx.contains(i)) return true;
+    final LessonPartView? p = partAt(i);
+    return p != null && playable(i) && i == firstOpenIn(p);
+  }
+
+  /// Where a visit opens: the part asked for ([want], 1-based) if it is open
+  /// or skipped, else the open part, else parked on the skipped ones — or
+  /// the score once the day is finished.
+  LessonAt openingFor(int? want) {
+    if (finished) return const AtScore();
+    if (want != null && want >= 1 && want <= partStates.length) {
+      final LessonPartView asked = partStates[want - 1];
+      if (asked.state == LessonPartState.skipped ||
+          asked.state == LessonPartState.today) {
+        final int? i = firstOpenIn(asked);
+        if (i != null) return AtQuestion(i);
+      }
+    }
+    for (final LessonPartView p in partStates) {
+      if (p.state != LessonPartState.today) continue;
+      final int? i = firstOpenIn(p);
+      if (i != null) return AtQuestion(i);
+    }
+    return const AtParked();
+  }
+
+  /// Where a fresh visit opens.
+  LessonAt get opening => openingFor(requestedPart);
 
   /// Where the screen is: the pin, while it still names a screen this lesson
   /// has; else where a fresh visit opens.
   ///
-  /// A pinned question must be answered or be the first unanswered one —
-  /// questions not reached yet cannot be opened: one at a time is the format.
+  /// A pinned question must be [isReachable] — questions not reached yet
+  /// cannot be opened.
   late final LessonAt at = () {
     final LessonPin? p = pin;
     if (p == null || p.day != day) return opening;
     return switch (p.at) {
       AtScore() => opening,
-      AtQuestion(:final int index) =>
-        index < questions.length &&
-                (answers.containsKey(questions[index].id) ||
-                    index == firstUnanswered)
-            ? p.at
-            : opening,
+      AtParked() => finished ? const AtScore() : const AtParked(),
+      AtQuestion(:final int index) => isReachable(index) ? p.at : opening,
     };
   }();
 
@@ -314,7 +407,9 @@ class LessonRunState {
   /// this day's questions, and only while the day is not finished.
   LessonPart? get shownCheckpoint {
     final LessonCheckpoint? c = checkpoint;
-    if (c == null || c.day != day || at is AtScore || finished) return null;
+    if (c == null || c.day != day || at is! AtQuestion || finished) {
+      return null;
+    }
     final List<LessonPart> parts = lessonPartBounds(questions.length);
     return c.part + 1 < parts.length ? parts[c.part] : null;
   }
@@ -341,14 +436,29 @@ class LessonRunState {
     return n;
   }
 
-  /// Where Continue leads from question [index]: the next question if it has
-  /// been reached, else the first unanswered one, or the score.
+  /// Where Continue leads from question [index]: on within its part (an
+  /// answered question, or the part's next to answer); else, when rereading,
+  /// on to the next answered question; else where a fresh visit would open —
+  /// the open part, parked, or the score.
+  ///
+  /// Not on to an answered question after answering [index] on THIS visit: a
+  /// part come back to after a skip is followed by parts already done, and
+  /// finishing it must go to the open part (or the score), not page through
+  /// answered questions.
   LessonAt nextFrom(int index) {
-    final int? first = firstUnanswered;
-    if (index + 1 < questions.length && (first == null || index + 1 <= first)) {
-      return AtQuestion(index + 1);
+    final int n = index + 1;
+    if (n < questions.length) {
+      final LessonPartView? p = partAt(index);
+      if (p != null &&
+          n < p.end &&
+          (answeredIdx.contains(n) || n == firstOpenIn(p))) {
+        return AtQuestion(n);
+      }
+      if (answeredIdx.contains(n) && !local.containsKey(questions[index].id)) {
+        return AtQuestion(n);
+      }
     }
-    return finished ? const AtScore() : AtQuestion(first ?? 0);
+    return openingFor(null);
   }
 
   /// The pick on [itemId], or null.
@@ -377,6 +487,8 @@ class LessonRunState {
     bool clearPick = false,
     bool clearWork = false,
     bool clearProblem = false,
+    int? requestedPart,
+    bool clearRequested = false,
   }) => LessonRunState(
     quiz: quiz ?? this.quiz,
     loadError: loadError,
@@ -387,6 +499,9 @@ class LessonRunState {
     redrawn: redrawn ?? this.redrawn,
     work: clearWork ? null : (work ?? this.work),
     problem: clearProblem ? null : (problem ?? this.problem),
+    requestedPart: clearRequested
+        ? null
+        : (requestedPart ?? this.requestedPart),
   );
 }
 
@@ -413,14 +528,26 @@ class LessonRunState {
 /// ## Answers in order, as text
 ///
 /// [answer] sends the option's TEXT — each learner sees their own order, so
-/// an index would re-point — for the first unanswered question only, and only
-/// while it is the one on screen. The reveal is the reply: a replay shows the
-/// RECORDED answer, never this device's pick.
+/// an index would re-point — for the question on screen, and only while it
+/// is the next to answer in a part that is open or skipped. The reveal is the
+/// reply: a replay shows the RECORDED answer, never this device's pick.
+///
+/// ## A part can be skipped
+///
+/// [skipPart] skips the open part (`POST /contest/skip`); it stays open beside
+/// the next one until the day ends. [request] opens a visit on a skipped
+/// part — a skipped node's own link. A LOCKED refusal (an answer in a part
+/// neither open nor skipped: another device moved on) drops the pin, as
+/// NOT_TODAY does, and the re-read reopens where the parts now say.
 @riverpod
 class LessonRun extends _$LessonRun {
   /// Counts the reads after answers, so one that lands late never replaces a
   /// newer one — the read after the last answer is what carries the score.
   int _reads = 0;
+
+  /// The part this visit was opened for — [request]'s. Copied into every
+  /// state the open builds.
+  int? _requested;
 
   @override
   LessonRunState build() {
@@ -429,6 +556,18 @@ class LessonRun extends _$LessonRun {
   }
 
   ContestRepository get _repo => ref.read(contestRepositoryProvider);
+
+  /// Open this visit on part [part] (1-based) — `?part=k`. Safe to call from
+  /// a page's `initState`: it only records the wish, and the open copies it
+  /// into the state it builds. A lesson already in takes it a moment later.
+  void request(int? part) {
+    _requested = part;
+    if (state.quiz == null || state.requestedPart == part) return;
+    Future<void>.microtask(() {
+      if (!ref.mounted) return;
+      state = state.copyWith(requestedPart: part, clearRequested: part == null);
+    });
+  }
 
   /// The error screen's "Try again": open the lesson again.
   void retry() {
@@ -457,7 +596,7 @@ class LessonRun extends _$LessonRun {
         quiz = await _repo.fetchTodayQuiz();
         if (!ref.mounted) return;
       }
-      state = LessonRunState(quiz: quiz);
+      state = LessonRunState(quiz: quiz, requestedPart: _requested);
     } on Object catch (e) {
       if (!ref.mounted) return;
       state = LessonRunState(loadError: contestMessage(e));
@@ -466,11 +605,22 @@ class LessonRun extends _$LessonRun {
     }
   }
 
+  /// The question on screen, when it can be answered now: unanswered, and
+  /// the next to answer in a part that is open or skipped.
+  int? _answerable(LessonRunState s) {
+    final LessonAt at = s.at;
+    if (at is! AtQuestion) return null;
+    final int index = at.index;
+    if (index >= s.questions.length) return null;
+    if (s.answeredIdx.contains(index) || !s.isReachable(index)) return null;
+    return index;
+  }
+
   /// Pick [value] on the question on screen. Nothing is sent until Check.
   void pick(String value) {
     final LessonRunState s = state;
-    final int? index = s.firstUnanswered;
-    if (s.isBusy || index == null || s.at != AtQuestion(index)) return;
+    final int? index = _answerable(s);
+    if (s.isBusy || index == null) return;
     state = s.copyWith(picked: LessonPick(s.questions[index].id, value));
   }
 
@@ -478,18 +628,17 @@ class LessonRun extends _$LessonRun {
   Future<void> answer(String value) async {
     final LessonRunState s = state;
     final int? day = s.day;
-    final int? index = s.firstUnanswered;
-    // Strictly in order: the first unanswered question, and only while it
-    // is the one on screen. Never during the open, never twice at once.
+    final int? index = _answerable(s);
+    // In order within a part: the question on screen, and only while it is
+    // its part's next to answer. Never during the open, never twice at once.
     if (s.isBusy || day == null || index == null || value.isEmpty) return;
-    if (s.at != AtQuestion(index)) return;
     final PublicQuizItem item = s.questions[index];
 
     // Held while it runs: leaving mid-answer must not lose the re-read of the
     // standing it moved.
     final link = ref.keepAlive();
-    // Pinned before sending: once counted, it stops being "the first
-    // unanswered" and the screen must stay on its reveal.
+    // Pinned before sending: once counted, it stops being "the next to
+    // answer" and the screen must stay on its reveal.
     state = s.copyWith(
       work: LessonWork.answering,
       pin: LessonPin(day, AtQuestion(index)),
@@ -522,6 +671,16 @@ class LessonRun extends _$LessonRun {
       // fix it to the set questions.
       state = LessonRunState(work: LessonWork.opening);
       unawaited(_open());
+    } on ContestLocked {
+      if (!ref.mounted) return;
+      // A part that is not open — another device moved on, or the parts were
+      // re-cut. Not an error to show: the pin drops, as for NOT_TODAY, and
+      // the re-read reopens the visit where the parts now say.
+      state = state.copyWith(clearPin: true, clearPick: true);
+      ref.invalidate(contestPathProvider);
+      await _reread();
+      if (!ref.mounted) return;
+      state = state.copyWith(clearWork: true);
     } on ContestStale {
       if (!ref.mounted) return;
       // Redrawn for the learner's level since they loaded. Not an error: the
@@ -625,12 +784,78 @@ class LessonRun extends _$LessonRun {
     );
   }
 
+  /// Skip lesson part [k] (1-based) — the open one. Then: the part now open,
+  /// if one is; else the path's next level when it is not a lesson part (the
+  /// route is returned, and the page goes there); else parked on the skipped
+  /// parts. A refusal is shown under the question on screen.
+  Future<String?> skipPart(int k) async {
+    final LessonRunState s = state;
+    final String? dayKey = s.quiz?.dayKey;
+    if (s.isBusy || dayKey == null || ref.read(skipCooldownProvider)) {
+      return null;
+    }
+    final LessonAt here = s.at;
+    final String? itemId = here is AtQuestion && here.index < s.questions.length
+        ? s.questions[here.index].id
+        : null;
+    final link = ref.keepAlive();
+    state = s.copyWith(
+      work: LessonWork.skipping,
+      redrawn: false,
+      clearProblem: true,
+    );
+    try {
+      final SkipOutcome outcome = await performSkip(
+        ref,
+        lessonNodeId(dayKey, k),
+      );
+      if (!ref.mounted) return null;
+      await _reread();
+      if (!ref.mounted) return null;
+      // Over a read that failed, the skip is still known.
+      TodayQuiz? quiz = state.quiz;
+      if (quiz != null && !quiz.skippedParts.contains(k)) {
+        quiz = quiz.copyWith(
+          skippedParts: <int>[...quiz.skippedParts, k]..sort(),
+        );
+      }
+      state = state.copyWith(quiz: quiz, clearWork: true);
+      for (final LessonPartView p in state.partStates) {
+        if (p.state != LessonPartState.today) continue;
+        final int? i = state.firstOpenIn(p);
+        if (i != null) {
+          go(AtQuestion(i));
+          return null;
+        }
+      }
+      final PathNode? next = outcome.next;
+      if (next != null && !next.isLesson) {
+        final String? route = contestLevelRoute(next);
+        if (route != null) return route;
+      }
+      go(const AtParked());
+      return null;
+    } on Object catch (e) {
+      if (!ref.mounted) return null;
+      state = state.copyWith(
+        clearWork: true,
+        clearCheckpoint: true,
+        problem: itemId == null
+            ? null
+            : LessonProblem(itemId, contestMessage(e)),
+      );
+      return null;
+    } finally {
+      link.close();
+    }
+  }
+
   /// Continue from the answered question on screen — and from the
   /// checkpoint, where it reads "Keep going".
   ///
   /// On the last question of a part that is not the day's last, answered on
-  /// THIS visit, when what follows is the first unanswered question, it opens
-  /// the checkpoint. "This visit" is what tells finishing a part from
+  /// THIS visit, when the next part is the open one and what follows is its
+  /// first question to answer, it opens the checkpoint. "This visit" is what tells finishing a part from
   /// rereading it: after a reload, stepping back to part 1's last question and
   /// pressing Continue must not announce a checkpoint passed yesterday.
   void next() {
@@ -645,12 +870,16 @@ class LessonRun extends _$LessonRun {
       go(to);
       return;
     }
-    final List<LessonPart> parts = lessonPartBounds(s.questions.length);
-    final LessonPart? part = partOf(index, s.questions.length);
-    final int? first = s.firstUnanswered;
+    final LessonPartView? part = s.partAt(index);
+    final LessonPartView? following =
+        part != null && part.index + 1 < s.partStates.length
+        ? s.partStates[part.index + 1]
+        : null;
+    final int? first = following == null ? null : s.firstOpenIn(following);
     if (part != null &&
+        following != null &&
         !s.finished &&
-        part.index + 1 < parts.length &&
+        following.state == LessonPartState.today &&
         index == part.end - 1 &&
         first != null &&
         to == AtQuestion(first) &&

@@ -528,6 +528,61 @@ class _TextLink extends StatelessWidget {
   }
 }
 
+/// A quiet text link in periwinkle for a secondary action — Skip, never the
+/// screen's one white pill. Disabled (dimmed) while [onTap] is null.
+class ContestTextLink extends StatelessWidget {
+  const ContestTextLink({
+    required this.label,
+    required this.onTap,
+    this.fontSize = 14,
+    this.colour = ContestColors.peri,
+    this.textAlign = TextAlign.start,
+    super.key,
+  });
+
+  final String label;
+  final VoidCallback? onTap;
+  final double fontSize;
+  final Color colour;
+  final TextAlign textAlign;
+
+  @override
+  Widget build(BuildContext context) {
+    final bool enabled = onTap != null;
+    return Semantics(
+      button: true,
+      enabled: enabled,
+      label: label,
+      excludeSemantics: true,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: ZaveRadius.pillBr,
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(minHeight: ZaveSpace.minTapTarget),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 4),
+            child: Center(
+              widthFactor: 1,
+              child: Opacity(
+                opacity: enabled ? 1 : 0.6,
+                child: Text(
+                  label,
+                  textAlign: textAlign,
+                  style: ZaveType.body.copyWith(
+                    fontSize: fontSize.sp,
+                    fontWeight: FontWeight.w600,
+                    color: colour,
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
 /// "Back to the contest" — every level's way home. The web's `BackToPath`.
 class BackToPath extends StatelessWidget {
   const BackToPath({super.key});
@@ -561,7 +616,7 @@ class LockedNotice extends StatelessWidget {
             const ContestDot(tone: ContestTone.idle, label: 'Not open yet'),
             SizedBox(height: ZaveSpace.sm),
             Text(
-              '$detail. Levels open one after another — finish it first.',
+              '$detail. Levels open one after another — finish or skip it first.',
               style: ZaveType.body.copyWith(fontSize: 15.sp),
             ),
             SizedBox(height: ZaveSpace.xs),

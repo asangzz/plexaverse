@@ -1150,7 +1150,13 @@ mixin _$TodayQuiz {
  List<PublicQuizItem> get questions;/// In the order they were answered.
  List<QuizAnswerView> get answered; bool get completed; QuizScore? get score; FinishBonus? get finishBonus;/// An answer given NOW earns nothing, ever. Says nothing about answers
 /// already given — each carries what the ledger paid it.
- bool get scoringPaused;
+ bool get scoringPaused;/// Today's contest day key (`YYYY-MM-DD`, the contest's timezone), sent
+/// only while `ready`: a lesson part's node id — what Skip is keyed on —
+/// is `<dayKey>:lesson:<k>`. Null from a server before Skip, and then the
+/// player offers no "Skip this part".
+ String? get dayKey;/// Lesson parts (1-based, sorted) skipped today. Each stays open beside
+/// the next part until the day ends.
+ List<int> get skippedParts;
 /// Create a copy of TodayQuiz
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
@@ -1163,16 +1169,16 @@ $TodayQuizCopyWith<TodayQuiz> get copyWith => _$TodayQuizCopyWithImpl<TodayQuiz>
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is TodayQuiz&&(identical(other.status, status) || other.status == status)&&(identical(other.reason, reason) || other.reason == reason)&&(identical(other.contestId, contestId) || other.contestId == contestId)&&(identical(other.day, day) || other.day == day)&&(identical(other.band, band) || other.band == band)&&(identical(other.bandLocked, bandLocked) || other.bandLocked == bandLocked)&&(identical(other.tomorrow, tomorrow) || other.tomorrow == tomorrow)&&(identical(other.started, started) || other.started == started)&&(identical(other.ownQuestions, ownQuestions) || other.ownQuestions == ownQuestions)&&const DeepCollectionEquality().equals(other.questions, questions)&&const DeepCollectionEquality().equals(other.answered, answered)&&(identical(other.completed, completed) || other.completed == completed)&&(identical(other.score, score) || other.score == score)&&(identical(other.finishBonus, finishBonus) || other.finishBonus == finishBonus)&&(identical(other.scoringPaused, scoringPaused) || other.scoringPaused == scoringPaused));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is TodayQuiz&&(identical(other.status, status) || other.status == status)&&(identical(other.reason, reason) || other.reason == reason)&&(identical(other.contestId, contestId) || other.contestId == contestId)&&(identical(other.day, day) || other.day == day)&&(identical(other.band, band) || other.band == band)&&(identical(other.bandLocked, bandLocked) || other.bandLocked == bandLocked)&&(identical(other.tomorrow, tomorrow) || other.tomorrow == tomorrow)&&(identical(other.started, started) || other.started == started)&&(identical(other.ownQuestions, ownQuestions) || other.ownQuestions == ownQuestions)&&const DeepCollectionEquality().equals(other.questions, questions)&&const DeepCollectionEquality().equals(other.answered, answered)&&(identical(other.completed, completed) || other.completed == completed)&&(identical(other.score, score) || other.score == score)&&(identical(other.finishBonus, finishBonus) || other.finishBonus == finishBonus)&&(identical(other.scoringPaused, scoringPaused) || other.scoringPaused == scoringPaused)&&(identical(other.dayKey, dayKey) || other.dayKey == dayKey)&&const DeepCollectionEquality().equals(other.skippedParts, skippedParts));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
-int get hashCode => Object.hash(runtimeType,status,reason,contestId,day,band,bandLocked,tomorrow,started,ownQuestions,const DeepCollectionEquality().hash(questions),const DeepCollectionEquality().hash(answered),completed,score,finishBonus,scoringPaused);
+int get hashCode => Object.hash(runtimeType,status,reason,contestId,day,band,bandLocked,tomorrow,started,ownQuestions,const DeepCollectionEquality().hash(questions),const DeepCollectionEquality().hash(answered),completed,score,finishBonus,scoringPaused,dayKey,const DeepCollectionEquality().hash(skippedParts));
 
 @override
 String toString() {
-  return 'TodayQuiz(status: $status, reason: $reason, contestId: $contestId, day: $day, band: $band, bandLocked: $bandLocked, tomorrow: $tomorrow, started: $started, ownQuestions: $ownQuestions, questions: $questions, answered: $answered, completed: $completed, score: $score, finishBonus: $finishBonus, scoringPaused: $scoringPaused)';
+  return 'TodayQuiz(status: $status, reason: $reason, contestId: $contestId, day: $day, band: $band, bandLocked: $bandLocked, tomorrow: $tomorrow, started: $started, ownQuestions: $ownQuestions, questions: $questions, answered: $answered, completed: $completed, score: $score, finishBonus: $finishBonus, scoringPaused: $scoringPaused, dayKey: $dayKey, skippedParts: $skippedParts)';
 }
 
 
@@ -1183,7 +1189,7 @@ abstract mixin class $TodayQuizCopyWith<$Res>  {
   factory $TodayQuizCopyWith(TodayQuiz value, $Res Function(TodayQuiz) _then) = _$TodayQuizCopyWithImpl;
 @useResult
 $Res call({
-@JsonKey(unknownEnumValue: QuizStatus.noQuizToday) QuizStatus status,@JsonKey(unknownEnumValue: JsonKey.nullForUndefinedEnumValue) QuizReason? reason, String? contestId, int? day, String? band, bool bandLocked, bool? tomorrow, bool? started, int ownQuestions, List<PublicQuizItem> questions, List<QuizAnswerView> answered, bool completed, QuizScore? score, FinishBonus? finishBonus, bool scoringPaused
+@JsonKey(unknownEnumValue: QuizStatus.noQuizToday) QuizStatus status,@JsonKey(unknownEnumValue: JsonKey.nullForUndefinedEnumValue) QuizReason? reason, String? contestId, int? day, String? band, bool bandLocked, bool? tomorrow, bool? started, int ownQuestions, List<PublicQuizItem> questions, List<QuizAnswerView> answered, bool completed, QuizScore? score, FinishBonus? finishBonus, bool scoringPaused, String? dayKey, List<int> skippedParts
 });
 
 
@@ -1200,7 +1206,7 @@ class _$TodayQuizCopyWithImpl<$Res>
 
 /// Create a copy of TodayQuiz
 /// with the given fields replaced by the non-null parameter values.
-@pragma('vm:prefer-inline') @override $Res call({Object? status = null,Object? reason = freezed,Object? contestId = freezed,Object? day = freezed,Object? band = freezed,Object? bandLocked = null,Object? tomorrow = freezed,Object? started = freezed,Object? ownQuestions = null,Object? questions = null,Object? answered = null,Object? completed = null,Object? score = freezed,Object? finishBonus = freezed,Object? scoringPaused = null,}) {
+@pragma('vm:prefer-inline') @override $Res call({Object? status = null,Object? reason = freezed,Object? contestId = freezed,Object? day = freezed,Object? band = freezed,Object? bandLocked = null,Object? tomorrow = freezed,Object? started = freezed,Object? ownQuestions = null,Object? questions = null,Object? answered = null,Object? completed = null,Object? score = freezed,Object? finishBonus = freezed,Object? scoringPaused = null,Object? dayKey = freezed,Object? skippedParts = null,}) {
   return _then(_self.copyWith(
 status: null == status ? _self.status : status // ignore: cast_nullable_to_non_nullable
 as QuizStatus,reason: freezed == reason ? _self.reason : reason // ignore: cast_nullable_to_non_nullable
@@ -1217,7 +1223,9 @@ as List<QuizAnswerView>,completed: null == completed ? _self.completed : complet
 as bool,score: freezed == score ? _self.score : score // ignore: cast_nullable_to_non_nullable
 as QuizScore?,finishBonus: freezed == finishBonus ? _self.finishBonus : finishBonus // ignore: cast_nullable_to_non_nullable
 as FinishBonus?,scoringPaused: null == scoringPaused ? _self.scoringPaused : scoringPaused // ignore: cast_nullable_to_non_nullable
-as bool,
+as bool,dayKey: freezed == dayKey ? _self.dayKey : dayKey // ignore: cast_nullable_to_non_nullable
+as String?,skippedParts: null == skippedParts ? _self.skippedParts : skippedParts // ignore: cast_nullable_to_non_nullable
+as List<int>,
   ));
 }
 /// Create a copy of TodayQuiz
@@ -1326,10 +1334,10 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function(@JsonKey(unknownEnumValue: QuizStatus.noQuizToday)  QuizStatus status, @JsonKey(unknownEnumValue: JsonKey.nullForUndefinedEnumValue)  QuizReason? reason,  String? contestId,  int? day,  String? band,  bool bandLocked,  bool? tomorrow,  bool? started,  int ownQuestions,  List<PublicQuizItem> questions,  List<QuizAnswerView> answered,  bool completed,  QuizScore? score,  FinishBonus? finishBonus,  bool scoringPaused)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function(@JsonKey(unknownEnumValue: QuizStatus.noQuizToday)  QuizStatus status, @JsonKey(unknownEnumValue: JsonKey.nullForUndefinedEnumValue)  QuizReason? reason,  String? contestId,  int? day,  String? band,  bool bandLocked,  bool? tomorrow,  bool? started,  int ownQuestions,  List<PublicQuizItem> questions,  List<QuizAnswerView> answered,  bool completed,  QuizScore? score,  FinishBonus? finishBonus,  bool scoringPaused,  String? dayKey,  List<int> skippedParts)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _TodayQuiz() when $default != null:
-return $default(_that.status,_that.reason,_that.contestId,_that.day,_that.band,_that.bandLocked,_that.tomorrow,_that.started,_that.ownQuestions,_that.questions,_that.answered,_that.completed,_that.score,_that.finishBonus,_that.scoringPaused);case _:
+return $default(_that.status,_that.reason,_that.contestId,_that.day,_that.band,_that.bandLocked,_that.tomorrow,_that.started,_that.ownQuestions,_that.questions,_that.answered,_that.completed,_that.score,_that.finishBonus,_that.scoringPaused,_that.dayKey,_that.skippedParts);case _:
   return orElse();
 
 }
@@ -1347,10 +1355,10 @@ return $default(_that.status,_that.reason,_that.contestId,_that.day,_that.band,_
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function(@JsonKey(unknownEnumValue: QuizStatus.noQuizToday)  QuizStatus status, @JsonKey(unknownEnumValue: JsonKey.nullForUndefinedEnumValue)  QuizReason? reason,  String? contestId,  int? day,  String? band,  bool bandLocked,  bool? tomorrow,  bool? started,  int ownQuestions,  List<PublicQuizItem> questions,  List<QuizAnswerView> answered,  bool completed,  QuizScore? score,  FinishBonus? finishBonus,  bool scoringPaused)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function(@JsonKey(unknownEnumValue: QuizStatus.noQuizToday)  QuizStatus status, @JsonKey(unknownEnumValue: JsonKey.nullForUndefinedEnumValue)  QuizReason? reason,  String? contestId,  int? day,  String? band,  bool bandLocked,  bool? tomorrow,  bool? started,  int ownQuestions,  List<PublicQuizItem> questions,  List<QuizAnswerView> answered,  bool completed,  QuizScore? score,  FinishBonus? finishBonus,  bool scoringPaused,  String? dayKey,  List<int> skippedParts)  $default,) {final _that = this;
 switch (_that) {
 case _TodayQuiz():
-return $default(_that.status,_that.reason,_that.contestId,_that.day,_that.band,_that.bandLocked,_that.tomorrow,_that.started,_that.ownQuestions,_that.questions,_that.answered,_that.completed,_that.score,_that.finishBonus,_that.scoringPaused);case _:
+return $default(_that.status,_that.reason,_that.contestId,_that.day,_that.band,_that.bandLocked,_that.tomorrow,_that.started,_that.ownQuestions,_that.questions,_that.answered,_that.completed,_that.score,_that.finishBonus,_that.scoringPaused,_that.dayKey,_that.skippedParts);case _:
   throw StateError('Unexpected subclass');
 
 }
@@ -1367,10 +1375,10 @@ return $default(_that.status,_that.reason,_that.contestId,_that.day,_that.band,_
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function(@JsonKey(unknownEnumValue: QuizStatus.noQuizToday)  QuizStatus status, @JsonKey(unknownEnumValue: JsonKey.nullForUndefinedEnumValue)  QuizReason? reason,  String? contestId,  int? day,  String? band,  bool bandLocked,  bool? tomorrow,  bool? started,  int ownQuestions,  List<PublicQuizItem> questions,  List<QuizAnswerView> answered,  bool completed,  QuizScore? score,  FinishBonus? finishBonus,  bool scoringPaused)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function(@JsonKey(unknownEnumValue: QuizStatus.noQuizToday)  QuizStatus status, @JsonKey(unknownEnumValue: JsonKey.nullForUndefinedEnumValue)  QuizReason? reason,  String? contestId,  int? day,  String? band,  bool bandLocked,  bool? tomorrow,  bool? started,  int ownQuestions,  List<PublicQuizItem> questions,  List<QuizAnswerView> answered,  bool completed,  QuizScore? score,  FinishBonus? finishBonus,  bool scoringPaused,  String? dayKey,  List<int> skippedParts)?  $default,) {final _that = this;
 switch (_that) {
 case _TodayQuiz() when $default != null:
-return $default(_that.status,_that.reason,_that.contestId,_that.day,_that.band,_that.bandLocked,_that.tomorrow,_that.started,_that.ownQuestions,_that.questions,_that.answered,_that.completed,_that.score,_that.finishBonus,_that.scoringPaused);case _:
+return $default(_that.status,_that.reason,_that.contestId,_that.day,_that.band,_that.bandLocked,_that.tomorrow,_that.started,_that.ownQuestions,_that.questions,_that.answered,_that.completed,_that.score,_that.finishBonus,_that.scoringPaused,_that.dayKey,_that.skippedParts);case _:
   return null;
 
 }
@@ -1382,7 +1390,7 @@ return $default(_that.status,_that.reason,_that.contestId,_that.day,_that.band,_
 @JsonSerializable()
 
 class _TodayQuiz extends TodayQuiz {
-  const _TodayQuiz({@JsonKey(unknownEnumValue: QuizStatus.noQuizToday) this.status = QuizStatus.noQuizToday, @JsonKey(unknownEnumValue: JsonKey.nullForUndefinedEnumValue) this.reason, this.contestId, this.day, this.band, this.bandLocked = false, this.tomorrow, this.started, this.ownQuestions = 0, final  List<PublicQuizItem> questions = const <PublicQuizItem>[], final  List<QuizAnswerView> answered = const <QuizAnswerView>[], this.completed = false, this.score, this.finishBonus, this.scoringPaused = false}): _questions = questions,_answered = answered,super._();
+  const _TodayQuiz({@JsonKey(unknownEnumValue: QuizStatus.noQuizToday) this.status = QuizStatus.noQuizToday, @JsonKey(unknownEnumValue: JsonKey.nullForUndefinedEnumValue) this.reason, this.contestId, this.day, this.band, this.bandLocked = false, this.tomorrow, this.started, this.ownQuestions = 0, final  List<PublicQuizItem> questions = const <PublicQuizItem>[], final  List<QuizAnswerView> answered = const <QuizAnswerView>[], this.completed = false, this.score, this.finishBonus, this.scoringPaused = false, this.dayKey, final  List<int> skippedParts = const <int>[]}): _questions = questions,_answered = answered,_skippedParts = skippedParts,super._();
   factory _TodayQuiz.fromJson(Map<String, dynamic> json) => _$TodayQuizFromJson(json);
 
 @override@JsonKey(unknownEnumValue: QuizStatus.noQuizToday) final  QuizStatus status;
@@ -1430,6 +1438,22 @@ class _TodayQuiz extends TodayQuiz {
 /// An answer given NOW earns nothing, ever. Says nothing about answers
 /// already given — each carries what the ledger paid it.
 @override@JsonKey() final  bool scoringPaused;
+/// Today's contest day key (`YYYY-MM-DD`, the contest's timezone), sent
+/// only while `ready`: a lesson part's node id — what Skip is keyed on —
+/// is `<dayKey>:lesson:<k>`. Null from a server before Skip, and then the
+/// player offers no "Skip this part".
+@override final  String? dayKey;
+/// Lesson parts (1-based, sorted) skipped today. Each stays open beside
+/// the next part until the day ends.
+ final  List<int> _skippedParts;
+/// Lesson parts (1-based, sorted) skipped today. Each stays open beside
+/// the next part until the day ends.
+@override@JsonKey() List<int> get skippedParts {
+  if (_skippedParts is EqualUnmodifiableListView) return _skippedParts;
+  // ignore: implicit_dynamic_type
+  return EqualUnmodifiableListView(_skippedParts);
+}
+
 
 /// Create a copy of TodayQuiz
 /// with the given fields replaced by the non-null parameter values.
@@ -1444,16 +1468,16 @@ Map<String, dynamic> toJson() {
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is _TodayQuiz&&(identical(other.status, status) || other.status == status)&&(identical(other.reason, reason) || other.reason == reason)&&(identical(other.contestId, contestId) || other.contestId == contestId)&&(identical(other.day, day) || other.day == day)&&(identical(other.band, band) || other.band == band)&&(identical(other.bandLocked, bandLocked) || other.bandLocked == bandLocked)&&(identical(other.tomorrow, tomorrow) || other.tomorrow == tomorrow)&&(identical(other.started, started) || other.started == started)&&(identical(other.ownQuestions, ownQuestions) || other.ownQuestions == ownQuestions)&&const DeepCollectionEquality().equals(other._questions, _questions)&&const DeepCollectionEquality().equals(other._answered, _answered)&&(identical(other.completed, completed) || other.completed == completed)&&(identical(other.score, score) || other.score == score)&&(identical(other.finishBonus, finishBonus) || other.finishBonus == finishBonus)&&(identical(other.scoringPaused, scoringPaused) || other.scoringPaused == scoringPaused));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is _TodayQuiz&&(identical(other.status, status) || other.status == status)&&(identical(other.reason, reason) || other.reason == reason)&&(identical(other.contestId, contestId) || other.contestId == contestId)&&(identical(other.day, day) || other.day == day)&&(identical(other.band, band) || other.band == band)&&(identical(other.bandLocked, bandLocked) || other.bandLocked == bandLocked)&&(identical(other.tomorrow, tomorrow) || other.tomorrow == tomorrow)&&(identical(other.started, started) || other.started == started)&&(identical(other.ownQuestions, ownQuestions) || other.ownQuestions == ownQuestions)&&const DeepCollectionEquality().equals(other._questions, _questions)&&const DeepCollectionEquality().equals(other._answered, _answered)&&(identical(other.completed, completed) || other.completed == completed)&&(identical(other.score, score) || other.score == score)&&(identical(other.finishBonus, finishBonus) || other.finishBonus == finishBonus)&&(identical(other.scoringPaused, scoringPaused) || other.scoringPaused == scoringPaused)&&(identical(other.dayKey, dayKey) || other.dayKey == dayKey)&&const DeepCollectionEquality().equals(other._skippedParts, _skippedParts));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
-int get hashCode => Object.hash(runtimeType,status,reason,contestId,day,band,bandLocked,tomorrow,started,ownQuestions,const DeepCollectionEquality().hash(_questions),const DeepCollectionEquality().hash(_answered),completed,score,finishBonus,scoringPaused);
+int get hashCode => Object.hash(runtimeType,status,reason,contestId,day,band,bandLocked,tomorrow,started,ownQuestions,const DeepCollectionEquality().hash(_questions),const DeepCollectionEquality().hash(_answered),completed,score,finishBonus,scoringPaused,dayKey,const DeepCollectionEquality().hash(_skippedParts));
 
 @override
 String toString() {
-  return 'TodayQuiz(status: $status, reason: $reason, contestId: $contestId, day: $day, band: $band, bandLocked: $bandLocked, tomorrow: $tomorrow, started: $started, ownQuestions: $ownQuestions, questions: $questions, answered: $answered, completed: $completed, score: $score, finishBonus: $finishBonus, scoringPaused: $scoringPaused)';
+  return 'TodayQuiz(status: $status, reason: $reason, contestId: $contestId, day: $day, band: $band, bandLocked: $bandLocked, tomorrow: $tomorrow, started: $started, ownQuestions: $ownQuestions, questions: $questions, answered: $answered, completed: $completed, score: $score, finishBonus: $finishBonus, scoringPaused: $scoringPaused, dayKey: $dayKey, skippedParts: $skippedParts)';
 }
 
 
@@ -1464,7 +1488,7 @@ abstract mixin class _$TodayQuizCopyWith<$Res> implements $TodayQuizCopyWith<$Re
   factory _$TodayQuizCopyWith(_TodayQuiz value, $Res Function(_TodayQuiz) _then) = __$TodayQuizCopyWithImpl;
 @override @useResult
 $Res call({
-@JsonKey(unknownEnumValue: QuizStatus.noQuizToday) QuizStatus status,@JsonKey(unknownEnumValue: JsonKey.nullForUndefinedEnumValue) QuizReason? reason, String? contestId, int? day, String? band, bool bandLocked, bool? tomorrow, bool? started, int ownQuestions, List<PublicQuizItem> questions, List<QuizAnswerView> answered, bool completed, QuizScore? score, FinishBonus? finishBonus, bool scoringPaused
+@JsonKey(unknownEnumValue: QuizStatus.noQuizToday) QuizStatus status,@JsonKey(unknownEnumValue: JsonKey.nullForUndefinedEnumValue) QuizReason? reason, String? contestId, int? day, String? band, bool bandLocked, bool? tomorrow, bool? started, int ownQuestions, List<PublicQuizItem> questions, List<QuizAnswerView> answered, bool completed, QuizScore? score, FinishBonus? finishBonus, bool scoringPaused, String? dayKey, List<int> skippedParts
 });
 
 
@@ -1481,7 +1505,7 @@ class __$TodayQuizCopyWithImpl<$Res>
 
 /// Create a copy of TodayQuiz
 /// with the given fields replaced by the non-null parameter values.
-@override @pragma('vm:prefer-inline') $Res call({Object? status = null,Object? reason = freezed,Object? contestId = freezed,Object? day = freezed,Object? band = freezed,Object? bandLocked = null,Object? tomorrow = freezed,Object? started = freezed,Object? ownQuestions = null,Object? questions = null,Object? answered = null,Object? completed = null,Object? score = freezed,Object? finishBonus = freezed,Object? scoringPaused = null,}) {
+@override @pragma('vm:prefer-inline') $Res call({Object? status = null,Object? reason = freezed,Object? contestId = freezed,Object? day = freezed,Object? band = freezed,Object? bandLocked = null,Object? tomorrow = freezed,Object? started = freezed,Object? ownQuestions = null,Object? questions = null,Object? answered = null,Object? completed = null,Object? score = freezed,Object? finishBonus = freezed,Object? scoringPaused = null,Object? dayKey = freezed,Object? skippedParts = null,}) {
   return _then(_TodayQuiz(
 status: null == status ? _self.status : status // ignore: cast_nullable_to_non_nullable
 as QuizStatus,reason: freezed == reason ? _self.reason : reason // ignore: cast_nullable_to_non_nullable
@@ -1498,7 +1522,9 @@ as List<QuizAnswerView>,completed: null == completed ? _self.completed : complet
 as bool,score: freezed == score ? _self.score : score // ignore: cast_nullable_to_non_nullable
 as QuizScore?,finishBonus: freezed == finishBonus ? _self.finishBonus : finishBonus // ignore: cast_nullable_to_non_nullable
 as FinishBonus?,scoringPaused: null == scoringPaused ? _self.scoringPaused : scoringPaused // ignore: cast_nullable_to_non_nullable
-as bool,
+as bool,dayKey: freezed == dayKey ? _self.dayKey : dayKey // ignore: cast_nullable_to_non_nullable
+as String?,skippedParts: null == skippedParts ? _self._skippedParts : skippedParts // ignore: cast_nullable_to_non_nullable
+as List<int>,
   ));
 }
 

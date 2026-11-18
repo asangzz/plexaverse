@@ -554,6 +554,160 @@ void main() {
       },
     );
 
+    test('a skip sends the node id as the path gave it', () async {
+      final (ApiContestRepository repo, _Canned wire) = _stack(
+        200,
+        _ok(<String, dynamic>{
+          'result': <String, dynamic>{
+            'nodeId': '2026-11-18:lesson:2',
+            'alreadySkipped': false,
+          },
+        }),
+      );
+      final SkipResult r = await repo.skipLevel('2026-11-18:lesson:2');
+      expect(r.nodeId, '2026-11-18:lesson:2');
+      expect(r.alreadySkipped, isFalse);
+      expect(wire.seen.single.method, 'POST');
+      expect(wire.seen.single.path, '/contest/skip');
+      expect(wire.seen.single.data, <String, dynamic>{
+        'nodeId': '2026-11-18:lesson:2',
+      });
+    });
+
+    test('a skip’s refusals map by code, the server’s sentence kept', () async {
+      final List<(String, String, int, TypeMatcher<ContestRefusal>)> cases =
+          <(String, String, int, TypeMatcher<ContestRefusal>)>[
+            (
+              'WRONG_DAY',
+              'That day is over. Reload the path for today’s.',
+              409,
+              isA<ContestWrongDay>(),
+            ),
+            (
+              'ALREADY_DONE',
+              'That level is already done.',
+              409,
+              isA<ContestAlreadyDone>(),
+            ),
+            (
+              'NOT_OPEN',
+              'Only the level you are on can be skipped.',
+              409,
+              isA<ContestNotOpen>(),
+            ),
+            (
+              'LOCKED',
+              'Finish or skip Lesson part 2 of 3 first.',
+              409,
+              isA<ContestLocked>(),
+            ),
+            (
+              'NOT_ENTERED',
+              'Join the contest to take part in its tasks.',
+              404,
+              isA<ContestNotEntered>(),
+            ),
+            (
+              'VALIDATION_FAILED',
+              'That level is not on today’s path.',
+              400,
+              isA<ContestInvalid>(),
+            ),
+          ];
+      for (final (
+            String code,
+            String message,
+            int status,
+            TypeMatcher<ContestRefusal> want,
+          )
+          in cases) {
+        final (ApiContestRepository repo, _) = _stack(
+          status,
+          _refusal(code, message),
+        );
+        final Object e = await _thrown(() => repo.skipLevel('x'));
+        expect(e, want, reason: code);
+        expect(contestMessage(e), message, reason: code);
+      }
+      final (ApiContestRepository repo, _) = _stack(
+        500,
+        _refusal('INTERNAL', 'Could not skip that level. Try again.'),
+      );
+      final Object e = await _thrown(() => repo.skipLevel('x'));
+      expect(e, isA<ContestUnavailable>());
+      expect(contestMessage(e), 'Could not skip that level. Try again.');
+    });
+
+    test('the consistency meter is read from {consistency}', () async {
+      final (ApiContestRepository repo, _Canned wire) = _stack(
+        200,
+        _ok(<String, dynamic>{
+          'consistency': <String, dynamic>{
+            'state': 'measuring',
+            'mode': 'shadow',
+            'threshold': 75,
+            'percent': 68,
+            'atOrAbove': false,
+            'earned': 1820,
+            'available': 2680,
+            'pending': 80,
+            'unaudited': 100,
+            'toLine': 190,
+            'countedDays': 12,
+            'window': <String, dynamic>{
+              'from': '2026-10-31T18:30:00.000Z',
+              'to': '2026-11-30T18:30:00.000Z',
+              'basis': 'calendar',
+              'estimated': false,
+            },
+            'today': <String, dynamic>{
+              'dayKey': '2026-11-18',
+              'earned': 60,
+              'available': 340,
+            },
+            'joined': true,
+            'scoringPaused': false,
+            'noContestRunning': false,
+            'days': <Map<String, dynamic>>[
+              <String, dynamic>{
+                'dayKey': '2026-11-18',
+                'available': 340,
+                'earned': 60,
+                'pending': 0,
+                'paused': false,
+                'today': true,
+              },
+            ],
+          },
+        }),
+      );
+      final ConsistencyView v = await repo.fetchConsistency();
+      expect(wire.seen.single.method, 'GET');
+      expect(wire.seen.single.path, '/contest/consistency');
+      expect(v.state, ConsistencyState.measuring);
+      expect(v.percent, 68);
+      expect(v.atOrAbove, isFalse);
+      expect(v.toLine, 190);
+      expect(v.window?.from, DateTime.utc(2026, 10, 31, 18, 30));
+      expect(v.today?.available, 340);
+      expect(v.days.single.today, isTrue);
+    });
+
+    test('a consistency read with no body, or a 500, is unavailable', () async {
+      final (ApiContestRepository empty, _) = _stack(
+        200,
+        _ok(<String, dynamic>{}),
+      );
+      expect(await _thrown(empty.fetchConsistency), isA<ContestUnavailable>());
+      final (ApiContestRepository failed, _) = _stack(
+        500,
+        _refusal('INTERNAL', 'Could not load your consistency.'),
+      );
+      final Object e = await _thrown(failed.fetchConsistency);
+      expect(e, isA<ContestUnavailable>());
+      expect(contestMessage(e), 'Could not load your consistency.');
+    });
+
     test('a screenshot over 8 MB is refused before a byte is sent', () async {
       final (ApiContestRepository repo, _Canned wire) = _stack(200, _ok(null));
       final Object e = await _thrown(

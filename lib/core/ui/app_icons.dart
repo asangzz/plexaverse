@@ -631,6 +631,14 @@ class AppIcons {
     fontPackage: _pkg,
   ); // fire
 
+  /// The consistency meter's figure in the stats bar — the web's
+  /// `GaugeIcon`.
+  static const IconData gauge = IconData(
+    0xf625,
+    fontFamily: _family,
+    fontPackage: _pkg,
+  ); // gaugeHigh
+
   /// A finalist's place on the board.
   static const IconData medal = IconData(
     0xf5a2,
@@ -762,6 +770,7 @@ class AppIcons {
     'quote': quote,
     'briefcase': briefcase,
     'fire': fire,
+    'gauge': gauge,
     'medal': medal,
     'userGroup': userGroup,
     'bullseye': bullseye,

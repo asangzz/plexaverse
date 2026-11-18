@@ -378,7 +378,7 @@ void main() {
       expect(find.text('Not open yet'), findsOneWidget);
       expect(
         find.text(
-          'Unlocks after Comment on a top voice. Levels open one after another — finish it first.',
+          'Unlocks after Comment on a top voice. Levels open one after another — finish or skip it first.',
         ),
         findsOneWidget,
       );

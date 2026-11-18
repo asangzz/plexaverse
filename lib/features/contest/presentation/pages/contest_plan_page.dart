@@ -10,6 +10,7 @@ import '../../application/plan_week_controllers.dart';
 import '../../domain/contest_repository.dart';
 import '../widgets/contest_kit.dart';
 import '../widgets/sheet/contest_sheet.dart';
+import '../widgets/skip_level.dart';
 
 /// `/contest/plan` — Sunday's level: plan this week, day by day. The web's
 /// `WeekPlanGuide`.
@@ -238,7 +239,7 @@ class _Completion extends ConsumerWidget {
     }
     if (view.status == PlanWeekStatus.locked) {
       return Text(
-        '${view.lockedDetail ?? 'Finish today’s earlier levels first'}. Plan '
+        '${view.lockedDetail ?? 'Finish or skip today’s earlier levels first'}. Plan '
         'the week now, and mark it planned once they are done.',
         style: line,
       );
@@ -272,6 +273,7 @@ class _Completion extends ConsumerWidget {
           SizedBox(height: ZaveSpace.md),
           SheetAlert(message: mark.error!, backToPath: mark.locked),
         ],
+        const ContestSkipLevel(kind: PathNodeKind.planWeek),
       ],
     );
   }

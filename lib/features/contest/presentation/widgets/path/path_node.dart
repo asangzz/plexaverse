@@ -1,4 +1,5 @@
 import 'dart:math' as math;
+import 'dart:ui' show PathMetric;
 
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -107,7 +108,9 @@ const BorderRadius _ellipse = BorderRadius.all(
 /// ## What the colour says
 ///
 /// See [_skinFor]. On top of it: an amber ring and dot while an admin has
-/// the level, a red ring when they sent it back or an audit removed it.
+/// the level, a red ring when they sent it back or an audit removed it, and
+/// for a level skipped today (still open) the kind's own skin with a dashed
+/// periwinkle ring, a dimmed icon and a skip badge.
 /// Colour is never the only signal — the label carries the state in words,
 /// and the card spells it out.
 ///
@@ -169,10 +172,11 @@ class PathNodeButton extends StatelessWidget {
       _ => null,
     };
 
+    final bool skipped = node.state == PathNodeState.skipped;
     final Widget face = isFinished(node.state)
         ? const Icon(AppIcons.check, size: 30, color: ContestColors.ink)
         : Opacity(
-            opacity: isDarkState(node.state) ? 0.4 : 1,
+            opacity: isDarkState(node.state) ? 0.4 : (skipped ? 0.6 : 1),
             child: Icon(
               contestKindIcon(node.kind),
               size: 28,
@@ -239,7 +243,38 @@ class PathNodeButton extends StatelessWidget {
                   ),
                 ),
               ),
+            if (skipped)
+              const Positioned(
+                left: -7,
+                top: -7,
+                right: -7,
+                bottom: -7,
+                child: CustomPaint(painter: _DashedRing()),
+              ),
             ZavePress(child: body),
+            if (skipped)
+              Positioned(
+                top: -4,
+                right: -4,
+                child: Container(
+                  width: 16,
+                  height: 16,
+                  alignment: Alignment.center,
+                  decoration: BoxDecoration(
+                    color: ContestColors.peri,
+                    shape: BoxShape.circle,
+                    border: Border.all(
+                      color: ContestColors.groundTop,
+                      width: 2,
+                    ),
+                  ),
+                  child: const Icon(
+                    AppIcons.skip,
+                    size: 9,
+                    color: ContestColors.groundTop,
+                  ),
+                ),
+              ),
             if (node.state == PathNodeState.pending)
               Positioned(
                 top: -4,
@@ -269,6 +304,35 @@ class PathNodeButton extends StatelessWidget {
       ),
     );
   }
+}
+
+/// The skipped level's ring: 3px, dashed, periwinkle at 75% — the web's
+/// `outline: 3px dashed rgba(174,180,255,0.75)` 4px off the node. A
+/// [BoxDecoration] has no dashes, so it is painted.
+class _DashedRing extends CustomPainter {
+  const _DashedRing();
+
+  static const Color _colour = Color(0xBFAEB4FF);
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final Paint stroke = Paint()
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 3
+      ..color = _colour;
+    final Rect oval = (Offset.zero & size).deflate(1.5);
+    final Path ring = Path()..addOval(oval);
+    const double dash = 7;
+    const double gap = 5;
+    for (final PathMetric m in ring.computeMetrics()) {
+      for (double d = 0; d < m.length; d += dash + gap) {
+        canvas.drawPath(m.extractPath(d, math.min(d + dash, m.length)), stroke);
+      }
+    }
+  }
+
+  @override
+  bool shouldRepaint(_DashedRing oldDelegate) => false;
 }
 
 /// "START", over the level to do now: a white bubble on its own ledge, with

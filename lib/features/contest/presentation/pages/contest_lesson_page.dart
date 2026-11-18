@@ -8,6 +8,7 @@ import '../../../plexa/presentation/widgets/plexa_moment.dart';
 import '../../../plexa/presentation/widgets/quiz_plexa.dart';
 import '../../application/contest_controllers.dart';
 import '../../application/lesson_controllers.dart';
+import '../../application/skip_controllers.dart';
 import '../../domain/contest_dates.dart';
 import '../../domain/contest_repository.dart';
 import '../../domain/contest_words.dart';
@@ -19,6 +20,7 @@ import '../widgets/lesson/lesson_score.dart';
 import '../widgets/lesson/lesson_shell.dart';
 import '../widgets/lesson/lesson_steps.dart';
 import '../widgets/lesson/lesson_summary.dart';
+import '../widgets/lesson/skipped_parts.dart';
 
 /// **Today's lesson** — the web's `/contest/lesson` (`ContestQuiz.tsx`).
 ///
@@ -33,7 +35,14 @@ import '../widgets/lesson/lesson_summary.dart';
 /// The outline while the lesson is opened; "Could not load today’s lesson";
 /// the status screens when there is nothing to answer (no contest, not
 /// joined, not started, ended, no lesson today); and, once there is a
-/// lesson: one question at a time, a checkpoint between parts, and the score.
+/// lesson: one question at a time, a checkpoint between parts, the parked
+/// screen when every part left is skipped, and the score.
+///
+/// ## `?part=k`
+///
+/// A skipped part's node opens `/contest/lesson?part=k` (17 Nov 2026): the
+/// visit starts on that part when it is open or skipped, else where a plain
+/// visit would.
 ///
 /// ## No Zave header
 ///
@@ -42,11 +51,33 @@ import '../widgets/lesson/lesson_summary.dart';
 /// contest" or its white pill. A `ZaveScaffold` would add a back arrow over
 /// both — two ways out stacked — so the page paints the contest's ground on
 /// a bare `Scaffold`, as the Plexa journey does for its own top row.
-class ContestLessonPage extends ConsumerWidget {
-  const ContestLessonPage({super.key});
+class ContestLessonPage extends ConsumerStatefulWidget {
+  const ContestLessonPage({this.part, super.key});
+
+  /// The part asked for, 1-based — `?part=k`. Null for a plain visit.
+  final int? part;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<ContestLessonPage> createState() => _ContestLessonPageState();
+}
+
+class _ContestLessonPageState extends ConsumerState<ContestLessonPage> {
+  @override
+  void initState() {
+    super.initState();
+    ref.read(lessonRunProvider.notifier).request(widget.part);
+  }
+
+  @override
+  void didUpdateWidget(ContestLessonPage old) {
+    super.didUpdateWidget(old);
+    if (old.part != widget.part) {
+      ref.read(lessonRunProvider.notifier).request(widget.part);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
     // The standing and the path re-read when the app comes back — the score
     // and its next level read both.
     ref.watch(contestResumeRefreshProvider);
@@ -74,11 +105,13 @@ class ContestLessonPage extends ConsumerWidget {
           run: run,
           onGo: (int i) => actions.go(AtQuestion(i)),
         ),
+        AtParked() => _Parked(run: run, actions: actions),
         AtQuestion(:final int index) => _Player(
           run: run,
           index: index,
           actions: actions,
           onQuit: quit,
+          cooling: ref.watch(skipCooldownProvider),
         ),
       };
     }
@@ -96,6 +129,7 @@ class _Player extends StatelessWidget {
     required this.index,
     required this.actions,
     required this.onQuit,
+    required this.cooling,
   });
 
   final LessonRunState run;
@@ -103,11 +137,31 @@ class _Player extends StatelessWidget {
   final LessonRun actions;
   final VoidCallback onQuit;
 
+  /// The shared double-tap guard is cooling down after a skip.
+  final bool cooling;
+
   @override
   Widget build(BuildContext context) {
     final LessonPart? checkpoint = run.shownCheckpoint;
     final List<PublicQuizItem> questions = run.questions;
     final List<LessonPart> parts = lessonPartBounds(questions.length);
+    final bool canSkip =
+        run.quiz?.dayKey != null && !cooling && run.work == null;
+
+    Future<void> skip(int k) async {
+      final String? route = await actions.skipPart(k);
+      if (route != null && context.mounted) context.go(route);
+    }
+
+    // "Skip this part": only on the open part, before the question is
+    // answered, with nothing in flight, and not just after a skip.
+    final LessonPartView? here = run.partAt(index);
+    final bool skipHere =
+        canSkip &&
+        checkpoint == null &&
+        here != null &&
+        here.state == LessonPartState.today &&
+        !run.answers.containsKey(questions[index].id);
 
     // Not keyed per question — see [LessonQuestion].
     final Widget question = LessonQuestion(
@@ -118,8 +172,12 @@ class _Player extends StatelessWidget {
       onNext: actions.next,
       onGo: (int i) => actions.go(AtQuestion(i)),
       onQuit: onQuit,
+      onSkipPart: skipHere ? () => skip(here.index + 1) : null,
     );
     if (checkpoint == null) return question;
+    final bool nextOpen =
+        checkpoint.index + 1 < run.partStates.length &&
+        run.partStates[checkpoint.index + 1].state == LessonPartState.today;
 
     return Stack(
       children: <Widget>[
@@ -141,6 +199,10 @@ class _Player extends StatelessWidget {
             progress: questions.isEmpty ? 0 : checkpoint.end / questions.length,
             onContinue: actions.next,
             onQuit: onQuit,
+            onSkipNext: canSkip && nextOpen
+                ? () => skip(checkpoint.index + 2)
+                : null,
+            skipping: run.work == LessonWork.skipping,
           ),
         ),
       ],
@@ -199,7 +261,7 @@ class _Score extends StatelessWidget {
           questions: questions,
           answers: run.answers,
           at: run.at,
-          firstUnanswered: run.firstUnanswered,
+          isReachable: run.isReachable,
           locked: run.isBusy,
           onGo: onGo,
         ),
@@ -212,6 +274,46 @@ class _Score extends StatelessWidget {
             for (final LessonLearnt l in learnt) l.answer,
           ],
           learnt: learnt,
+        ),
+      ],
+    );
+  }
+}
+
+/// Every part left is skipped and none was asked for: what is still open,
+/// each skipped part, and the next level.
+class _Parked extends StatelessWidget {
+  const _Parked({required this.run, required this.actions});
+
+  final LessonRunState run;
+  final LessonRun actions;
+
+  @override
+  Widget build(BuildContext context) {
+    final List<int> skipped = <int>[
+      for (final LessonPartView p in run.partStates)
+        if (p.state == LessonPartState.skipped) p.index + 1,
+    ];
+    return _Page(
+      children: <Widget>[
+        const Align(alignment: Alignment.centerLeft, child: BackToPath()),
+        SizedBox(height: ZaveSpace.lg),
+        LessonSteps(
+          questions: run.questions,
+          answers: run.answers,
+          at: run.at,
+          isReachable: run.isReachable,
+          locked: run.isBusy,
+          onGo: (int i) => actions.go(AtQuestion(i)),
+        ),
+        SizedBox(height: ZaveSpace.xl),
+        SkippedPartsView(
+          parts: skipped,
+          onDo: (int k) {
+            if (k < 1 || k > run.partStates.length) return;
+            final int? i = run.firstOpenIn(run.partStates[k - 1]);
+            if (i != null) actions.go(AtQuestion(i));
+          },
         ),
       ],
     );

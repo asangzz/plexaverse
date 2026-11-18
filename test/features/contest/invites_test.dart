@@ -233,7 +233,7 @@ void main() {
       expect(
         find.text(
           'Unlocks after Post 5 valuable comments. Levels open one after '
-          'another — finish it first.',
+          'another — finish or skip it first.',
         ),
         findsOneWidget,
       );

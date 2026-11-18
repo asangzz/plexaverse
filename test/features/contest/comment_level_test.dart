@@ -556,7 +556,7 @@ void main() {
       expect(find.text('Not open yet'), findsOneWidget);
       expect(
         find.text(
-          'Unlocks after Lesson part 3 of 3. Levels open one after another — finish it first.',
+          'Unlocks after Lesson part 3 of 3. Levels open one after another — finish or skip it first.',
         ),
         findsOneWidget,
       );

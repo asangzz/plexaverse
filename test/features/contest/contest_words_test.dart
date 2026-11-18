@@ -47,6 +47,17 @@ void main() {
       expect(stateWord(PathNodeState.rejected), 'Rejected');
       expect(stateWord(PathNodeState.revoked), 'Removed after review');
       expect(stateWord(PathNodeState.unavailable), 'Nothing to do today');
+      expect(stateWord(PathNodeState.skipped), 'Skipped, still open today');
+    });
+
+    test('Skip’s words are the web’s', () {
+      expect(kSkipLabel, 'Skip this level');
+      expect(kSkipPartLabel, 'Skip this part');
+      expect(
+        kSkipNote,
+        'It stays open until the day ends. Its XP counts only if you come '
+        'back to it.',
+      );
     });
 
     test('every kind has its kicker', () {
@@ -95,6 +106,26 @@ void main() {
       expect(
         actionWord(_task(PathNodeKind.comment, points: 1500)),
         'Start +1,500 XP',
+      );
+      // A skipped level is still open: Start, or Continue once part done.
+      expect(
+        actionWord(_task(PathNodeKind.comment, state: PathNodeState.skipped)),
+        'Start +40 XP',
+      );
+      expect(
+        actionWord(
+          _task(
+            PathNodeKind.feedComments,
+            state: PathNodeState.skipped,
+            started: true,
+            points: 60,
+          ),
+        ),
+        'Continue +60 XP',
+      );
+      expect(
+        canOpen(_task(PathNodeKind.comment, state: PathNodeState.skipped)),
+        isTrue,
       );
     });
 
@@ -159,6 +190,43 @@ void main() {
       expect(currentNodeId(<PathDay>[_week[0]]), isNull);
     });
 
+    test('START falls back to the first skipped level once nothing else is '
+        'open', () {
+      // An open level beats a skipped one before it.
+      final List<PathDay> withOpen = <PathDay>[
+        _today(<PathNode>[
+          _lesson(1, PathNodeState.done),
+          _lesson(2, PathNodeState.skipped),
+          _lesson(3, PathNodeState.today),
+        ]),
+      ];
+      expect(currentNodeId(withOpen), '2026-11-11:lesson:3');
+      expect(openLevelOf(withOpen)!.id, '2026-11-11:lesson:3');
+      // Nothing open: START goes back to the first skipped — but the open
+      // level a skip leads to is none.
+      final List<PathDay> allSkipped = <PathDay>[
+        _today(<PathNode>[
+          _lesson(1, PathNodeState.done),
+          _lesson(2, PathNodeState.skipped),
+          _lesson(3, PathNodeState.done),
+          _task(PathNodeKind.comment, state: PathNodeState.skipped),
+        ]),
+      ];
+      expect(currentNodeId(allSkipped), '2026-11-11:lesson:2');
+      expect(openLevelOf(allSkipped), isNull);
+      // Sunday's late node, open after skipped levels, wins over them.
+      final List<PathDay> late = <PathDay>[
+        _today(<PathNode>[
+          _task(PathNodeKind.comment, state: PathNodeState.skipped),
+          _task(PathNodeKind.planWeek, state: PathNodeState.done, points: 0),
+          _task(PathNodeKind.video),
+        ]),
+      ];
+      expect(currentNodeId(late), '2026-11-11:video');
+      expect(openLevelOf(late)!.id, '2026-11-11:video');
+      expect(openLevelOf(<PathDay>[_week[0]]), isNull);
+    });
+
     test('the day divider counts the day, never the length', () {
       expect(dayLabel(_week[1]), 'Wed · Day 17 · Today');
       expect(dayLabel(_week[0]), 'Mon · Day 15');
@@ -175,7 +243,9 @@ void main() {
       expect(windAt(-1), -0.7);
     });
 
-    test('the lesson is done when its LAST part is', () {
+    // Was "the lesson is done when its LAST part is": a part can be skipped
+    // now (17 Nov 2026), so the last can be done before an earlier one.
+    test('the lesson is done when EVERY part is', () {
       expect(isLessonDone(_week[1]), isFalse);
       expect(
         isLessonDone(
@@ -185,6 +255,17 @@ void main() {
           ]),
         ),
         isTrue,
+      );
+      // The old rule called this done.
+      expect(
+        isLessonDone(
+          _today(<PathNode>[
+            _lesson(1, PathNodeState.done),
+            _lesson(2, PathNodeState.skipped),
+            _lesson(3, PathNodeState.done),
+          ]),
+        ),
+        isFalse,
       );
       expect(isLessonDone(null), isFalse);
       expect(lessonPartsOf(_week[1]), hasLength(3));
@@ -206,6 +287,27 @@ void main() {
       expect(
         partProgress(_task(PathNodeKind.comment), answered: 4, total: 10),
         0,
+      );
+    });
+
+    test('with WHICH questions are answered, a part counts its own', () {
+      // 15 → 5/5/5. Part 2 skipped with two answered, part 3 one answered:
+      // a count of 3 would read part 2 as nothing and part 3 as nothing.
+      final PathNode two = _lesson(2, PathNodeState.skipped, start: 5, end: 10);
+      final PathNode three = _lesson(
+        3,
+        PathNodeState.today,
+        start: 10,
+        end: 15,
+      );
+      final Set<int> which = <int>{0, 1, 2, 3, 4, 5, 6, 10};
+      expect(
+        partProgress(two, answered: 8, total: 15, answeredIndexes: which),
+        0.4,
+      );
+      expect(
+        partProgress(three, answered: 8, total: 15, answeredIndexes: which),
+        0.2,
       );
     });
   });
@@ -428,6 +530,18 @@ void main() {
         );
       }
       expect(contestLevelRoute(_task(PathNodeKind.unknown)), isNull);
+    });
+
+    test('a skipped lesson part opens on itself', () {
+      final PathNode two = _lesson(
+        2,
+        PathNodeState.skipped,
+      ).copyWith(href: '/contest/lesson?part=2');
+      expect(contestLevelRoute(two), '${ZaveRoutes.contestLesson}?part=2');
+      expect(
+        contestLevelRoute(_lesson(3, PathNodeState.today)),
+        ZaveRoutes.contestLesson,
+      );
     });
 
     test('the next level after a finished one, or back to the path', () {

@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/misc.dart' show Override;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:plexaverse/features/contest/application/contest_controllers.dart';
 import 'package:plexaverse/features/contest/application/lesson_controllers.dart';
+import 'package:plexaverse/features/contest/application/skip_controllers.dart';
 import 'package:plexaverse/features/contest/data/contest_repositories.dart';
 import 'package:plexaverse/features/contest/domain/contest_repository.dart';
 import 'package:plexaverse/features/contest/domain/lesson_parts.dart';
@@ -16,8 +17,9 @@ import 'package:plexaverse/features/contest/domain/lesson_parts.dart';
 /// a way the player has to answer correctly:
 ///   * an answer that lands before the open fixes the day to the set
 ///     questions for good, and the server will happily take it;
-///   * the server takes any unanswered question, but the path's parts count
-///     answers as filling the day in order;
+///   * within a part the questions are answered in order, and a part the
+///     learner skipped stays open beside the next (the server refuses a
+///     locked part with LOCKED);
 ///   * a replay is the RECORDED answer, which may not be the pick;
 ///   * STALE_QUIZ and NOT_TODAY are both "the questions on screen are not
 ///     today's any more", and each has its own cure.
@@ -142,7 +144,10 @@ void main() {
   });
 
   group('answering', () {
-    test('strictly in order: only the first unanswered question, as its '
+    // Restated for Skip (17 Nov 2026): "the first unanswered question" is
+    // now "the next to answer in a part that is open or skipped". With no
+    // part skipped the two are the same question, so the expectations hold.
+    test('in order within a part: only its next question to answer, as its '
         'option TEXT, with the day it was loaded for', () async {
       // Questions 1 and 3 were answered on another device — out of order.
       final _Server server = _Server()
@@ -153,6 +158,7 @@ void main() {
 
       expect(c.read(lessonRunProvider).firstUnanswered, 1);
       expect(c.read(lessonRunProvider).at, const AtQuestion(1));
+      expect(c.read(lessonRunProvider).isReachable(3), isFalse);
 
       // A question not reached yet does not open.
       run.go(const AtQuestion(3));
@@ -303,6 +309,137 @@ void main() {
     });
   });
 
+  group('skipped parts', () {
+    test('a skipped part opens beside the open one, each at its next '
+        'question to answer', () async {
+      final _Server server = _Server()
+        ..dayKey = '2026-11-11'
+        ..skipped.add(1);
+      final ProviderContainer c = await _opened(server);
+      final LessonRunState s = c.read(lessonRunProvider);
+
+      // A plain visit opens on the open part, not the skipped one.
+      expect(s.at, const AtQuestion(5));
+      expect(s.isReachable(0), isTrue);
+      expect(s.isReachable(1), isFalse);
+      expect(s.isReachable(5), isTrue);
+      expect(s.isReachable(6), isFalse);
+      expect(s.isReachable(10), isFalse);
+
+      final LessonRun run = c.read(lessonRunProvider.notifier);
+      run.go(const AtQuestion(0));
+      expect(c.read(lessonRunProvider).at, const AtQuestion(0));
+      await run.answer('b0');
+      expect(server.answers, <String>['11:qz-b1-1=b0']);
+    });
+
+    test('?part=k opens that part when it is skipped', () async {
+      final _Server server = _Server()
+        ..dayKey = '2026-11-11'
+        ..skipped.add(1);
+      final ProviderContainer c = _container(server);
+      c.listen(lessonRunProvider, (_, _) {});
+      c.read(lessonRunProvider.notifier).request(1);
+      await pumpEventQueue();
+      expect(c.read(lessonRunProvider).at, const AtQuestion(0));
+      // A part that is neither open nor skipped is not opened for asking.
+      c.read(lessonRunProvider.notifier).request(3);
+      await pumpEventQueue();
+      expect(c.read(lessonRunProvider).at, const AtQuestion(5));
+    });
+
+    test('skipping the open part opens the next, and the guard holds the '
+        'next Skip back', () async {
+      final _Server server = _Server()..dayKey = '2026-11-11';
+      final ProviderContainer c = await _opened(server);
+      final LessonRun run = c.read(lessonRunProvider.notifier);
+
+      expect(await run.skipPart(1), isNull);
+      expect(server.calls, contains('skip:2026-11-11:lesson:1'));
+      final LessonRunState s = c.read(lessonRunProvider);
+      expect(s.quiz!.skippedParts, <int>[1]);
+      expect(s.at, const AtQuestion(5));
+      expect(s.work, isNull);
+      expect(c.read(skipCooldownProvider), isTrue);
+
+      // Within the guard's window a second Skip sends nothing.
+      expect(await run.skipPart(2), isNull);
+      expect(
+        server.calls.where((String x) => x.startsWith('skip:')),
+        hasLength(1),
+      );
+    });
+
+    test(
+      'no part left to open: on to the path’s next level, else parked',
+      () async {
+        final _Server server = _Server()
+          ..dayKey = '2026-11-11'
+          ..skipped.addAll(<int>[1, 2])
+          ..path = _pathWithOpen(PathNodeKind.comment);
+        final ProviderContainer c = await _opened(server);
+        expect(
+          await c.read(lessonRunProvider.notifier).skipPart(3),
+          '/contest/comment',
+        );
+
+        final _Server alone = _Server()
+          ..dayKey = '2026-11-11'
+          ..skipped.addAll(<int>[1, 2]);
+        final ProviderContainer d = await _opened(alone);
+        expect(await d.read(lessonRunProvider.notifier).skipPart(3), isNull);
+        expect(d.read(lessonRunProvider).at, const AtParked());
+      },
+    );
+
+    test('a refused skip is said under the question on screen', () async {
+      final _Server server = _Server()
+        ..dayKey = '2026-11-11'
+        ..refuseSkip = const ContestWrongDay(
+          'That day is over. Reload the path for today’s.',
+        );
+      final ProviderContainer c = await _opened(server);
+      await c.read(lessonRunProvider.notifier).skipPart(1);
+      final LessonRunState s = c.read(lessonRunProvider);
+      expect(
+        s.problemFor('qz-b1-1'),
+        'That day is over. Reload the path for today’s.',
+      );
+      expect(s.work, isNull);
+      expect(c.read(skipCooldownProvider), isFalse);
+    });
+
+    test(
+      'no day key, no Skip: a server before Skip is never sent one',
+      () async {
+        final _Server server = _Server();
+        final ProviderContainer c = await _opened(server);
+        expect(await c.read(lessonRunProvider.notifier).skipPart(1), isNull);
+        expect(
+          server.calls.where((String x) => x.startsWith('skip:')),
+          isEmpty,
+        );
+      },
+    );
+
+    // LOCKED is not "any other refusal": it means another device moved the
+    // parts on, and the visit reopens where they now say — no problem line.
+    test('LOCKED drops the pin and re-reads, with no line under the '
+        'question', () async {
+      final _Server server = _Server()
+        ..refuseAnswer = const ContestLocked(
+          'Finish or skip Lesson part 1 of 3 first.',
+        );
+      final ProviderContainer c = await _opened(server);
+      await c.read(lessonRunProvider.notifier).answer('b0');
+      final LessonRunState s = c.read(lessonRunProvider);
+      expect(s.problem, isNull);
+      expect(s.pin, isNull);
+      expect(s.work, isNull);
+      expect(server.calls.last, 'read');
+    });
+  });
+
   group('checkpoints', () {
     test('after the last question of a part answered on this visit', () async {
       final _Server server = _Server();
@@ -326,6 +463,24 @@ void main() {
       run.next();
       expect(c.read(lessonRunProvider).shownCheckpoint, isNull);
       expect(c.read(lessonRunProvider).at, const AtQuestion(5));
+    });
+
+    test('not when the next part is skipped: on to the open part', () async {
+      final _Server server = _Server()
+        ..dayKey = '2026-11-11'
+        ..skipped.add(2);
+      for (int i = 0; i < 4; i++) {
+        server.record('qz-b1-${i + 1}', 'b$i');
+      }
+      final ProviderContainer c = await _opened(server);
+      final LessonRun run = c.read(lessonRunProvider.notifier);
+      expect(c.read(lessonRunProvider).at, const AtQuestion(4));
+
+      await run.answer('b4');
+      await pumpEventQueue();
+      run.next();
+      expect(c.read(lessonRunProvider).shownCheckpoint, isNull);
+      expect(c.read(lessonRunProvider).at, const AtQuestion(10));
     });
 
     test('not for a part finished on an earlier visit', () async {
@@ -454,6 +609,33 @@ void main() {
   });
 }
 
+/// A running path whose today has [kind] open after the lesson.
+ContestPath _pathWithOpen(PathNodeKind kind) => ContestPath(
+  status: ContestPathStatus.running,
+  days: <PathDay>[
+    PathDay(
+      dayKey: '2026-11-11',
+      weekday: 3,
+      isToday: true,
+      nodes: <PathNode>[
+        const PathNode(
+          id: '2026-11-11:lesson:3',
+          kind: PathNodeKind.lesson,
+          state: PathNodeState.skipped,
+          href: '/contest/lesson?part=3',
+        ),
+        PathNode(
+          id: '2026-11-11:${kind.wire}',
+          kind: kind,
+          state: PathNodeState.today,
+          href: '/contest/x',
+          canSkip: true,
+        ),
+      ],
+    ),
+  ],
+);
+
 ProviderContainer _container(_Server server) {
   final ProviderContainer c = ProviderContainer(
     overrides: <Override>[contestRepositoryProvider.overrideWithValue(server)],
@@ -502,6 +684,18 @@ class _Server implements ContestRepository {
   /// The refused answer was recorded anyway — only its reply was lost.
   bool loseReply = false;
   int overviewReads = 0;
+
+  /// Today's key — null, as from a server before Skip, unless a test sets it.
+  String? dayKey;
+
+  /// Skipped lesson parts, 1-based.
+  final Set<int> skipped = <int>{};
+
+  /// Thrown by the next skip.
+  Object? refuseSkip;
+
+  /// What the path reads after a skip.
+  ContestPath path = const ContestPath();
 
   static const int size = 15;
 
@@ -556,7 +750,19 @@ class _Server implements ContestRepository {
       ),
       finishBonus: const FinishBonus(points: 20, minCorrect: 9),
       scoringPaused: paused,
+      dayKey: dayKey,
+      skippedParts: dayKey == null ? const <int>[] : (skipped.toList()..sort()),
     );
+  }
+
+  @override
+  Future<SkipResult> skipLevel(String nodeId) async {
+    calls.add('skip:$nodeId');
+    final Object? refusal = refuseSkip;
+    if (refusal != null) throw refusal;
+    final int k = int.parse(nodeId.split(':').last);
+    final bool again = !skipped.add(k);
+    return SkipResult(nodeId: nodeId, alreadySkipped: again);
   }
 
   @override
@@ -635,7 +841,7 @@ class _Server implements ContestRepository {
   }
 
   @override
-  Future<ContestPath> fetchPath() async => const ContestPath();
+  Future<ContestPath> fetchPath() async => path;
 
   @override
   Future<BoardResult> fetchBoard({int? limit}) async => const BoardResult();

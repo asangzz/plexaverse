@@ -337,7 +337,17 @@ GoRouter appRouter(Ref ref) {
       ),
       // ── The contest's levels, opened from the path by a node's KIND. Each
       // draws its own way back to the path.
-      _fullScreen(ZaveRoutes.contestLesson, const ContestLessonPage()),
+      // `?part=k` (1–3) opens that lesson part — a skipped part's own link.
+      GoRoute(
+        path: ZaveRoutes.contestLesson,
+        parentNavigatorKey: _rootNavigatorKey,
+        pageBuilder: (context, state) => CupertinoPage<void>(
+          key: state.pageKey,
+          child: ContestLessonPage(
+            part: contestLessonPartOf(state.uri.queryParameters['part']),
+          ),
+        ),
+      ),
       // The daily quiz's old address. It grew into today's lesson; sent
       // emails and notifications still point here.
       GoRoute(
@@ -567,6 +577,13 @@ Widget _fadeTransition(
 ///
 /// The visible back button is in [ZaveScaffold], not here — a gesture nobody
 /// is told about is not an affordance, and it is the belt to this brace.
+/// `?part=k` on the lesson: 1–3 as digits, else null — the web's `parsePart`.
+int? contestLessonPartOf(String? raw) {
+  if (raw == null || !RegExp(r'^\d+$').hasMatch(raw)) return null;
+  final int? n = int.tryParse(raw);
+  return n != null && n >= 1 && n <= 3 ? n : null;
+}
+
 GoRoute _fullScreen(String path, Widget child) => GoRoute(
   path: path,
   parentNavigatorKey: _rootNavigatorKey,
