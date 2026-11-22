@@ -7,13 +7,13 @@
 /// ## The two paths
 ///
 /// ```
-/// personal: welcome → (brand) → connect → plan → cvUpload ─┬──────────────→ styleChoice ┬→ styleScreenshots ┬→ finish
-///                                                            └→ currentRole ─┘            └→ styleWrite ───────┘
-///                                                               (CV skipped)
+/// personal: welcome → (brand) → connect → (state) → plan → cvUpload ─┬──────────────→ styleChoice ┬→ styleScreenshots ┬→ finish
+///                                                                      └→ currentRole ─┘            └→ styleWrite ───────┘
+///                                                                         (CV skipped)
 ///
-/// company:  welcome → (brand) → connect → plan → companyPage → companyLogo → posterStyle → companyDoc ┬──────────────────→ styleChoice → …
-///                                                                                                       └→ companyDetails ─┘
-///                                                                                                (doc skipped or too thin)
+/// company:  welcome → (brand) → connect → (state) → plan → companyPage → companyLogo → posterStyle → companyDoc ┬──────────────────→ styleChoice → …
+///                                                                                                                 └→ companyDetails ─┘
+///                                                                                                          (doc skipped or too thin)
 /// ```
 ///
 /// LinkedIn comes straight after the welcome on both paths: a company brand
@@ -24,6 +24,13 @@
 /// (`company_brand.dart`, the web's `canStartCompanyBrand()`): a question with
 /// one answer is not a question. Everyone is a personal brand, and the company
 /// path waits, intact, for the day it reopens.
+///
+/// **The buyer's GST State is asked just before the plan** — "Which State
+/// are you in?" — of an India buyer with none on record, because the plan
+/// step can take a payment and every GST invoice names the State (the web's
+/// `BillingStateStep`, owner 22 Nov 2026). Everyone else, and anyone whose
+/// answer cannot be read, goes on to the plan without a word; the plan
+/// step's checkout asks it inline then.
 ///
 /// **The plan comes straight after the connect, and there is no skip.** By
 /// then the user has done the one thing that proves intent; everything after
@@ -45,6 +52,14 @@ enum OnboardingStep {
   /// `connect-linkedin`. Required — there is no skip, on either platform: a
   /// successful connect is the only way forward.
   connect,
+
+  /// `billing-state`: the buyer's GST State, printed on every GST invoice
+  /// and the place of supply. Asked only of a buyer in India (the region the
+  /// plan is priced in) with no State on record, and only before a plan —
+  /// an account that already has one goes straight past this and the plan.
+  /// No skip: it is one tap on a pre-selected answer, and the plan step
+  /// that follows can take a payment.
+  billingState,
 
   /// The plan: an autopay mandate with a free first month in India, a 30-day
   /// pass everywhere else. Required — the web's `PlanStep`. Skipped only for
@@ -101,6 +116,8 @@ enum OnboardingStep {
   ///
   /// [finish] is the one step whose lane depends on state — the normal finish
   /// is a centred progress hint, and only a FAILED finalise offers chips.
+  /// [billingState] is a panel: a picker and a button — a form, not a choice
+  /// of chips.
   OnboardingLane lane({bool finaliseError = false}) => switch (this) {
     OnboardingStep.welcome ||
     OnboardingStep.brand ||
@@ -136,6 +153,9 @@ enum OnboardingStep {
       OnboardingStep.finish,
     ];
     final OnboardingStep resolved = switch (this) {
+      // Part of the plan step's turn: not a step for everyone, so it never
+      // moves the bar on its own (the web's `resolvedStep`).
+      OnboardingStep.billingState => OnboardingStep.plan,
       OnboardingStep.styleScreenshots ||
       OnboardingStep.styleWrite => OnboardingStep.styleChoice,
       OnboardingStep.companyDetails => OnboardingStep.companyDoc,
@@ -155,6 +175,8 @@ enum OnboardingStep {
   /// are missing, so the controller writes it (see `companyDetailsAsk`).
   /// Nor is [plan]: its line depends on the offer, which is not known until
   /// the region has been read (see `OnboardingChatController.planAsk`).
+  /// Nor [billingState]: whether it is asked at all depends on the region and
+  /// on what is on record (see `OnboardingChatController.billingStateAsk`).
   List<String> botLines({
     required String firstName,
     required bool company,
@@ -174,6 +196,7 @@ enum OnboardingStep {
           ? 'Connect LinkedIn so I can load the company pages you manage.'
           : "I'll publish on your behalf and learn from your existing posts.",
     ],
+    OnboardingStep.billingState => const <String>[],
     OnboardingStep.plan => const <String>[],
     OnboardingStep.companyPage => <String>['Which page do you want to grow?'],
     // The only step with two lines: the second is a procedure the user has to

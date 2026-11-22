@@ -3,6 +3,7 @@ import 'package:riverpod_annotation/riverpod_annotation.dart';
 import '../../../core/platform/checkout.dart';
 import '../data/pricing_repositories.dart';
 import '../domain/pricing_repository.dart';
+import 'billing_state_controller.dart';
 import 'plan_checkout.dart';
 
 part 'pricing_controller.g.dart';
@@ -161,6 +162,10 @@ abstract final class PlanResultCopy {
 ///
 /// The state is the plan id whose checkout is open, so a second tap cannot
 /// open a second sheet.
+///
+/// An India buyer with no GST State on record is asked it first: the
+/// checkout answers [PlanCheckoutStateNeeded], this marks the card
+/// ([BillingStateAsk]), and the page runs [buy] again once it is saved.
 @riverpod
 class CheckoutController extends _$CheckoutController {
   @override
@@ -185,6 +190,11 @@ class CheckoutController extends _$CheckoutController {
       if (!ref.mounted) return null;
 
       switch (outcome) {
+        case PlanCheckoutStateNeeded():
+          // Nothing was opened. The card asks the State in place of its
+          // button; nothing to say.
+          ref.read(billingStateAskProvider.notifier).ask(offer.planType);
+          return null;
         case PlanCheckoutDismissed():
           return null;
         case PlanCheckoutFailed(:final String message, :final bool offerStale):

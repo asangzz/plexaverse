@@ -110,6 +110,42 @@ class _Pricing extends FakePricingRepository {
   final List<String> ordersFor = <String>[];
   final List<String> mandatesFor = <String>[];
 
+  /// `GET /user/billing-state` fails while set.
+  bool stateUnreadable = false;
+
+  /// The next State save fails with the server's 500 sentence, when set.
+  String? stateSaveFails;
+
+  /// Every State save, as `code:source`.
+  final List<String> stateSaves = <String>[];
+
+  @override
+  Future<BillingState> fetchBillingState() async {
+    if (stateUnreadable) throw const PricingUnavailable();
+    return super.fetchBillingState();
+  }
+
+  @override
+  Future<SavedBillingState> saveBillingState({
+    required String stateCode,
+    required BillingStateSource source,
+  }) async {
+    stateSaves.add('$stateCode:${source.wire}');
+    final String? fails = stateSaveFails;
+    if (fails != null) {
+      stateSaveFails = null;
+      final RequestOptions request = RequestOptions(
+        path: '/user/billing-state',
+      );
+      throw DioException(
+        requestOptions: request,
+        response: Response<dynamic>(requestOptions: request, statusCode: 500),
+        error: ServerFailure(message: fails, errorCode: 'INTERNAL'),
+      );
+    }
+    return super.saveBillingState(stateCode: stateCode, source: source);
+  }
+
   @override
   Future<PlanPricing> fetchPricing({String? countryCode}) async {
     if (unreadable) throw const PricingUnavailable();
@@ -295,6 +331,7 @@ void main() {
     await open(tester);
     await act(tester, () => chat().acknowledgeWelcome());
     await act(tester, () => chat().connectLinkedin());
+    await act(tester, () => chat().saveBillingState('27'));
     await act(tester, () => chat().startPlan());
     await act(tester, () => chat().skipCv());
     await act(tester, () => chat().pickRole('Software Engineer'));
@@ -309,6 +346,7 @@ void main() {
     expect(visited, <OnboardingStep>[
       OnboardingStep.welcome,
       OnboardingStep.connect,
+      OnboardingStep.billingState,
       OnboardingStep.plan,
       OnboardingStep.cvUpload,
       OnboardingStep.currentRole,
@@ -327,6 +365,7 @@ void main() {
     await open(tester);
     await act(tester, () => chat().acknowledgeWelcome());
     await act(tester, () => chat().connectLinkedin());
+    await act(tester, () => chat().saveBillingState('27'));
     await act(tester, () => chat().startPlan());
     await act(tester, () => chat().uploadCv());
     await act(tester, () => chat().chooseScreenshots());
@@ -335,6 +374,7 @@ void main() {
     expect(visited, <OnboardingStep>[
       OnboardingStep.welcome,
       OnboardingStep.connect,
+      OnboardingStep.billingState,
       OnboardingStep.plan,
       OnboardingStep.cvUpload,
       OnboardingStep.styleChoice,
@@ -352,6 +392,7 @@ void main() {
       await act(tester, () => chat().acknowledgeWelcome());
       await act(tester, () => chat().pickBrand(BrandChoice.company));
       await act(tester, () => chat().connectLinkedin());
+      await act(tester, () => chat().saveBillingState('27'));
       await act(tester, () => chat().startPlan());
       await act(tester, () => chat().pickCompanyPage('1234567', 'Plexaverse'));
       await act(tester, () => chat().uploadLogo());
@@ -380,6 +421,7 @@ void main() {
         OnboardingStep.welcome,
         OnboardingStep.brand,
         OnboardingStep.connect,
+        OnboardingStep.billingState,
         OnboardingStep.plan,
         OnboardingStep.companyPage,
         OnboardingStep.companyLogo,
@@ -404,17 +446,28 @@ void main() {
     await act(tester, () => chat().acknowledgeWelcome());
     await act(tester, () => chat().pickBrand(BrandChoice.company));
     await act(tester, () => chat().connectLinkedin());
+    await act(tester, () => chat().saveBillingState('27'));
     await act(tester, () => chat().startPlan());
     await act(tester, () => chat().switchToPersonal());
     await act(tester, () => chat().connectLinkedin());
 
+    // The second pass goes through the State step without a word: the
+    // State is on record now.
     expect(visited.skip(2), <OnboardingStep>[
       OnboardingStep.connect,
+      OnboardingStep.billingState,
       OnboardingStep.plan,
       OnboardingStep.companyPage,
       OnboardingStep.connect,
+      OnboardingStep.billingState,
       OnboardingStep.plan,
     ]);
+    expect(
+      state().messages.where(
+        (ChatMessage m) => m.text == OnboardingChatController.billingStateAsk,
+      ),
+      hasLength(1),
+    );
     expect(state().answers.brand, BrandChoice.personal);
   });
 
@@ -458,9 +511,12 @@ void main() {
   });
 
   group('the plan', () {
+    /// To the plan step, through the State step where it asks — a no-op
+    /// everywhere it does not (abroad, an unreadable region, a plan held).
     Future<void> toPlan(WidgetTester tester) async {
       await act(tester, () => chat().acknowledgeWelcome());
       await act(tester, () => chat().connectLinkedin());
+      await act(tester, () => chat().saveBillingState('27'));
     }
 
     testWidgets('India: free first, a UPI AutoPay mandate, and the thread '
@@ -607,16 +663,22 @@ void main() {
       await open(tester, onboarding: const _Subscribed());
       await toPlan(tester);
 
+      // Past the State AND the plan: there is nothing to pay, and the State
+      // is asked before the next payment instead.
       expect(visited, <OnboardingStep>[
         OnboardingStep.welcome,
         OnboardingStep.connect,
-        OnboardingStep.plan,
+        OnboardingStep.billingState,
         OnboardingStep.cvUpload,
       ]);
       expect(sheet.opened, isEmpty);
       expect(
         state().messages.map((ChatMessage m) => m.text),
         isNot(contains(OnboardingChatController.planAsk(null))),
+      );
+      expect(
+        state().messages.map((ChatMessage m) => m.text),
+        isNot(contains(OnboardingChatController.billingStateAsk)),
       );
     });
 
@@ -787,6 +849,197 @@ void main() {
       container.read(onboardingChatControllerProvider.notifier).state = state()
           .copyWith(connectFailed: true);
       await act(tester, () => chat().skipConnect());
+      // Nor the State that comes before it.
+      expect(state().step, OnboardingStep.billingState);
+      await act(tester, () => chat().saveBillingState('27'));
+      expect(state().step, OnboardingStep.plan);
+    });
+  });
+
+  group('the buyer\'s GST State', () {
+    Future<void> toState(WidgetTester tester) async {
+      await act(tester, () => chat().acknowledgeWelcome());
+      await act(tester, () => chat().connectLinkedin());
+    }
+
+    List<String> said() =>
+        state().messages.map((ChatMessage m) => m.text).toList();
+
+    testWidgets('India: asked once, straight before the plan, pre-selected '
+        'from the region and saved only on the tap', (
+      WidgetTester tester,
+    ) async {
+      final _Pricing pricing = _Pricing();
+      await open(tester, pricing: pricing);
+      await toState(tester);
+
+      expect(state().step, OnboardingStep.billingState);
+      expect(visited.sublist(visited.length - 2), <OnboardingStep>[
+        OnboardingStep.connect,
+        OnboardingStep.billingState,
+      ]);
+      // The web's line, word for word.
+      expect(
+        said().last,
+        'Which State are you in? It is printed on your GST '
+        'invoices.',
+      );
+      // The server's reading of the region pre-selects; nothing is saved
+      // until the buyer taps.
+      expect(state().billingStatePreset, '27');
+      expect(pricing.stateSaves, isEmpty);
+
+      await act(tester, () => chat().saveBillingState('29'));
+      expect(pricing.stateSaves, <String>['29:onboarding']);
+      final ChatMessage echo = state().messages.lastWhere(
+        (ChatMessage m) => m.role == ChatRole.user,
+      );
+      expect(echo.text, 'Karnataka');
+      expect(echo.badge, 'State saved');
+      expect(state().step, OnboardingStep.plan);
+      expect(said().last, OnboardingChatController.planAsk(state().planOffer));
+
+      // Asked once: the checkout opens with no second ask.
+      await act(tester, () => chat().startPlan());
+      expect(state().planAskingState, isFalse);
+      expect(sheet.opened, hasLength(1));
+      expect(pricing.stateSaves, hasLength(1));
+      expect(
+        said().where(
+          (String l) => l == OnboardingChatController.billingStateAsk,
+        ),
+        hasLength(1),
+      );
+      expect(state().step, OnboardingStep.cvUpload);
+    });
+
+    testWidgets('the picker cannot submit an empty or unknown State', (
+      WidgetTester tester,
+    ) async {
+      final _Pricing pricing = _Pricing();
+      await open(tester, pricing: pricing);
+      await toState(tester);
+
+      for (final String code in <String>['', '  ', '97', '00', 'MH']) {
+        await act(tester, () => chat().saveBillingState(code));
+      }
+      expect(pricing.stateSaves, isEmpty);
+      expect(state().step, OnboardingStep.billingState);
+      expect(state().billingStateSaving, isFalse);
+    });
+
+    testWidgets('a buyer outside India is never asked', (
+      WidgetTester tester,
+    ) async {
+      final _Pricing pricing = _Pricing(abroad: true);
+      await open(tester, pricing: pricing);
+      await toState(tester);
+
+      expect(state().step, OnboardingStep.plan);
+      expect(said(), isNot(contains(OnboardingChatController.billingStateAsk)));
+
+      await act(tester, () => chat().startPlan());
+      expect(state().planAskingState, isFalse);
+      expect(pricing.ordersFor, <String>['US']);
+      expect(pricing.stateSaves, isEmpty);
+      expect(state().step, OnboardingStep.cvUpload);
+    });
+
+    testWidgets('a State already on record is not asked again', (
+      WidgetTester tester,
+    ) async {
+      final _Pricing pricing = _Pricing();
+      await pricing.saveBillingState(
+        stateCode: '07',
+        source: BillingStateSource.settings,
+      );
+      await open(tester, pricing: pricing);
+      await toState(tester);
+
+      expect(state().step, OnboardingStep.plan);
+      expect(said(), isNot(contains(OnboardingChatController.billingStateAsk)));
+      await act(tester, () => chat().startPlan());
+      expect(sheet.opened, hasLength(1));
+      expect(pricing.stateSaves, <String>['07:settings']);
+    });
+
+    testWidgets('a State that cannot be read steps aside, and the plan step '
+        'asks it inline before the checkout opens', (
+      WidgetTester tester,
+    ) async {
+      final _Pricing pricing = _Pricing()..stateUnreadable = true;
+      await open(tester, pricing: pricing);
+      await toState(tester);
+
+      // Our outage is never a dead end: on to the plan without a word.
+      expect(state().step, OnboardingStep.plan);
+      expect(said(), isNot(contains(OnboardingChatController.billingStateAsk)));
+
+      // Readable again by the time they press: the checkout asks first.
+      pricing.stateUnreadable = false;
+      await act(tester, () => chat().startPlan());
+      expect(state().planAskingState, isTrue);
+      expect(state().billingStatePreset, '27');
+      expect(sheet.opened, isEmpty);
+      expect(pricing.mandatesFor, isEmpty);
+
+      await act(tester, () => chat().saveCheckoutState('29'));
+      expect(pricing.stateSaves, <String>['29:checkout']);
+      expect(state().planAskingState, isFalse);
+      expect(sheet.opened, hasLength(1));
+      expect(pricing.mandatesFor, <String>['IN']);
+      expect(state().step, OnboardingStep.cvUpload);
+    });
+
+    testWidgets('a State that still cannot be read lets the payment go ahead', (
+      WidgetTester tester,
+    ) async {
+      final _Pricing pricing = _Pricing()..stateUnreadable = true;
+      await open(tester, pricing: pricing);
+      await toState(tester);
+
+      await act(tester, () => chat().startPlan());
+      expect(state().planAskingState, isFalse);
+      expect(sheet.opened, hasLength(1));
+      expect(state().step, OnboardingStep.cvUpload);
+    });
+
+    testWidgets('Cancel on the inline ask drops the payment, not the step', (
+      WidgetTester tester,
+    ) async {
+      final _Pricing pricing = _Pricing()..stateUnreadable = true;
+      await open(tester, pricing: pricing);
+      await toState(tester);
+      pricing.stateUnreadable = false;
+
+      await act(tester, () => chat().startPlan());
+      expect(state().planAskingState, isTrue);
+      chat().cancelCheckoutState();
+      await settle(tester);
+      expect(state().planAskingState, isFalse);
+      expect(state().step, OnboardingStep.plan);
+      expect(sheet.opened, isEmpty);
+      expect(pricing.stateSaves, isEmpty);
+    });
+
+    testWidgets('a failed save says why and keeps the question up', (
+      WidgetTester tester,
+    ) async {
+      final _Pricing pricing = _Pricing()
+        ..stateSaveFails = 'Could not save your State. Try again.';
+      await open(tester, pricing: pricing);
+      await toState(tester);
+
+      await act(tester, () => chat().saveBillingState('29'));
+      expect(state().step, OnboardingStep.billingState);
+      expect(
+        state().billingStateError,
+        'Could not save your State. Try again.',
+      );
+      expect(state().billingStateSaving, isFalse);
+
+      await act(tester, () => chat().saveBillingState('29'));
+      expect(state().billingStateError, isNull);
       expect(state().step, OnboardingStep.plan);
     });
   });

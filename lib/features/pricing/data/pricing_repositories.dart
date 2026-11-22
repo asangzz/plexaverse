@@ -1,4 +1,5 @@
-import 'package:dio/dio.dart' show DioException, Options, ResponseType;
+import 'package:dio/dio.dart'
+    show DioException, Options, RequestOptions, Response, ResponseType;
 import 'package:flutter/foundation.dart' show kReleaseMode;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -230,6 +231,37 @@ class ApiPricingRepository implements PricingRepository {
     } on Object {
       throw const PricingUnavailable();
     }
+  }
+
+  @override
+  Future<BillingState> fetchBillingState() async {
+    try {
+      final response = await _client.get<Map<String, dynamic>>(
+        ApiPaths.userBillingState,
+      );
+      final Map<String, dynamic>? data = response.data;
+      if (data == null) throw const PricingUnavailable();
+      return BillingState.fromJson(data);
+    } on PricingUnavailable {
+      rethrow;
+    } on Object {
+      throw const PricingUnavailable();
+    }
+  }
+
+  @override
+  Future<SavedBillingState> saveBillingState({
+    required String stateCode,
+    required BillingStateSource source,
+  }) async {
+    // Not wrapped: the server's 400 carries the sentence to show.
+    final response = await _client.put<Map<String, dynamic>>(
+      ApiPaths.userBillingState,
+      data: <String, dynamic>{'stateCode': stateCode, 'source': source.wire},
+    );
+    final Map<String, dynamic>? data = response.data;
+    if (data == null) throw StateError('user/billing-state returned nothing');
+    return SavedBillingState.fromJson(data);
   }
 
   @override
@@ -527,6 +559,55 @@ class FakePricingRepository implements PricingRepository {
         '<div>This is a computer-generated document and needs no '
         'signature.</div>'
         '</div></body></html>';
+  }
+
+  /// The mock account's GST State: an account in India that has not said
+  /// yet, so the mock build walks onboarding's State step and the checkout's
+  /// inline ask. The edge "suggests" Maharashtra, as Cloudflare's region
+  /// would. Answers at once, as the empty document list does, so a test that
+  /// never asks waits on no timer.
+  String? _stateCode;
+  BillingStateSource? _stateSource;
+  DateTime? _stateDeclaredAt;
+
+  @override
+  Future<BillingState> fetchBillingState() async => BillingState(
+    stateCode: _stateCode,
+    stateName: billingStateName(_stateCode),
+    declaredAt: _stateDeclaredAt,
+    source: _stateSource,
+    isIndia: true,
+    suggestedStateCode: '27',
+  );
+
+  /// Refuses what the server refuses: a code that is not a State or UT.
+  @override
+  Future<SavedBillingState> saveBillingState({
+    required String stateCode,
+    required BillingStateSource source,
+  }) async {
+    if (!isBillingStateCode(stateCode)) {
+      final RequestOptions request = RequestOptions(
+        path: ApiPaths.userBillingState,
+      );
+      throw DioException(
+        requestOptions: request,
+        response: Response<dynamic>(requestOptions: request, statusCode: 400),
+        error: const ValidationFailure(
+          message: 'Choose your State or Union Territory from the list.',
+          errorCode: 'VALIDATION_FAILED',
+        ),
+      );
+    }
+    _stateCode = stateCode;
+    _stateSource = source;
+    _stateDeclaredAt = DateTime.now();
+    return SavedBillingState(
+      stateCode: stateCode,
+      stateName: billingStateName(stateCode)!,
+      declaredAt: _stateDeclaredAt,
+      source: source,
+    );
   }
 
   @override

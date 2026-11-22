@@ -42,8 +42,13 @@ class PlanCard extends StatelessWidget {
     this.onRetry,
     this.autopayLive = false,
     this.busy = false,
+    this.stateAsk,
     super.key,
   });
+
+  /// The buyer's GST State, asked in place of the button before the
+  /// checkout opens. Null when it is not being asked.
+  final Widget? stateAsk;
 
   final PricingPlan plan;
   final PlanPricing pricing;
@@ -199,6 +204,8 @@ class PlanCard extends StatelessWidget {
             // UPI AutoPay is running: nothing to buy here, and the server
             // would refuse a second plan. Say where it is managed instead.
             _AutopayLiveNote()
+          else if (stateAsk != null)
+            stateAsk!
           else if (offerFailed)
             ZaveButton(label: 'Try again', onPressed: onRetry, expand: true)
           else
@@ -214,7 +221,10 @@ class PlanCard extends StatelessWidget {
               onPressed: offer == null || busy ? null : onCheckout,
               expand: true,
             ),
-          if (card != null && !autopayLive && !busy) ...<Widget>[
+          if (card != null &&
+              !autopayLive &&
+              !busy &&
+              stateAsk == null) ...<Widget>[
             SizedBox(height: ZaveSpace.md),
             Center(
               child: Text(

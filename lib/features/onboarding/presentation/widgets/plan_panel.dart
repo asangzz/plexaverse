@@ -6,6 +6,13 @@ import '../../../pricing/domain/plan_offer.dart';
 
 /// The plan step — the web's `components/onboarding/PlanStep.tsx`.
 ///
+/// **The buyer's State comes first.** Onboarding asks it as its own step just
+/// before this one. Should an India buyer still reach the button without one
+/// — the step stepped aside because a read failed — the checkout answers
+/// that, and [stateAsk] (the picker) takes the button's place until it is
+/// saved; then the checkout opens. Never a wall: an unreadable State lets
+/// the payment go ahead, and its invoice is flagged instead.
+///
 /// A panel, not a chip row: it carries a price, a list and a button, and a
 /// commitment is not something to read at chip width.
 ///
@@ -41,8 +48,13 @@ class PlanPanel extends StatelessWidget {
     required this.onStart,
     required this.onRetry,
     this.sheetUnfinished = false,
+    this.stateAsk,
     super.key,
   });
+
+  /// The buyer's GST State, asked in place of the button before the
+  /// checkout opens. Null when it is not being asked.
+  final Widget? stateAsk;
 
   /// Null while the region and the autopay switch are still being read.
   final PlanOffer? offer;
@@ -197,7 +209,9 @@ class PlanPanel extends StatelessWidget {
           // Blue: this is the billing path, the one thing ZaveColors.blue is
           // reserved for. Disabled until the offer is in — falling back to
           // India on a missing answer is the bug the web's step shipped with.
-          if (failed)
+          if (stateAsk != null)
+            stateAsk!
+          else if (failed)
             ZaveButton(
               kind: ZaveButtonKind.ghost,
               expand: true,
@@ -218,7 +232,10 @@ class PlanPanel extends StatelessWidget {
                   : 'Pay ${offer.priceLabel} for this month',
               onPressed: offer == null ? null : onStart,
             ),
-          if (autopay != null && sheetUnfinished && !busy) ...<Widget>[
+          if (autopay != null &&
+              sheetUnfinished &&
+              !busy &&
+              stateAsk == null) ...<Widget>[
             SizedBox(height: ZaveSpace.md),
             Text(wayOut, style: ZaveType.caption.copyWith(height: 1.6)),
           ],

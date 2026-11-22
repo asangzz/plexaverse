@@ -80,6 +80,12 @@ void main() {
         ),
       );
       for (final (bool c, bool b) in variants) {
+        // The State is part of the plan's turn: asked of India buyers only,
+        // so it never moves the bar on its own (the web's resolvedStep).
+        expect(
+          OnboardingStep.billingState.progressPercent(company: c, brandStep: b),
+          OnboardingStep.plan.progressPercent(company: c, brandStep: b),
+        );
         for (final OnboardingStep s in <OnboardingStep>[
           OnboardingStep.styleScreenshots,
           OnboardingStep.styleWrite,
@@ -94,6 +100,16 @@ void main() {
         }
       }
     });
+  });
+
+  test('the State step is a panel whose line the controller writes', () {
+    // A picker and a button — a form, not a choice of chips. Whether it is
+    // asked at all depends on the region and on what is on record.
+    expect(OnboardingStep.billingState.lane(), OnboardingLane.panel);
+    expect(
+      OnboardingStep.billingState.botLines(firstName: 'A', company: false),
+      isEmpty,
+    );
   });
 
   group('company document gaps', () {

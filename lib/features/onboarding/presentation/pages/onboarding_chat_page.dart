@@ -5,9 +5,11 @@ import '../../../../core/access/company_brand.dart';
 import '../../../../core/ui/app_icons.dart';
 import '../../../../core/ui/zave/zave_kit.dart';
 import '../../../auth/application/sign_out_controller.dart';
+import '../../../pricing/presentation/widgets/billing_state_picker.dart';
 import '../../application/onboarding_chat_controller.dart';
 import '../../application/onboarding_controller.dart';
 import '../../domain/onboarding_repository.dart';
+import '../widgets/billing_state_panel.dart';
 import '../widgets/chat_lane.dart';
 import '../widgets/onboarding_chrome.dart';
 import '../widgets/plan_panel.dart';
@@ -294,6 +296,12 @@ class _DockControl extends ConsumerWidget {
             ),
         ],
       ),
+      OnboardingStep.billingState => BillingStatePanel(
+        preset: chat.billingStatePreset,
+        busy: chat.billingStateSaving,
+        error: chat.billingStateError,
+        onSubmit: (String code) => controller().saveBillingState(code),
+      ),
       OnboardingStep.plan => PlanPanel(
         offer: chat.planOffer,
         failed: chat.planOfferFailed,
@@ -302,6 +310,20 @@ class _DockControl extends ConsumerWidget {
         sheetUnfinished: chat.planSheetUnfinished,
         onStart: () => controller().startPlan(),
         onRetry: () => controller().retryPlanOffer(),
+        // The State, asked in place of the button before the checkout opens
+        // — only when the State step could not ask it.
+        stateAsk: chat.planAskingState
+            ? BillingStatePicker(
+                showQuestion: true,
+                submitLabel: 'Save and continue',
+                submitKind: ZaveButtonKind.brand,
+                preset: chat.billingStatePreset,
+                busy: chat.billingStateSaving,
+                error: chat.billingStateError,
+                onSubmit: (String code) => controller().saveCheckoutState(code),
+                onCancel: controller().cancelCheckoutState,
+              )
+            : null,
       ),
       OnboardingStep.companyPage => CompanyPagePanel(
         load: controller().companyPages,

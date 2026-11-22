@@ -45,6 +45,22 @@ class PlanCheckoutAlreadyActive extends PlanCheckoutOutcome {
   final String? message;
 }
 
+/// The buyer's GST State is not on record, and this payment is in India: ask
+/// it first, then call the same method again. Nothing was opened and nothing
+/// was charged.
+///
+/// Every GST invoice must name the buyer's State, collected "before making
+/// any supplies" (Circular 242/36/2024-GST; the web's `useBillingStateGate`).
+/// Asked once: after the save the State is on record and the next call goes
+/// straight through.
+class PlanCheckoutStateNeeded extends PlanCheckoutOutcome {
+  const PlanCheckoutStateNeeded({this.suggestedStateCode});
+
+  /// What the picker may start on — the server's reading of the region.
+  /// Never saved for them.
+  final String? suggestedStateCode;
+}
+
 /// The user closed the sheet. How a person says "not now" — no message,
 /// because an error for a deliberate choice trains people to ignore errors.
 class PlanCheckoutDismissed extends PlanCheckoutOutcome {
@@ -63,7 +79,8 @@ class PlanCheckoutFailed extends PlanCheckoutOutcome {
   final bool offerStale;
 }
 
-/// Buying a plan: open the registration or the order, open the sheet, verify.
+/// Buying a plan: ask the State if it is missing, open the registration or
+/// the order, open the sheet, verify.
 ///
 /// The web's `useAutopayCheckout` / `useOneTimeCheckout`, and one class for
 /// the same reason the web made them one module: the Pricing screen, Settings
@@ -72,6 +89,14 @@ class PlanCheckoutFailed extends PlanCheckoutOutcome {
 ///
 /// What the sheet returns is a CLAIM. The server checks the signature before
 /// anything is activated, so a device that lies gets nothing.
+///
+/// **The buyer's GST State comes first** — here, so that no payment path can
+/// forget it: a payment in India from an account with no State on record
+/// answers [PlanCheckoutStateNeeded] before anything is opened, and every
+/// caller's switch has to say what it does with that. Never a wall: when the
+/// State cannot be read, the payment goes ahead — the server takes it and
+/// flags its invoice, because our outage must not cost anyone the plan they
+/// are paying for.
 class PlanCheckout {
   const PlanCheckout(this._repo, this._sheet);
 
@@ -80,6 +105,27 @@ class PlanCheckout {
 
   static const String _notConfigured =
       'Payments are not set up yet. Try again in a little while.';
+
+  /// Ask the State first? Only for a payment in India (the one charged in
+  /// rupees, a domestic supply) whose account has none on record. Read fresh
+  /// each time, so a State saved anywhere — another screen, the web — counts
+  /// at once.
+  Future<PlanCheckoutStateNeeded?> _stateNeeded({required bool inIndia}) async {
+    if (!inIndia) return null;
+    final BillingState onRecord;
+    try {
+      onRecord = await _repo.fetchBillingState();
+    } on Object {
+      // Unreadable: pay. Only a known gap asks.
+      return null;
+    }
+    if (!billingStateNeeded(isIndia: true, stateCode: onRecord.stateCode)) {
+      return null;
+    }
+    return PlanCheckoutStateNeeded(
+      suggestedStateCode: onRecord.suggestedStateCode,
+    );
+  }
 
   /// Registers UPI AutoPay (TOKEN_AUTOPAY_SPEC.md §3.3-§3.4): POST
   /// `/autopay/create`, open the sheet on that ORDER with its customer and
@@ -103,6 +149,10 @@ class PlanCheckout {
     required String countryCode,
     String? email,
   }) async {
+    // UPI AutoPay is India-only: the server refuses any other country.
+    final PlanCheckoutStateNeeded? ask = await _stateNeeded(inIndia: true);
+    if (ask != null) return ask;
+
     final MandateIntent intent;
     try {
       intent = await _repo.createMandate(
@@ -198,6 +248,13 @@ class PlanCheckout {
     required String countryCode,
     String? email,
   }) async {
+    // The pass is priced from this region; only India's is a GST supply
+    // to a buyer with a State.
+    final PlanCheckoutStateNeeded? ask = await _stateNeeded(
+      inIndia: countryCode.trim().toUpperCase() == 'IN',
+    );
+    if (ask != null) return ask;
+
     final OrderIntent order;
     try {
       order = await _repo.createOrder(

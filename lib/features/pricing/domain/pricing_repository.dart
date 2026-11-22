@@ -1,11 +1,13 @@
 import 'allowance.dart';
 import 'autopay.dart';
+import 'billing_state.dart';
 import 'plan_offer.dart';
 import 'pricing.dart';
 import 'tax_document.dart';
 
 export 'allowance.dart';
 export 'autopay.dart';
+export 'billing_state.dart';
 export 'plan_offer.dart';
 export 'pricing.dart';
 export 'tax_document.dart';
@@ -114,6 +116,21 @@ abstract class PricingRepository {
   /// the page is never handed to a browser). Throws [PricingUnavailable] on
   /// any failure, including a body that is not a page.
   Future<String> fetchTaxDocumentHtml(String id);
+
+  /// `GET /user/billing-state` — the buyer's GST State on record, and the
+  /// State the server's edge would pre-select. Throws [PricingUnavailable]
+  /// on any failure — including a server older than the route — which every
+  /// caller reads as "do not ask", never as "do not let them pay".
+  Future<BillingState> fetchBillingState();
+
+  /// `PUT /user/billing-state` — the buyer's own choice, and where it was
+  /// made. A refusal (400 VALIDATION_FAILED) arrives as the `DioException`
+  /// whose `error` carries the server's sentence; a body with no State
+  /// throws a [StateError].
+  Future<SavedBillingState> saveBillingState({
+    required String stateCode,
+    required BillingStateSource source,
+  });
 
   /// `POST /payment/create-order` — a one-time 30-day pass, wherever UPI
   /// AutoPay is not offered. Priced by the server from [countryCode].

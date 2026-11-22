@@ -560,6 +560,10 @@ String _$autopayRestartOfferHash() =>
 ///
 /// The state is the plan id whose checkout is open, so a second tap cannot
 /// open a second sheet.
+///
+/// An India buyer with no GST State on record is asked it first: the
+/// checkout answers [PlanCheckoutStateNeeded], this marks the card
+/// ([BillingStateAsk]), and the page runs [buy] again once it is saved.
 
 @ProviderFor(CheckoutController)
 final checkoutControllerProvider = CheckoutControllerProvider._();
@@ -573,6 +577,10 @@ final checkoutControllerProvider = CheckoutControllerProvider._();
 ///
 /// The state is the plan id whose checkout is open, so a second tap cannot
 /// open a second sheet.
+///
+/// An India buyer with no GST State on record is asked it first: the
+/// checkout answers [PlanCheckoutStateNeeded], this marks the card
+/// ([BillingStateAsk]), and the page runs [buy] again once it is saved.
 final class CheckoutControllerProvider
     extends $NotifierProvider<CheckoutController, String?> {
   /// Buying a plan from the Pricing screen.
@@ -584,6 +592,10 @@ final class CheckoutControllerProvider
   ///
   /// The state is the plan id whose checkout is open, so a second tap cannot
   /// open a second sheet.
+  ///
+  /// An India buyer with no GST State on record is asked it first: the
+  /// checkout answers [PlanCheckoutStateNeeded], this marks the card
+  /// ([BillingStateAsk]), and the page runs [buy] again once it is saved.
   CheckoutControllerProvider._()
     : super(
         from: null,
@@ -612,7 +624,7 @@ final class CheckoutControllerProvider
 }
 
 String _$checkoutControllerHash() =>
-    r'a5a470b13b30ce1d5b732fcec4b6e3425c90c43e';
+    r'c94988d0dbd8fc4d36c058769c2fb2320207d4ab';
 
 /// Buying a plan from the Pricing screen.
 ///
@@ -623,6 +635,10 @@ String _$checkoutControllerHash() =>
 ///
 /// The state is the plan id whose checkout is open, so a second tap cannot
 /// open a second sheet.
+///
+/// An India buyer with no GST State on record is asked it first: the
+/// checkout answers [PlanCheckoutStateNeeded], this marks the card
+/// ([BillingStateAsk]), and the page runs [buy] again once it is saved.
 
 abstract class _$CheckoutController extends $Notifier<String?> {
   String? build();

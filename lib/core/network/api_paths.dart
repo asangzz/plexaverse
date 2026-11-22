@@ -131,6 +131,17 @@ class ApiPaths {
   /// still answers, but always with a balance of 0, so nothing here reads it.
   static const String userAllowances = '/user/allowances';
 
+  /// The buyer's GST State, printed on every GST invoice and the place of
+  /// supply (`app/api/mobile/v1/user/billing-state`).
+  ///
+  /// GET → `{stateCode, stateName, declaredAt, source, isIndia, required,
+  /// suggestedStateCode}`; `suggestedStateCode` (the edge's region) only
+  /// pre-selects and is never saved on its own.
+  /// PUT `{stateCode, source}` — `source` one of `onboarding | settings |
+  /// checkout` — → `{stateCode, stateName, declaredAt, source}`; 400
+  /// VALIDATION_FAILED for a code that is not a State or UT.
+  static const String userBillingState = '/user/billing-state';
+
   /// The auto-post kill switch. PATCH `{enabled: bool}`.
   ///
   /// Deliberately NOT a field on [userPreferences]: enabling it stamps a

@@ -9,6 +9,9 @@ import 'package:plexaverse/features/pricing/domain/pricing_repository.dart';
 /// `PlanCheckout.registerAutopay` — the web's `useAutopayCheckout`, for the
 /// app (TOKEN_AUTOPAY_SPEC.md §4.2-§4.3): each server refusal its own path,
 /// and a payment the server cannot confirm yet never told to pay again.
+///
+/// The account here has declared its GST State, except in the group that is
+/// about exactly that.
 
 DioException _refused(int status, String code, String message) {
   final RequestOptions request = RequestOptions(path: '/autopay/create');
@@ -111,8 +114,12 @@ void main() {
   late _Sheet sheet;
   late PlanCheckout checkout;
 
-  setUp(() {
+  setUp(() async {
     repo = _Repo();
+    await repo.saveBillingState(
+      stateCode: '29',
+      source: BillingStateSource.onboarding,
+    );
     sheet = _Sheet();
     checkout = PlanCheckout(repo, sheet);
   });
@@ -286,9 +293,75 @@ void main() {
     expect(repo.verifiedOrders, isEmpty);
   });
 
+  group('the buyer\'s GST State comes first', () {
+    test('a registration with no State on record asks it, and opens '
+        'nothing', () async {
+      final _Repo fresh = _Repo();
+      final PlanCheckoutOutcome outcome = await PlanCheckout(
+        fresh,
+        sheet,
+      ).registerAutopay(planType: 'personal', countryCode: 'IN');
+      expect(outcome, isA<PlanCheckoutStateNeeded>());
+      // The region's reading pre-selects; it is never saved for them.
+      expect((outcome as PlanCheckoutStateNeeded).suggestedStateCode, '27');
+      expect(fresh.countries, isEmpty);
+      expect(sheet.opened, isEmpty);
+    });
+
+    test('asked once: saved, the same call goes straight through', () async {
+      final _Repo fresh = _Repo();
+      final PlanCheckout c = PlanCheckout(fresh, sheet);
+      expect(
+        await c.registerAutopay(planType: 'personal', countryCode: 'IN'),
+        isA<PlanCheckoutStateNeeded>(),
+      );
+      await fresh.saveBillingState(
+        stateCode: '27',
+        source: BillingStateSource.checkout,
+      );
+      expect(
+        await c.registerAutopay(planType: 'personal', countryCode: 'IN'),
+        isA<PlanCheckoutDone>(),
+      );
+      expect(sheet.opened, hasLength(1));
+    });
+
+    test('the pass in India asks too; abroad it never does', () async {
+      final _Repo fresh = _Repo();
+      final PlanCheckout c = PlanCheckout(fresh, sheet);
+      expect(
+        await c.payForMonth(planType: 'personal', countryCode: 'IN'),
+        isA<PlanCheckoutStateNeeded>(),
+      );
+      expect(sheet.opened, isEmpty);
+      // A buyer abroad pays in dollars and has no GST State.
+      expect(
+        await c.payForMonth(planType: 'personal', countryCode: 'US'),
+        isA<PlanCheckoutDone>(),
+      );
+      expect(sheet.opened, hasLength(1));
+    });
+
+    test('a State that cannot be read never stops a payment', () async {
+      final _Unreadable fresh = _Unreadable();
+      expect(
+        await PlanCheckout(
+          fresh,
+          sheet,
+        ).registerAutopay(planType: 'personal', countryCode: 'IN'),
+        isA<PlanCheckoutDone>(),
+      );
+      expect(fresh.countries, <String>['IN']);
+    });
+  });
+
   test('the pass: ALREADY_SUBSCRIBED from create-order moves on, with the '
       'server\'s sentence', () async {
     final _PassRefused passRepo = _PassRefused();
+    await passRepo.saveBillingState(
+      stateCode: '29',
+      source: BillingStateSource.onboarding,
+    );
     final PlanCheckoutOutcome outcome = await PlanCheckout(
       passRepo,
       sheet,
@@ -301,6 +374,13 @@ void main() {
     );
     expect(sheet.opened, isEmpty);
   });
+}
+
+/// `GET /user/billing-state` fails: an older server, or our outage.
+class _Unreadable extends _Repo {
+  @override
+  Future<BillingState> fetchBillingState() async =>
+      throw const PricingUnavailable();
 }
 
 class _PassRefused extends FakePricingRepository {

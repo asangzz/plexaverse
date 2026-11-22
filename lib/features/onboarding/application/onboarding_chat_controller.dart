@@ -6,6 +6,7 @@ import 'package:riverpod_annotation/riverpod_annotation.dart';
 import '../../../core/access/company_brand.dart';
 import '../../../core/platform/checkout.dart';
 import '../../preferences/application/preferences_controller.dart';
+import '../../pricing/application/billing_state_controller.dart';
 import '../../pricing/application/plan_checkout.dart';
 import '../../pricing/data/pricing_repositories.dart';
 import '../../pricing/domain/pricing_repository.dart';
@@ -84,6 +85,13 @@ class OnboardingChatController extends _$OnboardingChatController {
   /// Prefilled into the payment sheet. Read with the plan check.
   String? _planEmail;
 
+  /// What the State step read on its way to the plan: the offer (null when
+  /// the region could not be read). The plan step that follows uses it
+  /// rather than reading again, so the State question and the plan are
+  /// decided on the same answer about where the buyer is — the web's shared
+  /// `usePlanOffer`. Null when nothing was carried; used once.
+  ({PlanOffer? offer})? _carried;
+
   /// True while the state this code is about to write is still the state the
   /// screen is showing.
   bool _current(int generation) => !_disposed && generation == _generation;
@@ -141,6 +149,10 @@ class OnboardingChatController extends _$OnboardingChatController {
   Future<void> _enter(OnboardingStep next) async {
     _generation += 1;
     state = state.copyWith(step: next, isBotTyping: false);
+    if (next == OnboardingStep.billingState) {
+      await _askBillingState();
+      return;
+    }
     if (next == OnboardingStep.plan) {
       await _offerPlan();
       return;
@@ -282,8 +294,9 @@ class OnboardingChatController extends _$OnboardingChatController {
       badge: 'LinkedIn linked',
     );
     // The plan is asked here — after the connect, before anything is built on
-    // the user's behalf. It decides where they go next.
-    await _enter(OnboardingStep.plan);
+    // the user's behalf. It decides where they go next. Before it, an India
+    // buyer's GST State.
+    await _enter(OnboardingStep.billingState);
   }
 
   /// "I'll connect later" — offered only after a failed attempt. The one
@@ -293,8 +306,148 @@ class OnboardingChatController extends _$OnboardingChatController {
     if (state.step != OnboardingStep.connect || !state.connectFailed) return;
     _echoUser("I'll connect later", badge: 'Skipped');
     // Skipping the connect does not skip the plan: nothing after this point
-    // is worth building for someone who has not got one.
+    // is worth building for someone who has not got one. Nor the State that
+    // comes before it.
+    await _enter(OnboardingStep.billingState);
+  }
+
+  // ── The buyer's GST State ─────────────────────────────────────────────────
+
+  /// What Plexa says on the State step — the web's
+  /// `${BILLING_STATE_QUESTION} ${BILLING_STATE_REASON}`.
+  static const String billingStateAsk =
+      '$kBillingStateQuestion $kBillingStateReason';
+
+  /// Whether the State step asks — the web's `billingStateStepDecision`,
+  /// less its "wait" (both reads are awaited here).
+  ///
+  /// Only a buyer in India — the region the plan is priced in, the same
+  /// answer that sells them UPI AutoPay — with no State on record. A region
+  /// that could not be read, or a State that could not be, steps aside: the
+  /// plan step has its own retry, and its checkout asks again inline
+  /// ([PlanCheckoutStateNeeded]). A step with no skip must never become a
+  /// dead end because of our outage.
+  static bool billingStateStepAsks({
+    required PlanOffer? offer,
+    required BillingState? onRecord,
+  }) {
+    if (offer == null || !offer.isIndia) return false;
+    if (onRecord == null) return false;
+    return billingStateNeeded(isIndia: true, stateCode: onRecord.stateCode);
+  }
+
+  /// Enters the State step: is there a plan already, where is the buyer,
+  /// and is a State on record?
+  ///
+  /// An account that already has a plan goes straight past this AND the plan
+  /// — there is nothing to pay, and the State is asked before the next
+  /// payment instead. Everyone else's offer is read here once and carried
+  /// into the plan step.
+  Future<void> _askBillingState() async {
+    final int generation = _generation;
+    _carried = null;
+    state = state.copyWith(
+      isBotTyping: true,
+      planOffer: null,
+      planOfferFailed: false,
+      planAskingState: false,
+      billingStatePreset: null,
+      billingStateSaving: false,
+      billingStateError: null,
+    );
+    final PlanHolder holder = await _repo.fetchPlanHolder();
+    if (!_current(generation)) return;
+    if (holder.hasPlan) {
+      state = state.copyWith(isBotTyping: false);
+      await _enter(_afterPlan);
+      return;
+    }
+    _planEmail = holder.email;
+    final (PlanOffer? offer, BillingState? onRecord) = await (
+      _loadPlanOffer(),
+      _readBillingState(),
+    ).wait;
+    if (!_current(generation)) return;
+    _carried = (offer: offer);
+    if (!billingStateStepAsks(offer: offer, onRecord: onRecord)) {
+      state = state.copyWith(isBotTyping: false);
+      await _enter(OnboardingStep.plan);
+      return;
+    }
+    // Pre-selected from the server's region; only the buyer's tap saves.
+    state = state.copyWith(billingStatePreset: onRecord!.preset);
+    await _sendBot(billingStateAsk);
+  }
+
+  /// The State on record, or null when it cannot be read — which never asks.
+  Future<BillingState?> _readBillingState() async {
+    try {
+      return await _pricing.fetchBillingState();
+    } on Object {
+      return null;
+    }
+  }
+
+  /// The State step's Continue. Saved with source `onboarding`; the thread
+  /// says which State, and the plan step follows.
+  Future<void> saveBillingState(String code) async {
+    if (state.step != OnboardingStep.billingState) return;
+    final SavedBillingState? saved = await _saveState(
+      code,
+      BillingStateSource.onboarding,
+    );
+    if (saved == null || state.step != OnboardingStep.billingState) return;
+    _echoUser(saved.stateName, badge: 'State saved');
     await _enter(OnboardingStep.plan);
+  }
+
+  /// The plan step's inline ask: saved with source `checkout`, then the
+  /// checkout the buyer pressed runs — once; the State is on record now.
+  Future<void> saveCheckoutState(String code) async {
+    if (state.step != OnboardingStep.plan || !state.planAskingState) return;
+    final SavedBillingState? saved = await _saveState(
+      code,
+      BillingStateSource.checkout,
+    );
+    if (saved == null || state.step != OnboardingStep.plan) return;
+    state = state.copyWith(planAskingState: false);
+    await startPlan();
+  }
+
+  /// "Cancel" on the inline ask drops the payment, not the step.
+  void cancelCheckoutState() {
+    if (state.step != OnboardingStep.plan) return;
+    state = state.copyWith(planAskingState: false, billingStateError: null);
+  }
+
+  /// One save, for both asks. Null when nothing was saved — an empty or
+  /// unknown code is refused without a request (the picker cannot submit
+  /// one either), and a failure leaves its sentence on the state.
+  Future<SavedBillingState?> _saveState(
+    String code,
+    BillingStateSource source,
+  ) async {
+    if (!isBillingStateCode(code) || state.billingStateSaving) return null;
+    final int generation = _generation;
+    state = state.copyWith(billingStateSaving: true, billingStateError: null);
+    try {
+      final SavedBillingState saved = await _pricing.saveBillingState(
+        stateCode: code,
+        source: source,
+      );
+      if (!_current(generation)) return null;
+      state = state.copyWith(billingStateSaving: false);
+      // Anything already showing the State reads it again.
+      ref.invalidate(billingStateProvider);
+      return saved;
+    } on Object catch (e) {
+      if (!_current(generation)) return null;
+      state = state.copyWith(
+        billingStateSaving: false,
+        billingStateError: billingStateSaveError(e),
+      );
+      return null;
+    }
   }
 
   // ── Plan ──────────────────────────────────────────────────────────────────
@@ -321,6 +474,8 @@ class OnboardingChatController extends _$OnboardingChatController {
   /// again, and its checkout then opens a SECOND mandate beside the first.
   Future<void> _offerPlan() async {
     final int generation = _generation;
+    final ({PlanOffer? offer})? carried = _carried;
+    _carried = null;
     state = state.copyWith(
       isBotTyping: true,
       planOffer: null,
@@ -328,7 +483,17 @@ class OnboardingChatController extends _$OnboardingChatController {
       planBusy: false,
       planError: null,
       planSheetUnfinished: false,
+      planAskingState: false,
+      billingStateError: null,
     );
+    if (carried != null) {
+      // Read on the way here by the State step, which already found no plan
+      // on the account: the same offer the State question was decided on.
+      final PlanOffer? offer = carried.offer;
+      state = state.copyWith(planOffer: offer, planOfferFailed: offer == null);
+      await _sendBot(planAsk(offer));
+      return;
+    }
     final PlanHolder holder = await _repo.fetchPlanHolder();
     if (!_current(generation)) return;
     if (holder.hasPlan) {
@@ -388,9 +553,16 @@ class OnboardingChatController extends _$OnboardingChatController {
   /// the 30-day pass everywhere else. A registration still confirming with
   /// the bank ends the step too: the UPI app has taken the payment, and
   /// asking again would be a second payment.
+  ///
+  /// An India buyer with no GST State on record — the State step stepped
+  /// aside because a read failed — is asked it inline first
+  /// ([PlanCheckoutStateNeeded]); [saveCheckoutState] then runs this again.
   Future<void> startPlan() async {
     final PlanOffer? offer = state.planOffer;
-    if (state.step != OnboardingStep.plan || offer == null || state.planBusy) {
+    if (state.step != OnboardingStep.plan ||
+        offer == null ||
+        state.planBusy ||
+        state.planAskingState) {
       return;
     }
     final int generation = _generation;
@@ -415,6 +587,15 @@ class OnboardingChatController extends _$OnboardingChatController {
     if (!_current(generation)) return;
 
     switch (outcome) {
+      case PlanCheckoutStateNeeded(:final String? suggestedStateCode):
+        // Nothing was opened or charged. The panel asks the State in place
+        // of the button, pre-selected from the region.
+        state = state.copyWith(
+          planBusy: false,
+          planAskingState: true,
+          billingStatePreset: suggestedStateCode,
+          billingStateError: null,
+        );
       case PlanCheckoutDismissed():
         // Closing the sheet is a decision — no error. But on UPI AutoPay it
         // is also what a phone whose UPI app never opened looks like, so the

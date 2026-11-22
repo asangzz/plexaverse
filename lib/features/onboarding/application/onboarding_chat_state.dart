@@ -60,6 +60,23 @@ abstract class OnboardingChatState with _$OnboardingChatState {
     /// the wrong plan.
     @Default(false) bool planOfferFailed,
 
+    /// What the State picker starts on — the State on record, else the
+    /// server's reading of the region. Never saved until the buyer taps.
+    String? billingStatePreset,
+
+    /// A State is being saved (the State step, or the plan step's inline
+    /// ask).
+    @Default(false) bool billingStateSaving,
+
+    /// Why the last State save did not go through, in one sentence.
+    String? billingStateError,
+
+    /// The plan step's button found no State on record — the State step
+    /// stepped aside because a read failed — so the panel asks it inline,
+    /// and the checkout runs once it is saved. Never a wall: an unreadable
+    /// State lets the payment go ahead.
+    @Default(false) bool planAskingState,
+
     /// The Razorpay sheet is open, or its result is being verified.
     @Default(false) bool planBusy,
 

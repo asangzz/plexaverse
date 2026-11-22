@@ -8,11 +8,14 @@ import '../../../../core/ui/app_icons.dart';
 // Re-exports `UserPreferences` alongside the Settings entities, so this file
 // needs one import for both rather than two that overlap.
 import '../../../../core/ui/zave/zave_kit.dart';
+import '../../../pricing/application/billing_state_controller.dart';
 import '../../../pricing/application/plan_checkout.dart';
 import '../../../pricing/application/pricing_controller.dart';
 import '../../../pricing/domain/pricing_repository.dart';
+import '../../../pricing/presentation/widgets/billing_state_picker.dart';
 import '../../application/settings_controllers.dart';
 import '../../domain/settings_repository.dart';
+import 'billing_state_row.dart';
 import 'settings_section.dart';
 import 'tax_documents_list.dart';
 
@@ -45,6 +48,10 @@ import 'tax_documents_list.dart';
 /// offers the way back on the registration the server quotes now: for a kept
 /// free month that is the ₹399 paid registration whose month starts where
 /// the free month ends.
+///
+/// **The buyer's GST State** ([BillingStateRow]): shown and changeable for an
+/// India account, and asked inline before the way back registers UPI
+/// AutoPay when none is on record (source `checkout`).
 ///
 /// **Tax invoices last** ([TaxDocumentsList], §5.9): the GST invoices, credit
 /// notes and refund vouchers, each opened in the app. Nothing shows until
@@ -230,6 +237,9 @@ class BillingSection extends ConsumerWidget {
             ),
           ],
 
+          // The State every GST invoice names — India only.
+          const BillingStateRow(),
+
           // The GST documents — nothing at all until there is one.
           const TaxDocumentsList(),
         ],
@@ -247,6 +257,10 @@ class BillingSection extends ConsumerWidget {
 /// mandate can still debit (`canStop`). Once AutoPay is off it offers the
 /// way back — but not straight after a stop made here, which would offer to
 /// undo, in the same breath, what the user just chose.
+///
+/// The way back asks the buyer's GST State first when none is on record
+/// (they finished onboarding before it was asked): the picker takes the
+/// button's place, and the registration opens once it is saved.
 class AutopayPanel extends ConsumerStatefulWidget {
   const AutopayPanel({required this.status, super.key});
 
@@ -268,6 +282,9 @@ class _AutopayPanelState extends ConsumerState<AutopayPanel> {
   /// The web's `#e5484d` — the one red this product uses for "this did not
   /// work", as the plan step's errors do.
   static const Color _alert = Color(0xFFE5484D);
+
+  /// This panel's key on [BillingStateAsk].
+  static const String _stateAskKey = 'settings:restart';
 
   Future<void> _stop() async {
     final StopAutopayResult? result = await ref
@@ -294,7 +311,12 @@ class _AutopayPanelState extends ConsumerState<AutopayPanel> {
     String? done;
     String? error;
     bool offerStale = false;
+    bool askedState = false;
     switch (outcome) {
+      case PlanCheckoutStateNeeded():
+        // Nothing was opened: the State is asked in the button's place.
+        askedState = true;
+        ref.read(billingStateAskProvider.notifier).ask(_stateAskKey);
       case PlanCheckoutDismissed():
         break;
       case PlanCheckoutFailed(:final String message, offerStale: final bool s):
@@ -320,7 +342,7 @@ class _AutopayPanelState extends ConsumerState<AutopayPanel> {
         ..invalidate(autopayRestartOfferProvider)
         ..invalidate(pricingPaymentConfigProvider);
     }
-    if (error == null) {
+    if (error == null && !askedState) {
       ref
         ..invalidate(autopayStatusProvider)
         ..invalidate(autopayRestartOfferProvider)
@@ -339,6 +361,7 @@ class _AutopayPanelState extends ConsumerState<AutopayPanel> {
     final AsyncValue<StopAutopayResult?> stopState = ref.watch(
       stopAutopayControllerProvider,
     );
+    final bool askingState = ref.watch(billingStateAskProvider) == _stateAskKey;
 
     // AutoPay is off: what the server would register now (the way back),
     // read only then.
@@ -473,11 +496,25 @@ class _AutopayPanelState extends ConsumerState<AutopayPanel> {
             ),
           ],
           SizedBox(height: ZaveSpace.md),
-          ZaveButton.brand(
-            label: _restarting ? 'Opening' : _restartLabel(restart),
-            busy: _restarting,
-            onPressed: _restarting ? null : () => _restart(restart),
-          ),
+          if (askingState)
+            BillingStateForm(
+              source: BillingStateSource.checkout,
+              showQuestion: true,
+              submitLabel: 'Save and continue',
+              submitKind: ZaveButtonKind.brand,
+              onSaved: (SavedBillingState _) {
+                ref.read(billingStateAskProvider.notifier).clear();
+                _restart(restart);
+              },
+              onCancel: () =>
+                  ref.read(billingStateAskProvider.notifier).clear(),
+            )
+          else
+            ZaveButton.brand(
+              label: _restarting ? 'Opening' : _restartLabel(restart),
+              busy: _restarting,
+              onPressed: _restarting ? null : () => _restart(restart),
+            ),
         ],
 
         // A way back the server refused as out of date (AUTOPAY_DISABLED):

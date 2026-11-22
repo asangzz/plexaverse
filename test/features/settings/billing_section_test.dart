@@ -14,7 +14,8 @@ import 'package:plexaverse/features/settings/presentation/widgets/billing_sectio
 /// The Settings billing section: the plan's status, and — on a UPI AutoPay
 /// account — the mandate with the user's own Stop autopay
 /// (TOKEN_AUTOPAY_SPEC.md D17, §4.4). Wallet XP was retired on 10 Nov 2026,
-/// so there is no balance, no "top up", and no "XP" anywhere.
+/// so there is no balance, no "top up", and no "XP" anywhere. And the
+/// buyer's GST State: shown, changeable, and asked before the way back pays.
 
 /// The pricing backend for this section: the mandate's status as scripted,
 /// the stop as the server answers it, and the offer the way back reads.
@@ -613,6 +614,11 @@ void main() {
           keptTrialEndsAt: soon,
         ),
       )..closeRegistrations = true;
+      // Declared in onboarding: the registration opens without a State ask.
+      await repo.saveBillingState(
+        stateCode: '29',
+        source: BillingStateSource.onboarding,
+      );
       await pump(tester, trial, repo: repo);
       expect(texts(tester), contains('Set up AutoPay with ₹399'));
       final int readsBefore = repo.configReads;
@@ -670,6 +676,127 @@ void main() {
       expect(text, contains('Try again'));
     });
   });
+
+  group('the buyer\'s GST State', () {
+    const SubscriptionState trial = SubscriptionState(
+      status: 'active',
+      paymentMode: 'subscription',
+      entitled: true,
+      entitlementReason: 'subscription_trial',
+    );
+
+    /// Past the fake backend's latency and the sheet's slide.
+    Future<void> step(WidgetTester tester) async {
+      for (int i = 0; i < 10; i++) {
+        await tester.pump(const Duration(milliseconds: 200));
+      }
+    }
+
+    testWidgets('an India account with none sees it is not set, and adds it '
+        'from Settings', (WidgetTester tester) async {
+      final _Billing repo = _Billing();
+      List<String> text = await pump(
+        tester,
+        const SubscriptionState(),
+        repo: repo,
+      );
+      expect(text, contains('YOUR STATE'));
+      expect(text, contains('Not set yet'));
+      expect(
+        text,
+        contains(
+          'It is printed on your GST invoices. Changing it applies to '
+          'invoices issued from now on; invoices already issued keep the '
+          'State they were issued with.',
+        ),
+      );
+
+      await tester.tap(find.text('Add your State'));
+      await step(tester);
+      // Pre-selected from the region; nothing saved yet.
+      expect(find.text('Maharashtra'), findsOneWidget);
+      expect((await repo.fetchBillingState()).stateCode, isNull);
+
+      // A different choice, from the sheet of States.
+      await tester.tap(
+        find.byKey(const ValueKey<String>('billing-state-field')),
+      );
+      await step(tester);
+      await tester.tap(find.text('Bihar'));
+      await step(tester);
+      await tester.tap(find.text('Save'));
+      await step(tester);
+
+      final BillingState saved = await repo.fetchBillingState();
+      expect(saved.stateCode, '10');
+      expect(saved.source, BillingStateSource.settings);
+      text = texts(tester);
+      expect(text, contains('Bihar'));
+      expect(text, contains('Saved.'));
+      expect(text, contains('Change State'));
+    });
+
+    testWidgets('a buyer abroad with no State is shown none', (
+      WidgetTester tester,
+    ) async {
+      final List<String> text = await pump(
+        tester,
+        const SubscriptionState(),
+        repo: _Abroad(),
+      );
+      expect(text, isNot(contains('YOUR STATE')));
+      expect(text, isNot(contains('Add your State')));
+    });
+
+    testWidgets('the way back asks the State first, then opens the '
+        'registration — once', (WidgetTester tester) async {
+      final DateTime soon = DateTime.now().add(const Duration(days: 10));
+      final _Billing repo = _Billing(
+        status: AutopayStatus(
+          rail: 'token',
+          tokenStatus: 'cancelled',
+          stopped: true,
+          monthlyPaise: 39900,
+          accessUntil: soon,
+          inTrial: true,
+          trialEndsAt: soon,
+        ),
+        offer: TokenOffer(
+          kind: MandateKind.paid,
+          registrationPaise: 39900,
+          registrationRefunded: false,
+          monthlyPaise: 39900,
+          maxAmountPaise: 39900,
+          freeDays: 0,
+          copyVersion: kAutopayCheckoutCopyVersion,
+          firstChargeAt: soon,
+          keptTrialEndsAt: soon,
+        ),
+      );
+      await pump(tester, trial, repo: repo);
+
+      await tester.tap(find.text('Set up AutoPay with ₹399'));
+      await step(tester);
+      expect(repo.creates, 0);
+      expect(find.text('Which State are you in?'), findsOneWidget);
+      expect(find.text('Set up AutoPay with ₹399'), findsNothing);
+
+      await tester.tap(find.text('Save and continue'));
+      await step(tester);
+      final BillingState saved = await repo.fetchBillingState();
+      expect(saved.stateCode, '27');
+      expect(saved.source, BillingStateSource.checkout);
+      expect(repo.creates, 1);
+      expect(find.text('Which State are you in?'), findsNothing);
+    });
+  });
+}
+
+/// An account outside India, with no State on record.
+class _Abroad extends _Billing {
+  @override
+  Future<BillingState> fetchBillingState() async =>
+      const BillingState(isIndia: false);
 }
 
 class _Unreadable extends _Billing {

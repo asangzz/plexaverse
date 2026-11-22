@@ -5,8 +5,10 @@ import 'package:go_router/go_router.dart';
 import '../../../../core/platform/checkout.dart';
 import '../../../../core/ui/app_icons.dart';
 import '../../../../core/ui/zave/zave_kit.dart';
+import '../../application/billing_state_controller.dart';
 import '../../application/pricing_controller.dart';
 import '../../domain/pricing_repository.dart';
+import '../widgets/billing_state_picker.dart';
 import '../widgets/plan_card.dart';
 import '../widgets/referral_card.dart';
 import '../widgets/allowances_card.dart';
@@ -36,6 +38,11 @@ import '../widgets/allowances_card.dart';
 /// is a retry on the cards — never a fallback to the pass, because the server
 /// may owe this person a free month. While UPI AutoPay is live the personal
 /// card sells nothing and says where the mandate is managed.
+///
+/// An India buyer with no GST State on record is asked it on the card, in
+/// place of its button, before the checkout opens (source `checkout`); once
+/// it is saved the same checkout runs. Asked once — the next tap goes
+/// straight through.
 class PricingPage extends ConsumerWidget {
   const PricingPage({super.key});
 
@@ -69,6 +76,7 @@ class PricingPage extends ConsumerWidget {
     required bool autopayLive,
     required bool? onDevice,
     required String? buying,
+    required String? askingState,
   }) {
     final PaymentConfig? answer = config.value;
     // Not decided until the device has said whether it can register UPI
@@ -95,6 +103,20 @@ class PricingPage extends ConsumerWidget {
       onCheckout: offer == null || buying != null
           ? null
           : () => _buy(context, ref, offer),
+      stateAsk: askingState == plan.id && offer != null
+          ? BillingStateForm(
+              source: BillingStateSource.checkout,
+              showQuestion: true,
+              submitLabel: 'Save and continue',
+              submitKind: ZaveButtonKind.brand,
+              onSaved: (SavedBillingState _) {
+                ref.read(billingStateAskProvider.notifier).clear();
+                _buy(context, ref, offer);
+              },
+              onCancel: () =>
+                  ref.read(billingStateAskProvider.notifier).clear(),
+            )
+          : null,
     );
   }
 
@@ -121,6 +143,8 @@ class PricingPage extends ConsumerWidget {
     // null only while the device is being asked.
     final bool? onDevice = ref.watch(upiAutopayOnDeviceProvider).value;
     final String? buying = ref.watch(checkoutControllerProvider);
+    // The card waiting on the buyer's GST State, if any.
+    final String? askingState = ref.watch(billingStateAskProvider);
 
     return ZaveScaffold(
       largeTitle: 'Pricing',
@@ -189,6 +213,7 @@ class PricingPage extends ConsumerWidget {
                       autopayLive: autopayLive,
                       onDevice: onDevice,
                       buying: buying,
+                      askingState: askingState,
                     ),
                     SizedBox(height: ZaveSpace.lg),
                   ],

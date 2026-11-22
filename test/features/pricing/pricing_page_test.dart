@@ -13,7 +13,8 @@ import 'package:plexaverse/features/pricing/presentation/pages/pricing_page.dart
 /// includes, the referral promises the referrer a month, wallet XP appears
 /// nowhere — and each card is sold as the server's offer decides
 /// (TOKEN_AUTOPAY_SPEC.md §4.1, §4.4): UPI AutoPay where it is quoted, the
-/// 30-day pass everywhere else, a retry when it cannot be worked out.
+/// 30-day pass everywhere else, a retry when it cannot be worked out. An
+/// India buyer with no GST State on record is asked it on the card first.
 
 /// The mock backend with the payment config and the mandate status scripted,
 /// recording which checkout each tap opened.
@@ -167,9 +168,19 @@ void main() {
     }
   });
 
+  /// An account that declared its State in onboarding: the checkout opens
+  /// at once.
+  Future<_Pricing> declared(_Pricing pricing) async {
+    await pricing.saveBillingState(
+      stateCode: '29',
+      source: BillingStateSource.onboarding,
+    );
+    return pricing;
+  }
+
   testWidgets('a free-month offer reads as one, and sets up UPI AutoPay on '
       'an order with a customer', (WidgetTester tester) async {
-    final _Pricing pricing = _Pricing();
+    final _Pricing pricing = await declared(_Pricing());
     await pump(tester, pricing: pricing);
 
     final List<String> text = allText(tester);
@@ -217,7 +228,7 @@ void main() {
 
   testWidgets('a phone with no UPI app to approve in sells the 30-day pass, '
       'whatever the server offers', (WidgetTester tester) async {
-    final _Pricing pricing = _Pricing();
+    final _Pricing pricing = await declared(_Pricing());
     await pump(tester, pricing: pricing, probe: const _Probe(false));
 
     final List<String> text = allText(tester);
@@ -240,7 +251,9 @@ void main() {
   testWidgets('a dark server (no offer) sells the 30-day pass, as before', (
     WidgetTester tester,
   ) async {
-    final _Pricing pricing = _Pricing(config: const PaymentConfig());
+    final _Pricing pricing = await declared(
+      _Pricing(config: const PaymentConfig()),
+    );
     await pump(tester, pricing: pricing);
 
     final List<String> text = allText(tester);
@@ -287,6 +300,49 @@ void main() {
     );
     expect(text, isNot(contains('Get the 30-day pass · ₹399')));
     expect(text, isNot(contains('Start my free month')));
+  });
+
+  testWidgets('an India buyer with no State is asked it on the card before '
+      'the checkout opens — once', (WidgetTester tester) async {
+    final _Pricing pricing = _Pricing();
+    await pump(tester, pricing: pricing);
+
+    await tester.tap(find.text('Start my free month'));
+    await settle(tester);
+    // Nothing opened yet: the State is asked in the button's place,
+    // pre-selected from the region.
+    expect(pricing.mandatesFor, isEmpty);
+    expect(sheet.recurring, isEmpty);
+    expect(find.text('Which State are you in?'), findsOneWidget);
+    expect(find.text('It is printed on your GST invoices.'), findsOneWidget);
+    expect(find.text('Maharashtra'), findsOneWidget);
+    expect(find.text('Start my free month'), findsNothing);
+
+    await tester.tap(find.text('Save and continue'));
+    await settle(tester);
+    final BillingState saved = await pricing.fetchBillingState();
+    expect(saved.stateCode, '27');
+    expect(saved.source, BillingStateSource.checkout);
+    // Then the checkout the buyer pressed, without a second tap.
+    expect(pricing.mandatesFor, <String>['IN']);
+    expect(sheet.recurring, <bool>[true]);
+    expect(find.text('Which State are you in?'), findsNothing);
+  });
+
+  testWidgets('Cancel on the State drops the payment, not the page', (
+    WidgetTester tester,
+  ) async {
+    final _Pricing pricing = _Pricing();
+    await pump(tester, pricing: pricing);
+
+    await tester.tap(find.text('Start my free month'));
+    await settle(tester);
+    await tester.tap(find.text('Cancel'));
+    await settle(tester);
+    expect(find.text('Which State are you in?'), findsNothing);
+    expect(find.text('Start my free month'), findsOneWidget);
+    expect(pricing.mandatesFor, isEmpty);
+    expect((await pricing.fetchBillingState()).stateCode, isNull);
   });
 
   testWidgets('a live mandate sells nothing and says where it is managed', (
