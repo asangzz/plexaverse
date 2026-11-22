@@ -317,9 +317,7 @@ class _JoinedQuietState extends ConsumerState<_JoinedQuiet> {
     final ContestInfo contest = overview.contest;
     final ContestMoment? moment = quietMoment(overview, _openedAt);
     final ConsistencyView? meter = watchConsistency(ref);
-    final String reward =
-        'The top ${formatCount(contest.rewardTopN)} are featured to every '
-        'Plexaverse learner.';
+    final String topN = formatCount(contest.rewardTopN);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: <Widget>[
@@ -342,9 +340,8 @@ class _JoinedQuietState extends ConsumerState<_JoinedQuiet> {
         // settled, so a finished contest says who it goes to.
         Text(
           overview.isEnded
-              ? 'Final standings. ${contest.prizeTitle} goes to first place. '
-                    '$reward'
-              : '${contest.prizeTitle} for first place. $reward',
+              ? 'Final standings. ${contest.prizeTitle} goes to the top $topN.'
+              : '${contest.prizeTitle} for the top $topN.',
           style: ContestType.lead,
         ),
         SizedBox(height: ZaveSpace.xxl),

@@ -372,8 +372,7 @@ void main() {
     expect(find.text('ENDED'), findsOneWidget);
     expect(
       find.text(
-        'Final standings. Noise-cancelling headphones goes to first place. '
-        'The top 10 are featured to every Plexaverse learner.',
+        'Final standings. Noise-cancelling headphones goes to the top 10.',
       ),
       findsOneWidget,
     );
@@ -413,8 +412,7 @@ void main() {
     expect(find.text('STARTS 15 NOV 2026'), findsOneWidget);
     expect(
       find.text(
-        'Noise-cancelling headphones for first place. '
-        'The top 10 are featured to every Plexaverse learner.',
+        'Noise-cancelling headphones for the top 10.',
       ),
       findsOneWidget,
     );
@@ -437,7 +435,7 @@ void main() {
     expect(start.bottom, lessThan(667));
     // The rail and the board follow the path.
     for (final String title in <String>[
-      'First place wins Noise-cancelling headphones',
+      'Top 10 win Noise-cancelling headphones',
       'Daily quests',
       'This week on LinkedIn',
       'Leaderboard',
@@ -519,7 +517,7 @@ void main() {
     );
     expect(find.text('Could not load this week'), findsOneWidget);
     expect(
-      find.text('First place wins Noise-cancelling headphones'),
+      find.text('Top 10 win Noise-cancelling headphones'),
       findsOneWidget,
     );
     expect(find.text('This week is not in yet.'), findsNWidgets(2));

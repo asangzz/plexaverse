@@ -88,8 +88,7 @@ List<ContestRule> contestRules(ContestInfo c) {
     ),
     ContestRule(
       'Top $topN get featured',
-      'First place wins ${c.prizeTitle}. The top $topN are featured to every '
-          'Plexaverse learner. The prize is recognition only: no cash value, '
+      'The top $topN win ${c.prizeTitle}. The prize is recognition only: no cash value, '
           'not transferable, never sold. Ties go to first-try accuracy on the questions '
           'written for you, then to whoever got there first. Never a draw.',
     ),
@@ -181,13 +180,12 @@ class _ContestJoinCardState extends ConsumerState<ContestJoinCard> {
                 ),
                 SizedBox(height: ZaveSpace.xl),
               ],
-              Text('First place', style: ContestType.meta),
+              Text('Top ${formatCount(contest.rewardTopN)}', style: ContestType.meta),
               SizedBox(height: ZaveSpace.sm),
               Text(contest.prizeTitle, style: ContestType.sectionTitle),
               SizedBox(height: ZaveSpace.sm),
               Text(
-                'The top ${formatCount(contest.rewardTopN)} are featured to '
-                'every Plexaverse learner. Winner announced '
+                'Recognition only, no cash value. Winner announced '
                 '${shortDate(contest.endsAt.toLocal())}.',
                 style: ZaveType.body.copyWith(
                   fontSize: 15,

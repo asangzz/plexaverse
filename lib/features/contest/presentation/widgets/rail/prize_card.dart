@@ -51,14 +51,13 @@ class PrizeCard extends StatelessWidget {
                 Semantics(
                   header: true,
                   child: Text(
-                    'First place wins ${contest.prizeTitle}',
+                    'Top ${formatCount(contest.rewardTopN)} win ${contest.prizeTitle}',
                     style: railTitle,
                   ),
                 ),
                 const SizedBox(height: 2),
                 Text(
-                  'Results on $date · Top ${formatCount(contest.rewardTopN)} '
-                  'get featured to every Plexaverse learner',
+                  'Results on $date · Recognition only, no cash value',
                   style: railMuted,
                 ),
               ],
