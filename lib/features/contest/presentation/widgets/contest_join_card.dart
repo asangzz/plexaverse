@@ -25,7 +25,6 @@ class ContestRule {
 /// the admin page, and "the streak weighs most" changes behaviour where "50
 /// + 10 per day up to 20" mostly does not.
 List<ContestRule> contestRules(ContestInfo c) {
-  final String months = plural(c.rewardMonths, 'month', 'months');
   final String topN = formatCount(c.rewardTopN);
   final int weekComplete = c.weekComplete ?? 0;
   return <ContestRule>[
@@ -88,9 +87,10 @@ List<ContestRule> contestRules(ContestInfo c) {
           'plan. Lessons stay open either way.',
     ),
     ContestRule(
-      'Top $topN get $months free',
-      'First place wins ${c.prizeTitle}. The top $topN get $months free for '
-          'the next contest. Ties go to first-try accuracy on the questions '
+      'Top $topN get featured',
+      'First place wins ${c.prizeTitle}. The top $topN are featured to every '
+          'Plexaverse learner. The prize is recognition only: no cash value, '
+          'not transferable, never sold. Ties go to first-try accuracy on the questions '
           'written for you, then to whoever got there first. Never a draw.',
     ),
   ];
@@ -139,7 +139,6 @@ class _ContestJoinCardState extends ConsumerState<ContestJoinCard> {
         ? 'Day ${formatCount(overview.dayNumber)}. You can join any day it runs.'
         : 'Starts ${dayKeyShort(contest.firstDayKey)}. You can join now or '
               'any day it runs.';
-    final String months = plural(contest.rewardMonths, 'month', 'months');
     final String? image = contest.prizeImageUrl;
 
     return Column(
@@ -187,8 +186,8 @@ class _ContestJoinCardState extends ConsumerState<ContestJoinCard> {
               Text(contest.prizeTitle, style: ContestType.sectionTitle),
               SizedBox(height: ZaveSpace.sm),
               Text(
-                'The top ${formatCount(contest.rewardTopN)} get $months free '
-                'for the next contest. Winner announced '
+                'The top ${formatCount(contest.rewardTopN)} are featured to '
+                'every Plexaverse learner. Winner announced '
                 '${shortDate(contest.endsAt.toLocal())}.',
                 style: ZaveType.body.copyWith(
                   fontSize: 15,

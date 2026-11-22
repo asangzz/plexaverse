@@ -317,10 +317,9 @@ class _JoinedQuietState extends ConsumerState<_JoinedQuiet> {
     final ContestInfo contest = overview.contest;
     final ContestMoment? moment = quietMoment(overview, _openedAt);
     final ConsistencyView? meter = watchConsistency(ref);
-    final String months = plural(contest.rewardMonths, 'month', 'months');
     final String reward =
-        'The top ${formatCount(contest.rewardTopN)} get $months free for the '
-        'next contest.';
+        'The top ${formatCount(contest.rewardTopN)} are featured to every '
+        'Plexaverse learner.';
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: <Widget>[

@@ -58,8 +58,7 @@ class PrizeCard extends StatelessWidget {
                 const SizedBox(height: 2),
                 Text(
                   'Results on $date · Top ${formatCount(contest.rewardTopN)} '
-                  'get ${plural(contest.rewardMonths, 'month', 'months')} '
-                  'free for the next contest',
+                  'get featured to every Plexaverse learner',
                   style: railMuted,
                 ),
               ],

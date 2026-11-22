@@ -272,7 +272,7 @@ void main() {
       'The leaderboard opens for the last 10 days',
       'Published posts count',
       '30 days free, then a plan',
-      'Top 10 get 3 months free',
+      'Top 10 get featured',
     ]) {
       expect(find.text(rule), findsOneWidget, reason: rule);
     }
@@ -373,7 +373,7 @@ void main() {
     expect(
       find.text(
         'Final standings. Noise-cancelling headphones goes to first place. '
-        'The top 10 get 3 months free for the next contest.',
+        'The top 10 are featured to every Plexaverse learner.',
       ),
       findsOneWidget,
     );
@@ -414,7 +414,7 @@ void main() {
     expect(
       find.text(
         'Noise-cancelling headphones for first place. '
-        'The top 10 get 3 months free for the next contest.',
+        'The top 10 are featured to every Plexaverse learner.',
       ),
       findsOneWidget,
     );

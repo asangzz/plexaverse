@@ -365,8 +365,7 @@ class _RewardRule extends StatelessWidget {
         child: LabelledRule(
           colour: ZaveColors.rule,
           label: Text(
-            'Top ${formatCount(topN)} get '
-            '${plural(months, 'month', 'months')} free',
+            'Top ${formatCount(topN)} get featured',
             textAlign: TextAlign.center,
             style: ContestType.meta.copyWith(fontSize: 13),
           ),

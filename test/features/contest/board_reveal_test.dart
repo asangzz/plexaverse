@@ -120,7 +120,7 @@ void main() {
     expect(
       find.descendant(
         of: full,
-        matching: find.text('Top 10 get 3 months free'),
+        matching: find.text('Top 10 get featured'),
       ),
       findsOneWidget,
     );
@@ -210,7 +210,7 @@ void main() {
     expect(you.top, greaterThan(gap.bottom));
     expect(find.text('40'), findsOneWidget);
     // The reward line sits under the last rewarded place.
-    final Rect rule = tester.getRect(find.text('Top 10 get 3 months free'));
+    final Rect rule = tester.getRect(find.text('Top 10 get featured'));
     expect(rule.top, greaterThan(tester.getRect(find.text('Name 10')).bottom));
     expect(rule.bottom, lessThan(tester.getRect(find.text('Name 11')).top));
     // A streak of none is a dash, not a zero.
