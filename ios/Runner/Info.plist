@@ -43,6 +43,23 @@
 	<string>$(FLUTTER_BUILD_NUMBER)</string>
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
+	<!-- UPI AutoPay (TOKEN_AUTOPAY_SPEC.md §4.3). The Razorpay sheet hands a
+	     UPI AutoPay registration to the user's UPI app by its URL scheme, and
+	     iOS answers canOpenURL only for schemes listed here. Without them the
+	     sheet cannot see any UPI app installed.
+	     TODO(owner): check this list against Razorpay's current iOS UPI-Intent
+	     guide before the build ships, and confirm a ₹1 registration completes
+	     on a real iPhone (§7). If it cannot, set kUpiAutopayOnIos to false in
+	     lib/core/platform/checkout.dart: iOS then sells the 30-day pass. -->
+	<key>LSApplicationQueriesSchemes</key>
+	<array>
+		<string>tez</string>
+		<string>phonepe</string>
+		<string>paytmmp</string>
+		<string>bhim</string>
+		<string>credpay</string>
+		<string>upi</string>
+	</array>
 	<key>UIApplicationSceneManifest</key>
 	<dict>
 		<key>UIApplicationSupportsMultipleScenes</key>

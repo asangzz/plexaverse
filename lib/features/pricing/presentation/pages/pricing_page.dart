@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../../core/platform/checkout.dart';
 import '../../../../core/ui/app_icons.dart';
 import '../../../../core/ui/zave/zave_kit.dart';
 import '../../application/pricing_controller.dart';
@@ -21,45 +22,80 @@ import '../widgets/allowances_card.dart';
 /// "XP" in this app now means only the contest score, and this screen never
 /// says it.
 ///
-/// ## The one thing this screen cannot do
+/// ## How a plan is bought
 ///
-/// It cannot take money. Both Razorpay routes exist server-side, but the value
-/// they return is an order / subscription id that only the Razorpay **checkout
-/// SDK** can open, and the app does not ship `razorpay_flutter`. Creating an
-/// order from here would leave a paid-for-nothing order row behind and show the
-/// user a button that visibly does nothing.
+/// Each card is decided by its [PlanOffer] — the web's `decidePlanOffer`,
+/// from `GET /geo/pricing` and `GET /payment/config`: UPI AutoPay where the
+/// server quoted it (India, the personal plan), the 30-day pass everywhere
+/// else (TOKEN_AUTOPAY_SPEC.md §4.1, §4.3). The checkout is
+/// `razorpay_flutter`'s native sheet, run by [PlanCheckout] — the same code the
+/// onboarding plan step runs. While the token rail is dark the server sends
+/// no offer, and every card sells the pass.
 ///
-/// So the CTA is rendered, disabled, with the reason written underneath. That
-/// is the same call the Settings slice made for Slack and Google Calendar, and
-/// the precedent this codebase has already set: an honest disabled control
-/// beats a dead one.
-///
-/// ## A departure from the web, forced
-///
-/// The web decides "Subscribe" vs "Get the 30-day pass" from
-/// `GET /api/payment/config`. That route has a mobile mirror, but this screen
-/// only opens subscription mandates (the one-time order flow is not wired to
-/// the sheet), so it says "Subscribe" and nothing about a pass it cannot sell.
-/// Settings names an active 30-day pass bought on the web as one.
+/// A config that cannot be read, or an offer the server could not work out,
+/// is a retry on the cards — never a fallback to the pass, because the server
+/// may owe this person a free month. While UPI AutoPay is live the personal
+/// card sells nothing and says where the mandate is managed.
 class PricingPage extends ConsumerWidget {
   const PricingPage({super.key});
 
-  /// Runs checkout and says what happened.
+  /// Runs the checkout the card's [offer] describes and says what happened.
   ///
   /// Silence on a closed sheet — backing out of a payment is a decision, and
   /// the same rule the browser hand-off and the image picker follow.
   static Future<void> _buy(
     BuildContext context,
     WidgetRef ref,
-    PricingPlan plan,
+    PlanOffer offer,
   ) async {
     final String? note = await ref
         .read(checkoutControllerProvider.notifier)
-        .buy(planType: plan.id);
+        .buy(offer);
     if (note == null || !context.mounted) return;
     ScaffoldMessenger.of(context)
       ..hideCurrentSnackBar()
       ..showSnackBar(SnackBar(content: Text(note, style: ZaveType.body)));
+  }
+
+  /// One plan's card, decided by its offer. Never decided on half an answer:
+  /// the button waits for both the prices and the offer, and an offer that
+  /// cannot be worked out is a retry.
+  static Widget _card(
+    BuildContext context,
+    WidgetRef ref, {
+    required PricingPlan plan,
+    required PlanPricing pricing,
+    required AsyncValue<PaymentConfig> config,
+    required bool autopayLive,
+    required bool? onDevice,
+    required String? buying,
+  }) {
+    final PaymentConfig? answer = config.value;
+    // Not decided until the device has said whether it can register UPI
+    // AutoPay: a guess either way sells the wrong thing.
+    final PlanOffer? offer = answer == null || onDevice == null
+        ? null
+        : PlanOffer.decide(
+            pricing: pricing,
+            config: answer,
+            planType: plan.id,
+            upiAutopayOnDevice: onDevice,
+          );
+    final bool failed =
+        (config.hasError && !config.isLoading) ||
+        (answer != null && onDevice != null && offer == null);
+    return PlanCard(
+      plan: plan,
+      pricing: pricing,
+      offer: offer,
+      offerFailed: failed,
+      onRetry: () => ref.invalidate(pricingPaymentConfigProvider),
+      autopayLive: autopayLive && plan.id == PricingPlan.personal.id,
+      busy: buying == plan.id,
+      onCheckout: offer == null || buying != null
+          ? null
+          : () => _buy(context, ref, offer),
+    );
   }
 
   @override
@@ -74,6 +110,17 @@ class PricingPage extends ConsumerWidget {
     final AsyncValue<AllowanceTable> allowances = ref.watch(
       planAllowancesProvider,
     );
+    final AsyncValue<PaymentConfig> config = ref.watch(
+      pricingPaymentConfigProvider,
+    );
+    // A failed status read is not "no mandate"; it only means the card
+    // cannot say "UPI AutoPay is on". The server still refuses a second plan.
+    final bool autopayLive =
+        ref.watch(autopayStatusProvider).value?.live ?? false;
+    // Never errors (a probe that cannot answer is the platform's answer);
+    // null only while the device is being asked.
+    final bool? onDevice = ref.watch(upiAutopayOnDeviceProvider).value;
+    final String? buying = ref.watch(checkoutControllerProvider);
 
     return ZaveScaffold(
       largeTitle: 'Pricing',
@@ -90,6 +137,9 @@ class PricingPage extends ConsumerWidget {
             ..invalidate(planPricingProvider)
             ..invalidate(pricingBrandTypeProvider)
             ..invalidate(planAllowancesProvider)
+            ..invalidate(pricingPaymentConfigProvider)
+            ..invalidate(autopayStatusProvider)
+            ..invalidate(upiAutopayOnDeviceProvider)
             ..invalidate(referralControllerProvider);
           await ref.read(planPricingProvider.future);
         },
@@ -130,10 +180,15 @@ class PricingPage extends ConsumerWidget {
                   for (final PricingPlan plan in PricingPlan.forBrand(
                     brandType.value,
                   )) ...<Widget>[
-                    PlanCard(
+                    _card(
+                      context,
+                      ref,
                       plan: plan,
                       pricing: p,
-                      onCheckout: () => _buy(context, ref, plan),
+                      config: config,
+                      autopayLive: autopayLive,
+                      onDevice: onDevice,
+                      buying: buying,
                     ),
                     SizedBox(height: ZaveSpace.lg),
                   ],

@@ -4,6 +4,7 @@ import 'dart:math' as math;
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 import '../../../core/access/company_brand.dart';
+import '../../../core/platform/checkout.dart';
 import '../../preferences/application/preferences_controller.dart';
 import '../../pricing/application/plan_checkout.dart';
 import '../../pricing/data/pricing_repositories.dart';
@@ -303,19 +304,15 @@ class OnboardingChatController extends _$OnboardingChatController {
       ? OnboardingStep.companyPage
       : OnboardingStep.cvUpload;
 
-  /// What Plexa says on the plan step.
+  /// What Plexa says on the plan step — the web's `planStepLine`.
   ///
   /// Free first, where it is free — the fact that decides whether the next
-  /// sentence gets read at all. The web's line ends "nothing is charged until
-  /// day 30", which its own plan step contradicts a line later: the bank's
-  /// ₹5 mandate check IS a charge, refunded. So this names the day of the
-  /// first payment instead. Where autopay is not offered there is no free
-  /// month to lead with, and the line says only why the ask exists.
-  static String planAsk(PlanOffer? offer) => offer != null && offer.recurring
-      ? 'One thing before I start writing: your first month is free. Set up '
-            'autopay now and your first payment is on day $kFreeFirstMonthDays.'
-      : "One thing before I start writing: your plan — it's what pays for "
-            'the posts I write and publish for you.';
+  /// sentence gets read at all — and the DATE of the first payment the server
+  /// quoted, so the first debit is never a surprise. It never says "nothing
+  /// is charged": the UPI app takes ₹1 to set up the mandate (refunded), and
+  /// the panel right under the line says so. Any other offer — the pass, a
+  /// ₹399 registration, a kept ₹1 — gets only why the ask exists.
+  static String planAsk(PlanOffer? offer) => planStepLine(offer);
 
   /// Enters the plan step: is it needed, and what does it offer?
   ///
@@ -330,6 +327,7 @@ class OnboardingChatController extends _$OnboardingChatController {
       planOfferFailed: false,
       planBusy: false,
       planError: null,
+      planSheetUnfinished: false,
     );
     final PlanHolder holder = await _repo.fetchPlanHolder();
     if (!_current(generation)) return;
@@ -345,7 +343,8 @@ class OnboardingChatController extends _$OnboardingChatController {
     await _sendBot(planAsk(offer));
   }
 
-  /// Where they are and whether autopay works there — both, or neither.
+  /// Where they are and what the server offers them there — both, or
+  /// neither.
   ///
   /// Null on any failure, never a fallback to India: that fallback is the bug
   /// the web's plan step shipped with. It does not fail; it succeeds,
@@ -353,15 +352,20 @@ class OnboardingChatController extends _$OnboardingChatController {
   Future<PlanOffer?> _loadPlanOffer() async {
     try {
       // No country: the server reads the edge's, as the web does — see
-      // `PlanPricing`.
-      final (PlanPricing pricing, PaymentConfig config) = await (
+      // `PlanPricing`. The device is asked each time: a UPI app installed
+      // since the last ask counts at once.
+      final (PlanPricing pricing, PaymentConfig config, bool onDevice) = await (
         _pricing.fetchPricing(),
         _pricing.fetchPaymentConfig(),
+        canRegisterUpiAutopay(ref.read(upiAppProbeProvider)),
       ).wait;
+      // Null when India's UPI AutoPay offer could not be worked out: a
+      // retry, never the pass — this person may be owed a free month.
       return PlanOffer.decide(
         pricing: pricing,
         config: config,
         planType: state.answers.isCompany ? 'company' : 'personal',
+        upiAutopayOnDevice: onDevice,
       );
     } on Object {
       return null;
@@ -379,17 +383,26 @@ class OnboardingChatController extends _$OnboardingChatController {
   }
 
   /// The one control on the plan step. There is no skip.
+  ///
+  /// UPI AutoPay where the server quoted it ([PlanCheckout.registerAutopay]),
+  /// the 30-day pass everywhere else. A registration still confirming with
+  /// the bank ends the step too: the UPI app has taken the payment, and
+  /// asking again would be a second payment.
   Future<void> startPlan() async {
     final PlanOffer? offer = state.planOffer;
     if (state.step != OnboardingStep.plan || offer == null || state.planBusy) {
       return;
     }
     final int generation = _generation;
-    state = state.copyWith(planBusy: true, planError: null);
+    state = state.copyWith(
+      planBusy: true,
+      planError: null,
+      planSheetUnfinished: false,
+    );
 
     final PlanCheckout checkout = ref.read(planCheckoutProvider);
     final PlanCheckoutOutcome outcome = offer.recurring
-        ? await checkout.subscribe(
+        ? await checkout.registerAutopay(
             planType: offer.planType,
             countryCode: offer.countryCode,
             email: _planEmail,
@@ -403,27 +416,58 @@ class OnboardingChatController extends _$OnboardingChatController {
 
     switch (outcome) {
       case PlanCheckoutDismissed():
-        state = state.copyWith(planBusy: false);
-      case PlanCheckoutFailed(:final String message):
-        state = state.copyWith(planBusy: false, planError: message);
-      case PlanCheckoutDone():
+        // Closing the sheet is a decision — no error. But on UPI AutoPay it
+        // is also what a phone whose UPI app never opened looks like, so the
+        // panel names the way out (there is no skip).
+        state = state.copyWith(
+          planBusy: false,
+          planSheetUnfinished: offer.recurring,
+        );
+      case PlanCheckoutFailed(:final String message, :final bool offerStale):
+        state = state.copyWith(
+          planBusy: false,
+          planError: message,
+          planSheetUnfinished: offer.recurring,
+        );
+        // AUTOPAY_DISABLED: what this panel offers is out of date. Read it
+        // again so the button becomes the pass instead of failing for ever.
+        if (offerStale) await _reloadPlanOffer(generation);
+      case PlanCheckoutDone(:final MandateKind? kind):
         state = state.copyWith(planBusy: false);
         // The thread says what actually happened. On the autopay path that is
         // a mandate, not a payment; on the pass it is a payment.
-        if (offer.recurring) {
-          _echoUser('Autopay set up', badge: 'Free month started');
-        } else {
-          _echoUser('Paid for this month', badge: 'Plan active');
-        }
+        _echoDone(
+          offer.recurring ? PlanStepOutcome.mandate : PlanStepOutcome.pass,
+          kind: kind ?? offer.kind,
+        );
+        await _enter(_afterPlan);
+      case PlanCheckoutPending():
+        state = state.copyWith(planBusy: false);
+        _echoDone(PlanStepOutcome.mandatePending);
         await _enter(_afterPlan);
       case PlanCheckoutAlreadyActive():
-        // The server knows of a live mandate this screen did not (set up on
-        // the web, or on another device, since the step opened). The plan is
-        // there; nothing was bought just now.
+        // The server knows of a plan this screen did not (set up on the web,
+        // or on another device, since the step opened). The plan is there;
+        // nothing was bought just now.
         state = state.copyWith(planBusy: false);
-        _echoUser('I already have a plan', badge: 'Plan active');
+        _echoDone(PlanStepOutcome.already);
         await _enter(_afterPlan);
     }
+  }
+
+  void _echoDone(PlanStepOutcome outcome, {MandateKind? kind}) {
+    final ({String text, String badge}) echo = planDoneEcho(
+      outcome,
+      kind: kind,
+    );
+    _echoUser(echo.text, badge: echo.badge);
+  }
+
+  /// Reads the offer again after the server said the shown one is stale.
+  Future<void> _reloadPlanOffer(int generation) async {
+    final PlanOffer? offer = await _loadPlanOffer();
+    if (!_current(generation)) return;
+    state = state.copyWith(planOffer: offer, planOfferFailed: offer == null);
   }
 
   // ── Company page ──────────────────────────────────────────────────────────

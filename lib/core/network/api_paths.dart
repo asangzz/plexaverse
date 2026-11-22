@@ -571,16 +571,39 @@ class ApiPaths {
   // ── Money ───────────────────────────────────────────────────────────────
   static const String geoPricing = '/geo/pricing';
 
-  /// GET — the per-region autopay flags, which decide whether a plan is sold
-  /// as a subscription mandate or a one-time order. The Razorpay key is NOT
-  /// here: create-order and subscription/create each return it alongside the
-  /// thing it is for.
+  /// GET — this user's UPI AutoPay offer (`tokenOffer`), which decides
+  /// whether a plan is sold as a UPI AutoPay registration or a 30-day pass
+  /// (TOKEN_AUTOPAY_SPEC.md §4.1). The Razorpay key is NOT here: create-order
+  /// and autopay/create each return it alongside the thing it is for.
   static const String paymentConfig = '/payment/config';
 
   static const String paymentCreateOrder = '/payment/create-order';
   static const String paymentVerify = '/payment/verify';
-  static const String subscriptionCreate = '/subscription/create';
-  static const String subscriptionVerify = '/subscription/verify';
+
+  /// POST — open a UPI AutoPay registration: an ORDER with a customer and
+  /// `recurring: '1'` on Razorpay Recurring Payments. `/subscription/*`
+  /// (Razorpay Subscriptions, disabled on the account) is no longer called.
+  static const String autopayCreate = '/autopay/create';
+
+  /// POST — the registration sheet's result, verified server-side.
+  static const String autopayVerify = '/autopay/verify';
+
+  /// POST — the user's own Stop autopay (Settings → Billing).
+  static const String autopayStop = '/autopay/stop';
+
+  /// GET — the mandate, the next payment and how long the plan runs.
+  static const String autopayStatus = '/autopay/status';
+
+  /// GET — the caller's own GST documents (tax invoices, credit notes,
+  /// refund vouchers), newest first (TOKEN_AUTOPAY_SPEC.md §5.9).
+  static const String billingInvoices = '/billing/invoices';
+
+  /// GET — one of them as the printable page the web serves. Success is the
+  /// HTML itself (`text/html`), NOT the JSON envelope; failures use the
+  /// envelope. It needs the bearer token, so it is fetched through the app's
+  /// client and never handed to a browser.
+  static String billingInvoice(String id) =>
+      '/billing/invoices/${Uri.encodeComponent(id)}';
   static const String referral = '/referral';
   static const String referralApply = '/referral/apply';
 

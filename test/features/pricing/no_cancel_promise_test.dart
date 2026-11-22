@@ -6,17 +6,18 @@ import 'package:flutter_test/flutter_test.dart';
 // blanks comments with the same rules this scan needs.
 import '../../core/router/no_learn_route_test.dart' show stripComments;
 
-/// No promise of a way to cancel (owner, 17 Nov 2026: "hame koe subscription
-/// cancellation ka option nahi dena hai"). The app's half of the web's
+/// No promise of a way to cancel. The app's half of the web's
 /// `__tests__/lib/no-cancel-promise.test.ts`, with the same pattern.
 ///
-/// The product offers no cancellation, so nothing may say "cancel any time"
-/// or "cancel from Settings". What it does say, where the free month is
-/// offered and in Settings during it, is what cancelling the mandate at the
-/// bank costs: the free month ends with it.
+/// The control is **Stop autopay** (Settings → Billing; the 17 Nov "no
+/// cancellation" rule was reversed for it on 21 Nov 2026 — NPCI UPI circular
+/// 14.21), so the word everywhere is "stop", never "cancel any time" or
+/// "cancel from Settings". What the plan step and Settings say instead is
+/// what a stop does: in the free month the rest of it is kept and nothing is
+/// taken; after a payment the plan runs to the end of the paid period.
 ///
-/// Nor "No card": finishing onboarding registers autopay in India or buys the
-/// 30-day pass abroad, so a card or UPI is asked for.
+/// Nor "No card": finishing onboarding registers UPI AutoPay in India or buys
+/// the 30-day pass, so a payment method is asked for.
 ///
 /// Scans all of `lib/` — code only, comments stripped, generated files
 /// skipped.

@@ -299,6 +299,7 @@ class _DockControl extends ConsumerWidget {
         failed: chat.planOfferFailed,
         busy: chat.planBusy,
         error: chat.planError,
+        sheetUnfinished: chat.planSheetUnfinished,
         onStart: () => controller().startPlan(),
         onRetry: () => controller().retryPlanOffer(),
       ),

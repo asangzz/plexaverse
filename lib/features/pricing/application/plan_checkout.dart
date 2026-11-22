@@ -13,21 +13,36 @@ sealed class PlanCheckoutOutcome {
   const PlanCheckoutOutcome();
 }
 
-/// The server accepted the sheet's signature.
+/// The server accepted the sheet's result.
 ///
-/// For autopay that is the MANDATE, not a payment: with the free first month
-/// the subscription waits, `authenticated`, until the first charge thirty days
-/// later. Anything gating on "has paid" reads the entitlement, not this.
+/// For UPI AutoPay that is the MANDATE, and — unless [kind] is `paid` — not a
+/// payment: in the free month nothing is debited until the first charge.
+/// Anything gating on "has paid" reads the entitlement, not this.
 class PlanCheckoutDone extends PlanCheckoutOutcome {
-  const PlanCheckoutDone();
+  const PlanCheckoutDone({this.kind});
+
+  /// The registration's kind on the autopay path; null on the pass.
+  final MandateKind? kind;
 }
 
-/// The server refused because the account already has a live mandate or is
-/// inside its free month (409 `ALREADY_SUBSCRIBED`). The goal — a plan — is
-/// already met, so this is not a failure: onboarding's plan step, which has
-/// no skip, moves on instead of showing an error with no way past it.
+/// The UPI app took the registration, and the bank has not confirmed the
+/// mandate yet — the token is `initiated`, the payment could not be read
+/// yet, or (409 MANDATE_PENDING) a registration was already waiting on the
+/// bank. Not a failure and never a retry: a second attempt would be a second
+/// payment. The webhook or the server's sync completes it.
+class PlanCheckoutPending extends PlanCheckoutOutcome {
+  const PlanCheckoutPending();
+}
+
+/// The account already has a plan — a live mandate (409 `ALREADY_SUBSCRIBED`,
+/// or verify's `duplicate`), or access a pass would overlap. The goal — a
+/// plan — is already met, so this is not a failure: onboarding's plan step,
+/// which has no skip, moves on instead of showing an error with no way past.
 class PlanCheckoutAlreadyActive extends PlanCheckoutOutcome {
-  const PlanCheckoutAlreadyActive();
+  const PlanCheckoutAlreadyActive({this.message});
+
+  /// The server's own sentence, when it sent one.
+  final String? message;
 }
 
 /// The user closed the sheet. How a person says "not now" — no message,
@@ -37,19 +52,23 @@ class PlanCheckoutDismissed extends PlanCheckoutOutcome {
 }
 
 class PlanCheckoutFailed extends PlanCheckoutOutcome {
-  const PlanCheckoutFailed(this.message);
+  const PlanCheckoutFailed(this.message, {this.offerStale = false});
 
   /// One finished sentence, safe to show.
   final String message;
+
+  /// The offer the screen showed is out of date (400 AUTOPAY_DISABLED: it is
+  /// the pass now). The caller reads the offer again, so a step with no skip
+  /// is never left on a button that can only fail.
+  final bool offerStale;
 }
 
-/// Buying a plan: create the mandate or the order, open the sheet, verify.
+/// Buying a plan: open the registration or the order, open the sheet, verify.
 ///
-/// The web's `useSubscriptionCheckout` / `useOneTimeCheckout`, and one class
-/// for the same reason the web made them one hook: the Pricing screen and the
-/// onboarding plan step ask the same question, and two hand-written copies of
-/// "create → open → verify" drift on which errors they swallow — with the one
-/// on the path a new user actually walks being the one nobody tests.
+/// The web's `useAutopayCheckout` / `useOneTimeCheckout`, and one class for
+/// the same reason the web made them one module: the Pricing screen, Settings
+/// and the onboarding plan step ask the same question, and hand-written
+/// copies of "create → open → verify" drift on which errors they swallow.
 ///
 /// What the sheet returns is a CLAIM. The server checks the signature before
 /// anything is activated, so a device that lies gets nothing.
@@ -62,26 +81,51 @@ class PlanCheckout {
   static const String _notConfigured =
       'Payments are not set up yet. Try again in a little while.';
 
-  /// The autopay mandate. [countryCode] must be the region the price was
-  /// shown for — the server prices from it and defaults to India without it.
-  Future<PlanCheckoutOutcome> subscribe({
+  /// Registers UPI AutoPay (TOKEN_AUTOPAY_SPEC.md §3.3-§3.4): POST
+  /// `/autopay/create`, open the sheet on that ORDER with its customer and
+  /// `recurring: '1'`, then POST `/autopay/verify`.
+  ///
+  /// [countryCode] must be the region the offer was shown for — the server
+  /// enforces India and refuses an absent one.
+  ///
+  /// The server's refusals, each its own path:
+  ///   409 ALREADY_SUBSCRIBED  → [PlanCheckoutAlreadyActive];
+  ///   409 MANDATE_PENDING     → [PlanCheckoutPending];
+  ///   409 MANDATE_IN_PROGRESS → "set up in another window";
+  ///   400 AUTOPAY_DISABLED    → [PlanCheckoutFailed] with the server's
+  ///                             sentence and `offerStale`.
+  /// And verify's: `duplicate` → already active; `pending` or a token still
+  /// `initiated` → pending; a 400 that says the payment set nothing up
+  /// ([AutopayRefusals]) is shown as it is; anything else unconfirmed is
+  /// [AutopayCheckoutCopy.unconfirmed] ("no need to pay again").
+  Future<PlanCheckoutOutcome> registerAutopay({
     required String planType,
-    String? countryCode,
+    required String countryCode,
     String? email,
   }) async {
-    final CheckoutIntent intent;
+    final MandateIntent intent;
     try {
-      intent = await _repo.createSubscription(
+      intent = await _repo.createMandate(
         planType: planType,
         countryCode: countryCode,
+        copyVersion: kAutopayCheckoutCopyVersion,
       );
     } on Object catch (e) {
-      if (_errorCode(e) == 'ALREADY_SUBSCRIBED') {
-        return const PlanCheckoutAlreadyActive();
+      final String? said = serverMessage(e);
+      switch (errorCode(e)) {
+        case 'ALREADY_SUBSCRIBED':
+          return PlanCheckoutAlreadyActive(message: said);
+        case 'MANDATE_PENDING':
+          return const PlanCheckoutPending();
+        case 'MANDATE_IN_PROGRESS':
+          return PlanCheckoutFailed(said ?? AutopayCheckoutCopy.inProgress);
+        case 'AUTOPAY_DISABLED':
+          return PlanCheckoutFailed(
+            said ?? AutopayCheckoutCopy.disabled,
+            offerStale: true,
+          );
       }
-      return PlanCheckoutFailed(
-        _serverMessage(e) ?? 'Could not start the plan.',
-      );
+      return PlanCheckoutFailed(said ?? 'Could not start autopay.');
     }
 
     final String? keyId = intent.keyId;
@@ -94,16 +138,20 @@ class PlanCheckout {
     final CheckoutResult result = await _sheet.open(
       keyId: keyId,
       name: 'Plexaverse',
-      description: 'Monthly plan — first month free',
-      subscriptionId: intent.subscriptionId,
+      // From the ORDER, not the offer: the order is what the UPI app is
+      // about to be asked for.
+      description: autopayCheckoutDescription(
+        kind: intent.kind,
+        amountPaise: intent.amountPaise,
+        monthlyPaise: intent.monthlyPaise,
+        firstChargeAt: intent.firstChargeAt,
+        registrationRefunded: intent.registrationRefunded,
+      ),
+      orderId: intent.orderId,
+      customerId: intent.customerId,
+      recurring: true,
       email: email,
     );
-
-    // Deliberately not "payment failed": with the free first month nothing was
-    // charged, so telling someone to check their statement would send them
-    // looking for a debit that does not exist.
-    const String unconfirmed =
-        'We could not confirm your autopay setup. Try again in a moment.';
 
     switch (result) {
       case CheckoutCancelled():
@@ -113,24 +161,38 @@ class PlanCheckout {
           message ?? 'That did not go through. Try again.',
         );
       case CheckoutPaid(:final String paymentId, :final String? signature):
-        if (signature == null) return const PlanCheckoutFailed(unconfirmed);
+        if (signature == null) {
+          return const PlanCheckoutFailed(AutopayCheckoutCopy.unconfirmed);
+        }
+        final MandateVerification verified;
         try {
-          final bool verified = await _repo.verifySubscription(
+          verified = await _repo.verifyMandate(
+            orderId: intent.orderId,
             paymentId: paymentId,
-            subscriptionId: intent.subscriptionId,
             signature: signature,
           );
-          return verified
-              ? const PlanCheckoutDone()
-              : const PlanCheckoutFailed(unconfirmed);
-        } on Object {
-          return const PlanCheckoutFailed(unconfirmed);
+        } on Object catch (e) {
+          // A payment that set NOTHING up (voided attempt, wrong amount,
+          // failed, refunded): the server's own sentence, because the
+          // fallback — "it will appear here shortly, no need to pay again"
+          // — is the opposite of true there. Anything else unconfirmed (a
+          // 5xx, the network, a bad signature) keeps the fallback: the
+          // payment may well be recorded yet.
+          final String? said = serverMessage(e);
+          if (AutopayRefusals.isRefusal(said)) return PlanCheckoutFailed(said!);
+          return const PlanCheckoutFailed(AutopayCheckoutCopy.unconfirmed);
         }
+        if (!verified.success) {
+          return const PlanCheckoutFailed(AutopayCheckoutCopy.unconfirmed);
+        }
+        if (verified.duplicate) return const PlanCheckoutAlreadyActive();
+        if (verified.awaitingBank) return const PlanCheckoutPending();
+        return PlanCheckoutDone(kind: verified.kind ?? intent.kind);
     }
   }
 
-  /// One month, paid once — where autopay cannot complete. No mandate, so
-  /// nothing recurs and there is no free month.
+  /// One month, paid once — wherever UPI AutoPay is not offered. No mandate,
+  /// so nothing recurs and there is no free month.
   Future<PlanCheckoutOutcome> payForMonth({
     required String planType,
     required String countryCode,
@@ -143,8 +205,13 @@ class PlanCheckout {
         countryCode: countryCode,
       );
     } on Object catch (e) {
+      // A pass would overlap time the account already has (TOKEN_AUTOPAY_SPEC
+      // D15): the plan is there, so on a step with no skip this moves on.
+      if (errorCode(e) == 'ALREADY_SUBSCRIBED') {
+        return PlanCheckoutAlreadyActive(message: serverMessage(e));
+      }
       return PlanCheckoutFailed(
-        _serverMessage(e) ?? 'Could not start the payment.',
+        serverMessage(e) ?? 'Could not start the payment.',
       );
     }
 
@@ -162,8 +229,8 @@ class PlanCheckout {
       email: email,
     );
 
-    // Money DID move on this path, unlike the mandate — so this says to wait
-    // rather than to pay again.
+    // Money DID move on this path — so this says to wait rather than to pay
+    // again.
     const String unconfirmed =
         'We could not confirm your payment. If you were charged, it will land '
         'shortly.';
@@ -193,7 +260,7 @@ class PlanCheckout {
   }
 
   /// The envelope's `error.code`, when the server sent one.
-  static String? _errorCode(Object e) {
+  static String? errorCode(Object e) {
     if (e is! DioException) return null;
     final Object? failure = e.error;
     return failure is Failure ? failure.errorCode : null;
@@ -202,7 +269,7 @@ class PlanCheckout {
   /// The server's own sentence, when it sent one — the money routes answer
   /// with copy meant to be shown ("Your account is set to the company brand —
   /// please subscribe to the company plan.").
-  static String? _serverMessage(Object e) {
+  static String? serverMessage(Object e) {
     if (e is! DioException) return null;
     final Object? failure = e.error;
     if (failure is Failure) {

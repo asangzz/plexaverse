@@ -66,6 +66,11 @@ abstract class OnboardingChatState with _$OnboardingChatState {
     /// Why the last attempt did not finish, in one sentence. Not set when the
     /// sheet was simply closed.
     String? planError,
+
+    /// A UPI AutoPay sheet was opened on this step and did not finish —
+    /// closed, or failed. The panel then names the way out, since the step
+    /// has no skip and a UPI app that never opened looks exactly like this.
+    @Default(false) bool planSheetUnfinished,
     @Default(false) bool finaliseError,
 
     /// The preferences write succeeded. The page watches this and hands over to

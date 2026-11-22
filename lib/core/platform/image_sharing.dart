@@ -59,6 +59,18 @@ abstract class ImageSharingService {
     required double targetWidth,
     String? text,
   });
+
+  /// Writes [contents] to a file named [fileName] and offers it to the user.
+  ///
+  /// For a document the app fetched itself with the user's token — a tax
+  /// invoice's printable page (Settings → Billing). The app has no HTML view,
+  /// so the file is how the real page leaves it: it opens in a browser and
+  /// prints or saves as PDF from there.
+  Future<ShareResult> shareTextFile({
+    required String contents,
+    required String fileName,
+    String? text,
+  });
 }
 
 class PlatformImageSharing implements ImageSharingService {
@@ -139,6 +151,23 @@ class PlatformImageSharing implements ImageSharingService {
       final File file = File('${dir.path}/$fileName');
       await file.writeAsBytes(bytes.buffer.asUint8List(), flush: true);
 
+      return _offer(file, text);
+    } on Object {
+      return const ShareFailed();
+    }
+  }
+
+  @override
+  Future<ShareResult> shareTextFile({
+    required String contents,
+    required String fileName,
+    String? text,
+  }) async {
+    try {
+      // Temp, as for the PNGs above: a handoff, not a library.
+      final Directory dir = await getTemporaryDirectory();
+      final File file = File('${dir.path}/$fileName');
+      await file.writeAsString(contents, flush: true);
       return _offer(file, text);
     } on Object {
       return const ShareFailed();

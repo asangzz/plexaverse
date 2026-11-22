@@ -12,11 +12,12 @@ part 'pricing.g.dart';
 /// prevent. The shared model that would justify one copy is `preferences/`,
 /// which is domain-only by design; pricing is not that.
 ///
-/// The pricing screen passes the DEVICE LOCALE's country. The onboarding plan
-/// step passes none and lets the server read the edge's IP country, as the
-/// web does — there the region picks the payment instrument, not just the
-/// figure, and a phone's locale is a language setting that reads "US" for
-/// plenty of people in India (see the route's own comment).
+/// Every caller that SELLS from it — the Pricing screen, the onboarding plan
+/// step, Settings' way back — passes no country and lets the server read the
+/// edge's IP country, as the web does: the region picks the payment
+/// instrument, not just the figure, and a phone's locale is a language
+/// setting that reads "US" for plenty of people in India (see the route's
+/// own comment).
 @freezed
 abstract class PlanPricing with _$PlanPricing {
   const PlanPricing._();

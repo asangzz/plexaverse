@@ -65,5 +65,13 @@
         <intent>
             <action android:name="android.speech.RecognitionService"/>
         </intent>
+        <!-- UPI apps (Android 11+ package visibility). Without this,
+             canLaunchUrl('upi://pay') answers false on every phone and
+             upiAutopayOnDevice (lib/core/platform/checkout.dart) would sell
+             the 30-day pass to everyone instead of UPI AutoPay. -->
+        <intent>
+            <action android:name="android.intent.action.VIEW"/>
+            <data android:scheme="upi"/>
+        </intent>
     </queries>
 </manifest>
