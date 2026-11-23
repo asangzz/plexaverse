@@ -15,6 +15,9 @@ import '../widgets/contest_join_card.dart';
 import '../widgets/contest_kit.dart';
 import '../widgets/contest_section_bar.dart';
 import '../widgets/contest_skeletons.dart';
+import '../widgets/featured/hall_of_fame.dart';
+import '../widgets/featured/learners_of_the_week.dart';
+import '../widgets/featured/shoutout_card.dart';
 import '../widgets/path/path_view.dart';
 import '../widgets/paused_notice.dart';
 import '../widgets/rail/consistency_card.dart';
@@ -24,6 +27,7 @@ import '../widgets/rail/prize_card.dart';
 import '../widgets/rail/week_tasks_card.dart';
 import '../widgets/roadmap_line.dart';
 import '../widgets/stats_bar.dart';
+import '../widgets/web_link.dart';
 
 /// `/contest` — the Business English contest, for one participant. The
 /// signed-in home. A port of the web's `ContestClient.tsx`.
@@ -43,6 +47,17 @@ import '../widgets/stats_bar.dart';
 ///   * Joined and running → the path, then the prize, the board preview,
 ///     today's quests, the week's LinkedIn tasks and the full board, under a
 ///     small section bar that jumps between them.
+///   * Every state → the Hall of Fame (a finalised contest's consenting
+///     winners, for 30 days) under the rest; and wherever a contest is
+///     shown, a link to its full rules on the web.
+///
+/// ## The shoutout (owner, 22 Nov 2026: the prize is a profile shoutout)
+///
+/// A joined entrant gets the "Feature me if I make it" card — the
+/// `contest_shoutout` consent, un-ticked until they agree. A running entrant
+/// who has finished today's lesson also gets "Learners of the week", above
+/// the full board: never a level, never inside one, and with no XP, rank or
+/// order — the server sends none.
 ///
 /// ## Two reads, one owner each
 ///
@@ -99,7 +114,11 @@ class ContestPage extends ConsumerWidget {
   Widget _forOverview(ContestOverview? overview) {
     if (overview == null) {
       return const _Quiet(
-        children: <Widget>[_Empty(title: 'No contest right now')],
+        children: <Widget>[
+          _Empty(title: 'No contest right now'),
+          _WinnerShoutout(padding: EdgeInsets.only(top: 40)),
+          HallOfFame(padding: EdgeInsets.only(top: 40)),
+        ],
       );
     }
     final ContestEntryView? entry = overview.entry;
@@ -113,16 +132,42 @@ class ContestPage extends ConsumerWidget {
     }
     if (overview.isEnded) {
       return const _Quiet(
-        children: <Widget>[_Empty(title: 'This contest has ended')],
+        children: <Widget>[
+          _Empty(title: 'This contest has ended'),
+          _WinnerShoutout(padding: EdgeInsets.only(top: 40)),
+          HallOfFame(padding: EdgeInsets.only(top: 40)),
+        ],
       );
     }
     return _Quiet(
       children: <Widget>[
         ContestJoinCard(overview: overview),
+        _WinnerShoutout(padding: EdgeInsets.only(top: ZaveSpace.xxl)),
+        HallOfFame(padding: EdgeInsets.only(top: ZaveSpace.xxl)),
         SizedBox(height: ZaveSpace.xxl),
         RoadmapLine(lastDayKey: overview.contest.lastDayKey),
       ],
     );
+  }
+}
+
+/// The "Feature me" card outside the contest on screen — only for a winner of
+/// a contest whose Hall of Fame is showing (`viewerPlaced`). A result is fixed
+/// after its results week, when this page has usually moved on to the next
+/// contest or to none, and the prize is only theirs if they say yes. Anyone
+/// else not yet joined is asked only the join card's own consent. The web's
+/// `WinnerShoutout`.
+class _WinnerShoutout extends ConsumerWidget {
+  const _WinnerShoutout({this.padding = EdgeInsets.zero});
+
+  final EdgeInsetsGeometry padding;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final bool placed =
+        ref.watch(contestFeaturedProvider).value?.viewerPlaced ?? false;
+    if (!placed) return const SizedBox.shrink();
+    return ShoutoutCard(padding: padding);
   }
 }
 
@@ -374,13 +419,25 @@ class _JoinedQuietState extends ConsumerState<_JoinedQuiet> {
             ),
           ),
         ],
+        // The web's max-w-[600px]: a consent card should not stretch to a
+        // tablet's full width.
+        Align(
+          alignment: Alignment.centerLeft,
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 600),
+            child: ShoutoutCard(padding: EdgeInsets.only(top: ZaveSpace.xxl)),
+          ),
+        ),
         SizedBox(height: ZaveSpace.xxl),
         ContestBoardView(
           entrants: overview.entrants,
           rewardTopN: contest.rewardTopN,
           rewardMonths: contest.rewardMonths,
         ),
+        HallOfFame(padding: EdgeInsets.only(top: ZaveSpace.xxl)),
         SizedBox(height: ZaveSpace.xxl),
+        const ContestRulesLine(),
+        SizedBox(height: ZaveSpace.md),
         RoadmapLine(lastDayKey: contest.lastDayKey),
       ],
     );
@@ -541,6 +598,11 @@ class _RunningState extends ConsumerState<_Running> {
                         ),
                       ),
                       const SizedBox(height: 40),
+                      // The week's featured learners — after today's lesson
+                      // only, which the server decides; nothing before it.
+                      LearnersOfTheWeek(
+                        padding: EdgeInsets.only(bottom: ZaveSpace.xxl),
+                      ),
                       KeyedSubtree(
                         key: _anchors[ContestSection.leaderboard],
                         child: ContestBoardView(
@@ -549,7 +611,13 @@ class _RunningState extends ConsumerState<_Running> {
                           rewardMonths: contest.rewardMonths,
                         ),
                       ),
+                      ShoutoutCard(
+                        padding: EdgeInsets.only(top: ZaveSpace.xxl),
+                      ),
+                      HallOfFame(padding: EdgeInsets.only(top: ZaveSpace.xxl)),
                       SizedBox(height: ZaveSpace.xxl),
+                      const ContestRulesLine(),
+                      SizedBox(height: ZaveSpace.md),
                       RoadmapLine(lastDayKey: contest.lastDayKey),
                     ],
                   ),

@@ -2,6 +2,7 @@ import 'dart:typed_data';
 
 import 'contest_board.dart';
 import 'contest_consistency.dart';
+import 'contest_featured.dart';
 import 'contest_overview.dart';
 import 'contest_path.dart';
 import 'contest_tasks.dart';
@@ -10,6 +11,7 @@ import 'today_quiz.dart';
 export 'contest_board.dart';
 export 'contest_consistency.dart';
 export 'contest_failures.dart';
+export 'contest_featured.dart';
 export 'contest_overview.dart';
 export 'contest_path.dart';
 export 'contest_tasks.dart';
@@ -157,4 +159,27 @@ abstract class ContestRepository {
   /// `atOrAbove`, never by re-deriving it from `percent`. No price in this
   /// phase.
   Future<ConsistencyView> fetchConsistency();
+
+  /// `GET /contest/featured` — "Learners of the week" and the Hall of Fame.
+  /// A pure read; everyone in it agreed to be featured, checked on every
+  /// read, so it is never kept past the screen that shows it. The week's
+  /// people come only once today's lesson is finished, with no XP, no rank
+  /// and no order.
+  Future<ContestFeatured> fetchFeatured();
+
+  /// `GET /contest/shoutout` — the viewer's own "Feature me if I make it"
+  /// choice and the profile link on record.
+  Future<ShoutoutSettings> fetchShoutout();
+
+  /// `PUT /contest/shoutout` — agree (`featured: true` with a public profile
+  /// link, or none to confirm the one on record; [adult] is the card's "I am
+  /// 18 or older" tick, needed while no declaration is on record) or
+  /// withdraw (`featured: false`, which also erases the link and never fails
+  /// on one). Answers the new choice. [ContestBadProfileLink],
+  /// [ContestAdultRequired], [ContestInvalid].
+  Future<ShoutoutSettings> setShoutout({
+    required bool featured,
+    String? linkedinUrl,
+    bool adult = false,
+  });
 }

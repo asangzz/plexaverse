@@ -110,6 +110,25 @@ final class ContestBadUrl extends ContestRefusal {
   ]);
 }
 
+/// INVALID_LINKEDIN_URL: the "Feature me" card's link is not a public
+/// LinkedIn profile (`https://www.linkedin.com/in/<slug>`). Shown beside the
+/// field.
+final class ContestBadProfileLink extends ContestRefusal {
+  const ContestBadProfileLink([
+    super.message =
+        'Paste the link to your public LinkedIn profile, like '
+        'https://www.linkedin.com/in/your-name.',
+  ]);
+}
+
+/// ADULT_REQUIRED: being featured needs "I am 18 or older" on record — the
+/// "Feature me" card asks for the tick and sends it with the link.
+final class ContestAdultRequired extends ContestRefusal {
+  const ContestAdultRequired([
+    super.message = 'Confirm that you are 18 or older to be featured.',
+  ]);
+}
+
 /// REVOKED: the day or the week was audited and found false. Final.
 final class ContestRevoked extends ContestRefusal {
   const ContestRevoked([

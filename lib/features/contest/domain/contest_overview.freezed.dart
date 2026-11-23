@@ -26,7 +26,9 @@ mixin _$ContestInfo {
  DateTime get endsAt;/// The first and last playable day, `YYYY-MM-DD` in the contest's
 /// timezone. What the window is shown as: read with `dayKeyDate`, never
 /// through the device's timezone.
- String get firstDayKey; String get lastDayKey;/// How many finishers get plan time, and how many months each.
+ String get firstDayKey; String get lastDayKey;/// How many finishers win the prize — a profile shoutout, recognition
+/// only (owner, 22 Nov 2026). [rewardMonths] is kept for old rows only:
+/// plan time is never a contest prize, and the server grants none.
  int get rewardTopN; int get rewardMonths;/// Scoring days before a plan is needed, counted from the join day.
  int get freeDays;/// The week-complete bonus (`rules.weekComplete`). Absent from an older
 /// server, and then the join card leaves its rule out.
@@ -235,7 +237,7 @@ return $default(_that.id,_that.title,_that.prizeTitle,_that.prizeImageUrl,_that.
 @JsonSerializable()
 
 class _ContestInfo implements ContestInfo {
-  const _ContestInfo({this.id = '', this.title = '', this.prizeTitle = '', this.prizeImageUrl, required this.startsAt, required this.endsAt, this.firstDayKey = '', this.lastDayKey = '', this.rewardTopN = 10, this.rewardMonths = 3, this.freeDays = 30, this.weekComplete});
+  const _ContestInfo({this.id = '', this.title = '', this.prizeTitle = '', this.prizeImageUrl, required this.startsAt, required this.endsAt, this.firstDayKey = '', this.lastDayKey = '', this.rewardTopN = 10, this.rewardMonths = 0, this.freeDays = 30, this.weekComplete});
   factory _ContestInfo.fromJson(Map<String, dynamic> json) => _$ContestInfoFromJson(json);
 
 @override@JsonKey() final  String id;
@@ -257,7 +259,9 @@ class _ContestInfo implements ContestInfo {
 /// through the device's timezone.
 @override@JsonKey() final  String firstDayKey;
 @override@JsonKey() final  String lastDayKey;
-/// How many finishers get plan time, and how many months each.
+/// How many finishers win the prize — a profile shoutout, recognition
+/// only (owner, 22 Nov 2026). [rewardMonths] is kept for old rows only:
+/// plan time is never a contest prize, and the server grants none.
 @override@JsonKey() final  int rewardTopN;
 @override@JsonKey() final  int rewardMonths;
 /// Scoring days before a plan is needed, counted from the join day.

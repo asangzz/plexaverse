@@ -6,6 +6,7 @@ import '../../../../plexa/presentation/widgets/quiz_plexa.dart';
 import '../../../domain/contest_repository.dart';
 import '../../../domain/contest_words.dart';
 import '../contest_kit.dart';
+import '../web_link.dart';
 import 'feed_words.dart';
 import 'sent_links.dart';
 
@@ -131,9 +132,10 @@ class FeedCommentsRevoked extends StatelessWidget {
             SentLinks(links: view.links),
           ],
           SizedBox(height: ZaveSpace.md),
-          Text(
-            'Other days of the contest count as usual.',
-            style: ContestType.meta,
+          // The web's appeal line: a revoke can be appealed once, within its
+          // window, on the web's removed claims and appeals page.
+          const ContestAppealLine(
+            before: 'Other days of the contest count as usual. ',
           ),
         ],
       ),

@@ -66,6 +66,34 @@ Future<TodayQuiz> todayQuiz(Ref ref) =>
 Future<ConsistencyView> contestConsistency(Ref ref) =>
     ref.watch(contestRepositoryProvider).fetchConsistency();
 
+/// `GET /contest/featured` — "Learners of the week" and the Hall of Fame
+/// (owner, 22 Nov 2026: the prize is a profile shoutout). A pure read.
+///
+/// Everyone in it agreed to be featured, and the server checks that on every
+/// read, so it is held only while a screen shows it — a learner who
+/// withdrew is gone on the next read. The week's card opens when today's
+/// lesson is finished, so the lesson's answers re-read it (the web's
+/// `useAnswerContestQuiz`); a resume re-reads it too, as a new week or a
+/// finalised contest arrives no other way.
+@riverpod
+Future<ContestFeatured> contestFeatured(Ref ref) =>
+    ref.watch(contestRepositoryProvider).fetchFeatured();
+
+/// `GET /contest/shoutout` — the viewer's own "Feature me if I make it"
+/// choice. The card draws its box from this, so it is never pre-ticked.
+@riverpod
+class ContestShoutout extends _$ContestShoutout {
+  @override
+  Future<ShoutoutSettings> build() =>
+      ref.watch(contestRepositoryProvider).fetchShoutout();
+
+  /// The server's answer to a save, kept as the choice — the web's
+  /// `setQueryData`. Never a locally toggled guess: only the server knows
+  /// whether a consent was recorded.
+  void settle(ShoutoutSettings settings) =>
+      state = AsyncData<ShoutoutSettings>(settings);
+}
+
 /// `ref.invalidate`, from a widget's `WidgetRef` or a controller's `Ref` —
 /// both tear off to this shape, so one helper serves both.
 typedef ContestInvalidate = void Function(ProviderOrFamily provider);
@@ -226,6 +254,7 @@ void contestResumeRefresh(Ref ref) {
       ref.invalidate(contestPathProvider);
       ref.invalidate(todayQuizProvider);
       ref.invalidate(contestConsistencyProvider);
+      ref.invalidate(contestFeaturedProvider);
     },
   );
   ref.onDispose(listener.dispose);

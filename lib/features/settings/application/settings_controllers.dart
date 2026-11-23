@@ -2,6 +2,7 @@ import 'dart:ui' show PlatformDispatcher;
 
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
+import '../../contest/application/contest_controllers.dart';
 import '../data/settings_repositories.dart';
 import '../domain/settings_repository.dart';
 
@@ -314,6 +315,13 @@ class ConsentController extends _$ConsentController {
           .read(settingsRepositoryProvider)
           .setConsent(purpose: purpose, granted: granted);
       state = AsyncData<ConsentLedger>(updated);
+      // The contest's "Feature me" card reads this same consent on its own,
+      // and the contest page stays alive under Settings: a withdrawal here
+      // must not leave it saying "You’re in" on the way back.
+      if (purpose == 'contest_shoutout') {
+        ref.invalidate(contestShoutoutProvider);
+        ref.invalidate(contestFeaturedProvider);
+      }
       return null;
     } on Object {
       // Re-read rather than assume: a refused withdrawal has to show as

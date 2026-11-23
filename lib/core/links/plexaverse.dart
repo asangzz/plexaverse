@@ -24,3 +24,18 @@ const String plexaverseTermsUrl = '$_site/terms';
 /// at the moment consent is taken; a sign-up form that names it and cannot
 /// open it is the gap this closes.
 const String plexaversePrivacyUrl = '$_site/privacy';
+
+/// The contest's published rules — every figure, what the prize is, how
+/// claims are checked and how to appeal. `app/(legal)/contest/rules` on
+/// the web (LEGAL_CONSISTENCY_MEMO §3.A.5).
+///
+/// Opened on the web rather than rebuilt here: every number on that page is
+/// read from the contest's own stored rules, and a second copy in the app
+/// would be the one that drifts. The page is public: the browser it opens
+/// in has no web session.
+const String plexaverseContestRulesUrl = '$_site/contest/rules';
+
+/// The contest's removed claims and their appeals — where a revoke notice
+/// leads (`CONTEST_APPEALS_PATH` on the web). The app has no appeal form of
+/// its own: a revoke is appealed there, once, within its window.
+const String plexaverseContestAppealsUrl = '$_site/contest/appeals';

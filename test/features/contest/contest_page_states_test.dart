@@ -28,7 +28,7 @@ void main() {
   ContestInfo info() => ContestInfo(
     id: 'c1',
     title: 'Business English Contest',
-    prizeTitle: 'Noise-cancelling headphones',
+    prizeTitle: 'a profile shoutout',
     startsAt: DateTime.utc(2026, 11, 14, 18, 30),
     endsAt: DateTime.utc(2027, 2, 22, 18, 30),
     firstDayKey: '2026-11-15',
@@ -259,7 +259,7 @@ void main() {
     expect(find.text('1 NOV 2026 – 8 FEB 2027'), findsOneWidget);
     expect(find.text('Business English Contest'), findsOneWidget);
     expect(find.text('Day 11. You can join any day it runs.'), findsOneWidget);
-    expect(find.text('Noise-cancelling headphones'), findsOneWidget);
+    expect(find.text('a profile shoutout'), findsOneWidget);
     expect(find.text('1,283 people have joined.'), findsOneWidget);
     expect(find.text('How it scores'), findsOneWidget);
     for (final String rule in <String>[
@@ -372,7 +372,7 @@ void main() {
     expect(find.text('ENDED'), findsOneWidget);
     expect(
       find.text(
-        'Final standings. Noise-cancelling headphones goes to the top 10.',
+        'Final standings. a profile shoutout goes to the top 10.',
       ),
       findsOneWidget,
     );
@@ -412,7 +412,7 @@ void main() {
     expect(find.text('STARTS 15 NOV 2026'), findsOneWidget);
     expect(
       find.text(
-        'Noise-cancelling headphones for the top 10.',
+        'a profile shoutout for the top 10.',
       ),
       findsOneWidget,
     );
@@ -435,7 +435,7 @@ void main() {
     expect(start.bottom, lessThan(667));
     // The rail and the board follow the path.
     for (final String title in <String>[
-      'Top 10 win Noise-cancelling headphones',
+      'Top 10 win a profile shoutout',
       'Daily quests',
       'This week on LinkedIn',
       'Leaderboard',
@@ -517,7 +517,7 @@ void main() {
     );
     expect(find.text('Could not load this week'), findsOneWidget);
     expect(
-      find.text('Top 10 win Noise-cancelling headphones'),
+      find.text('Top 10 win a profile shoutout'),
       findsOneWidget,
     );
     expect(find.text('This week is not in yet.'), findsNWidgets(2));

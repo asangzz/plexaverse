@@ -408,6 +408,27 @@ class ApiPaths {
   /// is promised in this phase. 401; 500 INTERNAL.
   static const String contestConsistency = '/contest/consistency';
 
+  /// GET `{week, hallOfFame}` — the contest page's two shoutout cards (owner,
+  /// 22 Nov 2026: the prize is a profile shoutout).
+  ///
+  /// `week.state` none | after_lesson | no_week | ready; only `ready` carries
+  /// `learners` (up to ten) with `weekStart`/`weekEnd` — and only once the
+  /// caller's lesson for today is finished. They come with NO XP, NO rank and
+  /// NO order: the board stays hidden until the last ten days, so never
+  /// number them. `hallOfFame[]` is each contest finalised in the last 30
+  /// days, its consenting winners in place order with their `rank`. Everyone
+  /// listed agreed to be featured, checked on every read. 401; 500 INTERNAL.
+  static const String contestFeatured = '/contest/featured';
+
+  /// GET `{featured, linkedinUrl}` — the caller's own "Feature me if I make
+  /// it" choice, the `contest_shoutout` consent.
+  ///
+  /// PUT `{featured: true, linkedinUrl}` agrees (a public profile link,
+  /// `https://www.linkedin.com/in/<slug>`, or none to confirm the one on
+  /// record); `{featured: false}` withdraws and erases the link. Answers the
+  /// same shape. 400 VALIDATION_FAILED / INVALID_LINKEDIN_URL; 401.
+  static const String contestShoutout = '/contest/shoutout';
+
   // ── Placement ───────────────────────────────────────────────────────────
   // The placement test that sets the lesson level. Same vocabulary rule as the
   // contest above: read the code first.

@@ -426,9 +426,13 @@ void main() {
         findsOneWidget,
       );
       expect(
-        find.text('Other days of the contest count as usual.'),
+        find.text(
+          'Other days of the contest count as usual. Think we got it wrong?',
+        ),
         findsOneWidget,
       );
+      // The web's appeal line: the removed claims and appeals page.
+      expect(find.bySemanticsLabel('Appeal the decision'), findsOneWidget);
       expect(find.byType(TextField), findsNothing);
     });
 

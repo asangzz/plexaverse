@@ -663,6 +663,11 @@ class LessonRun extends _$LessonRun {
       // The total moved, and the last answer moves the streak, the path and
       // the board with it.
       refreshContestStanding(ref.invalidate);
+      // The answer that finishes today's lesson is what opens "Learners of
+      // the week" on the contest page (the web's useAnswerContestQuiz). Only
+      // that one: the page stays alive under the lesson, so re-reading on
+      // every answer would be fifteen reads that cannot change anything.
+      if (result.completed) ref.invalidate(contestFeaturedProvider);
       unawaited(_reread());
     } on ContestNotToday {
       if (!ref.mounted) return;

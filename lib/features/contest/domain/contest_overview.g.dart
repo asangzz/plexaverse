@@ -16,7 +16,7 @@ _ContestInfo _$ContestInfoFromJson(Map<String, dynamic> json) => _ContestInfo(
   firstDayKey: json['firstDayKey'] as String? ?? '',
   lastDayKey: json['lastDayKey'] as String? ?? '',
   rewardTopN: (json['rewardTopN'] as num?)?.toInt() ?? 10,
-  rewardMonths: (json['rewardMonths'] as num?)?.toInt() ?? 3,
+  rewardMonths: (json['rewardMonths'] as num?)?.toInt() ?? 0,
   freeDays: (json['freeDays'] as num?)?.toInt() ?? 30,
   weekComplete: (json['weekComplete'] as num?)?.toInt(),
 );

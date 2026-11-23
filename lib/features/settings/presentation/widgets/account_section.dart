@@ -7,6 +7,7 @@ import '../../../../core/ui/zave/zave_kit.dart';
 import '../../../auth/application/google_link_controller.dart';
 import '../../../auth/application/sign_out_controller.dart';
 import '../../../auth/domain/auth_repository.dart';
+import '../../../contest/domain/shoutout_words.dart';
 import '../../application/privacy_controller.dart';
 import '../../application/settings_controllers.dart';
 import '../../application/settings_write_controller.dart';
@@ -528,7 +529,11 @@ class _DataPrivacySectionState extends ConsumerState<DataPrivacySection> {
                 for (final ConsentPurposeState p in value.purposes)
                   _ConsentRow(
                     purpose: p,
-                    onChanged: p.required_
+                    // The contest shoutout is switched ON only on its contest
+                    // card (the link and the 18+ tick it needs are given
+                    // there; the server refuses a grant from here). OFF
+                    // works here like any other.
+                    onChanged: p.required_ || _onlyOnItsCard(p)
                         ? null
                         : (bool next) async {
                             final String? failure = await ref
@@ -585,6 +590,10 @@ class _DataPrivacySectionState extends ConsumerState<DataPrivacySection> {
   }
 }
 
+/// A purpose that is off and can only be switched ON on its own card.
+bool _onlyOnItsCard(ConsentPurposeState p) =>
+    p.purpose == kShoutoutPurpose && !p.granted;
+
 /// One purpose and its switch.
 ///
 /// A REQUIRED purpose renders disabled with the reason, rather than being
@@ -618,6 +627,9 @@ class _ConsentRow extends StatelessWidget {
                     'account.',
                     style: ZaveType.caption,
                   ),
+                ] else if (_onlyOnItsCard(purpose)) ...<Widget>[
+                  SizedBox(height: ZaveSpace.xs),
+                  Text(kShoutoutGrantOnContestLine, style: ZaveType.caption),
                 ] else if (purpose.stale) ...<Widget>[
                   SizedBox(height: ZaveSpace.xs),
                   Text(

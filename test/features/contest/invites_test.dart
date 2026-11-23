@@ -277,6 +277,12 @@ void main() {
       expect(find.text('Screenshot removed'), findsOneWidget);
       expect(find.text('Removed: Not a Sent page — −160 XP'), findsOneWidget);
       expect(find.text('Send screenshot'), findsNothing);
+      // The web's appeal line, under the removal it answers.
+      expect(find.text('Think we got it wrong?'), findsOneWidget);
+      expect(
+        find.textContaining('Appeal the decision', findRichText: true),
+        findsOneWidget,
+      );
     });
 
     testWidgets('done: the XP is in, and the rule is said again', (

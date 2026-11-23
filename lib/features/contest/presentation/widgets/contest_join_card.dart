@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 
+import '../../../../core/links/plexaverse.dart';
 import '../../../../core/ui/app_icons.dart';
 import '../../../../core/ui/zave/zave_kit.dart';
 import '../../../placement/presentation/widgets/placement_level_hint.dart';
@@ -10,6 +11,7 @@ import '../../domain/contest_dates.dart';
 import '../../domain/contest_repository.dart';
 import '../../domain/contest_words.dart';
 import 'contest_kit.dart';
+import 'web_link.dart';
 
 /// One rule of the contest, as the join card states it.
 class ContestRule {
@@ -88,9 +90,11 @@ List<ContestRule> contestRules(ContestInfo c) {
     ),
     ContestRule(
       'Top $topN get featured',
-      'The top $topN win ${c.prizeTitle}. The prize is recognition only: no cash value, '
-          'not transferable, never sold. Ties go to first-try accuracy on the questions '
-          'written for you, then to whoever got there first. Never a draw.',
+      'The top $topN win ${c.prizeTitle}: winners who agree to be featured are '
+          'shown to every learner in the Hall of Fame for 30 days. The prize is '
+          'recognition only: no cash value, not transferable, never sold. Ties '
+          'go to first-try accuracy on the questions written for you, then to '
+          'whoever got there first. Never a draw.',
     ),
   ];
 }
@@ -223,6 +227,12 @@ class _ContestJoinCardState extends ConsumerState<ContestJoinCard> {
                 _RuleRow(r, first: i == 0),
             ],
           ),
+        ),
+        SizedBox(height: ZaveSpace.sm),
+        const ContestWebLink(
+          label: 'Read the full contest rules',
+          rest: ' — every figure, how claims are checked, and how to appeal.',
+          url: plexaverseContestRulesUrl,
         ),
         SizedBox(height: ZaveSpace.xxl),
 

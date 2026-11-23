@@ -212,6 +212,13 @@ void main() {
       <int>[400],
       isA<ContestProfileIncomplete>(),
     ),
+    (
+      'INVALID_LINKEDIN_URL',
+      'Paste the link to your public LinkedIn profile, like '
+          'https://www.linkedin.com/in/your-name.',
+      <int>[400],
+      isA<ContestBadProfileLink>(),
+    ),
   ];
 
   // Every status a refusal could plausibly ride on, including the three the

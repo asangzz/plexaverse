@@ -657,7 +657,7 @@ final class ConsentControllerProvider
   ConsentController create() => ConsentController();
 }
 
-String _$consentControllerHash() => r'6c68efcfc9637170653a02df3c28c9c08348ccac';
+String _$consentControllerHash() => r'e678ac1686818c3dc44d4db13d3f1032e9490da8';
 
 /// The DPDP s6 consent ledger.
 ///

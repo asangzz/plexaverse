@@ -43,9 +43,11 @@ abstract class ContestInfo with _$ContestInfo {
     @Default('') String firstDayKey,
     @Default('') String lastDayKey,
 
-    /// How many finishers get plan time, and how many months each.
+    /// How many finishers win the prize — a profile shoutout, recognition
+    /// only (owner, 22 Nov 2026). [rewardMonths] is kept for old rows only:
+    /// plan time is never a contest prize, and the server grants none.
     @Default(10) int rewardTopN,
-    @Default(3) int rewardMonths,
+    @Default(0) int rewardMonths,
 
     /// Scoring days before a plan is needed, counted from the join day.
     @Default(30) int freeDays,

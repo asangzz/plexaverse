@@ -143,7 +143,7 @@ final class LessonRunProvider
   }
 }
 
-String _$lessonRunHash() => r'4f052769d4e8b3f2172792d812209ae26481b12e';
+String _$lessonRunHash() => r'2babde3e7307369ed17c196fd7682c2832c19172';
 
 /// One visit to today's lesson.
 ///

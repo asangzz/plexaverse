@@ -14,6 +14,7 @@ import '../../domain/contest_repository.dart';
 import '../widgets/contest_kit.dart';
 import '../widgets/sheet/contest_sheet.dart';
 import '../widgets/skip_level.dart';
+import '../widgets/web_link.dart';
 
 /// `/contest/invites` — Saturday's level: send the week's invitations, then
 /// prove it with one screenshot. The web's `InvitesUpload`.
@@ -128,6 +129,8 @@ class ContestInvitesPage extends ConsumerWidget {
         meta:
             'A fake screenshot loses its XP and the same again as a penalty. '
             'The next upload opens on Saturday.',
+        // The web's appeal line, under the removal it answers.
+        footer: const ContestAppealLine(),
       ),
       PathNodeState.rejected => Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -398,11 +401,19 @@ class _UploadPanel extends ConsumerWidget {
 
 /// A status, its line, and an optional quieter line under it.
 class _Notice extends StatelessWidget {
-  const _Notice({required this.dot, required this.line, this.meta});
+  const _Notice({
+    required this.dot,
+    required this.line,
+    this.meta,
+    this.footer,
+  });
 
   final ContestDot dot;
   final String line;
   final String? meta;
+
+  /// Under everything else in the panel — a removed screenshot's appeal.
+  final Widget? footer;
 
   @override
   Widget build(BuildContext context) {
@@ -418,6 +429,10 @@ class _Notice extends StatelessWidget {
             if (meta != null) ...<Widget>[
               SizedBox(height: ZaveSpace.sm),
               Text(meta!, style: ContestType.meta),
+            ],
+            if (footer case final Widget below) ...<Widget>[
+              SizedBox(height: ZaveSpace.sm),
+              below,
             ],
           ],
         ),

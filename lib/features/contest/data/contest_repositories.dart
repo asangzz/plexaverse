@@ -253,6 +253,46 @@ class ApiContestRepository implements ContestRepository {
     return ConsistencyView.fromJson(_inner(_body(r), 'consistency'));
   });
 
+  /// Bare inside `data`: the web's `{week, hallOfFame}`.
+  @override
+  Future<ContestFeatured> fetchFeatured() => _call(() async {
+    final Response<Map<String, dynamic>> r = await _client
+        .get<Map<String, dynamic>>(ApiPaths.contestFeatured);
+    return ContestFeatured.fromJson(_body(r));
+  });
+
+  /// Bare inside `data`: `{featured, linkedinUrl}`.
+  @override
+  Future<ShoutoutSettings> fetchShoutout() => _call(() async {
+    final Response<Map<String, dynamic>> r = await _client
+        .get<Map<String, dynamic>>(ApiPaths.contestShoutout);
+    return ShoutoutSettings.fromJson(_body(r));
+  });
+
+  /// A withdrawal sends `featured: false` and nothing else: it needs no
+  /// link, and a stale one riding along could only confuse the record.
+  @override
+  Future<ShoutoutSettings> setShoutout({
+    required bool featured,
+    String? linkedinUrl,
+    bool adult = false,
+  }) => _call(() async {
+    final String? link = linkedinUrl?.trim();
+    final Response<Map<String, dynamic>> r = await _client
+        .put<Map<String, dynamic>>(
+          ApiPaths.contestShoutout,
+          // A literal bool, as the join's consent is: nothing but the box the
+          // learner ticked can grant it. The 18+ tick only rides with a yes.
+          data: <String, dynamic>{
+            'featured': featured,
+            if (featured && link != null && link.isNotEmpty)
+              'linkedinUrl': link,
+            if (featured && adult) 'adult': true,
+          },
+        );
+    return ShoutoutSettings.fromJson(_body(r));
+  });
+
   // ── The seam ─────────────────────────────────────────────────────────────
 
   static Future<T> _call<T>(Future<T> Function() run) async {
@@ -300,6 +340,8 @@ class ApiContestRepository implements ContestRepository {
         'STORAGE_UNAVAILABLE': ContestStorageUnavailable.new,
         'VALIDATION_FAILED': ContestInvalid.new,
         'PROFILE_INCOMPLETE': ContestProfileIncomplete.new,
+        'INVALID_LINKEDIN_URL': ContestBadProfileLink.new,
+        'ADULT_REQUIRED': ContestAdultRequired.new,
       };
 
   /// A rejection, as the refusal the UI branches on.
@@ -441,6 +483,27 @@ class FakeContestRepository implements ContestRepository {
   @override
   Future<ConsistencyView> fetchConsistency() =>
       _answer((FakeContestWorld w) => w.consistency());
+
+  @override
+  Future<ContestFeatured> fetchFeatured() =>
+      _answer((FakeContestWorld w) => w.featured());
+
+  @override
+  Future<ShoutoutSettings> fetchShoutout() =>
+      _answer((FakeContestWorld w) => w.shoutout());
+
+  @override
+  Future<ShoutoutSettings> setShoutout({
+    required bool featured,
+    String? linkedinUrl,
+    bool adult = false,
+  }) => _answer(
+    (FakeContestWorld w) => w.setShoutout(
+      featured: featured,
+      linkedinUrl: linkedinUrl,
+      adult: adult,
+    ),
+  );
 }
 
 /// Mock ↔ real switch on `useFakeBackend`. A release build can never resolve

@@ -339,6 +339,129 @@ final class ContestConsistencyProvider
 String _$contestConsistencyHash() =>
     r'8363429760f8ba569889985a28a48648e35bcb57';
 
+/// `GET /contest/featured` — "Learners of the week" and the Hall of Fame
+/// (owner, 22 Nov 2026: the prize is a profile shoutout). A pure read.
+///
+/// Everyone in it agreed to be featured, and the server checks that on every
+/// read, so it is held only while a screen shows it — a learner who
+/// withdrew is gone on the next read. The week's card opens when today's
+/// lesson is finished, so the lesson's answers re-read it (the web's
+/// `useAnswerContestQuiz`); a resume re-reads it too, as a new week or a
+/// finalised contest arrives no other way.
+
+@ProviderFor(contestFeatured)
+final contestFeaturedProvider = ContestFeaturedProvider._();
+
+/// `GET /contest/featured` — "Learners of the week" and the Hall of Fame
+/// (owner, 22 Nov 2026: the prize is a profile shoutout). A pure read.
+///
+/// Everyone in it agreed to be featured, and the server checks that on every
+/// read, so it is held only while a screen shows it — a learner who
+/// withdrew is gone on the next read. The week's card opens when today's
+/// lesson is finished, so the lesson's answers re-read it (the web's
+/// `useAnswerContestQuiz`); a resume re-reads it too, as a new week or a
+/// finalised contest arrives no other way.
+
+final class ContestFeaturedProvider
+    extends
+        $FunctionalProvider<
+          AsyncValue<ContestFeatured>,
+          ContestFeatured,
+          FutureOr<ContestFeatured>
+        >
+    with $FutureModifier<ContestFeatured>, $FutureProvider<ContestFeatured> {
+  /// `GET /contest/featured` — "Learners of the week" and the Hall of Fame
+  /// (owner, 22 Nov 2026: the prize is a profile shoutout). A pure read.
+  ///
+  /// Everyone in it agreed to be featured, and the server checks that on every
+  /// read, so it is held only while a screen shows it — a learner who
+  /// withdrew is gone on the next read. The week's card opens when today's
+  /// lesson is finished, so the lesson's answers re-read it (the web's
+  /// `useAnswerContestQuiz`); a resume re-reads it too, as a new week or a
+  /// finalised contest arrives no other way.
+  ContestFeaturedProvider._()
+    : super(
+        from: null,
+        argument: null,
+        retry: null,
+        name: r'contestFeaturedProvider',
+        isAutoDispose: true,
+        dependencies: null,
+        $allTransitiveDependencies: null,
+      );
+
+  @override
+  String debugGetCreateSourceHash() => _$contestFeaturedHash();
+
+  @$internal
+  @override
+  $FutureProviderElement<ContestFeatured> $createElement(
+    $ProviderPointer pointer,
+  ) => $FutureProviderElement(pointer);
+
+  @override
+  FutureOr<ContestFeatured> create(Ref ref) {
+    return contestFeatured(ref);
+  }
+}
+
+String _$contestFeaturedHash() => r'238971d8dd962d115b2eebd0aa7a9a1d6526bd3a';
+
+/// `GET /contest/shoutout` — the viewer's own "Feature me if I make it"
+/// choice. The card draws its box from this, so it is never pre-ticked.
+
+@ProviderFor(ContestShoutout)
+final contestShoutoutProvider = ContestShoutoutProvider._();
+
+/// `GET /contest/shoutout` — the viewer's own "Feature me if I make it"
+/// choice. The card draws its box from this, so it is never pre-ticked.
+final class ContestShoutoutProvider
+    extends $AsyncNotifierProvider<ContestShoutout, ShoutoutSettings> {
+  /// `GET /contest/shoutout` — the viewer's own "Feature me if I make it"
+  /// choice. The card draws its box from this, so it is never pre-ticked.
+  ContestShoutoutProvider._()
+    : super(
+        from: null,
+        argument: null,
+        retry: null,
+        name: r'contestShoutoutProvider',
+        isAutoDispose: true,
+        dependencies: null,
+        $allTransitiveDependencies: null,
+      );
+
+  @override
+  String debugGetCreateSourceHash() => _$contestShoutoutHash();
+
+  @$internal
+  @override
+  ContestShoutout create() => ContestShoutout();
+}
+
+String _$contestShoutoutHash() => r'c405d7608e3bc63234f8babe163506810bceaa2c';
+
+/// `GET /contest/shoutout` — the viewer's own "Feature me if I make it"
+/// choice. The card draws its box from this, so it is never pre-ticked.
+
+abstract class _$ContestShoutout extends $AsyncNotifier<ShoutoutSettings> {
+  FutureOr<ShoutoutSettings> build();
+  @$mustCallSuper
+  @override
+  void runBuild() {
+    final ref =
+        this.ref as $Ref<AsyncValue<ShoutoutSettings>, ShoutoutSettings>;
+    final element =
+        ref.element
+            as $ClassProviderElement<
+              AnyNotifier<AsyncValue<ShoutoutSettings>, ShoutoutSettings>,
+              AsyncValue<ShoutoutSettings>,
+              Object?,
+              Object?
+            >;
+    element.handleCreate(ref, build);
+  }
+}
+
 /// Today's level of [kind], gated or not.
 ///
 /// The comment level's GET writes the day's row and may spend a model call,
@@ -523,4 +646,4 @@ final class ContestResumeRefreshProvider
 }
 
 String _$contestResumeRefreshHash() =>
-    r'05245ddfa76e8e36fa5b413ced537cf39ae5c132';
+    r'56c8fde3b93df48917b1a3bc211aa386a4b1bf51';

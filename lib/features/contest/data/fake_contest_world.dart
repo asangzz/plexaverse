@@ -4,6 +4,7 @@ import '../../../core/week/week_shape.dart';
 import '../domain/contest_dates.dart';
 import '../domain/contest_links.dart';
 import '../domain/contest_repository.dart';
+import '../domain/linkedin_profile_url.dart';
 import '../domain/contest_words.dart';
 import '../domain/lesson_parts.dart';
 
@@ -388,6 +389,186 @@ class FakeContestWorld {
     );
   }
 
+  // ── The shoutout ─────────────────────────────────────────────────────────
+
+  /// The viewer's `contest_shoutout` consent, and the profile link given for
+  /// it. Off until they agree, as the server's ledger starts.
+  bool _shoutoutOn = false;
+  String? _shoutoutLink;
+
+  /// "I am 18 or older" on record — the app's own sign-up never asks, so the
+  /// "Feature me" card does, and records it with the yes.
+  bool _adultDeclared = false;
+
+  /// `GET /contest/featured` — the server's `getContestFeatured`.
+  ///
+  /// The week's learners only for an entrant of a running contest whose
+  /// lesson for today is finished, and only for a week that ended after the
+  /// contest began; in this fixture, six fixed learners who agreed to be
+  /// featured, in an order that is not their XP's. The Hall of Fame holds a
+  /// contest finalised in the last 30 days where this scenario has one: the
+  /// ended contest, and — between contests — the last one.
+  ///
+  /// The viewer is never one of this fixture's winners (`viewerPlaced`
+  /// false), so outside a contest they joined the card is not offered.
+  ContestFeatured featured() =>
+      ContestFeatured(week: _learnersOfWeek(), hallOfFame: _hallOfFame());
+
+  LearnersOfWeek _learnersOfWeek() {
+    if (!_running || !_joined) return const LearnersOfWeek();
+    if (!_lessonComplete) {
+      return const LearnersOfWeek(state: LearnersOfWeekState.afterLesson);
+    }
+    final String thisWeek = _weekSunday(_todayKey);
+    // A week that ended before the contest began holds no contest XP.
+    if (thisWeek.compareTo(_first) <= 0) {
+      return const LearnersOfWeek(state: LearnersOfWeekState.noWeek);
+    }
+    return LearnersOfWeek(
+      state: LearnersOfWeekState.ready,
+      weekStart: _addDays(thisWeek, -7),
+      weekEnd: _addDays(thisWeek, -1),
+      learners: _weekLearners,
+    );
+  }
+
+  static const List<FeaturedPerson> _weekLearners = <FeaturedPerson>[
+    FeaturedPerson(
+      key: '3f9a1c27b0d4e815',
+      name: 'Meera Iyer',
+      headline: 'Product designer · Bengaluru',
+      linkedinUrl: 'https://www.linkedin.com/in/plexaverse-demo-learner-1',
+    ),
+    FeaturedPerson(
+      key: '41c07e9d2a6b3f58',
+      name: 'Kabir Mehta',
+      headline: 'Data analyst learning to present to leadership',
+      linkedinUrl: 'https://www.linkedin.com/in/plexaverse-demo-learner-2',
+    ),
+    FeaturedPerson(
+      key: '5b2e8f0a91c7d643',
+      name: 'Ananya Ghosh',
+      linkedinUrl: 'https://www.linkedin.com/in/plexaverse-demo-learner-3',
+    ),
+    FeaturedPerson(
+      key: '6d71a3e5c0f2b984',
+      name: 'Rohan Pillai',
+      headline: 'Site reliability engineer',
+      linkedinUrl: 'https://www.linkedin.com/in/plexaverse-demo-learner-4',
+    ),
+    FeaturedPerson(
+      key: '7e04c9b2d8a15f36',
+      name: 'Sana Jain',
+      headline: 'HR business partner',
+    ),
+    FeaturedPerson(
+      key: '8a63f1d07b2ec594',
+      name: 'Arjun Nair',
+      headline: 'Founder, a two-person design studio',
+      linkedinUrl: 'https://www.linkedin.com/in/plexaverse-demo-learner-5',
+    ),
+  ];
+
+  List<HallOfFameEntry> _hallOfFame() {
+    final String? finalisedOn = switch (scenario) {
+      FakeContestScenario.ended => _addDays(_last, 2),
+      FakeContestScenario.noContest => _addDays(_todayKey, -9),
+      _ => null,
+    };
+    if (finalisedOn == null) return const <HallOfFameEntry>[];
+    final DateTime finalisedAt = _instant(
+      finalisedOn,
+    ).add(const Duration(hours: 11));
+    return <HallOfFameEntry>[
+      HallOfFameEntry(
+        contestId: 'fake-contest-finalised-$finalisedOn',
+        title: 'Business English Contest',
+        prizeTitle: 'a profile shoutout',
+        rewardTopN: 10,
+        finalisedAt: finalisedAt,
+        featuredUntil: finalisedAt.add(const Duration(days: 30)),
+        // Only the winners who agreed to be featured: places 3, 6 and 9
+        // said no, and are simply not here.
+        winners: const <HallOfFameWinner>[
+          HallOfFameWinner(
+            rank: 1,
+            key: 'c41d0a9e7f3b2685',
+            name: 'Aarav Rao',
+            headline: 'Engineering manager · Pune',
+            linkedinUrl: 'https://www.linkedin.com/in/plexaverse-demo-learner-6',
+          ),
+          HallOfFameWinner(
+            rank: 2,
+            key: 'd52e1b0f8a4c3796',
+            name: 'Ishita Bose',
+            headline: 'Consultant, supply chain',
+            linkedinUrl: 'https://www.linkedin.com/in/plexaverse-demo-learner-7',
+          ),
+          HallOfFameWinner(
+            rank: 4,
+            key: 'e63f2c1a9b5d48a7',
+            name: 'Neha Kulkarni',
+            linkedinUrl: 'https://www.linkedin.com/in/plexaverse-demo-learner-8',
+          ),
+          HallOfFameWinner(
+            rank: 5,
+            key: 'f7403d2b0c6e59b8',
+            name: 'Dev Malhotra',
+            headline: 'Sales lead, B2B software',
+          ),
+          HallOfFameWinner(
+            rank: 7,
+            key: '08514e3c1d7f6ac9',
+            name: 'Tara Sen',
+            headline: 'Teacher turned learning designer',
+            linkedinUrl: 'https://www.linkedin.com/in/plexaverse-demo-learner-9',
+          ),
+        ],
+      ),
+    ];
+  }
+
+  /// `GET /contest/shoutout`.
+  ShoutoutSettings shoutout() => ShoutoutSettings(
+    featured: _shoutoutOn,
+    linkedinUrl: _shoutoutLink,
+    adultDeclared: _adultDeclared,
+  );
+
+  /// `PUT /contest/shoutout` — the server's `setShoutout`. On needs a public
+  /// profile link: the one sent, or the one on record; it is kept in its
+  /// canonical form. Off is a withdrawal, which erases the link and never
+  /// fails on one.
+  ShoutoutSettings setShoutout({
+    required bool featured,
+    String? linkedinUrl,
+    bool adult = false,
+  }) {
+    if (!featured) {
+      _shoutoutOn = false;
+      _shoutoutLink = null;
+      return shoutout();
+    }
+    final String? sent = linkedinUrl != null && linkedinUrl.trim().isNotEmpty
+        ? linkedinUrl
+        : null;
+    final String? url = sent != null
+        ? normaliseLinkedInProfileUrl(sent)
+        : profileHref(_shoutoutLink);
+    if (url == null) {
+      throw const ContestBadProfileLink(
+        'Paste the link to your public LinkedIn profile, like '
+        'https://www.linkedin.com/in/your-name.',
+      );
+    }
+    // As the server: the 18+ declaration on record, or the card's tick.
+    if (!_adultDeclared && !adult) throw const ContestAdultRequired();
+    _adultDeclared = true;
+    _shoutoutOn = true;
+    _shoutoutLink = url;
+    return shoutout();
+  }
+
   // ── The overview and the board ───────────────────────────────────────────
 
   ContestOverview? overview() {
@@ -436,13 +617,15 @@ class FakeContestWorld {
   ContestInfo _contestInfo() => ContestInfo(
     id: 'fake-contest-$_first',
     title: 'Business English Contest',
-    prizeTitle: 'Noise-cancelling headphones',
+    // The owner's rule (22 Nov 2026): every prize is a profile shoutout —
+    // never goods, never plan time, not even in a demo build.
+    prizeTitle: 'a profile shoutout',
     startsAt: _instant(_first),
     endsAt: _instant(_addDays(_last, 1)),
     firstDayKey: _first,
     lastDayKey: _last,
     rewardTopN: 10,
-    rewardMonths: 3,
+    rewardMonths: 0,
     freeDays: _freeDays,
     weekComplete: 500,
   );
