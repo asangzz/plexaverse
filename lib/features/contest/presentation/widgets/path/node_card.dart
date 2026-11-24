@@ -45,6 +45,7 @@ class NodeCard extends StatelessWidget {
     this.skipping = false,
     this.skipError,
     this.skipHidden = false,
+    this.level,
     super.key,
   });
 
@@ -52,6 +53,9 @@ class NodeCard extends StatelessWidget {
 
   /// "Wed · Day 17" — the kicker's first half.
   final String dayName;
+
+  /// Its number in the day — "Level 2" in the kicker. Null leaves it out.
+  final int? level;
   final VoidCallback onOpen;
 
   /// Skip this level. Null: no Skip on this card.
@@ -71,6 +75,8 @@ class NodeCard extends StatelessWidget {
   static Color fillFor(PathNodeKind kind) => switch (kind) {
     PathNodeKind.lesson => ContestColors.lesson,
     PathNodeKind.planWeek => ContestColors.plan,
+    // The top learners' level: gold, the shoutout's colour.
+    PathNodeKind.followWinners => const Color(0xFFB9770E),
     PathNodeKind.unknown => ContestColors.slab,
     _ => ContestColors.linkedIn,
   };
@@ -112,7 +118,11 @@ class NodeCard extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: <Widget>[
             Text(
-              '$dayName · ${kindWord(node.kind)}'.toUpperCase(),
+              <String>[
+                dayName,
+                if (level != null) 'Level $level',
+                kindWord(node.kind),
+              ].join(' · ').toUpperCase(),
               style: GoogleFonts.manrope(
                 fontSize: 12,
                 fontWeight: FontWeight.w800,

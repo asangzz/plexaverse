@@ -118,12 +118,19 @@ abstract class HallOfFameWinner with _$HallOfFameWinner {
   );
 }
 
-/// One finalised contest, for the 30 days after its result was fixed.
+/// One finalised round, for the 30 days after its result was fixed.
 @freezed
 abstract class HallOfFameEntry with _$HallOfFameEntry {
   const factory HallOfFameEntry({
     @Default('') String contestId,
+
+    /// The admin's own name for the round. Never shown: a round is named by
+    /// its dates ([lastDayKey]), as on the web (owner, 24 Nov 2026).
     @Default('') String title,
+
+    /// The round's last playable day, `YYYY-MM-DD` in its timezone — "the
+    /// round that ended 23 February 2027". Empty from a server before it.
+    @Default('') String lastDayKey,
     @Default('') String prizeTitle,
     @Default(0) int rewardTopN,
 
@@ -174,6 +181,12 @@ abstract class ShoutoutSettings with _$ShoutoutSettings {
     /// Whether "I am 18 or older" is on record. False: the card asks for the
     /// tick with the link, and sends it (`adult: true`).
     @Default(false) bool adultDeclared,
+
+    /// True only when the learner said yes under words that have since
+    /// changed: [featured] is false, and the card says why
+    /// (`kShoutoutStaleLine`) instead of looking as if the yes never saved.
+    /// Absent from the server's answer otherwise.
+    @Default(false) bool stale,
   }) = _ShoutoutSettings;
 
   factory ShoutoutSettings.fromJson(Map<String, dynamic> json) =>

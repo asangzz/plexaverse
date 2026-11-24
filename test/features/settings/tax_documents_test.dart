@@ -217,6 +217,13 @@ class _Sharing implements ImageSharingService {
     required double targetWidth,
     String? text,
   }) => throw UnimplementedError();
+
+  @override
+  Future<ShareResult> shareBytesFile({
+    required Uint8List bytes,
+    required String fileName,
+    String? text,
+  }) => throw UnimplementedError();
 }
 
 final TaxDocument _invoice = TaxDocument(

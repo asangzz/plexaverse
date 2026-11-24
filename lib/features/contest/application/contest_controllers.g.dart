@@ -76,12 +76,14 @@ final class ContestOverviewProvider
 
 String _$contestOverviewHash() => r'e4baddb3f2fe6f92b76329a4ed6ec20be5203b16';
 
-/// `GET /contest/path` — this week's levels and their states.
+/// `GET /contest/path` — this week's levels and their states, the follow
+/// level included.
 
 @ProviderFor(contestPath)
 final contestPathProvider = ContestPathProvider._();
 
-/// `GET /contest/path` — this week's levels and their states.
+/// `GET /contest/path` — this week's levels and their states, the follow
+/// level included.
 
 final class ContestPathProvider
     extends
@@ -91,7 +93,8 @@ final class ContestPathProvider
           FutureOr<ContestPath>
         >
     with $FutureModifier<ContestPath>, $FutureProvider<ContestPath> {
-  /// `GET /contest/path` — this week's levels and their states.
+  /// `GET /contest/path` — this week's levels and their states, the follow
+  /// level included.
   ContestPathProvider._()
     : super(
         from: null,
@@ -119,6 +122,69 @@ final class ContestPathProvider
 }
 
 String _$contestPathHash() => r'5951332cfb2b4fd583ecc2d09b435166a39338b7';
+
+/// `GET /contest/tasks/follow-winners` — "Follow last round's top learners":
+/// who is in the level and each one's two steps. A pure read; everyone in it
+/// agreed to be featured and published a profile, checked on every read, so
+/// it is held only while the screen shows it.
+
+@ProviderFor(FollowWinners)
+final followWinnersProvider = FollowWinnersProvider._();
+
+/// `GET /contest/tasks/follow-winners` — "Follow last round's top learners":
+/// who is in the level and each one's two steps. A pure read; everyone in it
+/// agreed to be featured and published a profile, checked on every read, so
+/// it is held only while the screen shows it.
+final class FollowWinnersProvider
+    extends $AsyncNotifierProvider<FollowWinners, FollowWinnersView> {
+  /// `GET /contest/tasks/follow-winners` — "Follow last round's top learners":
+  /// who is in the level and each one's two steps. A pure read; everyone in it
+  /// agreed to be featured and published a profile, checked on every read, so
+  /// it is held only while the screen shows it.
+  FollowWinnersProvider._()
+    : super(
+        from: null,
+        argument: null,
+        retry: null,
+        name: r'followWinnersProvider',
+        isAutoDispose: true,
+        dependencies: null,
+        $allTransitiveDependencies: null,
+      );
+
+  @override
+  String debugGetCreateSourceHash() => _$followWinnersHash();
+
+  @$internal
+  @override
+  FollowWinners create() => FollowWinners();
+}
+
+String _$followWinnersHash() => r'6125c4daf776dbf73e5e1169fb7f42f19ab862eb';
+
+/// `GET /contest/tasks/follow-winners` — "Follow last round's top learners":
+/// who is in the level and each one's two steps. A pure read; everyone in it
+/// agreed to be featured and published a profile, checked on every read, so
+/// it is held only while the screen shows it.
+
+abstract class _$FollowWinners extends $AsyncNotifier<FollowWinnersView> {
+  FutureOr<FollowWinnersView> build();
+  @$mustCallSuper
+  @override
+  void runBuild() {
+    final ref =
+        this.ref as $Ref<AsyncValue<FollowWinnersView>, FollowWinnersView>;
+    final element =
+        ref.element
+            as $ClassProviderElement<
+              AnyNotifier<AsyncValue<FollowWinnersView>, FollowWinnersView>,
+              AsyncValue<FollowWinnersView>,
+              Object?,
+              Object?
+            >;
+    element.handleCreate(ref, build);
+  }
+}
 
 /// `GET /contest/board?limit=` — the full board asks for 50, the rail's mini
 /// board for `max(rewardTopN, 3)`.
@@ -646,4 +712,4 @@ final class ContestResumeRefreshProvider
 }
 
 String _$contestResumeRefreshHash() =>
-    r'56c8fde3b93df48917b1a3bc211aa386a4b1bf51';
+    r'e76d9934018e35ae6d3a18a09e2027fbbe880cd5';

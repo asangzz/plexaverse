@@ -57,7 +57,7 @@ void main() {
         find.text('No connection. Check your network and try again.'),
         findsOneWidget,
       );
-      expect(find.text('Back to the contest'), findsOneWidget);
+      expect(find.text('Back to your levels'), findsOneWidget);
       expect(tester.takeException(), isNull);
 
       stub
@@ -74,8 +74,8 @@ void main() {
           status: QuizStatus.noContest,
           reason: QuizReason.noContest,
         ),
-        'No contest right now',
-        'The daily lesson runs inside a contest. The next one will show up on the contest page.',
+        'New levels are on the way',
+        'The levels reset between rounds, and the next round starts soon. Its lessons will show up on your levels page.',
       ),
       'an entrant before day 1': (
         const TodayQuiz(
@@ -83,15 +83,15 @@ void main() {
           reason: QuizReason.notStarted,
         ),
         'Not open yet',
-        'The daily lesson opens on day 1 of the contest.',
+        'The daily lesson opens on the first day of the round.',
       ),
       'ended': (
         const TodayQuiz(
           status: QuizStatus.ended,
           reason: QuizReason.contestEnded,
         ),
-        'The contest has ended',
-        'The daily lesson closed with it. The final standings are on the contest page.',
+        'This round has ended',
+        'The daily lesson closed with it. The next round’s lessons will show up on your levels page.',
       ),
       'the band’s questions ran out': (
         const TodayQuiz(
@@ -124,13 +124,15 @@ void main() {
 
         expect(find.text(title), findsOneWidget);
         expect(find.text(line), findsOneWidget);
-        expect(find.text('Back to the contest'), findsOneWidget);
-        expect(find.text('See the contest'), findsNothing);
+        expect(find.text('Back to your levels'), findsOneWidget);
+        expect(find.text('Open your levels'), findsNothing);
         expect(tester.takeException(), isNull);
       });
     }
 
-    testWidgets('not joined, while it runs: join and the lesson opens at once', (
+    // No join step (24 Nov 2026): reading the levels page enters the learner,
+    // and this page says so — deliberately replacing "join first".
+    testWidgets('no place yet, while it runs: open your levels once', (
       WidgetTester tester,
     ) async {
       await _pump(
@@ -141,19 +143,19 @@ void main() {
         ),
       );
 
-      expect(find.text('Join the contest first'), findsOneWidget);
+      expect(find.text('Open your levels first'), findsOneWidget);
       expect(
         find.text(
-          'The daily lesson is for entrants. Joining is free, and the lesson opens straight away.',
+          'Open your levels page once and today’s lesson opens here. There is nothing to join.',
         ),
         findsOneWidget,
       );
-      await _tap(tester, find.text('See the contest'));
+      await _tap(tester, find.text('Open your levels'));
       expect(find.text('THE PATH'), findsOneWidget);
     });
 
-    testWidgets('not joined, before it starts: day 1’s date, as the contest '
-        'counts it', (WidgetTester tester) async {
+    testWidgets('no place yet, before it starts: the first day’s date, as the '
+        'round counts it', (WidgetTester tester) async {
       await _pump(
         tester,
         FakeContestRepository(
@@ -162,10 +164,10 @@ void main() {
         ),
       );
 
-      expect(find.text('Join the contest first'), findsOneWidget);
+      expect(find.text('Open your levels first'), findsOneWidget);
       expect(
         find.text(
-          'The daily lesson is for entrants. Joining is free, and the lesson opens on day 1 of the contest, 15 Nov 2026.',
+          'Your levels open on the first day of the round, 15 Nov 2026. There is nothing to join.',
         ),
         findsOneWidget,
       );

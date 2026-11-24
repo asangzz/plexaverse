@@ -71,6 +71,17 @@ abstract class ImageSharingService {
     required String fileName,
     String? text,
   });
+
+  /// Writes [bytes] to a file named [fileName] and offers it to the user.
+  ///
+  /// For a binary document the app fetched itself with the user's token —
+  /// the ATS CV (Settings → Public profile), a PDF made on request and never
+  /// stored by the server. Temp, as the rest: a handoff, not a library.
+  Future<ShareResult> shareBytesFile({
+    required Uint8List bytes,
+    required String fileName,
+    String? text,
+  });
 }
 
 class PlatformImageSharing implements ImageSharingService {
@@ -168,6 +179,22 @@ class PlatformImageSharing implements ImageSharingService {
       final Directory dir = await getTemporaryDirectory();
       final File file = File('${dir.path}/$fileName');
       await file.writeAsString(contents, flush: true);
+      return _offer(file, text);
+    } on Object {
+      return const ShareFailed();
+    }
+  }
+
+  @override
+  Future<ShareResult> shareBytesFile({
+    required Uint8List bytes,
+    required String fileName,
+    String? text,
+  }) async {
+    try {
+      final Directory dir = await getTemporaryDirectory();
+      final File file = File('${dir.path}/$fileName');
+      await file.writeAsBytes(bytes, flush: true);
       return _offer(file, text);
     } on Object {
       return const ShareFailed();

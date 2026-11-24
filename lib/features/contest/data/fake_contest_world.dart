@@ -7,13 +7,15 @@ import '../domain/contest_repository.dart';
 import '../domain/linkedin_profile_url.dart';
 import '../domain/contest_words.dart';
 import '../domain/lesson_parts.dart';
+import '../domain/levels_words.dart';
 
-/// Which contest the mock flavor shows.
+/// Which round of levels the mock flavor shows.
 ///
-/// [running] is the default: an entrant on a Wednesday mid-path — the
+/// [running] is the default: a learner on a Wednesday mid-path — the
 /// lesson's second part half answered, the comment level locked behind it,
-/// the day's video claim behind that. The others are the states the contest
-/// page branches on, each reachable without a server:
+/// the day's video claim behind that, and last round's top learners to
+/// follow at the end. The others are the states the levels page branches on,
+/// each reachable without a server:
 ///
 /// ```sh
 /// flutter run -t lib/main_mock.dart --dart-define=FAKE_CONTEST=not_joined
@@ -21,20 +23,22 @@ import '../domain/lesson_parts.dart';
 enum FakeContestScenario {
   running,
 
-  /// No contest running, recently ended or scheduled: the overview is null.
+  /// No round running, recently ended or scheduled: the overview is null.
   noContest,
 
-  /// A running contest the user has not joined. Joining starts them on
+  /// A running round the user has no place in yet. Reading is joining (24
+  /// Nov 2026): the first read of the overview or the path enters them, on
   /// today, with the days before it missed.
   notJoined,
 
-  /// A contest that starts in a few days, not joined yet.
+  /// A round that starts in a few days; the first read enters them.
   upcoming,
 
-  /// A contest that ended last week; the user took part. Final standings.
+  /// A round that ended last week, with no next one yet (automatic rounds
+  /// switched off); the user took part.
   ended,
 
-  /// The contest's last days: the board is open and the user has a rank.
+  /// The round's last days: the board is open and the user has a rank.
   revealed,
 
   /// The free days are over and there is no plan: scoring has stopped.
@@ -317,6 +321,9 @@ class FakeContestWorld {
       int pending = 0;
       for (final PathNode n in path().today?.nodes ?? const <PathNode>[]) {
         if (n.state == PathNodeState.unavailable) continue;
+        // The follow level counts on neither side (FOLLOW_WINNER_KIND in
+        // the web's lib/consistency.ts).
+        if (n.kind == PathNodeKind.followWinners) continue;
         final int offer = n.isLesson ? n.points : (_rulePoints[n.kind] ?? 0);
         available += offer;
         switch (n.state) {
@@ -482,7 +489,8 @@ class FakeContestWorld {
     return <HallOfFameEntry>[
       HallOfFameEntry(
         contestId: 'fake-contest-finalised-$finalisedOn',
-        title: 'Business English Contest',
+        title: 'Levels · Aug–Nov 2026',
+        lastDayKey: _addDays(finalisedOn, -2),
         prizeTitle: 'a profile shoutout',
         rewardTopN: 10,
         finalisedAt: finalisedAt,
@@ -495,20 +503,23 @@ class FakeContestWorld {
             key: 'c41d0a9e7f3b2685',
             name: 'Aarav Rao',
             headline: 'Engineering manager · Pune',
-            linkedinUrl: 'https://www.linkedin.com/in/plexaverse-demo-learner-6',
+            linkedinUrl:
+                'https://www.linkedin.com/in/plexaverse-demo-learner-6',
           ),
           HallOfFameWinner(
             rank: 2,
             key: 'd52e1b0f8a4c3796',
             name: 'Ishita Bose',
             headline: 'Consultant, supply chain',
-            linkedinUrl: 'https://www.linkedin.com/in/plexaverse-demo-learner-7',
+            linkedinUrl:
+                'https://www.linkedin.com/in/plexaverse-demo-learner-7',
           ),
           HallOfFameWinner(
             rank: 4,
             key: 'e63f2c1a9b5d48a7',
             name: 'Neha Kulkarni',
-            linkedinUrl: 'https://www.linkedin.com/in/plexaverse-demo-learner-8',
+            linkedinUrl:
+                'https://www.linkedin.com/in/plexaverse-demo-learner-8',
           ),
           HallOfFameWinner(
             rank: 5,
@@ -521,7 +532,8 @@ class FakeContestWorld {
             key: '08514e3c1d7f6ac9',
             name: 'Tara Sen',
             headline: 'Teacher turned learning designer',
-            linkedinUrl: 'https://www.linkedin.com/in/plexaverse-demo-learner-9',
+            linkedinUrl:
+                'https://www.linkedin.com/in/plexaverse-demo-learner-9',
           ),
         ],
       ),
@@ -573,6 +585,7 @@ class FakeContestWorld {
 
   ContestOverview? overview() {
     if (!_hasContest) return null;
+    _enterOnRead();
     return ContestOverview(
       contest: _contestInfo(),
       phase: _phase,
@@ -616,7 +629,8 @@ class FakeContestWorld {
 
   ContestInfo _contestInfo() => ContestInfo(
     id: 'fake-contest-$_first',
-    title: 'Business English Contest',
+    // The admin's name for the round. Never shown to a learner.
+    title: 'Levels · Nov 2026–Feb 2027',
     // The owner's rule (22 Nov 2026): every prize is a profile shoutout —
     // never goods, never plan time, not even in a demo build.
     prizeTitle: 'a profile shoutout',
@@ -712,17 +726,16 @@ class FakeContestWorld {
     return rows;
   }
 
-  // ── Joining ──────────────────────────────────────────────────────────────
+  // ── Entering ─────────────────────────────────────────────────────────────
 
-  void join({required bool showName}) {
-    if (!_hasContest) {
-      throw const ContestNotRunning('There is no contest to join right now.');
-    }
-    // Joinable means running or upcoming; an ended one is final standings.
-    if (_phase == ContestPhase.ended) {
-      throw const ContestNotRunning('There is no contest to join right now.');
-    }
-    if (_joined) return;
+  /// Reading is joining (owner, 24 Nov 2026) — the server's
+  /// `ensureLevelsEntry`, which runs before the overview and the path answer:
+  /// a learner with no place in the running (or next) round is entered,
+  /// anonymously, and never refused for an 18+ declaration in the app. An
+  /// ended round enters nobody.
+  void _enterOnRead() {
+    if (!_hasContest || _joined) return;
+    if (_phase == ContestPhase.ended) return;
     _joined = true;
     _fresh = true;
     _joinedAt = DateTime.now().toUtc();
@@ -732,6 +745,7 @@ class FakeContestWorld {
 
   ContestPath path() {
     if (!_hasContest) return const ContestPath();
+    _enterOnRead();
     final String id = 'fake-contest-$_first';
     if (_phase == ContestPhase.ended) {
       return ContestPath(status: ContestPathStatus.ended, contestId: id);
@@ -761,7 +775,11 @@ class FakeContestWorld {
           dayKey: key,
           weekday: wd,
           isToday: key == _todayKey,
-          nodes: key == _todayKey ? _gate(nodes) : nodes,
+          // The follow level goes after the gate: it is outside the
+          // one-at-a-time order, never locked and never skipped.
+          nodes: key == _todayKey
+              ? <PathNode>[..._gate(nodes), ?_followNode()]
+              : nodes,
         ),
       );
     }
@@ -805,12 +823,13 @@ class FakeContestWorld {
   };
 
   static const Map<PathNodeKind, String> _hrefs = <PathNodeKind, String>{
-    PathNodeKind.lesson: '/contest/lesson',
-    PathNodeKind.connectLeaders: '/connections?from=contest',
-    PathNodeKind.comment: '/contest/comment',
-    PathNodeKind.feedComments: '/contest/feed-comments',
-    PathNodeKind.weeklyInvites: '/contest/invites',
-    PathNodeKind.planWeek: '/contest/plan',
+    PathNodeKind.lesson: '/levels/lesson',
+    PathNodeKind.connectLeaders: '/connections?from=levels',
+    PathNodeKind.comment: '/levels/comment',
+    PathNodeKind.feedComments: '/levels/feed-comments',
+    PathNodeKind.weeklyInvites: '/levels/invites',
+    PathNodeKind.planWeek: '/levels/plan',
+    PathNodeKind.followWinners: '/levels/follow',
   };
 
   static const Map<PathNodeKind, int> _rulePoints = <PathNodeKind, int>{
@@ -1451,11 +1470,11 @@ class FakeContestWorld {
 
   TodayQuiz startLesson() {
     if (!_running) {
-      throw const ContestNotRunning('There is no contest running right now.');
+      throw const ContestNotRunning();
     }
     if (!_joined) {
       throw const ContestNotEntered(
-        'Join the contest to take its daily lesson.',
+        'Open your levels page first: today’s lesson opens there.',
       );
     }
     // The learner's own questions are written only while nothing is
@@ -1471,10 +1490,12 @@ class FakeContestWorld {
     required String value,
   }) {
     if (!_running) {
-      throw const ContestNotRunning('There is no contest running right now.');
+      throw const ContestNotRunning();
     }
     if (!_joined) {
-      throw const ContestNotEntered('Join the contest to take its daily quiz.');
+      throw const ContestNotEntered(
+        'Open your levels page first: today’s quiz opens there.',
+      );
     }
     if (day != _dayNumber) {
       throw const ContestNotToday('That quiz has closed. Reload for today’s.');
@@ -1973,17 +1994,160 @@ class FakeContestWorld {
     return PlanWeekResult(taskId: 'fake-plan-$_todayKey');
   }
 
+  // ── "Follow last round's top learners" ───────────────────────────────────
+  //
+  // The server's follow-winners.service: the top learners of the round that
+  // ended before this one, who agreed to be featured AND published a
+  // Plexaverse profile — never the viewer. Step 1 (Follow on LinkedIn) is
+  // recorded on the learner's word; step 2 is the follow itself, which the
+  // real server reads off the follow row. This fake cannot see the profile
+  // fake's follows, so it takes step 2's re-check as the follow having been
+  // made — the controller only sends it after the follow succeeded.
+
+  static const int _followWinnerPoints = 20;
+
+  /// The round the top learners come from: the one that ended before this.
+  static const String _fromRoundLastDayKey = '2026-10-31';
+
+  static const List<FollowWinnerView> _winners = <FollowWinnerView>[
+    FollowWinnerView(
+      handle: 'asha-rao',
+      name: 'Asha Rao',
+      headline: 'Product lead · Hyderabad',
+      linkedinUrl: 'https://www.linkedin.com/in/plexaverse-demo-learner-10',
+    ),
+    FollowWinnerView(
+      handle: 'vikram-shah',
+      name: 'Vikram Shah',
+      headline: 'Founder, a B2B analytics studio',
+      linkedinUrl: 'https://www.linkedin.com/in/plexaverse-demo-learner-11',
+    ),
+  ];
+
+  final Set<String> _linkedinTapped = <String>{};
+  final Set<String> _plexaverseFollowed = <String>{};
+  final Map<String, int> _followPaid = <String, int>{};
+
+  /// The scenarios whose running round has a last round to follow.
+  bool get _hasFollowLevel => _running && _joined;
+
+  FollowWinnerView _winnerView(FollowWinnerView w) {
+    final bool done = _followPaid.containsKey(w.handle);
+    return w.copyWith(
+      linkedinDone: done || _linkedinTapped.contains(w.handle),
+      plexaverseDone: done || _plexaverseFollowed.contains(w.handle),
+      done: done,
+      paid: done ? _followPaid[w.handle] : null,
+    );
+  }
+
+  FollowWinnersView _followView() {
+    if (!_running) {
+      return const FollowWinnersView(reason: FollowWinnersReason.notRunning);
+    }
+    if (!_joined) {
+      return const FollowWinnersView(reason: FollowWinnersReason.notJoined);
+    }
+    final List<FollowWinnerView> winners = <FollowWinnerView>[
+      for (final FollowWinnerView w in _winners) _winnerView(w),
+    ];
+    return FollowWinnersView(
+      status: winners.every((FollowWinnerView w) => w.done)
+          ? FollowWinnersStatus.done
+          : FollowWinnersStatus.open,
+      pointsEach: _followWinnerPoints,
+      fromRoundLastDayKey: _fromRoundLastDayKey,
+      winners: winners,
+    );
+  }
+
+  /// `GET /contest/tasks/follow-winners`.
+  FollowWinnersView followWinners() => _followView();
+
+  /// `POST /contest/tasks/follow-winners` — the server's
+  /// `recordFollowWinnerStep`: step 1 recorded once, step 2 re-checked; both
+  /// done → paid once, whichever lands second.
+  FollowWinnerStepResult followWinnerStep({
+    required String handle,
+    required FollowWinnerStep step,
+  }) {
+    if (handle.trim().isEmpty) {
+      throw const ContestInvalid('Say whose profile: their handle.');
+    }
+    _assertEntrant();
+    final String h = handle.trim().toLowerCase();
+    if (!_winners.any((FollowWinnerView w) => w.handle == h)) {
+      throw const ContestNotInLevel();
+    }
+    switch (step) {
+      case FollowWinnerStep.linkedin:
+        _linkedinTapped.add(h);
+      case FollowWinnerStep.plexaverse:
+        _plexaverseFollowed.add(h);
+    }
+    int paid = 0;
+    if (!_followPaid.containsKey(h) &&
+        _linkedinTapped.contains(h) &&
+        _plexaverseFollowed.contains(h)) {
+      paid = _scoringPaused ? 0 : _followWinnerPoints;
+      _followPaid[h] = paid;
+      _total += paid;
+    }
+    return FollowWinnerStepResult(view: _followView(), pointsApplied: paid);
+  }
+
+  /// Today's follow node — the server's `followNodeFor`: open while any top
+  /// learner is left, done on the day the last is followed, gone after.
+  PathNode? _followNode() {
+    if (!_hasFollowLevel) return null;
+    final List<FollowWinnerView> views = <FollowWinnerView>[
+      for (final FollowWinnerView w in _winners) _winnerView(w),
+    ];
+    final int total = views.length;
+    final int done = views.where((FollowWinnerView w) => w.done).length;
+    final String id = '$_todayKey:${PathNodeKind.followWinners.wire}';
+    final FollowProgress follow = FollowProgress(done: done, total: total);
+    if (done == total) {
+      return PathNode(
+        id: id,
+        kind: PathNodeKind.followWinners,
+        state: PathNodeState.done,
+        title: kFollowWinnersTitle,
+        href: _hrefs[PathNodeKind.followWinners],
+        points: _followPaid.values.fold(0, (int a, int b) => a + b),
+        detail: total == 1 ? 'Followed' : 'All $total followed',
+        follow: follow,
+      );
+    }
+    final bool started =
+        done > 0 ||
+        views.any((FollowWinnerView w) => w.linkedinDone || w.plexaverseDone);
+    return PathNode(
+      id: id,
+      kind: PathNodeKind.followWinners,
+      state: PathNodeState.today,
+      title: kFollowWinnersTitle,
+      href: _hrefs[PathNodeKind.followWinners],
+      points: _followWinnerPoints * (total - done),
+      detail: done > 0
+          ? '$done of $total followed'
+          : 'Follow them on LinkedIn and on Plexaverse',
+      started: started,
+      follow: follow,
+    );
+  }
+
   // ── Shared refusals ──────────────────────────────────────────────────────
 
   /// The task routes' order: no contest running, then not a participant.
   /// NOT_ENTERED is 404 on these routes; the code is what matters.
   void _assertEntrant() {
     if (!_running) {
-      throw const ContestNotRunning('There is no contest running right now.');
+      throw const ContestNotRunning();
     }
     if (!_joined) {
       throw const ContestNotEntered(
-        'Join the contest to take part in its tasks.',
+        'Open your levels page first: today’s levels open there.',
       );
     }
   }

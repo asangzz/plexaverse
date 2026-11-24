@@ -7,19 +7,16 @@ import '../../../domain/contest_repository.dart';
 import '../../../domain/contest_words.dart';
 import 'rail_card.dart';
 
-/// The prize: what first place wins, the day the result is announced, and
-/// the top-N reward. The web's `PrizeCard`.
+/// The shoutout: what the top learners get, and the day the levels reset —
+/// the round's end, when the top learners are decided. The web's
+/// `PrizeCard`.
 ///
 /// ## A date, not a countdown
 ///
-/// "Results on 9 Feb 2027" — the owner's call (11 Nov 2026: "don't show the
-/// days left, tell the date of result directly"), and the same date the join
-/// card gives for "Winner announced". `endsAt` is the instant the contest
-/// closes, formatted on the phone's clock as the web formats it on the
-/// viewer's.
-///
-/// The top-N line names the condition the owner set — the months are free
-/// FOR THE NEXT CONTEST — so nobody reads it as months off their plan.
+/// "Levels reset 9 Feb 2027" — the owner's call (11 Nov 2026: "don't show
+/// the days left, tell the date of result directly"). `endsAt` is the
+/// instant the round closes, formatted on the phone's clock as the web
+/// formats it on the viewer's. Recognition only, said on the card itself.
 class PrizeCard extends StatelessWidget {
   const PrizeCard({required this.contest, super.key});
 
@@ -57,7 +54,7 @@ class PrizeCard extends StatelessWidget {
                 ),
                 const SizedBox(height: 2),
                 Text(
-                  'Results on $date · Recognition only, no cash value',
+                  '${date.isEmpty ? '' : 'Levels reset $date · '}Recognition only, no cash value',
                   style: railMuted,
                 ),
               ],

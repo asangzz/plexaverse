@@ -380,11 +380,11 @@ void main() {
     test('before it opens, it names the day and the last ten days', () {
       expect(
         boardLockedLine('2027-02-20'),
-        'The leaderboard opens on Saturday, 20 February — the last 10 days of the contest. Until then, it’s you against yesterday: keep your streak.',
+        'The top learners show on Saturday, 20 February — the last 10 days of the round. Until then, it’s you against yesterday: keep your streak.',
       );
       expect(
         boardLockedLine(''),
-        startsWith('The leaderboard opens in the contest’s last days'),
+        startsWith('The top learners show in the round’s last days'),
       );
     });
 
@@ -491,6 +491,8 @@ void main() {
         PathNodeKind.weeklyInvites: ZaveRoutes.contestInvites,
         PathNodeKind.planWeek: ZaveRoutes.contestPlan,
         PathNodeKind.connectLeaders: '/connections?from=contest',
+        // "Follow last round's top learners" (24 Nov 2026).
+        PathNodeKind.followWinners: ZaveRoutes.contestFollow,
       };
       want.forEach((PathNodeKind kind, String route) {
         // An href the app has never registered, to prove it is not read.

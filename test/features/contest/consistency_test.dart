@@ -147,30 +147,32 @@ void main() {
       );
     });
 
-    test('no_tasks says the % starts with the next contest day', () {
+    test('no_tasks says the % starts with the next day of levels', () {
       expect(
         consistencyLines(
           const ConsistencyView(state: ConsistencyState.noTasks),
         ),
         <String>[
-          'Nothing on offer yet this month. Your % starts with your next '
-              'contest day.',
+          'Nothing on offer yet this month. Your % starts with your next day '
+              'of levels.',
         ],
       );
     });
 
-    test('no contest running, with counted days: they don’t count', () {
+    test('no round running, with counted days: they don’t count', () {
       final ConsistencyView ended = measuring().copyWith(
         noContestRunning: true,
       );
       expect(
         consistencyLines(ended).last,
-        'No contest is running. Days without one don’t count.',
+        'No round of levels is running. Days without one don’t count.',
       );
       expect(
         consistencyLines(
           ended.copyWith(days: const <ConsistencyDay>[]),
-        ).contains('No contest is running. Days without one don’t count.'),
+        ).contains(
+          'No round of levels is running. Days without one don’t count.',
+        ),
         isFalse,
       );
     });
@@ -486,12 +488,11 @@ void main() {
       );
     });
 
-    testWidgets('no contest, or not joined: no meter anywhere', (
-      WidgetTester tester,
-    ) async {
+    // A learner new to the round is entered by the read (24 Nov 2026), so
+    // only "no round" is left with nothing to measure.
+    testWidgets('no round: no meter anywhere', (WidgetTester tester) async {
       for (final FakeContestScenario s in <FakeContestScenario>[
         FakeContestScenario.noContest,
-        FakeContestScenario.notJoined,
       ]) {
         FakeContestWorld.reset();
         await pumpContestPage(tester, scenario: s);

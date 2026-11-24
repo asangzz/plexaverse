@@ -47,7 +47,7 @@ class ContestDashboardSkeleton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return _Busy(
-      label: 'Loading the contest',
+      label: 'Loading your levels',
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: <Widget>[

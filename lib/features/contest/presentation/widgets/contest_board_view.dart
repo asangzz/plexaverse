@@ -7,6 +7,7 @@ import '../../application/contest_controllers.dart';
 import '../../domain/contest_dates.dart';
 import '../../domain/contest_repository.dart';
 import '../../domain/contest_words.dart';
+import '../../domain/levels_words.dart';
 import 'contest_kit.dart';
 import 'contest_skeletons.dart';
 import 'labelled_rule.dart';
@@ -68,7 +69,7 @@ class ContestBoardView extends ConsumerWidget {
           children: <Widget>[
             const ContestDot(
               tone: ContestTone.idle,
-              label: 'Leaderboard hidden for now',
+              label: '$kTopLearners hidden for now',
             ),
             SizedBox(height: ZaveSpace.sm),
             Text(
@@ -91,7 +92,7 @@ class ContestBoardView extends ConsumerWidget {
               Padding(
                 padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
                 child: Text(
-                  'Admin view. Entrants see the board from '
+                  'Admin view. Learners see the board from '
                   '${dayKeyLong(data.revealsOn)}.',
                   style: ContestType.meta,
                 ),
@@ -112,11 +113,11 @@ class ContestBoardView extends ConsumerWidget {
             Expanded(
               child: Semantics(
                 header: true,
-                child: Text('Leaderboard', style: ContestType.sectionTitle),
+                child: Text(kTopLearners, style: ContestType.sectionTitle),
               ),
             ),
             Text(
-              plural(entrants, 'entrant', 'entrants'),
+              plural(entrants, 'learner', 'learners'),
               style: ContestType.meta,
             ),
           ],
@@ -157,7 +158,7 @@ class ContestBoardView extends ConsumerWidget {
       return const <Widget>[
         Padding(
           padding: EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-          child: BoardRowsSkeleton(rows: 5, label: 'Loading the leaderboard'),
+          child: BoardRowsSkeleton(rows: 5, label: 'Loading the top learners'),
         ),
       ];
     }
@@ -269,7 +270,7 @@ class _Row extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final String? name = row.name;
-    final String spokenName = name ?? 'Participant';
+    final String spokenName = name ?? kAnonymousLearner;
     return Semantics(
       container: true,
       label:

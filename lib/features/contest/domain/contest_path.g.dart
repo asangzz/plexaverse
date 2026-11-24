@@ -20,6 +20,15 @@ Map<String, dynamic> _$NodePartToJson(_NodePart instance) => <String, dynamic>{
   'end': instance.end,
 };
 
+_FollowProgress _$FollowProgressFromJson(Map<String, dynamic> json) =>
+    _FollowProgress(
+      done: (json['done'] as num?)?.toInt() ?? 0,
+      total: (json['total'] as num?)?.toInt() ?? 0,
+    );
+
+Map<String, dynamic> _$FollowProgressToJson(_FollowProgress instance) =>
+    <String, dynamic>{'done': instance.done, 'total': instance.total};
+
 _NodeClaim _$NodeClaimFromJson(Map<String, dynamic> json) => _NodeClaim(
   kind:
       $enumDecodeNullable(
@@ -70,6 +79,9 @@ _PathNode _$PathNodeFromJson(Map<String, dynamic> json) => _PathNode(
   claim: json['claim'] == null
       ? null
       : NodeClaim.fromJson(json['claim'] as Map<String, dynamic>),
+  follow: json['follow'] == null
+      ? null
+      : FollowProgress.fromJson(json['follow'] as Map<String, dynamic>),
   canSkip: _canSkipUnlessUnknown(json, 'canSkip') as bool? ?? false,
 );
 
@@ -84,6 +96,7 @@ Map<String, dynamic> _$PathNodeToJson(_PathNode instance) => <String, dynamic>{
   'started': instance.started,
   'part': instance.part?.toJson(),
   'claim': instance.claim?.toJson(),
+  'follow': instance.follow?.toJson(),
   'canSkip': instance.canSkip,
 };
 
@@ -96,6 +109,7 @@ const _$PathNodeKindEnumMap = {
   PathNodeKind.planWeek: 'plan_week',
   PathNodeKind.article: 'article',
   PathNodeKind.video: 'video',
+  PathNodeKind.followWinners: 'follow_winners',
   PathNodeKind.unknown: 'unknown',
 };
 

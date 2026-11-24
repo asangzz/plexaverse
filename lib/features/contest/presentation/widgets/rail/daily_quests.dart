@@ -82,12 +82,21 @@ List<Quest> questsFor(PathDay? today, LessonProgress? lesson) {
       continue;
     }
     final String? detail = n.detail;
+    // The follow level counts its top learners, one bar step each.
+    final FollowProgress? counted =
+        n.kind == PathNodeKind.followWinners &&
+            n.follow != null &&
+            n.follow!.total > 0
+        ? n.follow
+        : null;
     out.add(
       Quest(
         id: n.id,
         title: n.title,
-        done: isHandedIn(n.state) ? 1 : 0,
-        goal: 1,
+        done: counted != null
+            ? (counted.done < counted.total ? counted.done : counted.total)
+            : (isHandedIn(n.state) ? 1 : 0),
+        goal: counted?.total ?? 1,
         icon: QuestIcon.task,
         kind: n.kind,
         note: switch (n.state) {

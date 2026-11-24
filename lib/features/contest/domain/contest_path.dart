@@ -26,6 +26,14 @@ enum PathNodeKind {
   planWeek,
   article,
   video,
+
+  /// "Follow last round's top learners" (owner, 24 Nov 2026): one node at
+  /// the END of today, OUTSIDE the one-at-a-time order — it never waits on a
+  /// level, never holds one back and is never skipped. On the path only
+  /// because this build asks for it (`?followLevel=1`): a build that predates
+  /// it would draw it as a dead locked node.
+  @JsonValue('follow_winners')
+  followWinners,
   unknown;
 
   /// The server's spelling — what a level's id and the web's routes use.
@@ -34,6 +42,7 @@ enum PathNodeKind {
     PathNodeKind.feedComments => 'feed_comments',
     PathNodeKind.weeklyInvites => 'weekly_invites',
     PathNodeKind.planWeek => 'plan_week',
+    PathNodeKind.followWinners => 'follow_winners',
     _ => name,
   };
 
@@ -155,6 +164,17 @@ abstract class NodePart with _$NodePart {
       _$NodePartFromJson(json);
 }
 
+/// The follow level's count: how many of the top learners in it are followed
+/// (both steps), of how many. The web's `PathNode['follow']`.
+@freezed
+abstract class FollowProgress with _$FollowProgress {
+  const factory FollowProgress({@Default(0) int done, @Default(0) int total}) =
+      _FollowProgress;
+
+  factory FollowProgress.fromJson(Map<String, dynamic> json) =>
+      _$FollowProgressFromJson(json);
+}
+
 /// The piece a claim node stands for, as the claim endpoint takes it.
 @freezed
 abstract class NodeClaim with _$NodeClaim {
@@ -178,7 +198,7 @@ abstract class NodeClaim with _$NodeClaim {
 /// ## [href] is a web path, and nothing here routes on it
 ///
 /// The server fills it with the WEB's address for the level
-/// (`/contest/lesson`, `/connections?from=contest`, …). The app dispatches on
+/// (`/levels/lesson`, `/connections?from=levels`, …). The app dispatches on
 /// [kind] and [claim] instead and reads [href] only as "this level opens":
 /// routed blindly, a web path the app does not register is a "Page not
 /// found", where an unknown kind simply opens nothing.
@@ -226,6 +246,9 @@ abstract class PathNode with _$PathNode {
 
     /// Claim nodes only.
     NodeClaim? claim,
+
+    /// The follow level only: its top learners followed, of how many.
+    FollowProgress? follow,
 
     /// The one level Skip may be pressed on: today's open level (the gate's
     /// first node still holding the chain, in state today or rejected). On at

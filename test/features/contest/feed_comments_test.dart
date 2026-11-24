@@ -399,7 +399,7 @@ void main() {
       );
       expect(find.text('Today’s comments are in'), findsOneWidget);
       expect(
-        find.text('Five new comments count on each day the contest runs.'),
+        find.text('Five new comments count on each day of the levels.'),
         findsOneWidget,
       );
       expect(find.byType(TextField), findsNothing);
@@ -426,9 +426,7 @@ void main() {
         findsOneWidget,
       );
       expect(
-        find.text(
-          'Other days of the contest count as usual. Think we got it wrong?',
-        ),
+        find.text('Your other days count as usual. Think we got it wrong?'),
         findsOneWidget,
       );
       // The web's appeal line: the removed claims and appeals page.

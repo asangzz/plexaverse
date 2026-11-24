@@ -38,8 +38,7 @@ void main() {
     expect(find.text('Connect with leaders'), findsOneWidget);
     expect(
       find.text(
-        'Send each request with its note, then finish to collect your contest '
-        'XP.',
+        'Send each request with its note, then finish to collect your XP.',
       ),
       findsOneWidget,
     );
@@ -164,7 +163,7 @@ void main() {
       _Contest(_path(PathNodeState.today)),
       _Engagement(sent: 0),
     );
-    await tester.tap(_iconButton('Back to the contest'));
+    await tester.tap(_iconButton('Back to your levels'));
     await tester.pumpAndSettle();
     expect(find.text('the path'), findsOneWidget);
   });

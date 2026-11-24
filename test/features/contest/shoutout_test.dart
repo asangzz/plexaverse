@@ -22,6 +22,8 @@ import 'package:plexaverse/features/contest/presentation/widgets/featured/hall_o
 import 'package:plexaverse/features/contest/presentation/widgets/featured/learners_of_the_week.dart';
 import 'package:plexaverse/features/contest/presentation/widgets/featured/shoutout_card.dart';
 import 'package:plexaverse/features/contest/presentation/widgets/feed/feed_panels.dart';
+import 'package:plexaverse/features/profile/data/profile_repositories.dart';
+import 'package:plexaverse/features/profile/domain/public_profile_words.dart';
 import 'package:plexaverse/features/settings/application/settings_controllers.dart';
 import 'package:plexaverse/features/settings/data/settings_repositories.dart';
 
@@ -267,7 +269,24 @@ void main() {
       expect(wire.seen.single.data, <String, dynamic>{
         'featured': true,
         'linkedinUrl': 'https://www.linkedin.com/in/Asha',
+        // The notice date of the words the card showed (review, 24 Nov 2026):
+        // the server refuses a yes without the current one.
+        'wordsVersion': kShoutoutWordsVersion,
       });
+      expect(kShoutoutWordsVersion, '2026-11-24');
+    });
+
+    test('the server says when an earlier yes no longer counts', () {
+      expect(
+        ShoutoutSettings.fromJson(<String, dynamic>{
+          'featured': false,
+          'linkedinUrl': null,
+          'adultDeclared': true,
+          'stale': true,
+        }).stale,
+        isTrue,
+      );
+      expect(ShoutoutSettings.fromJson(<String, dynamic>{}).stale, isFalse);
     });
 
     test('withdrawing sends featured: false and nothing else', () async {
@@ -538,14 +557,12 @@ void main() {
         ),
       );
       expect(
-        find.text(
-          'Other days of the contest count as usual. Think we got it wrong?',
-        ),
+        find.text('Your other days count as usual. Think we got it wrong?'),
         findsOneWidget,
       );
       await tester.tap(find.bySemanticsLabel('Appeal the decision'));
       await tester.pump();
-      expect(opener.opened, <String>[plexaverseContestAppealsUrl]);
+      expect(opener.opened, <String>[plexaverseLevelsAppealsUrl]);
     });
   });
 
@@ -627,10 +644,16 @@ void main() {
       final Finder fame = find.byType(HallOfFame);
       Finder inFame(Finder f) => find.descendant(of: fame, matching: f);
       expect(inFame(find.text('Hall of Fame')), findsOneWidget);
+      // A round is named by its dates, never by its admin title.
+      expect(
+        inFame(find.text('The round that ended 2 November 2026')),
+        findsOneWidget,
+      );
+      expect(inFame(find.text('Levels · Aug–Nov 2026')), findsNothing);
       expect(
         inFame(
           find.textContaining(
-            'The top 10 won a profile shoutout. Featured until ',
+            'The top 10 learners won a profile shoutout. Featured until ',
           ),
         ),
         findsOneWidget,
@@ -645,7 +668,7 @@ void main() {
       WidgetTester tester,
     ) async {
       await pumpContestPage(tester, scenario: FakeContestScenario.noContest);
-      expect(find.text('No contest right now'), findsOneWidget);
+      expect(find.text('New levels are on the way'), findsOneWidget);
       expect(find.text('Hall of Fame'), findsOneWidget);
       // Not one of the winners, no contest: no consent card.
       expect(find.byType(ShoutoutCard), findsNothing);
@@ -702,29 +725,42 @@ void main() {
     });
 
     testWidgets('ticking is not yet a yes; a bad link is said in its field; '
-        '“Feature me” agrees; un-ticking is the whole withdrawal', (
-      WidgetTester tester,
-    ) async {
+        'the public profile is asked in the same step and never granted '
+        'silently; “Feature me” publishes, then agrees; un-ticking is the '
+        'whole withdrawal', (WidgetTester tester) async {
       final _Shoutout repo = _Shoutout();
-      await pumpContestPage(tester, repo: repo);
+      final FakeProfileRepository profile = FakeProfileRepository(
+        latency: Duration.zero,
+      );
+      await pumpContestPage(
+        tester,
+        repo: repo,
+        overrides: <Override>[
+          profileRepositoryProvider.overrideWithValue(profile),
+        ],
+      );
 
       await tapVisible(tester, _boxFinder);
       expect(find.text('Your public LinkedIn profile link'), findsOneWidget);
-      expect(find.byType(TextField), findsOneWidget);
+      expect(_linkField, findsOneWidget);
+      // No public profile yet: its handle (the suggestion pre-filled) and
+      // its own box, un-ticked, in its own words.
+      expect(find.text('Your Plexaverse handle'), findsOneWidget);
+      expect(tester.getSemantics(_publishBox), _unticked);
       expect(repo.saves, isEmpty, reason: 'a tick is not consent');
 
       await tester.enterText(
-        find.byType(TextField),
+        _linkField,
         'https://www.linkedin.com/company/plexaverse',
       );
+      // The focused field scrolls itself into view; a scroll in flight
+      // takes no taps.
+      await settle(tester);
       await tapVisible(tester, find.bySemanticsLabel('Feature me'));
       expect(find.text(kShoutoutBadLink), findsOneWidget);
       expect(repo.saves, isEmpty, reason: 'a bad link is never sent');
 
-      await tester.enterText(
-        find.byType(TextField),
-        'linkedin.com/in/Asha-Rao',
-      );
+      await tester.enterText(_linkField, 'linkedin.com/in/Asha-Rao');
       await settle(tester);
       expect(find.text(kShoutoutBadLink), findsNothing);
 
@@ -740,7 +776,14 @@ void main() {
       expect(repo.saves, isEmpty, reason: 'no 18+ tick, nothing sent');
 
       await tapVisible(tester, adultBox);
+      // The public profile is OFFERED, optional (review of 24 Nov 2026): the
+      // card says being featured does not need it.
+      expect(find.textContaining(kShoutoutProfileOptionalLine), findsOneWidget);
+      expect(profile.writes, isEmpty, reason: 'never published silently');
+
+      await tapVisible(tester, _publishBox);
       await tapVisible(tester, find.bySemanticsLabel('Feature me'));
+      expect(profile.writes, <String>['publish:priya-sharma:adult']);
       expect(repo.saves, <(bool, String?)>[(true, 'linkedin.com/in/Asha-Rao')]);
       expect(repo.adultTicks, <bool>[true]);
       expect(find.text('You’re in if you make it'), findsOneWidget);
@@ -756,6 +799,120 @@ void main() {
       expect(find.text('You’re in if you make it'), findsNothing);
       expect(find.byType(TextField), findsNothing);
       expect(_box(tester), _unticked);
+    });
+
+    // Review of 24 Nov 2026: being featured needs no public page — only the
+    // follow level does — and one consent may not be made conditional on
+    // another it does not need. Unticked, nothing is published; the
+    // shoutout's own yes still goes.
+    testWidgets('with the public-profile box left unticked, publishes nothing '
+        'and still records the shoutout alone', (WidgetTester tester) async {
+      final _Shoutout repo = _Shoutout();
+      final FakeProfileRepository profile = FakeProfileRepository(
+        latency: Duration.zero,
+      );
+      await pumpContestPage(
+        tester,
+        repo: repo,
+        overrides: <Override>[
+          profileRepositoryProvider.overrideWithValue(profile),
+        ],
+      );
+      await tapVisible(tester, _boxFinder);
+      expect(find.text('Your Plexaverse handle'), findsOneWidget);
+      expect(tester.getSemantics(_publishBox), _unticked);
+      await tester.enterText(_linkField, 'linkedin.com/in/asha-rao');
+      await settle(tester);
+      await tapVisible(
+        tester,
+        find.bySemanticsLabel(
+          '$kAdultDeclarationLabel $kAdultDeclarationReason',
+        ),
+      );
+      await tapVisible(tester, find.bySemanticsLabel('Feature me'));
+      expect(profile.writes, isEmpty, reason: 'never published silently');
+      expect(repo.saves, <(bool, String?)>[(true, 'linkedin.com/in/asha-rao')]);
+      expect(find.text('You’re in if you make it'), findsOneWidget);
+    });
+
+    testWidgets('says why the box is empty when an earlier yes no longer '
+        'counts because the words changed', (WidgetTester tester) async {
+      final _Shoutout repo = _Shoutout(
+        settings: const ShoutoutSettings(
+          linkedinUrl: 'https://www.linkedin.com/in/asha-rao',
+          adultDeclared: true,
+          stale: true,
+        ),
+      );
+      await pumpContestPage(tester, repo: repo);
+      expect(find.text(kShoutoutStaleLine), findsOneWidget);
+      expect(_box(tester), _unticked);
+    });
+
+    // Review of 24 Nov 2026 (PV1): the stale yes is off, but the link given
+    // for it is still on record until it is withdrawn.
+    testWidgets('a stale yes can be withdrawn from the card, which erases the '
+        'link', (WidgetTester tester) async {
+      final _Shoutout repo = _Shoutout(
+        settings: const ShoutoutSettings(
+          linkedinUrl: 'https://www.linkedin.com/in/asha-rao',
+          adultDeclared: true,
+          stale: true,
+        ),
+      );
+      await pumpContestPage(tester, repo: repo);
+      await tapVisible(
+        tester,
+        find.bySemanticsLabel(kShoutoutStaleRemoveLabel),
+      );
+      expect(repo.saves, <(bool, String?)>[(false, null)]);
+    });
+
+    testWidgets('a stale yes: “Not now” withdraws it too', (
+      WidgetTester tester,
+    ) async {
+      final _Shoutout repo = _Shoutout(
+        settings: const ShoutoutSettings(
+          linkedinUrl: 'https://www.linkedin.com/in/asha-rao',
+          adultDeclared: true,
+          stale: true,
+        ),
+      );
+      await pumpContestPage(tester, repo: repo);
+      await tapVisible(tester, _boxFinder);
+      expect(repo.saves, isEmpty);
+      await tapVisible(tester, find.bySemanticsLabel('Not now'));
+      expect(repo.saves, <(bool, String?)>[(false, null)]);
+    });
+
+    testWidgets('a learner with a public profile is not asked for it again', (
+      WidgetTester tester,
+    ) async {
+      final _Shoutout repo = _Shoutout();
+      final FakeProfileRepository profile = FakeProfileRepository(
+        latency: Duration.zero,
+        handle: 'riya-kapoor',
+      );
+      await pumpContestPage(
+        tester,
+        repo: repo,
+        overrides: <Override>[
+          profileRepositoryProvider.overrideWithValue(profile),
+        ],
+      );
+      await tapVisible(tester, _boxFinder);
+      expect(find.text('Your Plexaverse handle'), findsNothing);
+      await tester.enterText(_linkField, 'linkedin.com/in/riya-kapoor');
+      await settle(tester);
+      await tapVisible(
+        tester,
+        find.bySemanticsLabel(
+          '$kAdultDeclarationLabel $kAdultDeclarationReason',
+        ),
+      );
+      await tapVisible(tester, find.bySemanticsLabel('Feature me'));
+      expect(profile.writes, isEmpty);
+      expect(repo.saves, hasLength(1));
     });
 
     testWidgets('“Not now” closes the field and sends nothing', (
@@ -782,20 +939,23 @@ void main() {
       await tapVisible(
         tester,
         find.bySemanticsLabel(
-          'Contest rules — how XP works, what the prize is, and how claims '
-          'are checked.',
+          'How levels, XP and shoutouts work — how XP works, how the top '
+          'learners are chosen, and how claims are checked.',
         ),
       );
       await tapVisible(tester, find.bySemanticsLabel('How featuring works'));
       expect(opener.opened, <String>[
-        plexaverseContestRulesUrl,
-        '$plexaverseContestRulesUrl#featured',
+        plexaverseLevelsRulesUrl,
+        '$plexaverseLevelsRulesUrl#featured',
       ]);
     });
 
-    testWidgets('the join card links the full rules', (
-      WidgetTester tester,
-    ) async {
+    // No join card any more (24 Nov 2026): a learner new to the round is
+    // entered by the read, so they get the rules line — and the shoutout
+    // card — like anyone else. Deliberately replaces "the join card links
+    // the full rules".
+    testWidgets('a learner new to the round reaches the rules, and the '
+        'shoutout card', (WidgetTester tester) async {
       final _Opener opener = _Opener();
       await pumpContestPage(
         tester,
@@ -805,13 +965,12 @@ void main() {
       await tapVisible(
         tester,
         find.bySemanticsLabel(
-          'Read the full contest rules — every figure, how claims are '
-          'checked, and how to appeal.',
+          'How levels, XP and shoutouts work — how XP works, how the top '
+          'learners are chosen, and how claims are checked.',
         ),
       );
-      expect(opener.opened, <String>[plexaverseContestRulesUrl]);
-      // A non-entrant has nothing to be featured in.
-      expect(find.byType(ShoutoutCard), findsNothing);
+      expect(opener.opened, <String>[plexaverseLevelsRulesUrl]);
+      expect(find.byType(ShoutoutCard), findsOneWidget);
     });
 
     testWidgets('a page that will not open is copied, and said as a page', (
@@ -839,7 +998,7 @@ void main() {
       );
       await tapVisible(tester, find.bySemanticsLabel('How featuring works'));
       expect(copied, <Object?>[
-        <String, dynamic>{'text': '$plexaverseContestRulesUrl#featured'},
+        <String, dynamic>{'text': '$plexaverseLevelsRulesUrl#featured'},
       ]);
       // A page, not "LinkedIn": the shared helper's words would be wrong here.
       expect(
@@ -880,6 +1039,19 @@ final Finder _boxFinder = find.bySemanticsLabel(
   RegExp('^${RegExp.escape(kShoutoutToggleLabel)}\\.'),
 );
 
+/// The public profile's own box, in the same step.
+final Finder _publishBox = find.bySemanticsLabel(
+  '$kPublicProfileToggleLabel. $kPublicProfileConsentText',
+);
+
+/// The LinkedIn profile link's field — by its hint, since the handle's field
+/// sits beside it.
+final Finder _linkField = find.byWidgetPredicate(
+  (Widget w) =>
+      w is TextField &&
+      w.decoration?.hintText == 'https://www.linkedin.com/in/your-name',
+);
+
 SemanticsNode _box(WidgetTester tester) => tester.getSemantics(_boxFinder);
 
 final Matcher _ticked = isSemantics(hasCheckedState: true, isChecked: true);
@@ -888,9 +1060,13 @@ final Matcher _unticked = isSemantics(hasCheckedState: true, isChecked: false);
 /// The mock flavor's running contest, with the cards' read replaceable and
 /// every save recorded.
 class _Shoutout extends FakeContestRepository {
-  _Shoutout({this.featured, super.scenario}) : super(latency: Duration.zero);
+  _Shoutout({this.featured, this.settings, super.scenario})
+    : super(latency: Duration.zero);
 
   final ContestFeatured? featured;
+
+  /// The choice every read answers with, instead of the fake world’s.
+  ShoutoutSettings? settings;
   final List<(bool, String?)> saves = <(bool, String?)>[];
   final List<bool> adultTicks = <bool>[];
   int featuredReads = 0;
@@ -903,8 +1079,10 @@ class _Shoutout extends FakeContestRepository {
   }
 
   @override
-  Future<ShoutoutSettings> fetchShoutout() {
+  Future<ShoutoutSettings> fetchShoutout() async {
     shoutoutReads++;
+    final ShoutoutSettings? canned = settings;
+    if (canned != null) return canned;
     return super.fetchShoutout();
   }
 

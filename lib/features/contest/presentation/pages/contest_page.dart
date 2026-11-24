@@ -9,15 +9,16 @@ import '../../application/contest_controllers.dart';
 import '../../application/contest_home_controllers.dart';
 import '../../domain/contest_dates.dart';
 import '../../domain/contest_repository.dart';
-import '../../domain/contest_words.dart';
+import '../../domain/levels_words.dart';
+import '../../../placement/presentation/widgets/placement_level_hint.dart';
 import '../widgets/contest_board_view.dart';
-import '../widgets/contest_join_card.dart';
 import '../widgets/contest_kit.dart';
 import '../widgets/contest_section_bar.dart';
 import '../widgets/contest_skeletons.dart';
 import '../widgets/featured/hall_of_fame.dart';
 import '../widgets/featured/learners_of_the_week.dart';
 import '../widgets/featured/shoutout_card.dart';
+import '../widgets/name_on_board_card.dart';
 import '../widgets/path/path_view.dart';
 import '../widgets/paused_notice.dart';
 import '../widgets/rail/consistency_card.dart';
@@ -29,53 +30,66 @@ import '../widgets/roadmap_line.dart';
 import '../widgets/stats_bar.dart';
 import '../widgets/web_link.dart';
 
-/// `/contest` — the Business English contest, for one participant. The
-/// signed-in home. A port of the web's `ContestClient.tsx`.
+/// `/contest` — the learner's levels: the day's path, XP and the top
+/// learners. The signed-in home. A port of the web's `ContestClient.tsx`
+/// (`/levels`).
+///
+/// Owner, 24 Nov 2026: learners are never told about a contest. There is no
+/// join card and no contest page — the home is the Duolingo-style level path
+/// (Level 1, Level 2 …), and the levels reset every three months, a new
+/// round. The mechanics are unchanged; only the words and the way in moved.
 ///
 /// ## The states
 ///
 ///   * Loading → the running page's own shape ([ContestDashboardSkeleton]):
-///     most visitors are running entrants.
+///     most visitors are entered and the round is running.
 ///   * Failed → said in words, with Plexa fixing it with a wrench.
-///   * No contest → "No contest right now", and the way back to the roadmap.
-///   * Not joined, contest over → "This contest has ended": no join card
-///     (joining a finished contest would only be refused) and no board,
-///     whose names were shared with participants only.
-///   * Not joined → the join card.
-///   * Joined, before day 1 or after the last → the quiet page: the header,
-///     the standing and the board — the final standings, on winner day.
-///   * Joined and running → the path, then the prize, the board preview,
-///     today's quests, the week's LinkedIn tasks and the full board, under a
-///     small section bar that jumps between them.
-///   * Every state → the Hall of Fame (a finalised contest's consenting
-///     winners, for 30 days) under the rest; and wherever a contest is
-///     shown, a link to its full rules on the web.
+///   * No round, or one that ENDED → "New levels are on the way": rounds run
+///     back to back and the next starts on its own, so this shows only when
+///     automatic rounds are switched off. Never the ended round's standings
+///     as a page of their own: its result is the Hall of Fame card.
+///   * Entered, round running → the path, then the rail's cards and the full
+///     board, under a small section bar that jumps between them.
+///   * Entered, round not started yet → when Level 1 opens.
+///   * Running or upcoming with no entry → entering failed on the server (it
+///     never throws; it logs). A pull, or "Try again", reads again, which
+///     retries it.
+///   * Every state → the Hall of Fame (a finalised round's consenting top
+///     learners, for 30 days), and the way to the published rules.
+///
+/// ## No join step
+///
+/// Reading is joining: `GET /contest` enters the learner in the running
+/// round, anonymously, before it answers — the app is never refused for an
+/// 18+ declaration. Their name is shown to other learners only once they
+/// switch "Show my name to other learners" on ([NameOnBoardCard]) — here or
+/// in Settings. Never assumed.
 ///
 /// ## The shoutout (owner, 22 Nov 2026: the prize is a profile shoutout)
 ///
-/// A joined entrant gets the "Feature me if I make it" card — the
-/// `contest_shoutout` consent, un-ticked until they agree. A running entrant
-/// who has finished today's lesson also gets "Learners of the week", above
-/// the full board: never a level, never inside one, and with no XP, rank or
-/// order — the server sends none.
+/// An entered learner gets the "Feature me if I make it" card — the
+/// `contest_shoutout` consent, un-ticked until they agree; so does a winner
+/// of a round whose Hall of Fame is showing, in every state. A running
+/// learner who has finished today's lesson also gets "Learners of the week",
+/// above the full board: never a level, never inside one, and with no XP,
+/// rank or order — the server sends none.
 ///
 /// ## Two reads, one owner each
 ///
-/// The overview owns who the learner is in the contest — XP, rank, streak,
-/// the prize. The path owns what the week holds and where each level
-/// stands. Neither restates the other, so the stats bar and the path cannot
-/// disagree about a figure, and the path is only read for a running
-/// entrant: a join card has no week to draw.
+/// The overview owns who the learner is in the round — XP, rank, streak. The
+/// path owns what the week holds and where each level stands. Neither
+/// restates the other, so the stats bar and the path cannot disagree about a
+/// figure.
 ///
 /// ## The roadmap stays the bigger goal
 ///
-/// The contest is an overlay on the 1000-day roadmap, not a replacement for
+/// The levels are an overlay on the 1000-day roadmap, not a replacement for
 /// it. One quiet line at the foot of every state says so ([RoadmapLine]).
 ///
 /// ## Plexa at phone width
 ///
 /// The web hides every moment below 640px, and the app is all phone; copied
-/// literally, the contest would show none. They are shown here — each is
+/// literally, the page would show none. They are shown here — each is
 /// decoration, and the screen always says in words what it means.
 class ContestPage extends ConsumerWidget {
   const ContestPage({super.key});
@@ -112,12 +126,21 @@ class ContestPage extends ConsumerWidget {
   }
 
   Widget _forOverview(ContestOverview? overview) {
-    if (overview == null) {
-      return const _Quiet(
+    // No round, or one that ended with no next one yet (automatic rounds
+    // switched off). Its result is the Hall of Fame card, never a page.
+    if (overview == null || overview.isEnded) {
+      return _Quiet(
         children: <Widget>[
-          _Empty(title: 'No contest right now'),
-          _WinnerShoutout(padding: EdgeInsets.only(top: 40)),
-          HallOfFame(padding: EdgeInsets.only(top: 40)),
+          const _Empty(
+            title: 'New levels are on the way',
+            line:
+                'Levels reset every $kRoundMonths months, and the next round '
+                'starts soon. Your roadmap carries on as usual.',
+          ),
+          const _WinnerShoutout(padding: EdgeInsets.only(top: 40)),
+          const HallOfFame(padding: EdgeInsets.only(top: 40)),
+          SizedBox(height: ZaveSpace.xxl),
+          const ContestRulesLine(),
         ],
       );
     }
@@ -127,35 +150,29 @@ class ContestPage extends ConsumerWidget {
     }
     if (entry != null) {
       return _Quiet(
-        children: <Widget>[_JoinedQuiet(overview: overview, entry: entry)],
+        children: <Widget>[_Upcoming(overview: overview, entry: entry)],
       );
     }
-    if (overview.isEnded) {
-      return const _Quiet(
-        children: <Widget>[
-          _Empty(title: 'This contest has ended'),
-          _WinnerShoutout(padding: EdgeInsets.only(top: 40)),
-          HallOfFame(padding: EdgeInsets.only(top: 40)),
-        ],
-      );
-    }
-    return _Quiet(
+    // Running or upcoming and still no entry: entering failed on the server.
+    // Reading again retries it.
+    return const _Quiet(
       children: <Widget>[
-        ContestJoinCard(overview: overview),
-        _WinnerShoutout(padding: EdgeInsets.only(top: ZaveSpace.xxl)),
-        HallOfFame(padding: EdgeInsets.only(top: ZaveSpace.xxl)),
-        SizedBox(height: ZaveSpace.xxl),
-        RoadmapLine(lastDayKey: overview.contest.lastDayKey),
+        _Empty(
+          title: 'Your levels are not ready yet',
+          line: 'We could not open your levels just now.',
+          retry: true,
+        ),
+        _WinnerShoutout(padding: EdgeInsets.only(top: 40)),
+        HallOfFame(padding: EdgeInsets.only(top: 40)),
       ],
     );
   }
 }
 
-/// The "Feature me" card outside the contest on screen — only for a winner of
-/// a contest whose Hall of Fame is showing (`viewerPlaced`). A result is fixed
+/// The "Feature me" card outside a running round — only for a winner of a
+/// round whose Hall of Fame is showing (`viewerPlaced`). A result is fixed
 /// after its results week, when this page has usually moved on to the next
-/// contest or to none, and the prize is only theirs if they say yes. Anyone
-/// else not yet joined is asked only the join card's own consent. The web's
+/// round, and the shoutout is only theirs if they say yes. The web's
 /// `WinnerShoutout`.
 class _WinnerShoutout extends ConsumerWidget {
   const _WinnerShoutout({this.padding = EdgeInsets.zero});
@@ -231,7 +248,7 @@ PlexaMomentClip _clipFor(ContestMoment moment) => switch (moment) {
   ContestMoment.finale => PlexaMomentClip.contestFinale,
 };
 
-/// "Could not load the contest", with Plexa and her wrench.
+/// "Could not load your levels", with Plexa and her wrench.
 class _LoadFailed extends ConsumerWidget {
   const _LoadFailed({required this.error});
 
@@ -240,7 +257,7 @@ class _LoadFailed extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     return _FailurePanel(
-      title: 'Could not load the contest',
+      title: 'Could not load your levels',
       message: contestMessage(error),
       onRetry: () => unawaited(_refresh(ref)),
     );
@@ -287,15 +304,20 @@ class _FailurePanel extends StatelessWidget {
   }
 }
 
-/// No contest to show: none running, or one that ended without the
-/// learner. Plexa scans the horizon for the next.
-class _Empty extends StatelessWidget {
-  const _Empty({required this.title});
+/// No round to show — none running, or one that ended with no next one —
+/// or an entry the server could not make. Plexa scans the horizon for the
+/// next.
+class _Empty extends ConsumerWidget {
+  const _Empty({required this.title, required this.line, this.retry = false});
 
   final String title;
+  final String line;
+
+  /// Offer "Try again": reading the overview again is what enters them.
+  final bool retry;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: <Widget>[
@@ -308,11 +330,14 @@ class _Empty extends StatelessWidget {
           child: Text(title, style: ContestType.pageTitle),
         ),
         SizedBox(height: ZaveSpace.lg),
-        Text(
-          'The next one will show up here. Your lessons and your roadmap '
-          'carry on as usual.',
-          style: ContestType.lead,
-        ),
+        Text(line, style: ContestType.lead),
+        if (retry) ...<Widget>[
+          SizedBox(height: ZaveSpace.lg),
+          ContestGhostPill(
+            label: 'Try again',
+            onPressed: () => unawaited(_refresh(ref)),
+          ),
+        ],
         SizedBox(height: ZaveSpace.lg),
         const RoadmapLine(),
       ],
@@ -320,41 +345,22 @@ class _Empty extends StatelessWidget {
   }
 }
 
-/// Joined, but not running: before day 1, or after the last day — the final
-/// standings.
-class _JoinedQuiet extends ConsumerStatefulWidget {
-  const _JoinedQuiet({required this.overview, required this.entry});
+/// Entered, and the round has not started yet: when Level 1 opens. The
+/// web's `Upcoming`.
+class _Upcoming extends ConsumerStatefulWidget {
+  const _Upcoming({required this.overview, required this.entry});
 
   final ContestOverview overview;
   final ContestEntryView entry;
 
   @override
-  ConsumerState<_JoinedQuiet> createState() => _JoinedQuietState();
+  ConsumerState<_Upcoming> createState() => _UpcomingState();
 }
 
-class _JoinedQuietState extends ConsumerState<_JoinedQuiet> {
-  /// When this page was opened — what "just joined" is measured against, as
+class _UpcomingState extends ConsumerState<_Upcoming> {
+  /// When this page was opened — what "just entered" is measured against, as
   /// the web measures it once per visit.
   final DateTime _openedAt = DateTime.now();
-
-  /// The meter's card, for the stats bar's figure to bring into view — the
-  /// web's `#consistency`, a link on this page too.
-  final GlobalKey _consistencyAnchor = GlobalKey(
-    debugLabel: 'contest-quiet-consistency',
-  );
-
-  void _revealConsistency() {
-    final BuildContext? target = _consistencyAnchor.currentContext;
-    if (target == null) return;
-    final bool still = MediaQuery.disableAnimationsOf(context);
-    unawaited(
-      Scrollable.ensureVisible(
-        target,
-        duration: still ? Duration.zero : const Duration(milliseconds: 400),
-        curve: ZaveMotion.curve,
-      ),
-    );
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -362,7 +368,7 @@ class _JoinedQuietState extends ConsumerState<_JoinedQuiet> {
     final ContestInfo contest = overview.contest;
     final ContestMoment? moment = quietMoment(overview, _openedAt);
     final ConsistencyView? meter = watchConsistency(ref);
-    final String topN = formatCount(contest.rewardTopN);
+    final String opens = dayKeyShort(contest.firstDayKey);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: <Widget>[
@@ -370,23 +376,15 @@ class _JoinedQuietState extends ConsumerState<_JoinedQuiet> {
           Center(child: PlexaMoment(_clipFor(moment), width: 200)),
           SizedBox(height: ZaveSpace.lg),
         ],
-        ContestKicker(
-          overview.isEnded
-              ? 'Ended'
-              : 'Starts ${dayKeyShort(contest.firstDayKey)}',
-        ),
+        ContestKicker('Opens $opens'),
         SizedBox(height: ZaveSpace.md),
         Semantics(
           header: true,
-          child: Text(contest.title, style: ContestType.pageTitle),
+          child: Text('Your levels', style: ContestType.pageTitle),
         ),
         SizedBox(height: ZaveSpace.md),
-        // "For first place" reads as a promise still open once it is
-        // settled, so a finished contest says who it goes to.
         Text(
-          overview.isEnded
-              ? 'Final standings. ${contest.prizeTitle} goes to the top $topN.'
-              : '${contest.prizeTitle} for the top $topN.',
+          'Level 1 opens on $opens. You are in: there is nothing to join.',
           style: ContestType.lead,
         ),
         SizedBox(height: ZaveSpace.xxl),
@@ -399,52 +397,35 @@ class _JoinedQuietState extends ConsumerState<_JoinedQuiet> {
               total: widget.entry.total,
               rank: widget.entry.rank,
               consistency: meter?.figure,
-              onConsistencyTap: _revealConsistency,
             ),
           ),
         ),
-        // The meter, when it has something to say — before day 1 it is
-        // no_contest and shows nothing; after the end it still counts the
-        // contest's days in this billing window.
-        if (meter != null && !meter.state.isHidden) ...<Widget>[
-          SizedBox(height: ZaveSpace.xxl),
-          Align(
-            alignment: Alignment.centerLeft,
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 420),
-              child: KeyedSubtree(
-                key: _consistencyAnchor,
-                child: const ConsistencyCard(),
-              ),
-            ),
-          ),
-        ],
         // The web's max-w-[600px]: a consent card should not stretch to a
         // tablet's full width.
         Align(
           alignment: Alignment.centerLeft,
           child: ConstrainedBox(
             constraints: const BoxConstraints(maxWidth: 600),
-            child: ShoutoutCard(padding: EdgeInsets.only(top: ZaveSpace.xxl)),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: <Widget>[
+                ShoutoutCard(padding: EdgeInsets.only(top: ZaveSpace.xxl)),
+                NameOnBoardCard(padding: EdgeInsets.only(top: ZaveSpace.xxl)),
+              ],
+            ),
           ),
-        ),
-        SizedBox(height: ZaveSpace.xxl),
-        ContestBoardView(
-          entrants: overview.entrants,
-          rewardTopN: contest.rewardTopN,
-          rewardMonths: contest.rewardMonths,
         ),
         HallOfFame(padding: EdgeInsets.only(top: ZaveSpace.xxl)),
         SizedBox(height: ZaveSpace.xxl),
         const ContestRulesLine(),
         SizedBox(height: ZaveSpace.md),
-        RoadmapLine(lastDayKey: contest.lastDayKey),
+        const RoadmapLine(),
       ],
     );
   }
 }
 
-/// A running entrant's page: the stats, the path, the rail's cards and the
+/// A running learner's page: the stats, the path, the rail's cards and the
 /// full board, in one scroll under the section bar.
 class _Running extends ConsumerStatefulWidget {
   const _Running({required this.overview, required this.entry});
@@ -544,7 +525,23 @@ class _RunningState extends ConsumerState<_Running> {
                       if (entry.scoringPaused) ...<Widget>[
                         SizedBox(height: ZaveSpace.gutter),
                         PausedNotice(freeDays: contest.freeDays),
+                      ] else if (entry.freeDaysLeft > 0) ...<Widget>[
+                        // The paid condition, said before the XP it governs
+                        // (the web's FreeDaysLine): an auto-entered learner
+                        // never saw onboarding's step or a join card.
+                        SizedBox(height: ZaveSpace.gutter),
+                        Text(
+                          freeDaysLine(entry.freeDaysLeft),
+                          key: const ValueKey<String>('free-days-line'),
+                          style: ContestType.meta.copyWith(height: 1.6),
+                        ),
                       ],
+                      // The placement nudge used to sit on the join card;
+                      // with no join step it sits over the path. Nothing
+                      // once the learner is placed.
+                      PlacementLevelHint(
+                        padding: EdgeInsets.only(top: ZaveSpace.gutter),
+                      ),
                       if (moment != null) ...<Widget>[
                         SizedBox(height: ZaveSpace.gutter),
                         Center(
@@ -556,7 +553,7 @@ class _RunningState extends ConsumerState<_Running> {
                         key: _anchors[ContestSection.path],
                         child: _PathArea(
                           path: path,
-                          title: contest.title,
+                          title: 'Your levels',
                           lesson: lesson,
                         ),
                       ),
@@ -610,6 +607,9 @@ class _RunningState extends ConsumerState<_Running> {
                           rewardTopN: contest.rewardTopN,
                           rewardMonths: contest.rewardMonths,
                         ),
+                      ),
+                      NameOnBoardCard(
+                        padding: EdgeInsets.only(top: ZaveSpace.xxl),
                       ),
                       ShoutoutCard(
                         padding: EdgeInsets.only(top: ZaveSpace.xxl),

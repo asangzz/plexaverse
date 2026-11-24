@@ -1,4 +1,4 @@
-/// The contest's words, and the few pure decisions every screen shares.
+/// The levels' words, and the few pure decisions every screen shares.
 ///
 /// Ports of the web's `components/contest/path/words.ts`, the copy helpers in
 /// `components/contest/ui.tsx` and `quizWords.ts`, `levelName` from
@@ -20,7 +20,7 @@ import 'contest_path.dart';
 import 'lesson_parts.dart';
 import 'today_quiz.dart';
 
-/// The last days of a contest in which the board is shown.
+/// The last days of a round in which the board is shown.
 /// `LEADERBOARD_REVEAL_DAYS` in the web's `lib/contest.ts`.
 const int kLeaderboardRevealDays = 10;
 
@@ -69,6 +69,7 @@ String kindWord(PathNodeKind kind) => switch (kind) {
   PathNodeKind.planWeek => 'Planner · Plan this week',
   PathNodeKind.article => 'LinkedIn · Article link',
   PathNodeKind.video => 'LinkedIn · Video link',
+  PathNodeKind.followWinners => 'LinkedIn + Plexaverse · Top learners',
   PathNodeKind.unknown => 'Level',
 };
 
@@ -341,10 +342,8 @@ String claimWord(PostClaim claim) => switch (claim.status) {
 /// then; this is the words.
 String boardLockedLine(String revealsOn) {
   final String label = dayKeyLong(revealsOn);
-  final String when = label.isEmpty
-      ? 'in the contest’s last days'
-      : 'on $label';
-  return 'The leaderboard opens $when — the last $kLeaderboardRevealDays days of the contest. Until then, it’s you against yesterday: keep your streak.';
+  final String when = label.isEmpty ? 'in the round’s last days' : 'on $label';
+  return 'The top learners show $when — the last $kLeaderboardRevealDays days of the round. Until then, it’s you against yesterday: keep your streak.';
 }
 
 /// The one sentence under the board: how far to the next place that changes

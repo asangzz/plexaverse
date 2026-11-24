@@ -31,23 +31,21 @@ export 'today_quiz.dart';
 /// task, the gate, the streak, the week trophy, a rank, an answer's
 /// verdict. A screen draws what these return.
 abstract class ContestRepository {
-  /// `GET /contest` — null when there is no contest at all (still a 200).
-  Future<ContestOverview?> fetchOverview();
-
-  /// `POST /contest/join` `{showName}`. Idempotent: joining twice changes
-  /// nothing, not even the level.
+  /// `GET /contest` — null when there is no round at all (still a 200).
   ///
-  /// [showName] is the leaderboard consent (`contest_leaderboard`), recorded
-  /// by the server when true. It must be what the learner ticked — the box
-  /// starts unticked — and false never withdraws an earlier yes (Settings
-  /// does that). [ContestNotRunning] when there is nothing to join.
-  Future<void> join({required bool showName});
+  /// READING IS JOINING (owner, 24 Nov 2026): before it answers, the server
+  /// starts the next round if the last has ended and enters the caller in the
+  /// running one, anonymously — so there is no join step, and no join call
+  /// here. The leaderboard-name consent is asked in context instead (the
+  /// levels page's "Show my name to other learners").
+  Future<ContestOverview?> fetchOverview();
 
   /// `GET /contest/board?limit=` — the server's default (50) when [limit] is
   /// null, clamped to 1–200.
   Future<BoardResult> fetchBoard({int? limit});
 
-  /// `GET /contest/path` — this week's levels, fully decided by the server.
+  /// `GET /contest/path?followLevel=1` — this week's levels, fully decided
+  /// by the server, with the follow level: this build draws it.
   Future<ContestPath> fetchPath();
 
   /// `GET /contest/lesson` — today's lesson as it stands. A pure read.
@@ -181,5 +179,21 @@ abstract class ContestRepository {
     required bool featured,
     String? linkedinUrl,
     bool adult = false,
+  });
+
+  /// `GET /contest/tasks/follow-winners` — "Follow last round's top
+  /// learners": who is in it, and each one's two steps. Not running and not
+  /// entered arrive as an unavailable view with a reason, not as refusals.
+  Future<FollowWinnersView> fetchFollowWinners();
+
+  /// `POST /contest/tasks/follow-winners` `{handle, step}` — step 1 tapped
+  /// ([FollowWinnerStep.linkedin], SELF-REPORTED: LinkedIn tells no app who
+  /// follows whom), or step 2 re-checked after the follow itself
+  /// ([FollowWinnerStep.plexaverse] — the server believes only the follow
+  /// row). Both done → paid once, whichever lands second. [ContestInvalid],
+  /// [ContestNotRunning], [ContestNotEntered], [ContestNotInLevel].
+  Future<FollowWinnerStepResult> recordFollowWinnerStep({
+    required String handle,
+    required FollowWinnerStep step,
   });
 }

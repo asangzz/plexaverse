@@ -61,6 +61,14 @@ final _Skin _linkedInSkin = _kindSkin(
   const Color(0x8C0A66C2),
 );
 
+/// The top learners' level: gold, the shoutout's colour.
+final _Skin _followSkin = _kindSkin(
+  const Color(0xFFFFD166),
+  const Color(0xFFF5A623),
+  const Color(0xFFB9770E),
+  const Color(0x73FFD166),
+);
+
 final _Skin _planSkin = _kindSkin(
   const Color(0xFF34D399),
   const Color(0xFF0F9F6E),
@@ -93,6 +101,7 @@ _Skin _skinFor(PathNode node) {
   return switch (node.kind) {
     PathNodeKind.lesson => _lessonSkin,
     PathNodeKind.planWeek => _planSkin,
+    PathNodeKind.followWinners => _followSkin,
     PathNodeKind.unknown => _darkSkin,
     _ => _linkedInSkin,
   };
@@ -128,6 +137,7 @@ class PathNodeButton extends StatelessWidget {
     this.current = false,
     this.progress = 0,
     this.expanded = false,
+    this.level,
     super.key,
   });
 
@@ -135,6 +145,10 @@ class PathNodeButton extends StatelessWidget {
 
   /// Said before the level's name: "Wed, day 17".
   final String dayName;
+
+  /// Its number in the day — Level 1, Level 2 … (owner, 24 Nov 2026: the
+  /// home is a Duolingo-style level path). Null leaves it unsaid.
+  final int? level;
   final VoidCallback onPressed;
 
   /// The level the START bubble sits on.
@@ -157,7 +171,9 @@ class PathNodeButton extends StatelessWidget {
             detail.startsWith('Unlocks after ')
         ? ' $detail.'
         : '';
-    return '$dayName: ${levelName(node)}. ${stateWord(node.state)}.$waits';
+    final String number = level == null ? '' : 'Level $level, ';
+    return '$dayName: $number${levelName(node)}. '
+        '${stateWord(node.state)}.$waits';
   }
 
   @override

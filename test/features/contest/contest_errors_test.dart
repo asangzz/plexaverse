@@ -96,16 +96,22 @@ void main() {
   table = <(String, String, List<int>, TypeMatcher<ContestRefusal>)>[
     (
       'NOT_ENTERED',
-      'Join the contest to take its daily quiz.',
+      'Open your levels page first: today’s quiz opens there.',
       // 403 on the lesson routes, 404 on the task routes.
       <int>[403, 404],
       isA<ContestNotEntered>(),
     ),
     (
       'NOT_RUNNING',
-      'There is no contest running right now.',
+      'No round of levels is running right now. The next one starts soon.',
       <int>[409],
       isA<ContestNotRunning>(),
+    ),
+    (
+      'NOT_IN_LEVEL',
+      'That learner is not one of the top learners in this level.',
+      <int>[404],
+      isA<ContestNotInLevel>(),
     ),
     (
       'LOCKED',
@@ -303,7 +309,7 @@ void main() {
       );
       expect(
         contestMessage(await _thrown(repo.fetchOverview)),
-        'There is no contest running right now.',
+        'No round of levels is running right now. The next one starts soon.',
       );
     });
   });
@@ -411,15 +417,81 @@ void main() {
       expect(await _thrown(empty.fetchOverview), isA<ContestUnavailable>());
     });
 
-    test('join sends the ticked box as a literal bool', () async {
+    // There is no join call any more (24 Nov 2026): reading is joining.
+    // The path asks for the follow level, which this build draws.
+    test('the path asks for the follow level with followLevel=1', () async {
       final (ApiContestRepository repo, _Canned wire) = _stack(
         200,
-        _ok(<String, dynamic>{'ok': true}),
+        _ok(<String, dynamic>{
+          'path': <String, dynamic>{'status': 'no_contest'},
+        }),
       );
-      await repo.join(showName: false);
-      expect(wire.seen.single.method, 'POST');
-      expect(wire.seen.single.path, '/contest/join');
-      expect(wire.seen.single.data, <String, dynamic>{'showName': false});
+      await repo.fetchPath();
+      expect(wire.seen.single.method, 'GET');
+      expect(wire.seen.single.path, '/contest/path');
+      expect(wire.seen.single.queryParameters, <String, dynamic>{
+        'followLevel': '1',
+      });
+    });
+
+    test('the follow level reads its view and sends one step', () async {
+      final Map<String, dynamic> view = <String, dynamic>{
+        'status': 'open',
+        'pointsEach': 20,
+        'fromRoundLastDayKey': '2026-10-31',
+        'winners': <Map<String, dynamic>>[
+          <String, dynamic>{
+            'handle': 'asha-rao',
+            'name': 'Asha Rao',
+            'image': null,
+            'headline': 'Product lead',
+            'linkedinUrl': 'https://www.linkedin.com/in/asha-rao',
+            'linkedinDone': true,
+            'plexaverseDone': false,
+            'done': false,
+            'paid': null,
+          },
+        ],
+      };
+      final (ApiContestRepository read, _Canned readWire) = _stack(
+        200,
+        _ok(<String, dynamic>{'view': view}),
+      );
+      final FollowWinnersView v = await read.fetchFollowWinners();
+      expect(readWire.seen.single.path, '/contest/tasks/follow-winners');
+      expect(v.status, FollowWinnersStatus.open);
+      expect(v.pointsEach, 20);
+      expect(v.winners.single.handle, 'asha-rao');
+      expect(v.winners.single.linkedinDone, isTrue);
+      expect(v.winners.single.paid, isNull);
+
+      final (ApiContestRepository write, _Canned writeWire) = _stack(
+        200,
+        _ok(<String, dynamic>{
+          'result': <String, dynamic>{'view': view, 'pointsApplied': 0},
+        }),
+      );
+      final FollowWinnerStepResult r = await write.recordFollowWinnerStep(
+        handle: 'asha-rao',
+        step: FollowWinnerStep.plexaverse,
+      );
+      expect(writeWire.seen.single.method, 'POST');
+      expect(writeWire.seen.single.path, '/contest/tasks/follow-winners');
+      expect(writeWire.seen.single.data, <String, dynamic>{
+        'handle': 'asha-rao',
+        'step': 'plexaverse',
+      });
+      expect(r.pointsApplied, 0);
+    });
+
+    test('an unknown follow status reads as nothing to follow', () {
+      final FollowWinnersView v = FollowWinnersView.fromJson(<String, dynamic>{
+        'status': 'something_new',
+        'reason': 'also_new',
+      });
+      expect(v.status, FollowWinnersStatus.unavailable);
+      expect(v.reason, isNull);
+      expect(v.winners, isEmpty);
     });
 
     test('the board asks for a limit only when one is given', () async {

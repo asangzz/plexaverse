@@ -8,7 +8,7 @@ import 'contest_kit.dart';
 /// The running page's sections, in page order.
 enum ContestSection {
   path('Path', AppIcons.star, ContestColors.peri),
-  leaderboard('Leaderboard', AppIcons.trophy, ContestColors.amber),
+  leaderboard('Top learners', AppIcons.trophy, ContestColors.amber),
   quests('Quests', AppIcons.chest, ContestColors.amber),
   linkedIn('LinkedIn', AppIcons.linkedin, Color(0xFF3AA0FF));
 
@@ -47,7 +47,7 @@ class _ContestSectionBarState extends State<ContestSectionBar> {
   Widget build(BuildContext context) {
     return Semantics(
       container: true,
-      label: 'Contest sections',
+      label: 'Levels sections',
       explicitChildNodes: true,
       child: Container(
         padding: EdgeInsets.symmetric(

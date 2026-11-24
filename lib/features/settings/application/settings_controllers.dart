@@ -3,6 +3,7 @@ import 'dart:ui' show PlatformDispatcher;
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 import '../../contest/application/contest_controllers.dart';
+import '../../profile/application/profile_controllers.dart';
 import '../data/settings_repositories.dart';
 import '../domain/settings_repository.dart';
 
@@ -309,17 +310,35 @@ class ConsentController extends _$ConsentController {
   /// state rather than a locally-toggled guess: it is the only thing that
   /// knows whether a withdrawal was accepted, and a switch that flips before
   /// the server agrees is a switch that can lie about consent.
-  Future<String?> set(String purpose, bool granted) async {
+  ///
+  /// [inContext] is for a feature's own card — the levels page's "Show my
+  /// name to other learners" — and records the act as `in_context`.
+  Future<String?> set(
+    String purpose,
+    bool granted, {
+    bool inContext = false,
+  }) async {
     try {
       final ConsentLedger updated = await ref
           .read(settingsRepositoryProvider)
-          .setConsent(purpose: purpose, granted: granted);
+          .setConsent(purpose: purpose, granted: granted, inContext: inContext);
       state = AsyncData<ConsentLedger>(updated);
-      // The contest's "Feature me" card reads this same consent on its own,
-      // and the contest page stays alive under Settings: a withdrawal here
+      // The levels' "Feature me" card reads this same consent on its own,
+      // and the levels page stays alive under Settings: a withdrawal here
       // must not leave it saying "You’re in" on the way back.
       if (purpose == 'contest_shoutout') {
         ref.invalidate(contestShoutoutProvider);
+        ref.invalidate(contestFeaturedProvider);
+      }
+      // The name beside the XP: the board and the top learners re-read it.
+      if (purpose == 'contest_leaderboard') {
+        ref.invalidate(contestBoardProvider);
+        ref.invalidate(contestOverviewProvider);
+      }
+      // A withdrawal unpublishes the page and frees the handle at once: the
+      // Public profile section must not keep showing it live.
+      if (purpose == 'public_profile') {
+        ref.invalidate(publicProfileSettingsControllerProvider);
         ref.invalidate(contestFeaturedProvider);
       }
       return null;

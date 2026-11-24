@@ -11,6 +11,7 @@ import '../../../core/network/dio_client.dart';
 import '../../../core/network/failure.dart';
 import '../../../core/plan/plan_refusal.dart';
 import '../domain/contest_repository.dart';
+import '../domain/shoutout_words.dart';
 import 'fake_contest_world.dart';
 
 export 'fake_contest_world.dart' show FakeContestScenario, FakeContestWorld;
@@ -50,16 +51,6 @@ class ApiContestRepository implements ContestRepository {
   });
 
   @override
-  Future<void> join({required bool showName}) => _call(() async {
-    await _client.post<Map<String, dynamic>>(
-      ApiPaths.contestJoin,
-      // A literal bool: the server refuses "true", 1 or a missing field, so
-      // nothing but the box the learner ticked can grant this consent.
-      data: <String, dynamic>{'showName': showName},
-    );
-  });
-
-  @override
   Future<BoardResult> fetchBoard({int? limit}) => _call(() async {
     final Response<Map<String, dynamic>> r = await _client
         .get<Map<String, dynamic>>(
@@ -69,10 +60,16 @@ class ApiContestRepository implements ContestRepository {
     return BoardResult.fromJson(_body(r));
   });
 
+  /// With `followLevel=1`: this build draws "Follow last round's top
+  /// learners" and opens its screen. Without the flag the server leaves the
+  /// node out, for the builds before it that would draw it as a dead lock.
   @override
   Future<ContestPath> fetchPath() => _call(() async {
     final Response<Map<String, dynamic>> r = await _client
-        .get<Map<String, dynamic>>(ApiPaths.contestPath);
+        .get<Map<String, dynamic>>(
+          ApiPaths.contestPath,
+          queryParameters: <String, dynamic>{'followLevel': '1'},
+        );
     return ContestPath.fromJson(_inner(_body(r), 'path'));
   });
 
@@ -282,15 +279,38 @@ class ApiContestRepository implements ContestRepository {
         .put<Map<String, dynamic>>(
           ApiPaths.contestShoutout,
           // A literal bool, as the join's consent is: nothing but the box the
-          // learner ticked can grant it. The 18+ tick only rides with a yes.
+          // learner ticked can grant it. The 18+ tick only rides with a yes,
+          // and so does the notice date of the words this card showed — the
+          // server refuses a yes without the current one (UPDATE_REQUIRED).
           data: <String, dynamic>{
             'featured': featured,
             if (featured && link != null && link.isNotEmpty)
               'linkedinUrl': link,
             if (featured && adult) 'adult': true,
+            if (featured) 'wordsVersion': kShoutoutWordsVersion,
           },
         );
     return ShoutoutSettings.fromJson(_body(r));
+  });
+
+  @override
+  Future<FollowWinnersView> fetchFollowWinners() => _call(() async {
+    final Response<Map<String, dynamic>> r = await _client
+        .get<Map<String, dynamic>>(ApiPaths.contestTaskFollowWinners);
+    return FollowWinnersView.fromJson(_inner(_body(r), 'view'));
+  });
+
+  @override
+  Future<FollowWinnerStepResult> recordFollowWinnerStep({
+    required String handle,
+    required FollowWinnerStep step,
+  }) => _call(() async {
+    final Response<Map<String, dynamic>> r = await _client
+        .post<Map<String, dynamic>>(
+          ApiPaths.contestTaskFollowWinners,
+          data: <String, dynamic>{'handle': handle, 'step': step.wire},
+        );
+    return FollowWinnerStepResult.fromJson(_inner(_body(r), 'result'));
   });
 
   // ── The seam ─────────────────────────────────────────────────────────────
@@ -322,6 +342,7 @@ class ApiContestRepository implements ContestRepository {
       <String, ContestRefusal Function([String])>{
         'NOT_ENTERED': ContestNotEntered.new,
         'NOT_RUNNING': ContestNotRunning.new,
+        'NOT_IN_LEVEL': ContestNotInLevel.new,
         'LOCKED': ContestLocked.new,
         'STALE_QUIZ': ContestStale.new,
         'NOT_TODAY': ContestNotToday.new,
@@ -401,10 +422,6 @@ class FakeContestRepository implements ContestRepository {
   @override
   Future<ContestOverview?> fetchOverview() =>
       _answer((FakeContestWorld w) => w.overview());
-
-  @override
-  Future<void> join({required bool showName}) =>
-      _answer((FakeContestWorld w) => w.join(showName: showName));
 
   @override
   Future<BoardResult> fetchBoard({int? limit}) =>
@@ -503,6 +520,18 @@ class FakeContestRepository implements ContestRepository {
       linkedinUrl: linkedinUrl,
       adult: adult,
     ),
+  );
+
+  @override
+  Future<FollowWinnersView> fetchFollowWinners() =>
+      _answer((FakeContestWorld w) => w.followWinners());
+
+  @override
+  Future<FollowWinnerStepResult> recordFollowWinnerStep({
+    required String handle,
+    required FollowWinnerStep step,
+  }) => _answer(
+    (FakeContestWorld w) => w.followWinnerStep(handle: handle, step: step),
   );
 }
 

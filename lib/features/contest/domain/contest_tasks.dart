@@ -431,3 +431,118 @@ abstract class SkipResult with _$SkipResult {
   factory SkipResult.fromJson(Map<String, dynamic> json) =>
       _$SkipResultFromJson(json);
 }
+
+// ── "Follow last round's top learners" ──────────────────────────────────────
+
+/// Where the follow level stands. Mirrors `FollowWinnersView['status']`; an
+/// unknown status reads as unavailable — nothing to follow.
+enum FollowWinnersStatus { unavailable, open, done }
+
+/// Why there is nothing to follow. Mirrors `FollowWinnersView['reason']`;
+/// unknown reads as null, which the page says as "nobody to follow".
+enum FollowWinnersReason {
+  @JsonValue('not_running')
+  notRunning,
+  @JsonValue('not_joined')
+  notJoined,
+  @JsonValue('no_winners')
+  noWinners,
+}
+
+/// The step of following one top learner a write records.
+enum FollowWinnerStep {
+  /// "Follow on LinkedIn" was tapped — SELF-REPORTED: LinkedIn tells no app
+  /// who follows whom, so the tap is all there is to record.
+  linkedin,
+
+  /// "Follow on Plexaverse" — re-checked against the follow itself, which
+  /// `POST /profile/follow` makes. The server never takes the app's word.
+  plexaverse;
+
+  String get wire => name;
+}
+
+/// One top learner of the last finalised round, as the follow level shows
+/// them. Mirrors `FollowWinnerView`: no user id, no XP and no rank — the
+/// handle names them, and the order is the server's daily shuffle.
+@freezed
+abstract class FollowWinnerView with _$FollowWinnerView {
+  const factory FollowWinnerView({
+    /// Their Plexaverse handle: what the step and the follow take, and their
+    /// page at `www.plexaverse.com/<handle>`.
+    @Default('') String handle,
+    @Default('') String name,
+
+    /// An https photo link, or null.
+    String? image,
+    String? headline,
+
+    /// `https://www.linkedin.com/in/<slug>` — opened in the learner's own
+    /// browser, never fetched. Re-checked before it is opened.
+    @Default('') String linkedinUrl,
+
+    /// Step 1 tapped.
+    @Default(false) bool linkedinDone,
+
+    /// Step 2: the learner follows this Plexaverse profile, read from the
+    /// follow itself.
+    @Default(false) bool plexaverseDone,
+
+    /// Both steps done, and so paid, once. Stays true after an unfollow.
+    @Default(false) bool done,
+
+    /// What the ledger paid for this one: null until done, 0 when done while
+    /// scoring was paused.
+    int? paid,
+  }) = _FollowWinnerView;
+
+  factory FollowWinnerView.fromJson(Map<String, dynamic> json) =>
+      _$FollowWinnerViewFromJson(json);
+}
+
+/// `GET /contest/tasks/follow-winners` → `{view}`. Mirrors
+/// `FollowWinnersView`.
+@freezed
+abstract class FollowWinnersView with _$FollowWinnersView {
+  const FollowWinnersView._();
+
+  const factory FollowWinnersView({
+    @JsonKey(unknownEnumValue: FollowWinnersStatus.unavailable)
+    @Default(FollowWinnersStatus.unavailable)
+    FollowWinnersStatus status,
+    @JsonKey(unknownEnumValue: JsonKey.nullForUndefinedEnumValue)
+    FollowWinnersReason? reason,
+
+    /// What each top learner pays once both steps are done (the round's rule).
+    @Default(0) int pointsEach,
+
+    /// The round they come from: its last day, `YYYY-MM-DD` in its timezone.
+    String? fromRoundLastDayKey,
+    @Default(<FollowWinnerView>[]) List<FollowWinnerView> winners,
+  }) = _FollowWinnersView;
+
+  factory FollowWinnersView.fromJson(Map<String, dynamic> json) =>
+      _$FollowWinnersViewFromJson(json);
+
+  /// The one whose handle this is, or null.
+  FollowWinnerView? winner(String handle) {
+    for (final FollowWinnerView w in winners) {
+      if (w.handle == handle) return w;
+    }
+    return null;
+  }
+}
+
+/// `POST /contest/tasks/follow-winners` → `{result}`. Mirrors
+/// `FollowWinnerStepResult`: the level after the step, and what THIS request
+/// paid (0 when nothing new was done, or scoring is paused).
+@freezed
+abstract class FollowWinnerStepResult with _$FollowWinnerStepResult {
+  const factory FollowWinnerStepResult({
+    required FollowWinnersView view,
+    @Default(0) int pointsApplied,
+  }) = _FollowWinnerStepResult;
+
+  factory FollowWinnerStepResult.fromJson(Map<String, dynamic> json) =>
+      _$FollowWinnerStepResultFromJson(json);
+}

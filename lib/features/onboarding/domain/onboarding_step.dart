@@ -1,3 +1,5 @@
+import '../../contest/domain/levels_words.dart';
+
 /// The onboarding script — the steps, their lanes, and every line Plexa says.
 ///
 /// A port of `components/onboarding/OnboardingChat.tsx`, step for step. The
@@ -7,7 +9,7 @@
 /// ## The two paths
 ///
 /// ```
-/// personal: welcome → (brand) → connect → (state) → plan → cvUpload ─┬──────────────→ styleChoice ┬→ styleScreenshots ┬→ finish
+/// personal: welcome → (brand) → connect → (state) → plan → cvUpload ─┬──────────────→ styleChoice ┬→ styleScreenshots ┬→ finish → levelsIntro
 ///                                                                      └→ currentRole ─┘            └→ styleWrite ───────┘
 ///                                                                         (CV skipped)
 ///
@@ -15,6 +17,14 @@
 ///                                                                                                                 └→ companyDetails ─┘
 ///                                                                                                          (doc skipped or too thin)
 /// ```
+///
+/// **The last step says how the levels work** (owner, 24 Nov 2026): after
+/// the save, before Level 1, Plexa says in plain words that levels earn XP,
+/// that they reset every three months, and that the learners with the most
+/// XP get a shoutout — their profile becomes a level every learner sees.
+/// Its words are the web's `LEVELS_INTRO`, word for word
+/// (`contest/domain/levels_words.dart`); its one chip, "Start Level 1", is
+/// the way onto the levels page.
 ///
 /// LinkedIn comes straight after the welcome on both paths: a company brand
 /// cannot pick a page before it, and every later step is worth less to a user
@@ -98,7 +108,13 @@ enum OnboardingStep {
   /// The written sample. No skip — it is the last place the voice can be
   /// captured.
   styleWrite,
-  finish;
+  finish,
+
+  /// `levels-intro`: after the save, before Level 1 — how levels, XP and the
+  /// shoutout work, in [kLevelsIntroLines]. One chip, [kLevelsIntroStart],
+  /// hands over to the levels page; the published rules are a link beside
+  /// it.
+  levelsIntro;
 
   /// How this step is answered — with a tap, or by typing.
   ///
@@ -123,7 +139,8 @@ enum OnboardingStep {
     OnboardingStep.brand ||
     OnboardingStep.connect ||
     OnboardingStep.currentRole ||
-    OnboardingStep.styleChoice => OnboardingLane.reply,
+    OnboardingStep.styleChoice ||
+    OnboardingStep.levelsIntro => OnboardingLane.reply,
     OnboardingStep.finish =>
       finaliseError ? OnboardingLane.reply : OnboardingLane.panel,
     _ => OnboardingLane.panel,
@@ -151,6 +168,7 @@ enum OnboardingStep {
         OnboardingStep.cvUpload,
       OnboardingStep.styleChoice,
       OnboardingStep.finish,
+      OnboardingStep.levelsIntro,
     ];
     final OnboardingStep resolved = switch (this) {
       // Part of the plan step's turn: not a step for everyone, so it never
@@ -232,6 +250,8 @@ enum OnboardingStep {
     OnboardingStep.finish => <String>[
       "That's everything, $firstName. Building your roadmap now…",
     ],
+    // The shared words: the web says the same, word for word.
+    OnboardingStep.levelsIntro => kLevelsIntroLines,
   };
 }
 

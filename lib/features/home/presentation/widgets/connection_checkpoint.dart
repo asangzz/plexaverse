@@ -39,8 +39,8 @@ class ConnectionCheckpoint extends ConsumerStatefulWidget {
 /// Why the number is asked for. Said in every state, because a figure nobody
 /// explains is a figure nobody updates.
 const String _why =
-    "Connection growth is how the contest's connect and invite tasks show up "
-    'over time.';
+    'Connection growth is how your connect and invite levels show up over '
+    'time.';
 
 const String _whereToFind =
     'Find it on your LinkedIn profile under your name, or in My Network → '

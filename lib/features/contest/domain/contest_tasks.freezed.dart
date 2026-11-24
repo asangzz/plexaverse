@@ -3821,4 +3821,882 @@ as bool,
 
 }
 
+
+/// @nodoc
+mixin _$FollowWinnerView {
+
+/// Their Plexaverse handle: what the step and the follow take, and their
+/// page at `www.plexaverse.com/<handle>`.
+ String get handle; String get name;/// An https photo link, or null.
+ String? get image; String? get headline;/// `https://www.linkedin.com/in/<slug>` — opened in the learner's own
+/// browser, never fetched. Re-checked before it is opened.
+ String get linkedinUrl;/// Step 1 tapped.
+ bool get linkedinDone;/// Step 2: the learner follows this Plexaverse profile, read from the
+/// follow itself.
+ bool get plexaverseDone;/// Both steps done, and so paid, once. Stays true after an unfollow.
+ bool get done;/// What the ledger paid for this one: null until done, 0 when done while
+/// scoring was paused.
+ int? get paid;
+/// Create a copy of FollowWinnerView
+/// with the given fields replaced by the non-null parameter values.
+@JsonKey(includeFromJson: false, includeToJson: false)
+@pragma('vm:prefer-inline')
+$FollowWinnerViewCopyWith<FollowWinnerView> get copyWith => _$FollowWinnerViewCopyWithImpl<FollowWinnerView>(this as FollowWinnerView, _$identity);
+
+  /// Serializes this FollowWinnerView to a JSON map.
+  Map<String, dynamic> toJson();
+
+
+@override
+bool operator ==(Object other) {
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is FollowWinnerView&&(identical(other.handle, handle) || other.handle == handle)&&(identical(other.name, name) || other.name == name)&&(identical(other.image, image) || other.image == image)&&(identical(other.headline, headline) || other.headline == headline)&&(identical(other.linkedinUrl, linkedinUrl) || other.linkedinUrl == linkedinUrl)&&(identical(other.linkedinDone, linkedinDone) || other.linkedinDone == linkedinDone)&&(identical(other.plexaverseDone, plexaverseDone) || other.plexaverseDone == plexaverseDone)&&(identical(other.done, done) || other.done == done)&&(identical(other.paid, paid) || other.paid == paid));
+}
+
+@JsonKey(includeFromJson: false, includeToJson: false)
+@override
+int get hashCode => Object.hash(runtimeType,handle,name,image,headline,linkedinUrl,linkedinDone,plexaverseDone,done,paid);
+
+@override
+String toString() {
+  return 'FollowWinnerView(handle: $handle, name: $name, image: $image, headline: $headline, linkedinUrl: $linkedinUrl, linkedinDone: $linkedinDone, plexaverseDone: $plexaverseDone, done: $done, paid: $paid)';
+}
+
+
+}
+
+/// @nodoc
+abstract mixin class $FollowWinnerViewCopyWith<$Res>  {
+  factory $FollowWinnerViewCopyWith(FollowWinnerView value, $Res Function(FollowWinnerView) _then) = _$FollowWinnerViewCopyWithImpl;
+@useResult
+$Res call({
+ String handle, String name, String? image, String? headline, String linkedinUrl, bool linkedinDone, bool plexaverseDone, bool done, int? paid
+});
+
+
+
+
+}
+/// @nodoc
+class _$FollowWinnerViewCopyWithImpl<$Res>
+    implements $FollowWinnerViewCopyWith<$Res> {
+  _$FollowWinnerViewCopyWithImpl(this._self, this._then);
+
+  final FollowWinnerView _self;
+  final $Res Function(FollowWinnerView) _then;
+
+/// Create a copy of FollowWinnerView
+/// with the given fields replaced by the non-null parameter values.
+@pragma('vm:prefer-inline') @override $Res call({Object? handle = null,Object? name = null,Object? image = freezed,Object? headline = freezed,Object? linkedinUrl = null,Object? linkedinDone = null,Object? plexaverseDone = null,Object? done = null,Object? paid = freezed,}) {
+  return _then(_self.copyWith(
+handle: null == handle ? _self.handle : handle // ignore: cast_nullable_to_non_nullable
+as String,name: null == name ? _self.name : name // ignore: cast_nullable_to_non_nullable
+as String,image: freezed == image ? _self.image : image // ignore: cast_nullable_to_non_nullable
+as String?,headline: freezed == headline ? _self.headline : headline // ignore: cast_nullable_to_non_nullable
+as String?,linkedinUrl: null == linkedinUrl ? _self.linkedinUrl : linkedinUrl // ignore: cast_nullable_to_non_nullable
+as String,linkedinDone: null == linkedinDone ? _self.linkedinDone : linkedinDone // ignore: cast_nullable_to_non_nullable
+as bool,plexaverseDone: null == plexaverseDone ? _self.plexaverseDone : plexaverseDone // ignore: cast_nullable_to_non_nullable
+as bool,done: null == done ? _self.done : done // ignore: cast_nullable_to_non_nullable
+as bool,paid: freezed == paid ? _self.paid : paid // ignore: cast_nullable_to_non_nullable
+as int?,
+  ));
+}
+
+}
+
+
+/// Adds pattern-matching-related methods to [FollowWinnerView].
+extension FollowWinnerViewPatterns on FollowWinnerView {
+/// A variant of `map` that fallback to returning `orElse`.
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case final Subclass value:
+///     return ...;
+///   case _:
+///     return orElse();
+/// }
+/// ```
+
+@optionalTypeArgs TResult maybeMap<TResult extends Object?>(TResult Function( _FollowWinnerView value)?  $default,{required TResult orElse(),}){
+final _that = this;
+switch (_that) {
+case _FollowWinnerView() when $default != null:
+return $default(_that);case _:
+  return orElse();
+
+}
+}
+/// A `switch`-like method, using callbacks.
+///
+/// Callbacks receives the raw object, upcasted.
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case final Subclass value:
+///     return ...;
+///   case final Subclass2 value:
+///     return ...;
+/// }
+/// ```
+
+@optionalTypeArgs TResult map<TResult extends Object?>(TResult Function( _FollowWinnerView value)  $default,){
+final _that = this;
+switch (_that) {
+case _FollowWinnerView():
+return $default(_that);case _:
+  throw StateError('Unexpected subclass');
+
+}
+}
+/// A variant of `map` that fallback to returning `null`.
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case final Subclass value:
+///     return ...;
+///   case _:
+///     return null;
+/// }
+/// ```
+
+@optionalTypeArgs TResult? mapOrNull<TResult extends Object?>(TResult? Function( _FollowWinnerView value)?  $default,){
+final _that = this;
+switch (_that) {
+case _FollowWinnerView() when $default != null:
+return $default(_that);case _:
+  return null;
+
+}
+}
+/// A variant of `when` that fallback to an `orElse` callback.
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case Subclass(:final field):
+///     return ...;
+///   case _:
+///     return orElse();
+/// }
+/// ```
+
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String handle,  String name,  String? image,  String? headline,  String linkedinUrl,  bool linkedinDone,  bool plexaverseDone,  bool done,  int? paid)?  $default,{required TResult orElse(),}) {final _that = this;
+switch (_that) {
+case _FollowWinnerView() when $default != null:
+return $default(_that.handle,_that.name,_that.image,_that.headline,_that.linkedinUrl,_that.linkedinDone,_that.plexaverseDone,_that.done,_that.paid);case _:
+  return orElse();
+
+}
+}
+/// A `switch`-like method, using callbacks.
+///
+/// As opposed to `map`, this offers destructuring.
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case Subclass(:final field):
+///     return ...;
+///   case Subclass2(:final field2):
+///     return ...;
+/// }
+/// ```
+
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String handle,  String name,  String? image,  String? headline,  String linkedinUrl,  bool linkedinDone,  bool plexaverseDone,  bool done,  int? paid)  $default,) {final _that = this;
+switch (_that) {
+case _FollowWinnerView():
+return $default(_that.handle,_that.name,_that.image,_that.headline,_that.linkedinUrl,_that.linkedinDone,_that.plexaverseDone,_that.done,_that.paid);case _:
+  throw StateError('Unexpected subclass');
+
+}
+}
+/// A variant of `when` that fallback to returning `null`
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case Subclass(:final field):
+///     return ...;
+///   case _:
+///     return null;
+/// }
+/// ```
+
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String handle,  String name,  String? image,  String? headline,  String linkedinUrl,  bool linkedinDone,  bool plexaverseDone,  bool done,  int? paid)?  $default,) {final _that = this;
+switch (_that) {
+case _FollowWinnerView() when $default != null:
+return $default(_that.handle,_that.name,_that.image,_that.headline,_that.linkedinUrl,_that.linkedinDone,_that.plexaverseDone,_that.done,_that.paid);case _:
+  return null;
+
+}
+}
+
+}
+
+/// @nodoc
+@JsonSerializable()
+
+class _FollowWinnerView implements FollowWinnerView {
+  const _FollowWinnerView({this.handle = '', this.name = '', this.image, this.headline, this.linkedinUrl = '', this.linkedinDone = false, this.plexaverseDone = false, this.done = false, this.paid});
+  factory _FollowWinnerView.fromJson(Map<String, dynamic> json) => _$FollowWinnerViewFromJson(json);
+
+/// Their Plexaverse handle: what the step and the follow take, and their
+/// page at `www.plexaverse.com/<handle>`.
+@override@JsonKey() final  String handle;
+@override@JsonKey() final  String name;
+/// An https photo link, or null.
+@override final  String? image;
+@override final  String? headline;
+/// `https://www.linkedin.com/in/<slug>` — opened in the learner's own
+/// browser, never fetched. Re-checked before it is opened.
+@override@JsonKey() final  String linkedinUrl;
+/// Step 1 tapped.
+@override@JsonKey() final  bool linkedinDone;
+/// Step 2: the learner follows this Plexaverse profile, read from the
+/// follow itself.
+@override@JsonKey() final  bool plexaverseDone;
+/// Both steps done, and so paid, once. Stays true after an unfollow.
+@override@JsonKey() final  bool done;
+/// What the ledger paid for this one: null until done, 0 when done while
+/// scoring was paused.
+@override final  int? paid;
+
+/// Create a copy of FollowWinnerView
+/// with the given fields replaced by the non-null parameter values.
+@override @JsonKey(includeFromJson: false, includeToJson: false)
+@pragma('vm:prefer-inline')
+_$FollowWinnerViewCopyWith<_FollowWinnerView> get copyWith => __$FollowWinnerViewCopyWithImpl<_FollowWinnerView>(this, _$identity);
+
+@override
+Map<String, dynamic> toJson() {
+  return _$FollowWinnerViewToJson(this, );
+}
+
+@override
+bool operator ==(Object other) {
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is _FollowWinnerView&&(identical(other.handle, handle) || other.handle == handle)&&(identical(other.name, name) || other.name == name)&&(identical(other.image, image) || other.image == image)&&(identical(other.headline, headline) || other.headline == headline)&&(identical(other.linkedinUrl, linkedinUrl) || other.linkedinUrl == linkedinUrl)&&(identical(other.linkedinDone, linkedinDone) || other.linkedinDone == linkedinDone)&&(identical(other.plexaverseDone, plexaverseDone) || other.plexaverseDone == plexaverseDone)&&(identical(other.done, done) || other.done == done)&&(identical(other.paid, paid) || other.paid == paid));
+}
+
+@JsonKey(includeFromJson: false, includeToJson: false)
+@override
+int get hashCode => Object.hash(runtimeType,handle,name,image,headline,linkedinUrl,linkedinDone,plexaverseDone,done,paid);
+
+@override
+String toString() {
+  return 'FollowWinnerView(handle: $handle, name: $name, image: $image, headline: $headline, linkedinUrl: $linkedinUrl, linkedinDone: $linkedinDone, plexaverseDone: $plexaverseDone, done: $done, paid: $paid)';
+}
+
+
+}
+
+/// @nodoc
+abstract mixin class _$FollowWinnerViewCopyWith<$Res> implements $FollowWinnerViewCopyWith<$Res> {
+  factory _$FollowWinnerViewCopyWith(_FollowWinnerView value, $Res Function(_FollowWinnerView) _then) = __$FollowWinnerViewCopyWithImpl;
+@override @useResult
+$Res call({
+ String handle, String name, String? image, String? headline, String linkedinUrl, bool linkedinDone, bool plexaverseDone, bool done, int? paid
+});
+
+
+
+
+}
+/// @nodoc
+class __$FollowWinnerViewCopyWithImpl<$Res>
+    implements _$FollowWinnerViewCopyWith<$Res> {
+  __$FollowWinnerViewCopyWithImpl(this._self, this._then);
+
+  final _FollowWinnerView _self;
+  final $Res Function(_FollowWinnerView) _then;
+
+/// Create a copy of FollowWinnerView
+/// with the given fields replaced by the non-null parameter values.
+@override @pragma('vm:prefer-inline') $Res call({Object? handle = null,Object? name = null,Object? image = freezed,Object? headline = freezed,Object? linkedinUrl = null,Object? linkedinDone = null,Object? plexaverseDone = null,Object? done = null,Object? paid = freezed,}) {
+  return _then(_FollowWinnerView(
+handle: null == handle ? _self.handle : handle // ignore: cast_nullable_to_non_nullable
+as String,name: null == name ? _self.name : name // ignore: cast_nullable_to_non_nullable
+as String,image: freezed == image ? _self.image : image // ignore: cast_nullable_to_non_nullable
+as String?,headline: freezed == headline ? _self.headline : headline // ignore: cast_nullable_to_non_nullable
+as String?,linkedinUrl: null == linkedinUrl ? _self.linkedinUrl : linkedinUrl // ignore: cast_nullable_to_non_nullable
+as String,linkedinDone: null == linkedinDone ? _self.linkedinDone : linkedinDone // ignore: cast_nullable_to_non_nullable
+as bool,plexaverseDone: null == plexaverseDone ? _self.plexaverseDone : plexaverseDone // ignore: cast_nullable_to_non_nullable
+as bool,done: null == done ? _self.done : done // ignore: cast_nullable_to_non_nullable
+as bool,paid: freezed == paid ? _self.paid : paid // ignore: cast_nullable_to_non_nullable
+as int?,
+  ));
+}
+
+
+}
+
+
+/// @nodoc
+mixin _$FollowWinnersView {
+
+@JsonKey(unknownEnumValue: FollowWinnersStatus.unavailable) FollowWinnersStatus get status;@JsonKey(unknownEnumValue: JsonKey.nullForUndefinedEnumValue) FollowWinnersReason? get reason;/// What each top learner pays once both steps are done (the round's rule).
+ int get pointsEach;/// The round they come from: its last day, `YYYY-MM-DD` in its timezone.
+ String? get fromRoundLastDayKey; List<FollowWinnerView> get winners;
+/// Create a copy of FollowWinnersView
+/// with the given fields replaced by the non-null parameter values.
+@JsonKey(includeFromJson: false, includeToJson: false)
+@pragma('vm:prefer-inline')
+$FollowWinnersViewCopyWith<FollowWinnersView> get copyWith => _$FollowWinnersViewCopyWithImpl<FollowWinnersView>(this as FollowWinnersView, _$identity);
+
+  /// Serializes this FollowWinnersView to a JSON map.
+  Map<String, dynamic> toJson();
+
+
+@override
+bool operator ==(Object other) {
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is FollowWinnersView&&(identical(other.status, status) || other.status == status)&&(identical(other.reason, reason) || other.reason == reason)&&(identical(other.pointsEach, pointsEach) || other.pointsEach == pointsEach)&&(identical(other.fromRoundLastDayKey, fromRoundLastDayKey) || other.fromRoundLastDayKey == fromRoundLastDayKey)&&const DeepCollectionEquality().equals(other.winners, winners));
+}
+
+@JsonKey(includeFromJson: false, includeToJson: false)
+@override
+int get hashCode => Object.hash(runtimeType,status,reason,pointsEach,fromRoundLastDayKey,const DeepCollectionEquality().hash(winners));
+
+@override
+String toString() {
+  return 'FollowWinnersView(status: $status, reason: $reason, pointsEach: $pointsEach, fromRoundLastDayKey: $fromRoundLastDayKey, winners: $winners)';
+}
+
+
+}
+
+/// @nodoc
+abstract mixin class $FollowWinnersViewCopyWith<$Res>  {
+  factory $FollowWinnersViewCopyWith(FollowWinnersView value, $Res Function(FollowWinnersView) _then) = _$FollowWinnersViewCopyWithImpl;
+@useResult
+$Res call({
+@JsonKey(unknownEnumValue: FollowWinnersStatus.unavailable) FollowWinnersStatus status,@JsonKey(unknownEnumValue: JsonKey.nullForUndefinedEnumValue) FollowWinnersReason? reason, int pointsEach, String? fromRoundLastDayKey, List<FollowWinnerView> winners
+});
+
+
+
+
+}
+/// @nodoc
+class _$FollowWinnersViewCopyWithImpl<$Res>
+    implements $FollowWinnersViewCopyWith<$Res> {
+  _$FollowWinnersViewCopyWithImpl(this._self, this._then);
+
+  final FollowWinnersView _self;
+  final $Res Function(FollowWinnersView) _then;
+
+/// Create a copy of FollowWinnersView
+/// with the given fields replaced by the non-null parameter values.
+@pragma('vm:prefer-inline') @override $Res call({Object? status = null,Object? reason = freezed,Object? pointsEach = null,Object? fromRoundLastDayKey = freezed,Object? winners = null,}) {
+  return _then(_self.copyWith(
+status: null == status ? _self.status : status // ignore: cast_nullable_to_non_nullable
+as FollowWinnersStatus,reason: freezed == reason ? _self.reason : reason // ignore: cast_nullable_to_non_nullable
+as FollowWinnersReason?,pointsEach: null == pointsEach ? _self.pointsEach : pointsEach // ignore: cast_nullable_to_non_nullable
+as int,fromRoundLastDayKey: freezed == fromRoundLastDayKey ? _self.fromRoundLastDayKey : fromRoundLastDayKey // ignore: cast_nullable_to_non_nullable
+as String?,winners: null == winners ? _self.winners : winners // ignore: cast_nullable_to_non_nullable
+as List<FollowWinnerView>,
+  ));
+}
+
+}
+
+
+/// Adds pattern-matching-related methods to [FollowWinnersView].
+extension FollowWinnersViewPatterns on FollowWinnersView {
+/// A variant of `map` that fallback to returning `orElse`.
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case final Subclass value:
+///     return ...;
+///   case _:
+///     return orElse();
+/// }
+/// ```
+
+@optionalTypeArgs TResult maybeMap<TResult extends Object?>(TResult Function( _FollowWinnersView value)?  $default,{required TResult orElse(),}){
+final _that = this;
+switch (_that) {
+case _FollowWinnersView() when $default != null:
+return $default(_that);case _:
+  return orElse();
+
+}
+}
+/// A `switch`-like method, using callbacks.
+///
+/// Callbacks receives the raw object, upcasted.
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case final Subclass value:
+///     return ...;
+///   case final Subclass2 value:
+///     return ...;
+/// }
+/// ```
+
+@optionalTypeArgs TResult map<TResult extends Object?>(TResult Function( _FollowWinnersView value)  $default,){
+final _that = this;
+switch (_that) {
+case _FollowWinnersView():
+return $default(_that);case _:
+  throw StateError('Unexpected subclass');
+
+}
+}
+/// A variant of `map` that fallback to returning `null`.
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case final Subclass value:
+///     return ...;
+///   case _:
+///     return null;
+/// }
+/// ```
+
+@optionalTypeArgs TResult? mapOrNull<TResult extends Object?>(TResult? Function( _FollowWinnersView value)?  $default,){
+final _that = this;
+switch (_that) {
+case _FollowWinnersView() when $default != null:
+return $default(_that);case _:
+  return null;
+
+}
+}
+/// A variant of `when` that fallback to an `orElse` callback.
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case Subclass(:final field):
+///     return ...;
+///   case _:
+///     return orElse();
+/// }
+/// ```
+
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function(@JsonKey(unknownEnumValue: FollowWinnersStatus.unavailable)  FollowWinnersStatus status, @JsonKey(unknownEnumValue: JsonKey.nullForUndefinedEnumValue)  FollowWinnersReason? reason,  int pointsEach,  String? fromRoundLastDayKey,  List<FollowWinnerView> winners)?  $default,{required TResult orElse(),}) {final _that = this;
+switch (_that) {
+case _FollowWinnersView() when $default != null:
+return $default(_that.status,_that.reason,_that.pointsEach,_that.fromRoundLastDayKey,_that.winners);case _:
+  return orElse();
+
+}
+}
+/// A `switch`-like method, using callbacks.
+///
+/// As opposed to `map`, this offers destructuring.
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case Subclass(:final field):
+///     return ...;
+///   case Subclass2(:final field2):
+///     return ...;
+/// }
+/// ```
+
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function(@JsonKey(unknownEnumValue: FollowWinnersStatus.unavailable)  FollowWinnersStatus status, @JsonKey(unknownEnumValue: JsonKey.nullForUndefinedEnumValue)  FollowWinnersReason? reason,  int pointsEach,  String? fromRoundLastDayKey,  List<FollowWinnerView> winners)  $default,) {final _that = this;
+switch (_that) {
+case _FollowWinnersView():
+return $default(_that.status,_that.reason,_that.pointsEach,_that.fromRoundLastDayKey,_that.winners);case _:
+  throw StateError('Unexpected subclass');
+
+}
+}
+/// A variant of `when` that fallback to returning `null`
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case Subclass(:final field):
+///     return ...;
+///   case _:
+///     return null;
+/// }
+/// ```
+
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function(@JsonKey(unknownEnumValue: FollowWinnersStatus.unavailable)  FollowWinnersStatus status, @JsonKey(unknownEnumValue: JsonKey.nullForUndefinedEnumValue)  FollowWinnersReason? reason,  int pointsEach,  String? fromRoundLastDayKey,  List<FollowWinnerView> winners)?  $default,) {final _that = this;
+switch (_that) {
+case _FollowWinnersView() when $default != null:
+return $default(_that.status,_that.reason,_that.pointsEach,_that.fromRoundLastDayKey,_that.winners);case _:
+  return null;
+
+}
+}
+
+}
+
+/// @nodoc
+@JsonSerializable()
+
+class _FollowWinnersView extends FollowWinnersView {
+  const _FollowWinnersView({@JsonKey(unknownEnumValue: FollowWinnersStatus.unavailable) this.status = FollowWinnersStatus.unavailable, @JsonKey(unknownEnumValue: JsonKey.nullForUndefinedEnumValue) this.reason, this.pointsEach = 0, this.fromRoundLastDayKey, final  List<FollowWinnerView> winners = const <FollowWinnerView>[]}): _winners = winners,super._();
+  factory _FollowWinnersView.fromJson(Map<String, dynamic> json) => _$FollowWinnersViewFromJson(json);
+
+@override@JsonKey(unknownEnumValue: FollowWinnersStatus.unavailable) final  FollowWinnersStatus status;
+@override@JsonKey(unknownEnumValue: JsonKey.nullForUndefinedEnumValue) final  FollowWinnersReason? reason;
+/// What each top learner pays once both steps are done (the round's rule).
+@override@JsonKey() final  int pointsEach;
+/// The round they come from: its last day, `YYYY-MM-DD` in its timezone.
+@override final  String? fromRoundLastDayKey;
+ final  List<FollowWinnerView> _winners;
+@override@JsonKey() List<FollowWinnerView> get winners {
+  if (_winners is EqualUnmodifiableListView) return _winners;
+  // ignore: implicit_dynamic_type
+  return EqualUnmodifiableListView(_winners);
+}
+
+
+/// Create a copy of FollowWinnersView
+/// with the given fields replaced by the non-null parameter values.
+@override @JsonKey(includeFromJson: false, includeToJson: false)
+@pragma('vm:prefer-inline')
+_$FollowWinnersViewCopyWith<_FollowWinnersView> get copyWith => __$FollowWinnersViewCopyWithImpl<_FollowWinnersView>(this, _$identity);
+
+@override
+Map<String, dynamic> toJson() {
+  return _$FollowWinnersViewToJson(this, );
+}
+
+@override
+bool operator ==(Object other) {
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is _FollowWinnersView&&(identical(other.status, status) || other.status == status)&&(identical(other.reason, reason) || other.reason == reason)&&(identical(other.pointsEach, pointsEach) || other.pointsEach == pointsEach)&&(identical(other.fromRoundLastDayKey, fromRoundLastDayKey) || other.fromRoundLastDayKey == fromRoundLastDayKey)&&const DeepCollectionEquality().equals(other._winners, _winners));
+}
+
+@JsonKey(includeFromJson: false, includeToJson: false)
+@override
+int get hashCode => Object.hash(runtimeType,status,reason,pointsEach,fromRoundLastDayKey,const DeepCollectionEquality().hash(_winners));
+
+@override
+String toString() {
+  return 'FollowWinnersView(status: $status, reason: $reason, pointsEach: $pointsEach, fromRoundLastDayKey: $fromRoundLastDayKey, winners: $winners)';
+}
+
+
+}
+
+/// @nodoc
+abstract mixin class _$FollowWinnersViewCopyWith<$Res> implements $FollowWinnersViewCopyWith<$Res> {
+  factory _$FollowWinnersViewCopyWith(_FollowWinnersView value, $Res Function(_FollowWinnersView) _then) = __$FollowWinnersViewCopyWithImpl;
+@override @useResult
+$Res call({
+@JsonKey(unknownEnumValue: FollowWinnersStatus.unavailable) FollowWinnersStatus status,@JsonKey(unknownEnumValue: JsonKey.nullForUndefinedEnumValue) FollowWinnersReason? reason, int pointsEach, String? fromRoundLastDayKey, List<FollowWinnerView> winners
+});
+
+
+
+
+}
+/// @nodoc
+class __$FollowWinnersViewCopyWithImpl<$Res>
+    implements _$FollowWinnersViewCopyWith<$Res> {
+  __$FollowWinnersViewCopyWithImpl(this._self, this._then);
+
+  final _FollowWinnersView _self;
+  final $Res Function(_FollowWinnersView) _then;
+
+/// Create a copy of FollowWinnersView
+/// with the given fields replaced by the non-null parameter values.
+@override @pragma('vm:prefer-inline') $Res call({Object? status = null,Object? reason = freezed,Object? pointsEach = null,Object? fromRoundLastDayKey = freezed,Object? winners = null,}) {
+  return _then(_FollowWinnersView(
+status: null == status ? _self.status : status // ignore: cast_nullable_to_non_nullable
+as FollowWinnersStatus,reason: freezed == reason ? _self.reason : reason // ignore: cast_nullable_to_non_nullable
+as FollowWinnersReason?,pointsEach: null == pointsEach ? _self.pointsEach : pointsEach // ignore: cast_nullable_to_non_nullable
+as int,fromRoundLastDayKey: freezed == fromRoundLastDayKey ? _self.fromRoundLastDayKey : fromRoundLastDayKey // ignore: cast_nullable_to_non_nullable
+as String?,winners: null == winners ? _self._winners : winners // ignore: cast_nullable_to_non_nullable
+as List<FollowWinnerView>,
+  ));
+}
+
+
+}
+
+
+/// @nodoc
+mixin _$FollowWinnerStepResult {
+
+ FollowWinnersView get view; int get pointsApplied;
+/// Create a copy of FollowWinnerStepResult
+/// with the given fields replaced by the non-null parameter values.
+@JsonKey(includeFromJson: false, includeToJson: false)
+@pragma('vm:prefer-inline')
+$FollowWinnerStepResultCopyWith<FollowWinnerStepResult> get copyWith => _$FollowWinnerStepResultCopyWithImpl<FollowWinnerStepResult>(this as FollowWinnerStepResult, _$identity);
+
+  /// Serializes this FollowWinnerStepResult to a JSON map.
+  Map<String, dynamic> toJson();
+
+
+@override
+bool operator ==(Object other) {
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is FollowWinnerStepResult&&(identical(other.view, view) || other.view == view)&&(identical(other.pointsApplied, pointsApplied) || other.pointsApplied == pointsApplied));
+}
+
+@JsonKey(includeFromJson: false, includeToJson: false)
+@override
+int get hashCode => Object.hash(runtimeType,view,pointsApplied);
+
+@override
+String toString() {
+  return 'FollowWinnerStepResult(view: $view, pointsApplied: $pointsApplied)';
+}
+
+
+}
+
+/// @nodoc
+abstract mixin class $FollowWinnerStepResultCopyWith<$Res>  {
+  factory $FollowWinnerStepResultCopyWith(FollowWinnerStepResult value, $Res Function(FollowWinnerStepResult) _then) = _$FollowWinnerStepResultCopyWithImpl;
+@useResult
+$Res call({
+ FollowWinnersView view, int pointsApplied
+});
+
+
+$FollowWinnersViewCopyWith<$Res> get view;
+
+}
+/// @nodoc
+class _$FollowWinnerStepResultCopyWithImpl<$Res>
+    implements $FollowWinnerStepResultCopyWith<$Res> {
+  _$FollowWinnerStepResultCopyWithImpl(this._self, this._then);
+
+  final FollowWinnerStepResult _self;
+  final $Res Function(FollowWinnerStepResult) _then;
+
+/// Create a copy of FollowWinnerStepResult
+/// with the given fields replaced by the non-null parameter values.
+@pragma('vm:prefer-inline') @override $Res call({Object? view = null,Object? pointsApplied = null,}) {
+  return _then(_self.copyWith(
+view: null == view ? _self.view : view // ignore: cast_nullable_to_non_nullable
+as FollowWinnersView,pointsApplied: null == pointsApplied ? _self.pointsApplied : pointsApplied // ignore: cast_nullable_to_non_nullable
+as int,
+  ));
+}
+/// Create a copy of FollowWinnerStepResult
+/// with the given fields replaced by the non-null parameter values.
+@override
+@pragma('vm:prefer-inline')
+$FollowWinnersViewCopyWith<$Res> get view {
+  
+  return $FollowWinnersViewCopyWith<$Res>(_self.view, (value) {
+    return _then(_self.copyWith(view: value));
+  });
+}
+}
+
+
+/// Adds pattern-matching-related methods to [FollowWinnerStepResult].
+extension FollowWinnerStepResultPatterns on FollowWinnerStepResult {
+/// A variant of `map` that fallback to returning `orElse`.
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case final Subclass value:
+///     return ...;
+///   case _:
+///     return orElse();
+/// }
+/// ```
+
+@optionalTypeArgs TResult maybeMap<TResult extends Object?>(TResult Function( _FollowWinnerStepResult value)?  $default,{required TResult orElse(),}){
+final _that = this;
+switch (_that) {
+case _FollowWinnerStepResult() when $default != null:
+return $default(_that);case _:
+  return orElse();
+
+}
+}
+/// A `switch`-like method, using callbacks.
+///
+/// Callbacks receives the raw object, upcasted.
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case final Subclass value:
+///     return ...;
+///   case final Subclass2 value:
+///     return ...;
+/// }
+/// ```
+
+@optionalTypeArgs TResult map<TResult extends Object?>(TResult Function( _FollowWinnerStepResult value)  $default,){
+final _that = this;
+switch (_that) {
+case _FollowWinnerStepResult():
+return $default(_that);case _:
+  throw StateError('Unexpected subclass');
+
+}
+}
+/// A variant of `map` that fallback to returning `null`.
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case final Subclass value:
+///     return ...;
+///   case _:
+///     return null;
+/// }
+/// ```
+
+@optionalTypeArgs TResult? mapOrNull<TResult extends Object?>(TResult? Function( _FollowWinnerStepResult value)?  $default,){
+final _that = this;
+switch (_that) {
+case _FollowWinnerStepResult() when $default != null:
+return $default(_that);case _:
+  return null;
+
+}
+}
+/// A variant of `when` that fallback to an `orElse` callback.
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case Subclass(:final field):
+///     return ...;
+///   case _:
+///     return orElse();
+/// }
+/// ```
+
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( FollowWinnersView view,  int pointsApplied)?  $default,{required TResult orElse(),}) {final _that = this;
+switch (_that) {
+case _FollowWinnerStepResult() when $default != null:
+return $default(_that.view,_that.pointsApplied);case _:
+  return orElse();
+
+}
+}
+/// A `switch`-like method, using callbacks.
+///
+/// As opposed to `map`, this offers destructuring.
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case Subclass(:final field):
+///     return ...;
+///   case Subclass2(:final field2):
+///     return ...;
+/// }
+/// ```
+
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( FollowWinnersView view,  int pointsApplied)  $default,) {final _that = this;
+switch (_that) {
+case _FollowWinnerStepResult():
+return $default(_that.view,_that.pointsApplied);case _:
+  throw StateError('Unexpected subclass');
+
+}
+}
+/// A variant of `when` that fallback to returning `null`
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case Subclass(:final field):
+///     return ...;
+///   case _:
+///     return null;
+/// }
+/// ```
+
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( FollowWinnersView view,  int pointsApplied)?  $default,) {final _that = this;
+switch (_that) {
+case _FollowWinnerStepResult() when $default != null:
+return $default(_that.view,_that.pointsApplied);case _:
+  return null;
+
+}
+}
+
+}
+
+/// @nodoc
+@JsonSerializable()
+
+class _FollowWinnerStepResult implements FollowWinnerStepResult {
+  const _FollowWinnerStepResult({required this.view, this.pointsApplied = 0});
+  factory _FollowWinnerStepResult.fromJson(Map<String, dynamic> json) => _$FollowWinnerStepResultFromJson(json);
+
+@override final  FollowWinnersView view;
+@override@JsonKey() final  int pointsApplied;
+
+/// Create a copy of FollowWinnerStepResult
+/// with the given fields replaced by the non-null parameter values.
+@override @JsonKey(includeFromJson: false, includeToJson: false)
+@pragma('vm:prefer-inline')
+_$FollowWinnerStepResultCopyWith<_FollowWinnerStepResult> get copyWith => __$FollowWinnerStepResultCopyWithImpl<_FollowWinnerStepResult>(this, _$identity);
+
+@override
+Map<String, dynamic> toJson() {
+  return _$FollowWinnerStepResultToJson(this, );
+}
+
+@override
+bool operator ==(Object other) {
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is _FollowWinnerStepResult&&(identical(other.view, view) || other.view == view)&&(identical(other.pointsApplied, pointsApplied) || other.pointsApplied == pointsApplied));
+}
+
+@JsonKey(includeFromJson: false, includeToJson: false)
+@override
+int get hashCode => Object.hash(runtimeType,view,pointsApplied);
+
+@override
+String toString() {
+  return 'FollowWinnerStepResult(view: $view, pointsApplied: $pointsApplied)';
+}
+
+
+}
+
+/// @nodoc
+abstract mixin class _$FollowWinnerStepResultCopyWith<$Res> implements $FollowWinnerStepResultCopyWith<$Res> {
+  factory _$FollowWinnerStepResultCopyWith(_FollowWinnerStepResult value, $Res Function(_FollowWinnerStepResult) _then) = __$FollowWinnerStepResultCopyWithImpl;
+@override @useResult
+$Res call({
+ FollowWinnersView view, int pointsApplied
+});
+
+
+@override $FollowWinnersViewCopyWith<$Res> get view;
+
+}
+/// @nodoc
+class __$FollowWinnerStepResultCopyWithImpl<$Res>
+    implements _$FollowWinnerStepResultCopyWith<$Res> {
+  __$FollowWinnerStepResultCopyWithImpl(this._self, this._then);
+
+  final _FollowWinnerStepResult _self;
+  final $Res Function(_FollowWinnerStepResult) _then;
+
+/// Create a copy of FollowWinnerStepResult
+/// with the given fields replaced by the non-null parameter values.
+@override @pragma('vm:prefer-inline') $Res call({Object? view = null,Object? pointsApplied = null,}) {
+  return _then(_FollowWinnerStepResult(
+view: null == view ? _self.view : view // ignore: cast_nullable_to_non_nullable
+as FollowWinnersView,pointsApplied: null == pointsApplied ? _self.pointsApplied : pointsApplied // ignore: cast_nullable_to_non_nullable
+as int,
+  ));
+}
+
+/// Create a copy of FollowWinnerStepResult
+/// with the given fields replaced by the non-null parameter values.
+@override
+@pragma('vm:prefer-inline')
+$FollowWinnersViewCopyWith<$Res> get view {
+  
+  return $FollowWinnersViewCopyWith<$Res>(_self.view, (value) {
+    return _then(_self.copyWith(view: value));
+  });
+}
+}
+
 // dart format on

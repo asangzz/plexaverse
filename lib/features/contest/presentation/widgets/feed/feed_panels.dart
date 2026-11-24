@@ -57,7 +57,7 @@ class FeedCommentsDone extends StatelessWidget {
                           // worth points at all.
                           Text(
                             view.points > 0
-                                ? 'Recorded. Contest scoring is paused for you, so no XP was added.'
+                                ? 'Recorded. Your scoring is paused, so no XP was added.'
                                 : 'Recorded.',
                             style: ContestType.meta,
                           ),
@@ -82,7 +82,7 @@ class FeedCommentsDone extends StatelessWidget {
             Text(feedWarningLine(view.penalty), style: ContestType.meta),
             SizedBox(height: 6.h),
             Text(
-              'Five new comments count on each day the contest runs.',
+              'Five new comments count on each day of the levels.',
               style: ContestType.meta,
             ),
             SizedBox(height: ZaveSpace.xl),
@@ -134,9 +134,7 @@ class FeedCommentsRevoked extends StatelessWidget {
           SizedBox(height: ZaveSpace.md),
           // The web's appeal line: a revoke can be appealed once, within its
           // window, on the web's removed claims and appeals page.
-          const ContestAppealLine(
-            before: 'Other days of the contest count as usual. ',
-          ),
+          const ContestAppealLine(before: 'Your other days count as usual. '),
         ],
       ),
     );

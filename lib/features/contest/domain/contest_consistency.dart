@@ -215,8 +215,8 @@ List<String> consistencyLines(ConsistencyView view, [ContestPath? path]) {
   }
   if (view.state == ConsistencyState.noTasks) {
     lines.add(
-      'Nothing on offer yet this month. Your % starts with your next contest '
-      'day.',
+      'Nothing on offer yet this month. Your % starts with your next day of '
+      'levels.',
     );
   }
   final ConsistencyToday? today = view.today;
@@ -254,7 +254,7 @@ List<String> consistencyLines(ConsistencyView view, [ContestPath? path]) {
     );
   }
   if (view.noContestRunning && view.days.isNotEmpty) {
-    lines.add('No contest is running. Days without one don’t count.');
+    lines.add('No round of levels is running. Days without one don’t count.');
   }
   return lines;
 }

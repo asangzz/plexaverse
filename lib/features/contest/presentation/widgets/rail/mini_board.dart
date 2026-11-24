@@ -8,6 +8,7 @@ import '../../../../../core/ui/zave/zave_kit.dart';
 import '../../../application/contest_controllers.dart';
 import '../../../domain/contest_repository.dart';
 import '../../../domain/contest_words.dart';
+import '../../../domain/levels_words.dart';
 import '../contest_kit.dart';
 import '../contest_skeletons.dart';
 import '../labelled_rule.dart';
@@ -20,14 +21,14 @@ const List<Color> _medal = <Color>[
   Color(0xFFE6A26B),
 ];
 
-/// "AR" for Aarav Rao; "P" for a Participant.
+/// "AR" for Aarav Rao; "L" for a Learner who has not switched their name on.
 String initialsOf(String? name) {
   final List<String> parts = (name ?? '')
       .trim()
       .split(RegExp(r'\s+'))
       .where((String p) => p.isNotEmpty)
       .toList();
-  if (parts.isEmpty) return 'P';
+  if (parts.isEmpty) return 'L';
   final String first = parts.first[0];
   final String last = parts.length > 1 ? parts.last[0] : '';
   return '$first$last'.toUpperCase();
@@ -70,7 +71,7 @@ class MiniBoard extends ConsumerWidget {
     } else if (data == null) {
       body = const BoardRowsSkeleton(
         rows: 3,
-        label: 'Loading the leaderboard preview',
+        label: 'Loading the top learners preview',
       );
     } else if (locked) {
       body = Text(boardLockedLine(data.revealsOn), style: railMuted);
@@ -92,7 +93,7 @@ class MiniBoard extends ConsumerWidget {
     }
 
     return RailCard(
-      title: 'Leaderboard',
+      title: kTopLearners,
       // Nothing to view all of while the board is hidden.
       aside: locked ? null : RailAside('View all', onTap: onViewAll),
       child: body,
@@ -110,7 +111,7 @@ class _Row extends StatelessWidget {
     final Color? medal = row.rank >= 1 && row.rank <= 3
         ? _medal[row.rank - 1]
         : null;
-    final String name = row.isViewer ? 'You' : (row.name ?? 'Participant');
+    final String name = row.isViewer ? 'You' : (row.name ?? kAnonymousLearner);
     return Semantics(
       container: true,
       label:

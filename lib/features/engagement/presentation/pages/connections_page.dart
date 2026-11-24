@@ -348,14 +348,14 @@ class _NothingGenerated extends StatelessWidget {
 
 // ── Contest mode ────────────────────────────────────────────────────────────
 
-/// What the contest's description says under the title. The web's own words.
+/// What the level's description says under the title. The web's own words.
 const String _contestLead =
-    'Send each request with its note, then finish to collect your contest XP.';
+    'Send each request with its note, then finish to collect your XP.';
 
-/// Back to the contest — where the level was opened, and where Finish goes.
+/// Back to the levels — where the level was opened, and where Finish goes.
 Widget _backToContest(BuildContext context) => ZaveIconButton(
   icon: const Icon(AppIcons.back),
-  tooltip: 'Back to the contest',
+  tooltip: 'Back to your levels',
   onPressed: () => context.go(ZaveRoutes.contest),
 );
 

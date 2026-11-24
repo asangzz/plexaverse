@@ -2,9 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/access/company_brand.dart';
+import '../../../../core/links/plexaverse.dart';
 import '../../../../core/ui/app_icons.dart';
+import '../../../../core/ui/widgets/open_link.dart';
 import '../../../../core/ui/zave/zave_kit.dart';
 import '../../../auth/application/sign_out_controller.dart';
+import '../../../contest/domain/levels_words.dart';
 import '../../../pricing/presentation/widgets/billing_state_picker.dart';
 import '../../application/onboarding_chat_controller.dart';
 import '../../application/onboarding_controller.dart';
@@ -417,6 +420,22 @@ class _DockControl extends ConsumerWidget {
                 ],
               )
             : const DockHint(text: 'Setting things up…'),
+      // How the levels work has been said (the web's LEVELS_INTRO, word for
+      // word); the one chip goes to Level 1, and the published rules open
+      // beside it in the browser, so the chat stays where it is.
+      OnboardingStep.levelsIntro => ReplyLane(
+        chips: <Widget>[
+          ReplySkipChip(
+            label: kLevelsIntroRules,
+            onTap: () =>
+                openLinkAndReport(context, ref, plexaverseLevelsRulesUrl),
+          ),
+          ReplyChip(
+            label: kLevelsIntroStart,
+            onTap: () => controller().startLevels(),
+          ),
+        ],
+      ),
     };
   }
 }

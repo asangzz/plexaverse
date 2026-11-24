@@ -7,17 +7,17 @@ import '../../../../core/ui/zave/zave_kit.dart';
 import '../../domain/contest_dates.dart';
 import 'contest_kit.dart';
 
-/// The quiet line at the foot of the contest page: the contest ends, the
-/// roadmap does not. The web's `RoadmapLine`.
+/// The quiet line at the foot of the levels page: a round ends and the
+/// levels reset, the roadmap does not. The web's `RoadmapLine`.
 ///
-/// The contest is an overlay on the 1000-day roadmap, not a replacement for
+/// The levels are an overlay on the 1000-day roadmap, not a replacement for
 /// it, so the page says so once and links back — quietly, because this page
 /// should not argue with the roadmap.
 class RoadmapLine extends StatelessWidget {
   const RoadmapLine({this.lastDayKey, super.key});
 
-  /// The contest's last day, `YYYY-MM-DD`; the sentence about it is left
-  /// out when there is no contest to end.
+  /// The round's last day, `YYYY-MM-DD`; the sentence about it is left out
+  /// when there is no round to end.
   final String? lastDayKey;
 
   @override
@@ -28,8 +28,8 @@ class RoadmapLine extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: <Widget>[
         Text(
-          '${last.isEmpty ? '' : 'The contest’s last day is $last. '}'
-          'Your 1000-day roadmap is the bigger goal, and it keeps going after.',
+          '${last.isEmpty ? '' : 'This round’s last day is $last; then the levels reset. '}'
+          'Your 1000-day roadmap is the bigger goal, and it keeps going.',
           style: style,
         ),
         Semantics(

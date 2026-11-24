@@ -30,6 +30,7 @@ import '../../features/compose/presentation/pages/compose_page.dart';
 import '../../features/contest/presentation/pages/contest_claim_page.dart';
 import '../../features/contest/presentation/pages/contest_comment_page.dart';
 import '../../features/contest/presentation/pages/contest_feed_comments_page.dart';
+import '../../features/contest/presentation/pages/contest_follow_page.dart';
 import '../../features/contest/presentation/pages/contest_invites_page.dart';
 import '../../features/contest/presentation/pages/contest_lesson_page.dart';
 import '../../features/contest/presentation/pages/contest_page.dart';
@@ -75,7 +76,8 @@ part 'app_router.g.dart';
 ///   /styleguide  — the Zave reference (public)
 ///
 ///   ── the signed-in shell (its branches; the More sheet reaches them) ──
-///   /contest     — the contest: the daily path and the standings (home)
+///   /contest     — the levels: the daily path, XP and the top learners
+///                  (home; `/levels` on the web)
 ///   /roadmap     — the 1000-day journey
 ///   /planner     — the week
 ///   /calendar    — the month
@@ -83,12 +85,13 @@ part 'app_router.g.dart';
 ///
 ///   ── pushed over the shell ──
 ///   /create · /company-post · /posts/:id · /schedules · /persona ·
-///   /settings · /accounts · /placement · the contest's levels:
-///   /contest/{lesson,comment,feed-comments,invites,plan,claim}
+///   /settings · /accounts · /placement · the levels:
+///   /contest/{lesson,comment,feed-comments,invites,plan,claim,follow}
 ///
-///   ── old addresses, kept as redirects ──
+///   ── old addresses, and the web's, kept as redirects ──
 ///   /dashboard → /contest · /learn → /contest ·
-///   /contest/quiz → /contest/lesson · /season-complete → /journey-complete
+///   /contest/quiz → /contest/lesson · /season-complete → /journey-complete ·
+///   /levels/… → /contest/… (the web's addresses since 24 Nov 2026)
 ///
 /// The five shell branches match [tabRoutes], so the shell host and the router
 /// cannot disagree about which branch is which.
@@ -262,6 +265,25 @@ GoRouter appRouter(Ref ref) {
         redirect: (_, _) => ZaveRoutes.contest,
       ),
 
+      // The web moved the levels page from /contest to /levels (24 Nov 2026),
+      // and every notification it sends since names /levels/… — a delivered
+      // lesson reminder hands `/levels/lesson` straight to `router.push`. Each
+      // address is forwarded to the app's own screen ([ZaveRoutes.
+      // levelsAlias]); the parent's redirect sees the full address, so it
+      // answers for its child too.
+      GoRoute(
+        path: ZaveRoutes.levels,
+        parentNavigatorKey: _rootNavigatorKey,
+        redirect: (_, state) => ZaveRoutes.levelsAlias(state.uri),
+        routes: <RouteBase>[
+          GoRoute(
+            path: ':section',
+            parentNavigatorKey: _rootNavigatorKey,
+            redirect: (_, state) => ZaveRoutes.levelsAlias(state.uri),
+          ),
+        ],
+      ),
+
       // ── Full-screen routes, parented to the root navigator so they cover
       // the floating buttons. Horizontal-slide entrance.
       // Compose. Two paths, one widget: it derives company mode from
@@ -362,6 +384,7 @@ GoRouter appRouter(Ref ref) {
       ),
       _fullScreen(ZaveRoutes.contestInvites, const ContestInvitesPage()),
       _fullScreen(ZaveRoutes.contestPlan, const ContestPlanPage()),
+      _fullScreen(ZaveRoutes.contestFollow, const ContestFollowPage()),
       // Which piece is claimed is the query, as the path's node built it. The
       // occurrence is opaque and goes back to the server as it came.
       GoRoute(

@@ -100,16 +100,17 @@ class ContestInvitesPage extends ConsumerWidget {
     if (data.status != ContestPathStatus.running) {
       return _Meta(
         data.status == ContestPathStatus.notJoined
-            ? 'This task is for contest entrants. Join on the contest page; it '
-                  'is free.'
-            : 'This task runs while the contest does.',
+            ? 'Open your levels page once and this level opens here. There is '
+                  'nothing to join.'
+            : 'This level runs while a round of levels does. The next round '
+                  'starts soon.',
       );
     }
     final InvitesSent? sent = upload.sent;
     if (sent != null) return _Sent(points: sent.points);
     if (found == null) {
       return const _Meta(
-        'There is no invites task in this week of the contest.',
+        'There is no invites level in this week of the round.',
       );
     }
 

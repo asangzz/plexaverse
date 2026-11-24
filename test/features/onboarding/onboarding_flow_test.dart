@@ -11,6 +11,7 @@ import 'package:plexaverse/core/network/failure.dart';
 import 'package:plexaverse/core/platform/checkout.dart';
 import 'package:plexaverse/core/platform/file_picking.dart';
 import 'package:plexaverse/core/platform/image_picking.dart';
+import 'package:plexaverse/features/contest/domain/levels_words.dart';
 import 'package:plexaverse/features/onboarding/application/onboarding_chat_controller.dart';
 import 'package:plexaverse/features/onboarding/data/onboarding_repositories.dart';
 import 'package:plexaverse/features/onboarding/domain/onboarding_repository.dart';
@@ -353,9 +354,26 @@ void main() {
       OnboardingStep.styleChoice,
       OnboardingStep.styleWrite,
       OnboardingStep.finish,
+      // Owner, 24 Nov 2026: after the save, how the levels work.
+      OnboardingStep.levelsIntro,
     ]);
     expect(state().answers.cv?.profession, 'Software Engineer');
     expect(state().answers.usedCvUpload, isFalse);
+    // Saved, but not handed over until "Start Level 1": the levels are
+    // explained first.
+    expect(state().completed, isFalse);
+    final List<String> said = <String>[
+      for (final ChatMessage m in state().messages)
+        if (m.role == ChatRole.bot) m.text,
+    ];
+    // Every intro line, last — however many there are (the paid condition
+    // was added in review, 24 Nov 2026).
+    expect(
+      said.sublist(said.length - kLevelsIntroLines.length),
+      kLevelsIntroLines,
+    );
+    await act(tester, () => chat().startLevels());
+    expect(state().messages.last.text, kLevelsIntroStart);
     expect(state().completed, isTrue);
   });
 
@@ -380,6 +398,7 @@ void main() {
       OnboardingStep.styleChoice,
       OnboardingStep.styleScreenshots,
       OnboardingStep.finish,
+      OnboardingStep.levelsIntro,
     ]);
     expect(state().answers.usedCvUpload, isTrue);
     expect(state().answers.cv?.headline, isNotNull);
@@ -431,6 +450,7 @@ void main() {
         OnboardingStep.styleChoice,
         OnboardingStep.styleWrite,
         OnboardingStep.finish,
+        OnboardingStep.levelsIntro,
       ]);
       expect(state().answers.companyLogoUrl, isNotNull);
       expect(state().answers.companyDoc?.website, 'acme.in');

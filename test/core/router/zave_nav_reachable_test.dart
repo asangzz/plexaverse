@@ -59,7 +59,7 @@ void main() {
             .map((ZaveDestination d) => d.label)
             .firstOrNull;
 
-        expect(labelOf(ZaveRoutes.contest), 'Contest', reason: '$brand/$role');
+        expect(labelOf(ZaveRoutes.contest), 'Levels', reason: '$brand/$role');
         expect(labelOf(ZaveRoutes.roadmap), 'Roadmap', reason: '$brand/$role');
       }
     }
@@ -67,7 +67,7 @@ void main() {
 
   test('Home is gone from the sheet, as it is from the web sidebar', () {
     // /dashboard only forwards to the contest now. A row for it would be a
-    // second "Contest" that never highlights.
+    // second "Levels" that never highlights.
     expect(
       zaveDestinations.map((ZaveDestination d) => d.route),
       isNot(contains(ZaveRoutes.dashboard)),

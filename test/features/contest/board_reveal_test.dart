@@ -18,7 +18,7 @@ import 'contest_home_harness.dart';
 /// The SERVER enforces it (no rows, no rank in the overview); these pin that
 /// the screens add nothing of their own: no "#–" placeholder, no empty
 /// table, no other entrant's name. After the reveal, the board's rules: the
-/// podium and you, "Participant" for anyone unnamed, and the viewer pinned
+/// podium and you, "Learner" for anyone unnamed, and the viewer pinned
 /// below the rows rather than spliced in.
 void main() {
   setUp(FakeContestWorld.reset);
@@ -52,13 +52,13 @@ void main() {
     );
 
     const String line =
-        'The leaderboard opens on Saturday, 30 January — the last 10 days of '
-        'the contest. Until then, it’s you against yesterday: keep your streak.';
+        'The top learners show on Saturday, 30 January — the last 10 days of '
+        'the round. Until then, it’s you against yesterday: keep your streak.';
     expect(
       find.descendant(of: find.byType(MiniBoard), matching: find.text(line)),
       findsOneWidget,
     );
-    expect(find.text('Leaderboard hidden for now'), findsOneWidget);
+    expect(find.text('Top learners hidden for now'), findsOneWidget);
     expect(
       find.descendant(
         of: find.byType(ContestBoardView),
@@ -72,7 +72,7 @@ void main() {
       expect(find.text(name), findsNothing, reason: name);
     }
     // The count names and ranks nobody, so it stays.
-    expect(find.text('1,284 entrants'), findsOneWidget);
+    expect(find.text('1,284 learners'), findsOneWidget);
   });
 
   testWidgets('after the reveal: the rank, the podium and you, and how far '
@@ -80,7 +80,7 @@ void main() {
     await pumpContestPage(tester, scenario: FakeContestScenario.revealed);
 
     expect(find.text('#7'), findsOneWidget);
-    expect(find.text('Leaderboard hidden for now'), findsNothing);
+    expect(find.text('Top learners hidden for now'), findsNothing);
 
     final Finder mini = find.byType(MiniBoard);
     expect(
@@ -93,7 +93,7 @@ void main() {
     );
     // The second place chose not to be named.
     expect(
-      find.descendant(of: mini, matching: find.text('Participant')),
+      find.descendant(of: mini, matching: find.text('Learner')),
       findsOneWidget,
     );
     expect(
@@ -114,7 +114,7 @@ void main() {
 
     final Finder full = find.byType(ContestBoardView);
     expect(
-      find.descendant(of: full, matching: find.text('Participant')),
+      find.descendant(of: full, matching: find.text('Learner')),
       findsWidgets,
     );
     expect(
@@ -183,12 +183,12 @@ void main() {
     );
     expect(
       find.text(
-        'Admin view. Entrants see the board from Saturday, 30 January.',
+        'Admin view. Learners see the board from Saturday, 30 January.',
       ),
       findsOneWidget,
     );
     expect(find.text('Aarav Rao'), findsOneWidget);
-    expect(find.text('Leaderboard hidden for now'), findsNothing);
+    expect(find.text('Top learners hidden for now'), findsNothing);
   });
 
   testWidgets('a viewer outside the rows is pinned below them, never '

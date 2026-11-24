@@ -39,7 +39,7 @@ CommentUnavailableWords commentUnavailableWords(
   CommentLevelReason.notToday => (
     title: 'No comment level today',
     line:
-        'There is no comment level today. Today’s lesson is on the contest page.',
+        'There is no comment level today. Today’s lesson is on your levels page.',
   ),
   CommentLevelReason.noPost => (
     title: 'No post to comment on today',
@@ -47,13 +47,14 @@ CommentUnavailableWords commentUnavailableWords(
         'There is no post from a top voice in your field today, so there is nothing to comment on. Today’s lesson still counts.',
   ),
   CommentLevelReason.notRunning => (
-    title: 'The contest is not running',
+    title: 'New levels are on the way',
     line:
-        'The comment level runs inside a contest. The next one will show up on the contest page.',
+        'The levels reset between rounds, and the next round starts soon. Its comment levels will show up on your levels page.',
   ),
   CommentLevelReason.notJoined => (
-    title: 'Join the contest first',
-    line: 'The comment level is for entrants, and joining is free.',
+    title: 'Open your levels first',
+    line:
+        'Open your levels page once and today’s comment level opens here. There is nothing to join.',
   ),
   CommentLevelReason.writing => (
     title: 'Writing today’s comment',

@@ -48,7 +48,7 @@ class PersonTile extends ConsumerWidget {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: <Widget>[
-          _Avatar(name: name, image: person.image),
+          PersonAvatar(name: name, image: person.image),
           SizedBox(width: ZaveSpace.md),
           Expanded(
             child: Column(
@@ -106,17 +106,25 @@ class PersonTile extends ConsumerWidget {
 }
 
 /// The photo, round — or the name's first letter where there is none, or
-/// where it is not https.
-class _Avatar extends StatelessWidget {
-  const _Avatar({required this.name, required this.image});
+/// where it is not https. Shared with the follow level's cards.
+class PersonAvatar extends StatelessWidget {
+  const PersonAvatar({
+    required this.name,
+    required this.image,
+    this.diameter = 48,
+    super.key,
+  });
 
   final String name;
   final String? image;
 
+  /// In logical pixels, before the screen's scale.
+  final double diameter;
+
   @override
   Widget build(BuildContext context) {
     final String? src = image;
-    final double size = 48.r;
+    final double size = diameter.r;
     final BoxDecoration ring = BoxDecoration(
       shape: BoxShape.circle,
       color: ZaveGlass.rest,
@@ -133,7 +141,9 @@ class _Avatar extends StatelessWidget {
         ),
       );
     }
-    final String initial = name.characters.first.toUpperCase();
+    final String initial = name.trim().isEmpty
+        ? '·'
+        : name.trim().characters.first.toUpperCase();
     return ExcludeSemantics(
       child: Container(
         width: size,

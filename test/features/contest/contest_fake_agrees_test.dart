@@ -64,11 +64,12 @@ void _expectServerShaped(ContestPath path, TodayQuiz quiz) {
           PathNodeState.done,
           PathNodeState.skipped,
         ], contains(n.state));
+        // The web's address since 24 Nov 2026 (`/levels`).
         expect(
           n.href,
           n.state == PathNodeState.skipped
-              ? '/contest/lesson?part=${n.part!.index}'
-              : '/contest/lesson',
+              ? '/levels/lesson?part=${n.part!.index}'
+              : '/levels/lesson',
         );
       }
       if (n.kind.isClaim) {
@@ -96,9 +97,16 @@ void _expectServerShaped(ContestPath path, TodayQuiz quiz) {
 
   final PathDay? today = path.today;
   if (today == null) return;
-  // The gate: after the first level that is not passable, nothing is open.
+  // The gate: after the first level that is not passable, nothing is open —
+  // but the follow level, which is outside the order (24 Nov 2026): never
+  // locked, never a holder, never skipped.
   bool blocked = false;
   for (final PathNode n in today.nodes) {
+    if (n.kind == PathNodeKind.followWinners) {
+      expect(n.state, isNot(PathNodeState.locked), reason: n.id);
+      expect(n.canSkip, isFalse, reason: n.id);
+      continue;
+    }
     if (blocked) {
       expect(
         n.state == PathNodeState.today || n.state == PathNodeState.rejected,
@@ -172,15 +180,18 @@ void main() {
         ContestPathStatus.noContest,
         QuizStatus.noContest,
       ),
+      // Reading is joining (owner, 24 Nov 2026): the overview's read enters
+      // the learner in the running — or the next — round, so the path and
+      // the lesson read after it already see an entrant.
       FakeContestScenario.notJoined: (
-        false,
-        ContestPathStatus.notJoined,
-        QuizStatus.notJoined,
+        true,
+        ContestPathStatus.running,
+        QuizStatus.ready,
       ),
       FakeContestScenario.upcoming: (
-        false,
-        ContestPathStatus.notJoined,
-        QuizStatus.notJoined,
+        true,
+        ContestPathStatus.upcoming,
+        QuizStatus.upcoming,
       ),
       FakeContestScenario.ended: (
         true,
@@ -500,11 +511,14 @@ void main() {
     );
   });
 
-  group('joining', () {
-    test('a late joiner starts today, with the days before it missed and the '
+  // There is no join step (owner, 24 Nov 2026): the server's
+  // ensureLevelsEntry runs before the overview and the path answer, and
+  // enters the learner anonymously. Deliberately changed from the old
+  // "joining" group, which pinned the join call this replaced.
+  group('entering on read', () {
+    test('a late learner starts today, with the days before it missed and the '
         'lesson not yet opened', () async {
       final FakeContestRepository repo = _fake(FakeContestScenario.notJoined);
-      await repo.join(showName: false);
       final ContestOverview o = (await repo.fetchOverview())!;
       expect(o.isEntrant, isTrue);
       expect(o.entry!.streak, 0);
@@ -543,7 +557,7 @@ void main() {
       'server’s trap, kept so a player that skips the open is caught',
       () async {
         final FakeContestRepository repo = _fake(FakeContestScenario.notJoined);
-        await repo.join(showName: true);
+        await repo.fetchOverview();
         final TodayQuiz q = await repo.fetchTodayQuiz();
         await repo.answerQuiz(
           day: q.day!,
@@ -556,45 +570,57 @@ void main() {
       },
     );
 
+    test('with no round, reading enters nobody and nothing opens', () async {
+      final FakeContestRepository repo = _fake(FakeContestScenario.noContest);
+      expect(await repo.fetchOverview(), isNull);
+      expect((await repo.fetchPath()).status, ContestPathStatus.noContest);
+      await expectLater(repo.startLesson(), throwsA(isA<ContestNotRunning>()));
+    });
+
+    test('the path alone enters too — either read is enough', () async {
+      final FakeContestRepository repo = _fake(FakeContestScenario.notJoined);
+      expect((await repo.fetchPath()).status, ContestPathStatus.running);
+      expect((await repo.fetchOverview())!.isEntrant, isTrue);
+    });
+
     test(
-      'there is nothing to join once a contest has ended, or with none',
+      'an upcoming round enters the learner and waits for its first day',
       () async {
+        final FakeContestRepository repo = _fake(FakeContestScenario.upcoming);
+        final ContestOverview o = (await repo.fetchOverview())!;
+        expect(o.phase, ContestPhase.upcoming);
+        expect(o.isEntrant, isTrue);
+        expect((await repo.fetchPath()).status, ContestPathStatus.upcoming);
+        expect((await repo.fetchTodayQuiz()).status, QuizStatus.upcoming);
         await expectLater(
-          _fake(FakeContestScenario.ended).join(showName: false),
-          throwsA(isA<ContestNotRunning>()),
-        );
-        await expectLater(
-          _fake(FakeContestScenario.noContest).join(showName: false),
+          repo.startLesson(),
           throwsA(isA<ContestNotRunning>()),
         );
       },
     );
 
-    test('joining an upcoming contest waits for its first day', () async {
-      final FakeContestRepository repo = _fake(FakeContestScenario.upcoming);
-      expect((await repo.fetchOverview())!.phase, ContestPhase.upcoming);
-      await repo.join(showName: false);
-      expect((await repo.fetchPath()).status, ContestPathStatus.upcoming);
-      expect((await repo.fetchTodayQuiz()).status, QuizStatus.upcoming);
-      await expectLater(repo.startLesson(), throwsA(isA<ContestNotRunning>()));
-    });
-
-    test('a non-entrant’s writes are refused as "join first"', () async {
-      final FakeContestRepository repo = _fake(FakeContestScenario.notJoined);
-      await expectLater(repo.startLesson(), throwsA(isA<ContestNotEntered>()));
-      await expectLater(
-        repo.completeConnect(),
-        throwsA(isA<ContestNotEntered>()),
-      );
-      expect(
-        (await repo.fetchCommentLevel()).reason,
-        CommentLevelReason.notJoined,
-      );
-      expect(
-        (await repo.fetchFeedComments()).reason,
-        FeedCommentsReason.notJoined,
-      );
-    });
+    test(
+      'before any read, a write is refused as "open your levels first"',
+      () async {
+        final FakeContestRepository repo = _fake(FakeContestScenario.notJoined);
+        await expectLater(
+          repo.startLesson(),
+          throwsA(isA<ContestNotEntered>()),
+        );
+        await expectLater(
+          repo.completeConnect(),
+          throwsA(isA<ContestNotEntered>()),
+        );
+        expect(
+          (await repo.fetchCommentLevel()).reason,
+          CommentLevelReason.notJoined,
+        );
+        expect(
+          (await repo.fetchFeedComments()).reason,
+          FeedCommentsReason.notJoined,
+        );
+      },
+    );
   });
 
   group('paused scoring', () {
@@ -691,7 +717,7 @@ void main() {
       _expectServerShaped(p, q);
       final PathNode two = nodeOf(p, '$today:lesson:2');
       expect(two.state, PathNodeState.skipped);
-      expect(two.href, '/contest/lesson?part=2');
+      expect(two.href, '/levels/lesson?part=2');
       expect(two.detail, 'You skipped this · 2 of 5 answered');
       expect(two.canSkip, isFalse);
       expect(contestLevelRoute(two), '${ZaveRoutes.contestLesson}?part=2');

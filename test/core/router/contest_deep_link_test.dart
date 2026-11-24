@@ -14,6 +14,7 @@ import 'package:plexaverse/features/auth/application/app_lock_controller.dart';
 import 'package:plexaverse/features/contest/application/contest_controllers.dart';
 import 'package:plexaverse/features/contest/domain/contest_repository.dart';
 import 'package:plexaverse/features/contest/presentation/pages/contest_claim_page.dart';
+import 'package:plexaverse/features/contest/presentation/pages/contest_follow_page.dart';
 import 'package:plexaverse/features/contest/presentation/pages/contest_lesson_page.dart';
 import 'package:plexaverse/features/contest/presentation/pages/contest_page.dart';
 import 'package:plexaverse/features/engagement/presentation/pages/connections_page.dart';
@@ -113,6 +114,41 @@ void main() {
       );
       expect(pageAt(ZaveRoutes.contestQuiz), isA<ContestLessonPage>());
     });
+  });
+
+  // The web moved the levels page to /levels on 24 Nov 2026, and every
+  // notification it sends since names /levels/… — a delivered lesson
+  // reminder hands `/levels/lesson` straight to `router.push`.
+  group('the web’s /levels addresses', () {
+    test('/levels is the levels page', () {
+      expect(resolve(ZaveRoutes.levels).uri.path, ZaveRoutes.contest);
+      expect(pageAt(ZaveRoutes.levels), isA<ContestPage>());
+    });
+
+    test('/levels/lesson is the lesson, the part kept', () {
+      expect(pageAt('/levels/lesson'), isA<ContestLessonPage>());
+      final Widget part = pageAt('/levels/lesson?part=2');
+      expect((part as ContestLessonPage).part, 2);
+    });
+
+    test('/levels/follow is the follow level', () {
+      expect(pageAt('/levels/follow'), isA<ContestFollowPage>());
+    });
+
+    test('/levels/claim keeps which piece', () {
+      final Widget page = pageAt(
+        '/levels/claim?kind=video&occurrence=6%3A1%3A2',
+      );
+      expect((page as ContestClaimPage).occurrence, '6:1:2');
+    });
+
+    test(
+      'a web-only page (the appeals, the rules) lands on the levels page',
+      () {
+        expect(resolve('/levels/appeals').uri.path, ZaveRoutes.contest);
+        expect(resolve('/levels/rules').uri.path, ZaveRoutes.contest);
+      },
+    );
   });
 
   test('the roadmap is the journey screen that used to be home', () {

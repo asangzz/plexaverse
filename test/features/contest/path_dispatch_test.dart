@@ -396,10 +396,11 @@ void main() {
     expect(current.current, isTrue);
     expect(
       current.semanticsLabel,
-      'Wed, day 11: Lesson · part 2 of 3. Open today.',
+      // Its number in the day (24 Nov 2026: a Duolingo-style level path).
+      'Wed, day 11: Level 2, Lesson · part 2 of 3. Open today.',
     );
     await tapVisible(tester, find.byType(PathNodeButton).at(1));
-    expect(find.text('WED · DAY 11 · LESSON'), findsOneWidget);
+    expect(find.text('WED · DAY 11 · LEVEL 2 · LESSON'), findsOneWidget);
     expect(find.text('START +50 XP'), findsOneWidget);
   });
 
@@ -472,7 +473,7 @@ void main() {
     expect(node.current, isTrue);
     expect(
       node.semanticsLabel,
-      'Wed, day 11: Comment on a top voice. Skipped, still open today.',
+      'Wed, day 11: Level 1, Comment on a top voice. Skipped, still open today.',
     );
     expect(find.byIcon(AppIcons.skip), findsOneWidget);
     await tapVisible(tester, find.byType(PathNodeButton).first);

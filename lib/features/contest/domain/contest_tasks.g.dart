@@ -368,3 +368,87 @@ Map<String, dynamic> _$SkipResultToJson(_SkipResult instance) =>
       'nodeId': instance.nodeId,
       'alreadySkipped': instance.alreadySkipped,
     };
+
+_FollowWinnerView _$FollowWinnerViewFromJson(Map<String, dynamic> json) =>
+    _FollowWinnerView(
+      handle: json['handle'] as String? ?? '',
+      name: json['name'] as String? ?? '',
+      image: json['image'] as String?,
+      headline: json['headline'] as String?,
+      linkedinUrl: json['linkedinUrl'] as String? ?? '',
+      linkedinDone: json['linkedinDone'] as bool? ?? false,
+      plexaverseDone: json['plexaverseDone'] as bool? ?? false,
+      done: json['done'] as bool? ?? false,
+      paid: (json['paid'] as num?)?.toInt(),
+    );
+
+Map<String, dynamic> _$FollowWinnerViewToJson(_FollowWinnerView instance) =>
+    <String, dynamic>{
+      'handle': instance.handle,
+      'name': instance.name,
+      'image': instance.image,
+      'headline': instance.headline,
+      'linkedinUrl': instance.linkedinUrl,
+      'linkedinDone': instance.linkedinDone,
+      'plexaverseDone': instance.plexaverseDone,
+      'done': instance.done,
+      'paid': instance.paid,
+    };
+
+_FollowWinnersView _$FollowWinnersViewFromJson(Map<String, dynamic> json) =>
+    _FollowWinnersView(
+      status:
+          $enumDecodeNullable(
+            _$FollowWinnersStatusEnumMap,
+            json['status'],
+            unknownValue: FollowWinnersStatus.unavailable,
+          ) ??
+          FollowWinnersStatus.unavailable,
+      reason: $enumDecodeNullable(
+        _$FollowWinnersReasonEnumMap,
+        json['reason'],
+        unknownValue: JsonKey.nullForUndefinedEnumValue,
+      ),
+      pointsEach: (json['pointsEach'] as num?)?.toInt() ?? 0,
+      fromRoundLastDayKey: json['fromRoundLastDayKey'] as String?,
+      winners:
+          (json['winners'] as List<dynamic>?)
+              ?.map((e) => FollowWinnerView.fromJson(e as Map<String, dynamic>))
+              .toList() ??
+          const <FollowWinnerView>[],
+    );
+
+Map<String, dynamic> _$FollowWinnersViewToJson(_FollowWinnersView instance) =>
+    <String, dynamic>{
+      'status': _$FollowWinnersStatusEnumMap[instance.status]!,
+      'reason': _$FollowWinnersReasonEnumMap[instance.reason],
+      'pointsEach': instance.pointsEach,
+      'fromRoundLastDayKey': instance.fromRoundLastDayKey,
+      'winners': instance.winners.map((e) => e.toJson()).toList(),
+    };
+
+const _$FollowWinnersStatusEnumMap = {
+  FollowWinnersStatus.unavailable: 'unavailable',
+  FollowWinnersStatus.open: 'open',
+  FollowWinnersStatus.done: 'done',
+};
+
+const _$FollowWinnersReasonEnumMap = {
+  FollowWinnersReason.notRunning: 'not_running',
+  FollowWinnersReason.notJoined: 'not_joined',
+  FollowWinnersReason.noWinners: 'no_winners',
+};
+
+_FollowWinnerStepResult _$FollowWinnerStepResultFromJson(
+  Map<String, dynamic> json,
+) => _FollowWinnerStepResult(
+  view: FollowWinnersView.fromJson(json['view'] as Map<String, dynamic>),
+  pointsApplied: (json['pointsApplied'] as num?)?.toInt() ?? 0,
+);
+
+Map<String, dynamic> _$FollowWinnerStepResultToJson(
+  _FollowWinnerStepResult instance,
+) => <String, dynamic>{
+  'view': instance.view.toJson(),
+  'pointsApplied': instance.pointsApplied,
+};

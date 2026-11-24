@@ -37,8 +37,9 @@ const List<ZaveDestination> zaveDestinations = <ZaveDestination>[
   // ── Overview ──
   ZaveDestination(
     // The signed-in home since 11 Nov 2026, and where the English lesson
-    // lives — the contest's daily path. The web's `IconTarget`.
-    label: 'Contest',
+    // lives — the daily level path. Named "Levels" since 24 Nov 2026, never
+    // "Contest" (owner). The web's `IconTarget`.
+    label: 'Levels',
     route: ZaveRoutes.contest,
     icon: AppIcons.bullseye,
     visibility: NavVisibility.both,

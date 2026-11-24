@@ -81,6 +81,7 @@ _HallOfFameEntry _$HallOfFameEntryFromJson(Map<String, dynamic> json) =>
     _HallOfFameEntry(
       contestId: json['contestId'] as String? ?? '',
       title: json['title'] as String? ?? '',
+      lastDayKey: json['lastDayKey'] as String? ?? '',
       prizeTitle: json['prizeTitle'] as String? ?? '',
       rewardTopN: (json['rewardTopN'] as num?)?.toInt() ?? 0,
       finalisedAt: DateTime.parse(json['finalisedAt'] as String),
@@ -96,6 +97,7 @@ Map<String, dynamic> _$HallOfFameEntryToJson(_HallOfFameEntry instance) =>
     <String, dynamic>{
       'contestId': instance.contestId,
       'title': instance.title,
+      'lastDayKey': instance.lastDayKey,
       'prizeTitle': instance.prizeTitle,
       'rewardTopN': instance.rewardTopN,
       'finalisedAt': instance.finalisedAt.toIso8601String(),
@@ -128,6 +130,7 @@ _ShoutoutSettings _$ShoutoutSettingsFromJson(Map<String, dynamic> json) =>
       featured: json['featured'] as bool? ?? false,
       linkedinUrl: json['linkedinUrl'] as String?,
       adultDeclared: json['adultDeclared'] as bool? ?? false,
+      stale: json['stale'] as bool? ?? false,
     );
 
 Map<String, dynamic> _$ShoutoutSettingsToJson(_ShoutoutSettings instance) =>
@@ -135,4 +138,5 @@ Map<String, dynamic> _$ShoutoutSettingsToJson(_ShoutoutSettings instance) =>
       'featured': instance.featured,
       'linkedinUrl': instance.linkedinUrl,
       'adultDeclared': instance.adultDeclared,
+      'stale': instance.stale,
     };

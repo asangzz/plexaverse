@@ -5,18 +5,22 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/misc.dart' show Override;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
+import 'package:plexaverse/core/ui/zave/zave_kit.dart';
 import 'package:plexaverse/features/contest/application/contest_controllers.dart';
 import 'package:plexaverse/features/contest/application/contest_home_controllers.dart';
 import 'package:plexaverse/features/contest/data/contest_repositories.dart';
 import 'package:plexaverse/features/contest/domain/contest_repository.dart';
+import 'package:plexaverse/features/contest/domain/levels_words.dart';
 import 'package:plexaverse/features/contest/presentation/widgets/contest_section_bar.dart';
 import 'package:plexaverse/features/contest/presentation/widgets/rail/daily_quests.dart';
 import 'package:plexaverse/features/plexa/presentation/widgets/plexa_moment.dart';
+import 'package:plexaverse/features/settings/data/settings_repositories.dart';
+import 'package:plexaverse/features/settings/domain/settings_repository.dart';
 
 import 'contest_home_harness.dart';
 
-/// `/contest`, in every state its overview and its path can put it in, at
-/// the narrowest phone the app ships on.
+/// `/contest` — the learner's levels — in every state its overview and its
+/// path can put it in, at the narrowest phone the app ships on.
 ///
 /// Each state is the web's `ContestClient` branch of the same name, and
 /// says the web's words. The fakes play the server; where a state needs an
@@ -27,7 +31,7 @@ void main() {
 
   ContestInfo info() => ContestInfo(
     id: 'c1',
-    title: 'Business English Contest',
+    title: 'Levels · Nov 2026–Feb 2027',
     prizeTitle: 'a profile shoutout',
     startsAt: DateTime.utc(2026, 11, 14, 18, 30),
     endsAt: DateTime.utc(2027, 2, 22, 18, 30),
@@ -197,8 +201,7 @@ void main() {
         contestOverviewProvider.overrideWith((Ref ref) => never.future),
       ],
     );
-    expect(find.bySemanticsLabel('Loading the contest'), findsOneWidget);
-    expect(find.text('Join the contest'), findsNothing);
+    expect(find.bySemanticsLabel('Loading your levels'), findsOneWidget);
   });
 
   testWidgets('a failed read is said in words, with a way to try again', (
@@ -216,7 +219,7 @@ void main() {
         }),
       ],
     );
-    expect(find.text('Could not load the contest'), findsOneWidget);
+    expect(find.text('Could not load your levels'), findsOneWidget);
     expect(
       find.text('No connection. Check your network and try again.'),
       findsOneWidget,
@@ -227,169 +230,130 @@ void main() {
     expect(reads, 2, reason: 'Try again reads the overview again');
   });
 
-  testWidgets('no contest: the waiting room and the way back', (
+  testWidgets('no round: new levels are on the way, and the way back', (
     WidgetTester tester,
   ) async {
     final GoRouter router = await pumpContestPage(
       tester,
       scenario: FakeContestScenario.noContest,
     );
-    expect(find.text('No contest right now'), findsOneWidget);
+    expect(find.text('New levels are on the way'), findsOneWidget);
     expect(
       find.text(
-        'The next one will show up here. Your lessons and your roadmap carry on as usual.',
+        'Levels reset every 3 months, and the next round starts soon. Your roadmap carries on as usual.',
       ),
       findsOneWidget,
     );
     expect(showsMoment(tester, PlexaMomentClip.waitingRoom), isTrue);
-    // No contest, so no last day to name.
+    // No round, so no last day to name.
     expect(
       find.text(
-        'Your 1000-day roadmap is the bigger goal, and it keeps going after.',
+        'Your 1000-day roadmap is the bigger goal, and it keeps going.',
       ),
       findsOneWidget,
     );
+    // The last round's result lives in the Hall of Fame card.
+    expect(find.text('Hall of Fame'), findsOneWidget);
     await tapVisible(tester, find.text('Back to your roadmap'));
     expect(locationOf(router).path, '/roadmap');
   });
 
-  testWidgets('not joined, running: the join card, its rules and an empty '
-      'consent box', (WidgetTester tester) async {
+  // Owner, 24 Nov 2026: no join card. Deliberately replaces the join card's
+  // tests — reading the levels enters the learner, so the page a new
+  // learner sees is the path itself.
+  testWidgets('a learner new to the round: reading enters them, and the page '
+      'is the path with Plexa’s ticket — no join step', (
+    WidgetTester tester,
+  ) async {
     await pumpContestPage(tester, scenario: FakeContestScenario.notJoined);
-    expect(find.text('1 NOV 2026 – 8 FEB 2027'), findsOneWidget);
-    expect(find.text('Business English Contest'), findsOneWidget);
-    expect(find.text('Day 11. You can join any day it runs.'), findsOneWidget);
-    expect(find.text('a profile shoutout'), findsOneWidget);
-    expect(find.text('1,283 people have joined.'), findsOneWidget);
-    expect(find.text('How it scores'), findsOneWidget);
-    for (final String rule in <String>[
-      'Your streak weighs most',
-      'Finish every day’s lesson in a week: +500 XP',
-      'A lesson a day, partly written for you',
-      'Harder levels earn more',
-      'Only your first try counts',
-      'LinkedIn tasks count',
-      'The leaderboard opens for the last 10 days',
-      'Published posts count',
-      '30 days free, then a plan',
-      'Top 10 get featured',
-    ]) {
-      expect(find.text(rule), findsOneWidget, reason: rule);
-    }
-    expect(
-      find.text(
-        'Joining is free. After your first free month, scoring needs a plan.',
-      ),
-      findsOneWidget,
-    );
-    expect(
-      tester.getSemantics(
-        find.bySemanticsLabel('Show my name on the leaderboard'),
-      ),
-      isSemantics(hasCheckedState: true, isChecked: false),
-      reason: 'consent is an act, so the box starts empty',
-    );
-    // A joiner has no board to see yet.
-    expect(find.text('Leaderboard'), findsNothing);
-  });
-
-  testWidgets('joining sends exactly what was ticked, and the page becomes '
-      'the path with Plexa’s ticket', (WidgetTester tester) async {
-    final _RecordingJoin repo = _RecordingJoin(FakeContestScenario.notJoined);
-    await pumpContestPage(tester, repo: repo);
-
-    await tapVisible(tester, find.text('Join the contest'));
-    expect(repo.sent, <bool>[false], reason: 'the box was left empty');
     expect(find.text('DAY 11'), findsOneWidget);
     expect(find.text('WEEK 2 · DAY 11'), findsOneWidget);
+    expect(find.text('Your levels'), findsOneWidget);
     expect(showsMoment(tester, PlexaMomentClip.contestJoined), isTrue);
+    for (final String text in allText(tester)) {
+      expect(text.toLowerCase().contains('join the'), isFalse, reason: text);
+    }
   });
 
-  testWidgets('ticking the box is the consent that is sent', (
-    WidgetTester tester,
-  ) async {
-    final _RecordingJoin repo = _RecordingJoin(FakeContestScenario.notJoined);
-    await pumpContestPage(tester, repo: repo);
-    await tapVisible(
+  testWidgets('the name switch is asked in context, starts off, and a tap '
+      'is the consent, recorded in context', (WidgetTester tester) async {
+    final _Consents consents = _Consents();
+    await pumpContestPage(
       tester,
-      find.text('Show my name on the leaderboard').first,
+      scenario: FakeContestScenario.notJoined,
+      overrides: <Override>[
+        settingsRepositoryProvider.overrideWithValue(consents),
+      ],
     );
-    await tapVisible(tester, find.text('Join the contest'));
-    expect(repo.sent, <bool>[true]);
+    final Finder toggle = find.byWidgetPredicate(
+      (Widget w) => w is ZaveSwitch && w.semanticLabel == kNameToggleLabel,
+    );
+    await Scrollable.ensureVisible(tester.element(toggle), alignment: 0.5);
+    await settle(tester);
+    expect(find.text(kNameToggleDetail), findsOneWidget);
+    expect(
+      tester.widget<ZaveSwitch>(toggle).value,
+      isFalse,
+      reason: 'consent is an act, so the switch starts off',
+    );
+    await tester.tap(toggle);
+    await settle(tester);
+    expect(consents.sent, <(String, bool, bool)>[
+      ('contest_leaderboard', true, true),
+    ]);
   });
 
-  testWidgets('a join with nothing to join says so in the neutral tone', (
-    WidgetTester tester,
-  ) async {
-    final _RecordingJoin repo = _RecordingJoin(
-      FakeContestScenario.notJoined,
-      refuse: const ContestNotRunning('There is no contest to join right now.'),
-    );
-    await pumpContestPage(tester, repo: repo);
-    await tapVisible(tester, find.text('Join the contest'));
-    expect(find.text('Nothing to join'), findsOneWidget);
-    expect(find.text('There is no contest to join right now.'), findsOneWidget);
-    expect(find.text('Not joined yet'), findsNothing);
-  });
-
-  testWidgets('not joined, upcoming: when it starts', (
+  testWidgets('upcoming: you are in, and when Level 1 opens', (
     WidgetTester tester,
   ) async {
     await pumpContestPage(tester, scenario: FakeContestScenario.upcoming);
+    expect(find.text('OPENS 15 NOV 2026'), findsOneWidget);
     expect(
-      find.text('Starts 15 Nov 2026. You can join now or any day it runs.'),
+      find.text(
+        'Level 1 opens on 15 Nov 2026. You are in: there is nothing to join.',
+      ),
       findsOneWidget,
     );
-    expect(find.text('Join the contest'), findsOneWidget);
   });
 
-  testWidgets('not joined, ended: no join card and no board', (
-    WidgetTester tester,
-  ) async {
-    await pumpContestPage(
-      tester,
-      overrides: <Override>[
-        overviewIs(
-          ContestOverview(
-            contest: info(),
-            phase: ContestPhase.ended,
-            dayNumber: 101,
-            entrants: 1200,
-          ),
-        ),
-      ],
-    );
-    expect(find.text('This contest has ended'), findsOneWidget);
-    expect(find.text('Join the contest'), findsNothing);
-    expect(find.text('Leaderboard'), findsNothing);
-    expect(showsMoment(tester, PlexaMomentClip.waitingRoom), isTrue);
-  });
-
-  testWidgets('joined, ended: the final standings and the finale', (
+  testWidgets('an ended round is never a page of its own: new levels are on '
+      'the way, and its result is the Hall of Fame card', (
     WidgetTester tester,
   ) async {
     await pumpContestPage(tester, scenario: FakeContestScenario.ended);
-    expect(find.text('ENDED'), findsOneWidget);
-    expect(
-      find.text(
-        'Final standings. a profile shoutout goes to the top 10.',
-      ),
-      findsOneWidget,
-    );
-    expect(find.text('Leaderboard'), findsOneWidget);
-    expect(find.text('#14'), findsOneWidget);
-    expect(
-      find.text(
-        'The contest’s last day is 2 Nov 2026. '
-        'Your 1000-day roadmap is the bigger goal, and it keeps going after.',
-      ),
-      findsOneWidget,
-    );
-    expect(showsMoment(tester, PlexaMomentClip.contestFinale), isTrue);
-    expect(find.text('Join the contest'), findsNothing);
+    expect(find.text('New levels are on the way'), findsOneWidget);
+    expect(find.text('Top learners'), findsNothing);
+    expect(find.text('Hall of Fame'), findsOneWidget);
+    expect(find.text('The round that ended 2 November 2026'), findsOneWidget);
+    expect(showsMoment(tester, PlexaMomentClip.waitingRoom), isTrue);
   });
 
-  testWidgets('joined, upcoming: when it starts, and the prize still to win', (
+  testWidgets('running with no entry: the entry could not be made, and Try '
+      'again reads again', (WidgetTester tester) async {
+    int reads = 0;
+    await pumpContestPage(
+      tester,
+      overrides: <Override>[
+        contestOverviewProvider.overrideWith((Ref ref) async {
+          reads++;
+          return ContestOverview(
+            contest: info(),
+            phase: ContestPhase.running,
+            dayNumber: 3,
+          );
+        }),
+      ],
+    );
+    expect(find.text('Your levels are not ready yet'), findsOneWidget);
+    expect(
+      find.text('We could not open your levels just now.'),
+      findsOneWidget,
+    );
+    await tapVisible(tester, find.text('Try again'));
+    expect(reads, 2);
+  });
+
+  testWidgets('entered, upcoming: when it opens, and the top learners hidden', (
     WidgetTester tester,
   ) async {
     await pumpContestPage(
@@ -409,14 +373,8 @@ void main() {
         ),
       ],
     );
-    expect(find.text('STARTS 15 NOV 2026'), findsOneWidget);
-    expect(
-      find.text(
-        'a profile shoutout for the top 10.',
-      ),
-      findsOneWidget,
-    );
-    expect(find.text('Leaderboard hidden for now'), findsOneWidget);
+    expect(find.text('OPENS 15 NOV 2026'), findsOneWidget);
+    expect(find.text('Your levels'), findsOneWidget);
   });
 
   testWidgets('running: the standing, the week and START on today’s level, '
@@ -438,7 +396,7 @@ void main() {
       'Top 10 win a profile shoutout',
       'Daily quests',
       'This week on LinkedIn',
-      'Leaderboard',
+      'Top learners',
     ]) {
       expect(find.text(title), findsWidgets, reason: title);
     }
@@ -458,12 +416,59 @@ void main() {
     await settle(tester);
     final double quests = tester.getRect(find.text('Daily quests')).top;
     expect(quests, lessThan(200), reason: 'brought to the top');
-    await tester.tap(tab('Leaderboard'));
+    await tester.tap(tab('Top learners'));
     await settle(tester);
-    expect(tester.getRect(find.text('Leaderboard').last).top, lessThan(200));
+    expect(tester.getRect(find.text('Top learners').last).top, lessThan(200));
     await tester.tap(tab('Path'));
     await settle(tester);
     expect(tester.getRect(find.text('WEEK 2 · DAY 11')).top, lessThan(200));
+  });
+
+  // Review of 24 Nov 2026 (FL1): there is no join card any more, and a learner
+  // entered automatically never sees onboarding's step — so while the free
+  // days run, the page itself says XP needs a plan after them (the web's
+  // FreeDaysLine, word for word).
+  group('the paid condition, while the free days run', () {
+    testWidgets('said above the path, in the web’s words', (
+      WidgetTester tester,
+    ) async {
+      await pumpContestPage(tester, repo: _FreeDaysLeft(12));
+      expect(
+        find.text(
+          '12 free days of XP left in this round. After that, XP counts only '
+          'while you have a Plexaverse plan — the lessons stay open either way.',
+        ),
+        findsOneWidget,
+      );
+      expect(
+        find.byKey(const ValueKey<String>('free-days-line')),
+        findsOneWidget,
+      );
+      expect(find.text('Scoring paused'), findsNothing);
+    });
+
+    testWidgets('“1 free day”, singular', (WidgetTester tester) async {
+      await pumpContestPage(tester, repo: _FreeDaysLeft(1));
+      expect(freeDaysLine(1), startsWith('1 free day of XP left'));
+      expect(find.text(freeDaysLine(1)), findsOneWidget);
+    });
+
+    testWidgets('gone once the days are used up', (WidgetTester tester) async {
+      await pumpContestPage(tester, repo: _FreeDaysLeft(0));
+      expect(
+        find.byKey(const ValueKey<String>('free-days-line')),
+        findsNothing,
+      );
+    });
+
+    testWidgets('never beside the paused notice', (WidgetTester tester) async {
+      await pumpContestPage(tester, scenario: FakeContestScenario.paused);
+      expect(find.text('Scoring paused'), findsOneWidget);
+      expect(
+        find.byKey(const ValueKey<String>('free-days-line')),
+        findsNothing,
+      );
+    });
   });
 
   testWidgets('paused scoring is said above everything', (
@@ -516,10 +521,7 @@ void main() {
       ],
     );
     expect(find.text('Could not load this week'), findsOneWidget);
-    expect(
-      find.text('Top 10 win a profile shoutout'),
-      findsOneWidget,
-    );
+    expect(find.text('Top 10 win a profile shoutout'), findsOneWidget);
     expect(find.text('This week is not in yet.'), findsNWidgets(2));
   });
 
@@ -561,19 +563,37 @@ void main() {
   }
 }
 
-/// The running scenario's fake, recording every consent the join sends.
-class _RecordingJoin extends FakeContestRepository {
-  _RecordingJoin(FakeContestScenario scenario, {this.refuse})
-    : super(scenario: scenario, latency: Duration.zero);
-
-  final ContestRefusal? refuse;
-  final List<bool> sent = <bool>[];
+/// The consent ledger, recording every decision sent: (purpose, granted,
+/// in context).
+class _Consents extends FakeSettingsRepository {
+  final List<(String, bool, bool)> sent = <(String, bool, bool)>[];
 
   @override
-  Future<void> join({required bool showName}) async {
-    sent.add(showName);
-    final ContestRefusal? no = refuse;
-    if (no != null) throw no;
-    return super.join(showName: showName);
+  Future<ConsentLedger> setConsent({
+    required String purpose,
+    required bool granted,
+    bool inContext = false,
+  }) {
+    sent.add((purpose, granted, inContext));
+    return super.setConsent(
+      purpose: purpose,
+      granted: granted,
+      inContext: inContext,
+    );
+  }
+}
+
+/// The running fake, with the entry's free days left set by the test.
+class _FreeDaysLeft extends FakeContestRepository {
+  _FreeDaysLeft(this.left) : super(latency: Duration.zero);
+
+  final int left;
+
+  @override
+  Future<ContestOverview?> fetchOverview() async {
+    final ContestOverview? o = await super.fetchOverview();
+    final ContestEntryView? e = o?.entry;
+    if (o == null || e == null) return o;
+    return o.copyWith(entry: e.copyWith(freeDaysLeft: left));
   }
 }

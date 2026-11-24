@@ -16,8 +16,8 @@ import 'package:shared_preferences/shared_preferences.dart';
 /// and what an answer turns into.
 void main() {
   const String why =
-      "Connection growth is how the contest's connect and invite tasks show "
-      'up over time.';
+      'Connection growth is how your connect and invite levels show up over '
+      'time.';
 
   setUp(() => SharedPreferences.setMockInitialValues(<String, Object>{}));
 

@@ -1,70 +1,17 @@
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
-import '../data/contest_repositories.dart';
 import '../domain/contest_repository.dart';
 import '../domain/lesson_parts.dart';
-import 'contest_controllers.dart';
 
 part 'contest_home_controllers.g.dart';
 
-// The contest page's own state: the join, which Plexa moment greets the
-// learner, and which level's card is open. Everything the page DRAWS comes
-// from the shared reads in contest_controllers.dart; nothing here restates a
-// server rule.
-
-// ── Joining ─────────────────────────────────────────────────────────────────
-
-/// Where the join stands — the join card's button and the line under it.
-class ContestJoinBusy {
-  const ContestJoinBusy({
-    this.joining = false,
-    this.error,
-    this.nothingToJoin = false,
-  });
-
-  final bool joining;
-
-  /// The server's sentence for a refused join, or the generic one. Null
-  /// while nothing has gone wrong.
-  final String? error;
-
-  /// The refusal was NOT_RUNNING: the contest closed between loading the
-  /// card and pressing the button. Said in the neutral tone — "Nothing to
-  /// join" — because it is not the learner's failure.
-  final bool nothingToJoin;
-}
-
-/// `POST /contest/join`, with its busy and error state off the widget.
-///
-/// A success re-reads the standing, and the page turns from the join card
-/// into the path (or the quiet page, before day 1) on the overview that
-/// comes back — the web's `useJoinContest` onSuccess.
-@riverpod
-class ContestJoinActions extends _$ContestJoinActions {
-  @override
-  ContestJoinBusy build() => const ContestJoinBusy();
-
-  /// [showName] is exactly what the learner ticked: it is their leaderboard
-  /// consent, and the box starts empty.
-  Future<bool> join({required bool showName}) async {
-    if (state.joining) return false;
-    state = const ContestJoinBusy(joining: true);
-    try {
-      await ref.read(contestRepositoryProvider).join(showName: showName);
-      if (!ref.mounted) return false;
-      state = const ContestJoinBusy();
-      refreshContestStanding(ref.invalidate);
-      return true;
-    } on Object catch (e) {
-      if (!ref.mounted) return false;
-      state = ContestJoinBusy(
-        error: contestMessage(e),
-        nothingToJoin: e is ContestNotRunning,
-      );
-      return false;
-    }
-  }
-}
+// The levels page's own state: which Plexa moment greets the learner, and
+// which level's card is open. Everything the page DRAWS comes from the shared
+// reads in contest_controllers.dart; nothing here restates a server rule.
+//
+// There is no join any more (owner, 24 Nov 2026): reading the overview
+// enters the learner in the running round, so the join card and its action
+// are gone.
 
 // ── Plexa's moment ──────────────────────────────────────────────────────────
 

@@ -285,6 +285,272 @@ as int?,
 
 
 /// @nodoc
+mixin _$FollowProgress {
+
+ int get done; int get total;
+/// Create a copy of FollowProgress
+/// with the given fields replaced by the non-null parameter values.
+@JsonKey(includeFromJson: false, includeToJson: false)
+@pragma('vm:prefer-inline')
+$FollowProgressCopyWith<FollowProgress> get copyWith => _$FollowProgressCopyWithImpl<FollowProgress>(this as FollowProgress, _$identity);
+
+  /// Serializes this FollowProgress to a JSON map.
+  Map<String, dynamic> toJson();
+
+
+@override
+bool operator ==(Object other) {
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is FollowProgress&&(identical(other.done, done) || other.done == done)&&(identical(other.total, total) || other.total == total));
+}
+
+@JsonKey(includeFromJson: false, includeToJson: false)
+@override
+int get hashCode => Object.hash(runtimeType,done,total);
+
+@override
+String toString() {
+  return 'FollowProgress(done: $done, total: $total)';
+}
+
+
+}
+
+/// @nodoc
+abstract mixin class $FollowProgressCopyWith<$Res>  {
+  factory $FollowProgressCopyWith(FollowProgress value, $Res Function(FollowProgress) _then) = _$FollowProgressCopyWithImpl;
+@useResult
+$Res call({
+ int done, int total
+});
+
+
+
+
+}
+/// @nodoc
+class _$FollowProgressCopyWithImpl<$Res>
+    implements $FollowProgressCopyWith<$Res> {
+  _$FollowProgressCopyWithImpl(this._self, this._then);
+
+  final FollowProgress _self;
+  final $Res Function(FollowProgress) _then;
+
+/// Create a copy of FollowProgress
+/// with the given fields replaced by the non-null parameter values.
+@pragma('vm:prefer-inline') @override $Res call({Object? done = null,Object? total = null,}) {
+  return _then(_self.copyWith(
+done: null == done ? _self.done : done // ignore: cast_nullable_to_non_nullable
+as int,total: null == total ? _self.total : total // ignore: cast_nullable_to_non_nullable
+as int,
+  ));
+}
+
+}
+
+
+/// Adds pattern-matching-related methods to [FollowProgress].
+extension FollowProgressPatterns on FollowProgress {
+/// A variant of `map` that fallback to returning `orElse`.
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case final Subclass value:
+///     return ...;
+///   case _:
+///     return orElse();
+/// }
+/// ```
+
+@optionalTypeArgs TResult maybeMap<TResult extends Object?>(TResult Function( _FollowProgress value)?  $default,{required TResult orElse(),}){
+final _that = this;
+switch (_that) {
+case _FollowProgress() when $default != null:
+return $default(_that);case _:
+  return orElse();
+
+}
+}
+/// A `switch`-like method, using callbacks.
+///
+/// Callbacks receives the raw object, upcasted.
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case final Subclass value:
+///     return ...;
+///   case final Subclass2 value:
+///     return ...;
+/// }
+/// ```
+
+@optionalTypeArgs TResult map<TResult extends Object?>(TResult Function( _FollowProgress value)  $default,){
+final _that = this;
+switch (_that) {
+case _FollowProgress():
+return $default(_that);case _:
+  throw StateError('Unexpected subclass');
+
+}
+}
+/// A variant of `map` that fallback to returning `null`.
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case final Subclass value:
+///     return ...;
+///   case _:
+///     return null;
+/// }
+/// ```
+
+@optionalTypeArgs TResult? mapOrNull<TResult extends Object?>(TResult? Function( _FollowProgress value)?  $default,){
+final _that = this;
+switch (_that) {
+case _FollowProgress() when $default != null:
+return $default(_that);case _:
+  return null;
+
+}
+}
+/// A variant of `when` that fallback to an `orElse` callback.
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case Subclass(:final field):
+///     return ...;
+///   case _:
+///     return orElse();
+/// }
+/// ```
+
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( int done,  int total)?  $default,{required TResult orElse(),}) {final _that = this;
+switch (_that) {
+case _FollowProgress() when $default != null:
+return $default(_that.done,_that.total);case _:
+  return orElse();
+
+}
+}
+/// A `switch`-like method, using callbacks.
+///
+/// As opposed to `map`, this offers destructuring.
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case Subclass(:final field):
+///     return ...;
+///   case Subclass2(:final field2):
+///     return ...;
+/// }
+/// ```
+
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( int done,  int total)  $default,) {final _that = this;
+switch (_that) {
+case _FollowProgress():
+return $default(_that.done,_that.total);case _:
+  throw StateError('Unexpected subclass');
+
+}
+}
+/// A variant of `when` that fallback to returning `null`
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case Subclass(:final field):
+///     return ...;
+///   case _:
+///     return null;
+/// }
+/// ```
+
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( int done,  int total)?  $default,) {final _that = this;
+switch (_that) {
+case _FollowProgress() when $default != null:
+return $default(_that.done,_that.total);case _:
+  return null;
+
+}
+}
+
+}
+
+/// @nodoc
+@JsonSerializable()
+
+class _FollowProgress implements FollowProgress {
+  const _FollowProgress({this.done = 0, this.total = 0});
+  factory _FollowProgress.fromJson(Map<String, dynamic> json) => _$FollowProgressFromJson(json);
+
+@override@JsonKey() final  int done;
+@override@JsonKey() final  int total;
+
+/// Create a copy of FollowProgress
+/// with the given fields replaced by the non-null parameter values.
+@override @JsonKey(includeFromJson: false, includeToJson: false)
+@pragma('vm:prefer-inline')
+_$FollowProgressCopyWith<_FollowProgress> get copyWith => __$FollowProgressCopyWithImpl<_FollowProgress>(this, _$identity);
+
+@override
+Map<String, dynamic> toJson() {
+  return _$FollowProgressToJson(this, );
+}
+
+@override
+bool operator ==(Object other) {
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is _FollowProgress&&(identical(other.done, done) || other.done == done)&&(identical(other.total, total) || other.total == total));
+}
+
+@JsonKey(includeFromJson: false, includeToJson: false)
+@override
+int get hashCode => Object.hash(runtimeType,done,total);
+
+@override
+String toString() {
+  return 'FollowProgress(done: $done, total: $total)';
+}
+
+
+}
+
+/// @nodoc
+abstract mixin class _$FollowProgressCopyWith<$Res> implements $FollowProgressCopyWith<$Res> {
+  factory _$FollowProgressCopyWith(_FollowProgress value, $Res Function(_FollowProgress) _then) = __$FollowProgressCopyWithImpl;
+@override @useResult
+$Res call({
+ int done, int total
+});
+
+
+
+
+}
+/// @nodoc
+class __$FollowProgressCopyWithImpl<$Res>
+    implements _$FollowProgressCopyWith<$Res> {
+  __$FollowProgressCopyWithImpl(this._self, this._then);
+
+  final _FollowProgress _self;
+  final $Res Function(_FollowProgress) _then;
+
+/// Create a copy of FollowProgress
+/// with the given fields replaced by the non-null parameter values.
+@override @pragma('vm:prefer-inline') $Res call({Object? done = null,Object? total = null,}) {
+  return _then(_FollowProgress(
+done: null == done ? _self.done : done // ignore: cast_nullable_to_non_nullable
+as int,total: null == total ? _self.total : total // ignore: cast_nullable_to_non_nullable
+as int,
+  ));
+}
+
+
+}
+
+
+/// @nodoc
 mixin _$NodeClaim {
 
 @JsonKey(unknownEnumValue: ClaimKind.unknown) ClaimKind get kind;/// Opaque. Sent back unchanged with the link — `"<week>:<journey>"` for
@@ -573,7 +839,8 @@ mixin _$PathNode {
 /// sent): the button says Continue, and [points] is what is left.
  bool get started;/// Lesson nodes only.
  NodePart? get part;/// Claim nodes only.
- NodeClaim? get claim;/// The one level Skip may be pressed on: today's open level (the gate's
+ NodeClaim? get claim;/// The follow level only: its top learners followed, of how many.
+ FollowProgress? get follow;/// The one level Skip may be pressed on: today's open level (the gate's
 /// first node still holding the chain, in state today or rejected). On at
 /// most one node, and absent everywhere else. Forced false for an
 /// [PathNodeKind.unknown] kind — a level this build cannot open is not
@@ -591,16 +858,16 @@ $PathNodeCopyWith<PathNode> get copyWith => _$PathNodeCopyWithImpl<PathNode>(thi
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is PathNode&&(identical(other.id, id) || other.id == id)&&(identical(other.kind, kind) || other.kind == kind)&&(identical(other.state, state) || other.state == state)&&(identical(other.title, title) || other.title == title)&&(identical(other.points, points) || other.points == points)&&(identical(other.href, href) || other.href == href)&&(identical(other.detail, detail) || other.detail == detail)&&(identical(other.started, started) || other.started == started)&&(identical(other.part, part) || other.part == part)&&(identical(other.claim, claim) || other.claim == claim)&&(identical(other.canSkip, canSkip) || other.canSkip == canSkip));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is PathNode&&(identical(other.id, id) || other.id == id)&&(identical(other.kind, kind) || other.kind == kind)&&(identical(other.state, state) || other.state == state)&&(identical(other.title, title) || other.title == title)&&(identical(other.points, points) || other.points == points)&&(identical(other.href, href) || other.href == href)&&(identical(other.detail, detail) || other.detail == detail)&&(identical(other.started, started) || other.started == started)&&(identical(other.part, part) || other.part == part)&&(identical(other.claim, claim) || other.claim == claim)&&(identical(other.follow, follow) || other.follow == follow)&&(identical(other.canSkip, canSkip) || other.canSkip == canSkip));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
-int get hashCode => Object.hash(runtimeType,id,kind,state,title,points,href,detail,started,part,claim,canSkip);
+int get hashCode => Object.hash(runtimeType,id,kind,state,title,points,href,detail,started,part,claim,follow,canSkip);
 
 @override
 String toString() {
-  return 'PathNode(id: $id, kind: $kind, state: $state, title: $title, points: $points, href: $href, detail: $detail, started: $started, part: $part, claim: $claim, canSkip: $canSkip)';
+  return 'PathNode(id: $id, kind: $kind, state: $state, title: $title, points: $points, href: $href, detail: $detail, started: $started, part: $part, claim: $claim, follow: $follow, canSkip: $canSkip)';
 }
 
 
@@ -611,11 +878,11 @@ abstract mixin class $PathNodeCopyWith<$Res>  {
   factory $PathNodeCopyWith(PathNode value, $Res Function(PathNode) _then) = _$PathNodeCopyWithImpl;
 @useResult
 $Res call({
- String id,@JsonKey(unknownEnumValue: PathNodeKind.unknown) PathNodeKind kind,@JsonKey(readValue: _stateUnlessUnknown, unknownEnumValue: PathNodeState.locked) PathNodeState state, String title, int points,@JsonKey(readValue: _hrefUnlessUnknown) String? href, String? detail, bool started, NodePart? part, NodeClaim? claim,@JsonKey(readValue: _canSkipUnlessUnknown) bool canSkip
+ String id,@JsonKey(unknownEnumValue: PathNodeKind.unknown) PathNodeKind kind,@JsonKey(readValue: _stateUnlessUnknown, unknownEnumValue: PathNodeState.locked) PathNodeState state, String title, int points,@JsonKey(readValue: _hrefUnlessUnknown) String? href, String? detail, bool started, NodePart? part, NodeClaim? claim, FollowProgress? follow,@JsonKey(readValue: _canSkipUnlessUnknown) bool canSkip
 });
 
 
-$NodePartCopyWith<$Res>? get part;$NodeClaimCopyWith<$Res>? get claim;
+$NodePartCopyWith<$Res>? get part;$NodeClaimCopyWith<$Res>? get claim;$FollowProgressCopyWith<$Res>? get follow;
 
 }
 /// @nodoc
@@ -628,7 +895,7 @@ class _$PathNodeCopyWithImpl<$Res>
 
 /// Create a copy of PathNode
 /// with the given fields replaced by the non-null parameter values.
-@pragma('vm:prefer-inline') @override $Res call({Object? id = null,Object? kind = null,Object? state = null,Object? title = null,Object? points = null,Object? href = freezed,Object? detail = freezed,Object? started = null,Object? part = freezed,Object? claim = freezed,Object? canSkip = null,}) {
+@pragma('vm:prefer-inline') @override $Res call({Object? id = null,Object? kind = null,Object? state = null,Object? title = null,Object? points = null,Object? href = freezed,Object? detail = freezed,Object? started = null,Object? part = freezed,Object? claim = freezed,Object? follow = freezed,Object? canSkip = null,}) {
   return _then(_self.copyWith(
 id: null == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
 as String,kind: null == kind ? _self.kind : kind // ignore: cast_nullable_to_non_nullable
@@ -640,7 +907,8 @@ as String?,detail: freezed == detail ? _self.detail : detail // ignore: cast_nul
 as String?,started: null == started ? _self.started : started // ignore: cast_nullable_to_non_nullable
 as bool,part: freezed == part ? _self.part : part // ignore: cast_nullable_to_non_nullable
 as NodePart?,claim: freezed == claim ? _self.claim : claim // ignore: cast_nullable_to_non_nullable
-as NodeClaim?,canSkip: null == canSkip ? _self.canSkip : canSkip // ignore: cast_nullable_to_non_nullable
+as NodeClaim?,follow: freezed == follow ? _self.follow : follow // ignore: cast_nullable_to_non_nullable
+as FollowProgress?,canSkip: null == canSkip ? _self.canSkip : canSkip // ignore: cast_nullable_to_non_nullable
 as bool,
   ));
 }
@@ -667,6 +935,18 @@ $NodeClaimCopyWith<$Res>? get claim {
 
   return $NodeClaimCopyWith<$Res>(_self.claim!, (value) {
     return _then(_self.copyWith(claim: value));
+  });
+}/// Create a copy of PathNode
+/// with the given fields replaced by the non-null parameter values.
+@override
+@pragma('vm:prefer-inline')
+$FollowProgressCopyWith<$Res>? get follow {
+    if (_self.follow == null) {
+    return null;
+  }
+
+  return $FollowProgressCopyWith<$Res>(_self.follow!, (value) {
+    return _then(_self.copyWith(follow: value));
   });
 }
 }
@@ -750,10 +1030,10 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String id, @JsonKey(unknownEnumValue: PathNodeKind.unknown)  PathNodeKind kind, @JsonKey(readValue: _stateUnlessUnknown, unknownEnumValue: PathNodeState.locked)  PathNodeState state,  String title,  int points, @JsonKey(readValue: _hrefUnlessUnknown)  String? href,  String? detail,  bool started,  NodePart? part,  NodeClaim? claim, @JsonKey(readValue: _canSkipUnlessUnknown)  bool canSkip)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String id, @JsonKey(unknownEnumValue: PathNodeKind.unknown)  PathNodeKind kind, @JsonKey(readValue: _stateUnlessUnknown, unknownEnumValue: PathNodeState.locked)  PathNodeState state,  String title,  int points, @JsonKey(readValue: _hrefUnlessUnknown)  String? href,  String? detail,  bool started,  NodePart? part,  NodeClaim? claim,  FollowProgress? follow, @JsonKey(readValue: _canSkipUnlessUnknown)  bool canSkip)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _PathNode() when $default != null:
-return $default(_that.id,_that.kind,_that.state,_that.title,_that.points,_that.href,_that.detail,_that.started,_that.part,_that.claim,_that.canSkip);case _:
+return $default(_that.id,_that.kind,_that.state,_that.title,_that.points,_that.href,_that.detail,_that.started,_that.part,_that.claim,_that.follow,_that.canSkip);case _:
   return orElse();
 
 }
@@ -771,10 +1051,10 @@ return $default(_that.id,_that.kind,_that.state,_that.title,_that.points,_that.h
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String id, @JsonKey(unknownEnumValue: PathNodeKind.unknown)  PathNodeKind kind, @JsonKey(readValue: _stateUnlessUnknown, unknownEnumValue: PathNodeState.locked)  PathNodeState state,  String title,  int points, @JsonKey(readValue: _hrefUnlessUnknown)  String? href,  String? detail,  bool started,  NodePart? part,  NodeClaim? claim, @JsonKey(readValue: _canSkipUnlessUnknown)  bool canSkip)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String id, @JsonKey(unknownEnumValue: PathNodeKind.unknown)  PathNodeKind kind, @JsonKey(readValue: _stateUnlessUnknown, unknownEnumValue: PathNodeState.locked)  PathNodeState state,  String title,  int points, @JsonKey(readValue: _hrefUnlessUnknown)  String? href,  String? detail,  bool started,  NodePart? part,  NodeClaim? claim,  FollowProgress? follow, @JsonKey(readValue: _canSkipUnlessUnknown)  bool canSkip)  $default,) {final _that = this;
 switch (_that) {
 case _PathNode():
-return $default(_that.id,_that.kind,_that.state,_that.title,_that.points,_that.href,_that.detail,_that.started,_that.part,_that.claim,_that.canSkip);case _:
+return $default(_that.id,_that.kind,_that.state,_that.title,_that.points,_that.href,_that.detail,_that.started,_that.part,_that.claim,_that.follow,_that.canSkip);case _:
   throw StateError('Unexpected subclass');
 
 }
@@ -791,10 +1071,10 @@ return $default(_that.id,_that.kind,_that.state,_that.title,_that.points,_that.h
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String id, @JsonKey(unknownEnumValue: PathNodeKind.unknown)  PathNodeKind kind, @JsonKey(readValue: _stateUnlessUnknown, unknownEnumValue: PathNodeState.locked)  PathNodeState state,  String title,  int points, @JsonKey(readValue: _hrefUnlessUnknown)  String? href,  String? detail,  bool started,  NodePart? part,  NodeClaim? claim, @JsonKey(readValue: _canSkipUnlessUnknown)  bool canSkip)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String id, @JsonKey(unknownEnumValue: PathNodeKind.unknown)  PathNodeKind kind, @JsonKey(readValue: _stateUnlessUnknown, unknownEnumValue: PathNodeState.locked)  PathNodeState state,  String title,  int points, @JsonKey(readValue: _hrefUnlessUnknown)  String? href,  String? detail,  bool started,  NodePart? part,  NodeClaim? claim,  FollowProgress? follow, @JsonKey(readValue: _canSkipUnlessUnknown)  bool canSkip)?  $default,) {final _that = this;
 switch (_that) {
 case _PathNode() when $default != null:
-return $default(_that.id,_that.kind,_that.state,_that.title,_that.points,_that.href,_that.detail,_that.started,_that.part,_that.claim,_that.canSkip);case _:
+return $default(_that.id,_that.kind,_that.state,_that.title,_that.points,_that.href,_that.detail,_that.started,_that.part,_that.claim,_that.follow,_that.canSkip);case _:
   return null;
 
 }
@@ -806,7 +1086,7 @@ return $default(_that.id,_that.kind,_that.state,_that.title,_that.points,_that.h
 @JsonSerializable()
 
 class _PathNode extends PathNode {
-  const _PathNode({this.id = '', @JsonKey(unknownEnumValue: PathNodeKind.unknown) this.kind = PathNodeKind.unknown, @JsonKey(readValue: _stateUnlessUnknown, unknownEnumValue: PathNodeState.locked) this.state = PathNodeState.locked, this.title = '', this.points = 0, @JsonKey(readValue: _hrefUnlessUnknown) this.href, this.detail, this.started = false, this.part, this.claim, @JsonKey(readValue: _canSkipUnlessUnknown) this.canSkip = false}): super._();
+  const _PathNode({this.id = '', @JsonKey(unknownEnumValue: PathNodeKind.unknown) this.kind = PathNodeKind.unknown, @JsonKey(readValue: _stateUnlessUnknown, unknownEnumValue: PathNodeState.locked) this.state = PathNodeState.locked, this.title = '', this.points = 0, @JsonKey(readValue: _hrefUnlessUnknown) this.href, this.detail, this.started = false, this.part, this.claim, this.follow, @JsonKey(readValue: _canSkipUnlessUnknown) this.canSkip = false}): super._();
   factory _PathNode.fromJson(Map<String, dynamic> json) => _$PathNodeFromJson(json);
 
 /// Opaque and stable within the path: `<day>:lesson:<k>`, `<day>:<kind>`,
@@ -833,6 +1113,8 @@ class _PathNode extends PathNode {
 @override final  NodePart? part;
 /// Claim nodes only.
 @override final  NodeClaim? claim;
+/// The follow level only: its top learners followed, of how many.
+@override final  FollowProgress? follow;
 /// The one level Skip may be pressed on: today's open level (the gate's
 /// first node still holding the chain, in state today or rejected). On at
 /// most one node, and absent everywhere else. Forced false for an
@@ -853,16 +1135,16 @@ Map<String, dynamic> toJson() {
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is _PathNode&&(identical(other.id, id) || other.id == id)&&(identical(other.kind, kind) || other.kind == kind)&&(identical(other.state, state) || other.state == state)&&(identical(other.title, title) || other.title == title)&&(identical(other.points, points) || other.points == points)&&(identical(other.href, href) || other.href == href)&&(identical(other.detail, detail) || other.detail == detail)&&(identical(other.started, started) || other.started == started)&&(identical(other.part, part) || other.part == part)&&(identical(other.claim, claim) || other.claim == claim)&&(identical(other.canSkip, canSkip) || other.canSkip == canSkip));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is _PathNode&&(identical(other.id, id) || other.id == id)&&(identical(other.kind, kind) || other.kind == kind)&&(identical(other.state, state) || other.state == state)&&(identical(other.title, title) || other.title == title)&&(identical(other.points, points) || other.points == points)&&(identical(other.href, href) || other.href == href)&&(identical(other.detail, detail) || other.detail == detail)&&(identical(other.started, started) || other.started == started)&&(identical(other.part, part) || other.part == part)&&(identical(other.claim, claim) || other.claim == claim)&&(identical(other.follow, follow) || other.follow == follow)&&(identical(other.canSkip, canSkip) || other.canSkip == canSkip));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
-int get hashCode => Object.hash(runtimeType,id,kind,state,title,points,href,detail,started,part,claim,canSkip);
+int get hashCode => Object.hash(runtimeType,id,kind,state,title,points,href,detail,started,part,claim,follow,canSkip);
 
 @override
 String toString() {
-  return 'PathNode(id: $id, kind: $kind, state: $state, title: $title, points: $points, href: $href, detail: $detail, started: $started, part: $part, claim: $claim, canSkip: $canSkip)';
+  return 'PathNode(id: $id, kind: $kind, state: $state, title: $title, points: $points, href: $href, detail: $detail, started: $started, part: $part, claim: $claim, follow: $follow, canSkip: $canSkip)';
 }
 
 
@@ -873,11 +1155,11 @@ abstract mixin class _$PathNodeCopyWith<$Res> implements $PathNodeCopyWith<$Res>
   factory _$PathNodeCopyWith(_PathNode value, $Res Function(_PathNode) _then) = __$PathNodeCopyWithImpl;
 @override @useResult
 $Res call({
- String id,@JsonKey(unknownEnumValue: PathNodeKind.unknown) PathNodeKind kind,@JsonKey(readValue: _stateUnlessUnknown, unknownEnumValue: PathNodeState.locked) PathNodeState state, String title, int points,@JsonKey(readValue: _hrefUnlessUnknown) String? href, String? detail, bool started, NodePart? part, NodeClaim? claim,@JsonKey(readValue: _canSkipUnlessUnknown) bool canSkip
+ String id,@JsonKey(unknownEnumValue: PathNodeKind.unknown) PathNodeKind kind,@JsonKey(readValue: _stateUnlessUnknown, unknownEnumValue: PathNodeState.locked) PathNodeState state, String title, int points,@JsonKey(readValue: _hrefUnlessUnknown) String? href, String? detail, bool started, NodePart? part, NodeClaim? claim, FollowProgress? follow,@JsonKey(readValue: _canSkipUnlessUnknown) bool canSkip
 });
 
 
-@override $NodePartCopyWith<$Res>? get part;@override $NodeClaimCopyWith<$Res>? get claim;
+@override $NodePartCopyWith<$Res>? get part;@override $NodeClaimCopyWith<$Res>? get claim;@override $FollowProgressCopyWith<$Res>? get follow;
 
 }
 /// @nodoc
@@ -890,7 +1172,7 @@ class __$PathNodeCopyWithImpl<$Res>
 
 /// Create a copy of PathNode
 /// with the given fields replaced by the non-null parameter values.
-@override @pragma('vm:prefer-inline') $Res call({Object? id = null,Object? kind = null,Object? state = null,Object? title = null,Object? points = null,Object? href = freezed,Object? detail = freezed,Object? started = null,Object? part = freezed,Object? claim = freezed,Object? canSkip = null,}) {
+@override @pragma('vm:prefer-inline') $Res call({Object? id = null,Object? kind = null,Object? state = null,Object? title = null,Object? points = null,Object? href = freezed,Object? detail = freezed,Object? started = null,Object? part = freezed,Object? claim = freezed,Object? follow = freezed,Object? canSkip = null,}) {
   return _then(_PathNode(
 id: null == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
 as String,kind: null == kind ? _self.kind : kind // ignore: cast_nullable_to_non_nullable
@@ -902,7 +1184,8 @@ as String?,detail: freezed == detail ? _self.detail : detail // ignore: cast_nul
 as String?,started: null == started ? _self.started : started // ignore: cast_nullable_to_non_nullable
 as bool,part: freezed == part ? _self.part : part // ignore: cast_nullable_to_non_nullable
 as NodePart?,claim: freezed == claim ? _self.claim : claim // ignore: cast_nullable_to_non_nullable
-as NodeClaim?,canSkip: null == canSkip ? _self.canSkip : canSkip // ignore: cast_nullable_to_non_nullable
+as NodeClaim?,follow: freezed == follow ? _self.follow : follow // ignore: cast_nullable_to_non_nullable
+as FollowProgress?,canSkip: null == canSkip ? _self.canSkip : canSkip // ignore: cast_nullable_to_non_nullable
 as bool,
   ));
 }
@@ -930,6 +1213,18 @@ $NodeClaimCopyWith<$Res>? get claim {
 
   return $NodeClaimCopyWith<$Res>(_self.claim!, (value) {
     return _then(_self.copyWith(claim: value));
+  });
+}/// Create a copy of PathNode
+/// with the given fields replaced by the non-null parameter values.
+@override
+@pragma('vm:prefer-inline')
+$FollowProgressCopyWith<$Res>? get follow {
+    if (_self.follow == null) {
+    return null;
+  }
+
+  return $FollowProgressCopyWith<$Res>(_self.follow!, (value) {
+    return _then(_self.copyWith(follow: value));
   });
 }
 }

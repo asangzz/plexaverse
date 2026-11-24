@@ -3,6 +3,7 @@ import 'package:google_fonts/google_fonts.dart';
 
 import '../../../../core/ui/app_icons.dart';
 import '../../../../core/ui/zave/zave_kit.dart';
+import '../../../profile/domain/public_profile_words.dart';
 import '../../domain/weekly_article.dart';
 
 /// The italic serif accent the web planner uses for exactly three words:
@@ -43,10 +44,17 @@ class ArticleCard extends StatelessWidget {
     required this.onMarkPublished,
     required this.onNameNewsletter,
     required this.onSetReminder,
+    this.publicProfileOn = false,
     super.key,
   });
 
   final ArticleState state;
+
+  /// The user's public profile is published: "I published it" will put this
+  /// article's text on their page, so the card says so beside it
+  /// ([kPublicProfileArticleLine]) — the web's SundayArticlePanel does too.
+  final bool publicProfileOn;
+
   final VoidCallback onOpen;
 
   /// Copying needs the BODY, which the summary does not carry — the page
@@ -201,6 +209,14 @@ class ArticleCard extends StatelessWidget {
             onPressed: onCopy,
           ),
           if (!article.isPublished) ...<Widget>[
+            if (publicProfileOn) ...<Widget>[
+              SizedBox(height: ZaveSpace.md),
+              Text(
+                kPublicProfileArticleLine,
+                key: const ValueKey<String>('article-public-profile-line'),
+                style: ZaveType.caption,
+              ),
+            ],
             SizedBox(height: ZaveSpace.md),
             ZaveButton(
               label: 'I published it',

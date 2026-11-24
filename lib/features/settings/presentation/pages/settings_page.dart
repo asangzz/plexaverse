@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/ui/zave/zave_kit.dart';
 import '../../../preferences/domain/user_preferences.dart';
 import '../../application/settings_controllers.dart';
+import '../../../profile/presentation/widgets/public_profile_section.dart';
 import '../widgets/account_section.dart';
 import '../widgets/approval_channel_section.dart';
 import '../widgets/billing_section.dart';
@@ -115,6 +116,8 @@ class _SettingsBody extends StatelessWidget {
         const PlexaSection(),
         SizedBox(height: gap),
         ProfileSection(preferences: preferences),
+        SizedBox(height: gap),
+        const PublicProfileSection(),
         SizedBox(height: gap),
         BrandTypeSection(preferences: preferences),
         SizedBox(height: gap),

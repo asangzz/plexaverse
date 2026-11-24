@@ -583,13 +583,13 @@ class ContestTextLink extends StatelessWidget {
   }
 }
 
-/// "Back to the contest" — every level's way home. The web's `BackToPath`.
+/// "Back to your levels" — every level's way home. The web's `BackToPath`.
 class BackToPath extends StatelessWidget {
   const BackToPath({super.key});
 
   @override
   Widget build(BuildContext context) => _TextLink(
-    label: 'Back to the contest',
+    label: 'Back to your levels',
     icon: AppIcons.back,
     onTap: () => context.go(ZaveRoutes.contest),
   );
@@ -669,5 +669,6 @@ IconData contestKindIcon(PathNodeKind kind) => switch (kind) {
   PathNodeKind.planWeek => AppIcons.sparkle,
   PathNodeKind.article => AppIcons.article,
   PathNodeKind.video => AppIcons.play,
+  PathNodeKind.followWinners => AppIcons.personAdd,
   PathNodeKind.unknown => AppIcons.lock,
 };

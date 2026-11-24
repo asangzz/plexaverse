@@ -866,7 +866,11 @@ as String?,
 /// @nodoc
 mixin _$HallOfFameEntry {
 
- String get contestId; String get title; String get prizeTitle; int get rewardTopN;/// Instants — shown on the viewer's clock.
+ String get contestId;/// The admin's own name for the round. Never shown: a round is named by
+/// its dates ([lastDayKey]), as on the web (owner, 24 Nov 2026).
+ String get title;/// The round's last playable day, `YYYY-MM-DD` in its timezone — "the
+/// round that ended 23 February 2027". Empty from a server before it.
+ String get lastDayKey; String get prizeTitle; int get rewardTopN;/// Instants — shown on the viewer's clock.
  DateTime get finalisedAt; DateTime get featuredUntil;/// Only the winners who agreed to be featured: the placed ones in place
 /// order, then the unplaced in the server's shuffle.
  List<HallOfFameWinner> get winners;
@@ -882,16 +886,16 @@ $HallOfFameEntryCopyWith<HallOfFameEntry> get copyWith => _$HallOfFameEntryCopyW
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is HallOfFameEntry&&(identical(other.contestId, contestId) || other.contestId == contestId)&&(identical(other.title, title) || other.title == title)&&(identical(other.prizeTitle, prizeTitle) || other.prizeTitle == prizeTitle)&&(identical(other.rewardTopN, rewardTopN) || other.rewardTopN == rewardTopN)&&(identical(other.finalisedAt, finalisedAt) || other.finalisedAt == finalisedAt)&&(identical(other.featuredUntil, featuredUntil) || other.featuredUntil == featuredUntil)&&const DeepCollectionEquality().equals(other.winners, winners));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is HallOfFameEntry&&(identical(other.contestId, contestId) || other.contestId == contestId)&&(identical(other.title, title) || other.title == title)&&(identical(other.lastDayKey, lastDayKey) || other.lastDayKey == lastDayKey)&&(identical(other.prizeTitle, prizeTitle) || other.prizeTitle == prizeTitle)&&(identical(other.rewardTopN, rewardTopN) || other.rewardTopN == rewardTopN)&&(identical(other.finalisedAt, finalisedAt) || other.finalisedAt == finalisedAt)&&(identical(other.featuredUntil, featuredUntil) || other.featuredUntil == featuredUntil)&&const DeepCollectionEquality().equals(other.winners, winners));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
-int get hashCode => Object.hash(runtimeType,contestId,title,prizeTitle,rewardTopN,finalisedAt,featuredUntil,const DeepCollectionEquality().hash(winners));
+int get hashCode => Object.hash(runtimeType,contestId,title,lastDayKey,prizeTitle,rewardTopN,finalisedAt,featuredUntil,const DeepCollectionEquality().hash(winners));
 
 @override
 String toString() {
-  return 'HallOfFameEntry(contestId: $contestId, title: $title, prizeTitle: $prizeTitle, rewardTopN: $rewardTopN, finalisedAt: $finalisedAt, featuredUntil: $featuredUntil, winners: $winners)';
+  return 'HallOfFameEntry(contestId: $contestId, title: $title, lastDayKey: $lastDayKey, prizeTitle: $prizeTitle, rewardTopN: $rewardTopN, finalisedAt: $finalisedAt, featuredUntil: $featuredUntil, winners: $winners)';
 }
 
 
@@ -902,7 +906,7 @@ abstract mixin class $HallOfFameEntryCopyWith<$Res>  {
   factory $HallOfFameEntryCopyWith(HallOfFameEntry value, $Res Function(HallOfFameEntry) _then) = _$HallOfFameEntryCopyWithImpl;
 @useResult
 $Res call({
- String contestId, String title, String prizeTitle, int rewardTopN, DateTime finalisedAt, DateTime featuredUntil, List<HallOfFameWinner> winners
+ String contestId, String title, String lastDayKey, String prizeTitle, int rewardTopN, DateTime finalisedAt, DateTime featuredUntil, List<HallOfFameWinner> winners
 });
 
 
@@ -919,10 +923,11 @@ class _$HallOfFameEntryCopyWithImpl<$Res>
 
 /// Create a copy of HallOfFameEntry
 /// with the given fields replaced by the non-null parameter values.
-@pragma('vm:prefer-inline') @override $Res call({Object? contestId = null,Object? title = null,Object? prizeTitle = null,Object? rewardTopN = null,Object? finalisedAt = null,Object? featuredUntil = null,Object? winners = null,}) {
+@pragma('vm:prefer-inline') @override $Res call({Object? contestId = null,Object? title = null,Object? lastDayKey = null,Object? prizeTitle = null,Object? rewardTopN = null,Object? finalisedAt = null,Object? featuredUntil = null,Object? winners = null,}) {
   return _then(_self.copyWith(
 contestId: null == contestId ? _self.contestId : contestId // ignore: cast_nullable_to_non_nullable
 as String,title: null == title ? _self.title : title // ignore: cast_nullable_to_non_nullable
+as String,lastDayKey: null == lastDayKey ? _self.lastDayKey : lastDayKey // ignore: cast_nullable_to_non_nullable
 as String,prizeTitle: null == prizeTitle ? _self.prizeTitle : prizeTitle // ignore: cast_nullable_to_non_nullable
 as String,rewardTopN: null == rewardTopN ? _self.rewardTopN : rewardTopN // ignore: cast_nullable_to_non_nullable
 as int,finalisedAt: null == finalisedAt ? _self.finalisedAt : finalisedAt // ignore: cast_nullable_to_non_nullable
@@ -1013,10 +1018,10 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String contestId,  String title,  String prizeTitle,  int rewardTopN,  DateTime finalisedAt,  DateTime featuredUntil,  List<HallOfFameWinner> winners)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String contestId,  String title,  String lastDayKey,  String prizeTitle,  int rewardTopN,  DateTime finalisedAt,  DateTime featuredUntil,  List<HallOfFameWinner> winners)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _HallOfFameEntry() when $default != null:
-return $default(_that.contestId,_that.title,_that.prizeTitle,_that.rewardTopN,_that.finalisedAt,_that.featuredUntil,_that.winners);case _:
+return $default(_that.contestId,_that.title,_that.lastDayKey,_that.prizeTitle,_that.rewardTopN,_that.finalisedAt,_that.featuredUntil,_that.winners);case _:
   return orElse();
 
 }
@@ -1034,10 +1039,10 @@ return $default(_that.contestId,_that.title,_that.prizeTitle,_that.rewardTopN,_t
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String contestId,  String title,  String prizeTitle,  int rewardTopN,  DateTime finalisedAt,  DateTime featuredUntil,  List<HallOfFameWinner> winners)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String contestId,  String title,  String lastDayKey,  String prizeTitle,  int rewardTopN,  DateTime finalisedAt,  DateTime featuredUntil,  List<HallOfFameWinner> winners)  $default,) {final _that = this;
 switch (_that) {
 case _HallOfFameEntry():
-return $default(_that.contestId,_that.title,_that.prizeTitle,_that.rewardTopN,_that.finalisedAt,_that.featuredUntil,_that.winners);case _:
+return $default(_that.contestId,_that.title,_that.lastDayKey,_that.prizeTitle,_that.rewardTopN,_that.finalisedAt,_that.featuredUntil,_that.winners);case _:
   throw StateError('Unexpected subclass');
 
 }
@@ -1054,10 +1059,10 @@ return $default(_that.contestId,_that.title,_that.prizeTitle,_that.rewardTopN,_t
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String contestId,  String title,  String prizeTitle,  int rewardTopN,  DateTime finalisedAt,  DateTime featuredUntil,  List<HallOfFameWinner> winners)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String contestId,  String title,  String lastDayKey,  String prizeTitle,  int rewardTopN,  DateTime finalisedAt,  DateTime featuredUntil,  List<HallOfFameWinner> winners)?  $default,) {final _that = this;
 switch (_that) {
 case _HallOfFameEntry() when $default != null:
-return $default(_that.contestId,_that.title,_that.prizeTitle,_that.rewardTopN,_that.finalisedAt,_that.featuredUntil,_that.winners);case _:
+return $default(_that.contestId,_that.title,_that.lastDayKey,_that.prizeTitle,_that.rewardTopN,_that.finalisedAt,_that.featuredUntil,_that.winners);case _:
   return null;
 
 }
@@ -1069,11 +1074,16 @@ return $default(_that.contestId,_that.title,_that.prizeTitle,_that.rewardTopN,_t
 @JsonSerializable()
 
 class _HallOfFameEntry implements HallOfFameEntry {
-  const _HallOfFameEntry({this.contestId = '', this.title = '', this.prizeTitle = '', this.rewardTopN = 0, required this.finalisedAt, required this.featuredUntil, final  List<HallOfFameWinner> winners = const <HallOfFameWinner>[]}): _winners = winners;
+  const _HallOfFameEntry({this.contestId = '', this.title = '', this.lastDayKey = '', this.prizeTitle = '', this.rewardTopN = 0, required this.finalisedAt, required this.featuredUntil, final  List<HallOfFameWinner> winners = const <HallOfFameWinner>[]}): _winners = winners;
   factory _HallOfFameEntry.fromJson(Map<String, dynamic> json) => _$HallOfFameEntryFromJson(json);
 
 @override@JsonKey() final  String contestId;
+/// The admin's own name for the round. Never shown: a round is named by
+/// its dates ([lastDayKey]), as on the web (owner, 24 Nov 2026).
 @override@JsonKey() final  String title;
+/// The round's last playable day, `YYYY-MM-DD` in its timezone — "the
+/// round that ended 23 February 2027". Empty from a server before it.
+@override@JsonKey() final  String lastDayKey;
 @override@JsonKey() final  String prizeTitle;
 @override@JsonKey() final  int rewardTopN;
 /// Instants — shown on the viewer's clock.
@@ -1104,16 +1114,16 @@ Map<String, dynamic> toJson() {
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is _HallOfFameEntry&&(identical(other.contestId, contestId) || other.contestId == contestId)&&(identical(other.title, title) || other.title == title)&&(identical(other.prizeTitle, prizeTitle) || other.prizeTitle == prizeTitle)&&(identical(other.rewardTopN, rewardTopN) || other.rewardTopN == rewardTopN)&&(identical(other.finalisedAt, finalisedAt) || other.finalisedAt == finalisedAt)&&(identical(other.featuredUntil, featuredUntil) || other.featuredUntil == featuredUntil)&&const DeepCollectionEquality().equals(other._winners, _winners));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is _HallOfFameEntry&&(identical(other.contestId, contestId) || other.contestId == contestId)&&(identical(other.title, title) || other.title == title)&&(identical(other.lastDayKey, lastDayKey) || other.lastDayKey == lastDayKey)&&(identical(other.prizeTitle, prizeTitle) || other.prizeTitle == prizeTitle)&&(identical(other.rewardTopN, rewardTopN) || other.rewardTopN == rewardTopN)&&(identical(other.finalisedAt, finalisedAt) || other.finalisedAt == finalisedAt)&&(identical(other.featuredUntil, featuredUntil) || other.featuredUntil == featuredUntil)&&const DeepCollectionEquality().equals(other._winners, _winners));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
-int get hashCode => Object.hash(runtimeType,contestId,title,prizeTitle,rewardTopN,finalisedAt,featuredUntil,const DeepCollectionEquality().hash(_winners));
+int get hashCode => Object.hash(runtimeType,contestId,title,lastDayKey,prizeTitle,rewardTopN,finalisedAt,featuredUntil,const DeepCollectionEquality().hash(_winners));
 
 @override
 String toString() {
-  return 'HallOfFameEntry(contestId: $contestId, title: $title, prizeTitle: $prizeTitle, rewardTopN: $rewardTopN, finalisedAt: $finalisedAt, featuredUntil: $featuredUntil, winners: $winners)';
+  return 'HallOfFameEntry(contestId: $contestId, title: $title, lastDayKey: $lastDayKey, prizeTitle: $prizeTitle, rewardTopN: $rewardTopN, finalisedAt: $finalisedAt, featuredUntil: $featuredUntil, winners: $winners)';
 }
 
 
@@ -1124,7 +1134,7 @@ abstract mixin class _$HallOfFameEntryCopyWith<$Res> implements $HallOfFameEntry
   factory _$HallOfFameEntryCopyWith(_HallOfFameEntry value, $Res Function(_HallOfFameEntry) _then) = __$HallOfFameEntryCopyWithImpl;
 @override @useResult
 $Res call({
- String contestId, String title, String prizeTitle, int rewardTopN, DateTime finalisedAt, DateTime featuredUntil, List<HallOfFameWinner> winners
+ String contestId, String title, String lastDayKey, String prizeTitle, int rewardTopN, DateTime finalisedAt, DateTime featuredUntil, List<HallOfFameWinner> winners
 });
 
 
@@ -1141,10 +1151,11 @@ class __$HallOfFameEntryCopyWithImpl<$Res>
 
 /// Create a copy of HallOfFameEntry
 /// with the given fields replaced by the non-null parameter values.
-@override @pragma('vm:prefer-inline') $Res call({Object? contestId = null,Object? title = null,Object? prizeTitle = null,Object? rewardTopN = null,Object? finalisedAt = null,Object? featuredUntil = null,Object? winners = null,}) {
+@override @pragma('vm:prefer-inline') $Res call({Object? contestId = null,Object? title = null,Object? lastDayKey = null,Object? prizeTitle = null,Object? rewardTopN = null,Object? finalisedAt = null,Object? featuredUntil = null,Object? winners = null,}) {
   return _then(_HallOfFameEntry(
 contestId: null == contestId ? _self.contestId : contestId // ignore: cast_nullable_to_non_nullable
 as String,title: null == title ? _self.title : title // ignore: cast_nullable_to_non_nullable
+as String,lastDayKey: null == lastDayKey ? _self.lastDayKey : lastDayKey // ignore: cast_nullable_to_non_nullable
 as String,prizeTitle: null == prizeTitle ? _self.prizeTitle : prizeTitle // ignore: cast_nullable_to_non_nullable
 as String,rewardTopN: null == rewardTopN ? _self.rewardTopN : rewardTopN // ignore: cast_nullable_to_non_nullable
 as int,finalisedAt: null == finalisedAt ? _self.finalisedAt : finalisedAt // ignore: cast_nullable_to_non_nullable
@@ -1468,7 +1479,11 @@ mixin _$ShoutoutSettings {
 /// switched off.
  String? get linkedinUrl;/// Whether "I am 18 or older" is on record. False: the card asks for the
 /// tick with the link, and sends it (`adult: true`).
- bool get adultDeclared;
+ bool get adultDeclared;/// True only when the learner said yes under words that have since
+/// changed: [featured] is false, and the card says why
+/// (`kShoutoutStaleLine`) instead of looking as if the yes never saved.
+/// Absent from the server's answer otherwise.
+ bool get stale;
 /// Create a copy of ShoutoutSettings
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
@@ -1481,16 +1496,16 @@ $ShoutoutSettingsCopyWith<ShoutoutSettings> get copyWith => _$ShoutoutSettingsCo
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is ShoutoutSettings&&(identical(other.featured, featured) || other.featured == featured)&&(identical(other.linkedinUrl, linkedinUrl) || other.linkedinUrl == linkedinUrl)&&(identical(other.adultDeclared, adultDeclared) || other.adultDeclared == adultDeclared));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is ShoutoutSettings&&(identical(other.featured, featured) || other.featured == featured)&&(identical(other.linkedinUrl, linkedinUrl) || other.linkedinUrl == linkedinUrl)&&(identical(other.adultDeclared, adultDeclared) || other.adultDeclared == adultDeclared)&&(identical(other.stale, stale) || other.stale == stale));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
-int get hashCode => Object.hash(runtimeType,featured,linkedinUrl,adultDeclared);
+int get hashCode => Object.hash(runtimeType,featured,linkedinUrl,adultDeclared,stale);
 
 @override
 String toString() {
-  return 'ShoutoutSettings(featured: $featured, linkedinUrl: $linkedinUrl, adultDeclared: $adultDeclared)';
+  return 'ShoutoutSettings(featured: $featured, linkedinUrl: $linkedinUrl, adultDeclared: $adultDeclared, stale: $stale)';
 }
 
 
@@ -1501,7 +1516,7 @@ abstract mixin class $ShoutoutSettingsCopyWith<$Res>  {
   factory $ShoutoutSettingsCopyWith(ShoutoutSettings value, $Res Function(ShoutoutSettings) _then) = _$ShoutoutSettingsCopyWithImpl;
 @useResult
 $Res call({
- bool featured, String? linkedinUrl, bool adultDeclared
+ bool featured, String? linkedinUrl, bool adultDeclared, bool stale
 });
 
 
@@ -1518,11 +1533,12 @@ class _$ShoutoutSettingsCopyWithImpl<$Res>
 
 /// Create a copy of ShoutoutSettings
 /// with the given fields replaced by the non-null parameter values.
-@pragma('vm:prefer-inline') @override $Res call({Object? featured = null,Object? linkedinUrl = freezed,Object? adultDeclared = null,}) {
+@pragma('vm:prefer-inline') @override $Res call({Object? featured = null,Object? linkedinUrl = freezed,Object? adultDeclared = null,Object? stale = null,}) {
   return _then(_self.copyWith(
 featured: null == featured ? _self.featured : featured // ignore: cast_nullable_to_non_nullable
 as bool,linkedinUrl: freezed == linkedinUrl ? _self.linkedinUrl : linkedinUrl // ignore: cast_nullable_to_non_nullable
 as String?,adultDeclared: null == adultDeclared ? _self.adultDeclared : adultDeclared // ignore: cast_nullable_to_non_nullable
+as bool,stale: null == stale ? _self.stale : stale // ignore: cast_nullable_to_non_nullable
 as bool,
   ));
 }
@@ -1608,10 +1624,10 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( bool featured,  String? linkedinUrl,  bool adultDeclared)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( bool featured,  String? linkedinUrl,  bool adultDeclared,  bool stale)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _ShoutoutSettings() when $default != null:
-return $default(_that.featured,_that.linkedinUrl,_that.adultDeclared);case _:
+return $default(_that.featured,_that.linkedinUrl,_that.adultDeclared,_that.stale);case _:
   return orElse();
 
 }
@@ -1629,10 +1645,10 @@ return $default(_that.featured,_that.linkedinUrl,_that.adultDeclared);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( bool featured,  String? linkedinUrl,  bool adultDeclared)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( bool featured,  String? linkedinUrl,  bool adultDeclared,  bool stale)  $default,) {final _that = this;
 switch (_that) {
 case _ShoutoutSettings():
-return $default(_that.featured,_that.linkedinUrl,_that.adultDeclared);case _:
+return $default(_that.featured,_that.linkedinUrl,_that.adultDeclared,_that.stale);case _:
   throw StateError('Unexpected subclass');
 
 }
@@ -1649,10 +1665,10 @@ return $default(_that.featured,_that.linkedinUrl,_that.adultDeclared);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( bool featured,  String? linkedinUrl,  bool adultDeclared)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( bool featured,  String? linkedinUrl,  bool adultDeclared,  bool stale)?  $default,) {final _that = this;
 switch (_that) {
 case _ShoutoutSettings() when $default != null:
-return $default(_that.featured,_that.linkedinUrl,_that.adultDeclared);case _:
+return $default(_that.featured,_that.linkedinUrl,_that.adultDeclared,_that.stale);case _:
   return null;
 
 }
@@ -1664,7 +1680,7 @@ return $default(_that.featured,_that.linkedinUrl,_that.adultDeclared);case _:
 @JsonSerializable()
 
 class _ShoutoutSettings implements ShoutoutSettings {
-  const _ShoutoutSettings({this.featured = false, this.linkedinUrl, this.adultDeclared = false});
+  const _ShoutoutSettings({this.featured = false, this.linkedinUrl, this.adultDeclared = false, this.stale = false});
   factory _ShoutoutSettings.fromJson(Map<String, dynamic> json) => _$ShoutoutSettingsFromJson(json);
 
 /// Whether the `contest_shoutout` consent is in force. False until they
@@ -1676,6 +1692,11 @@ class _ShoutoutSettings implements ShoutoutSettings {
 /// Whether "I am 18 or older" is on record. False: the card asks for the
 /// tick with the link, and sends it (`adult: true`).
 @override@JsonKey() final  bool adultDeclared;
+/// True only when the learner said yes under words that have since
+/// changed: [featured] is false, and the card says why
+/// (`kShoutoutStaleLine`) instead of looking as if the yes never saved.
+/// Absent from the server's answer otherwise.
+@override@JsonKey() final  bool stale;
 
 /// Create a copy of ShoutoutSettings
 /// with the given fields replaced by the non-null parameter values.
@@ -1690,16 +1711,16 @@ Map<String, dynamic> toJson() {
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is _ShoutoutSettings&&(identical(other.featured, featured) || other.featured == featured)&&(identical(other.linkedinUrl, linkedinUrl) || other.linkedinUrl == linkedinUrl)&&(identical(other.adultDeclared, adultDeclared) || other.adultDeclared == adultDeclared));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is _ShoutoutSettings&&(identical(other.featured, featured) || other.featured == featured)&&(identical(other.linkedinUrl, linkedinUrl) || other.linkedinUrl == linkedinUrl)&&(identical(other.adultDeclared, adultDeclared) || other.adultDeclared == adultDeclared)&&(identical(other.stale, stale) || other.stale == stale));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
-int get hashCode => Object.hash(runtimeType,featured,linkedinUrl,adultDeclared);
+int get hashCode => Object.hash(runtimeType,featured,linkedinUrl,adultDeclared,stale);
 
 @override
 String toString() {
-  return 'ShoutoutSettings(featured: $featured, linkedinUrl: $linkedinUrl, adultDeclared: $adultDeclared)';
+  return 'ShoutoutSettings(featured: $featured, linkedinUrl: $linkedinUrl, adultDeclared: $adultDeclared, stale: $stale)';
 }
 
 
@@ -1710,7 +1731,7 @@ abstract mixin class _$ShoutoutSettingsCopyWith<$Res> implements $ShoutoutSettin
   factory _$ShoutoutSettingsCopyWith(_ShoutoutSettings value, $Res Function(_ShoutoutSettings) _then) = __$ShoutoutSettingsCopyWithImpl;
 @override @useResult
 $Res call({
- bool featured, String? linkedinUrl, bool adultDeclared
+ bool featured, String? linkedinUrl, bool adultDeclared, bool stale
 });
 
 
@@ -1727,11 +1748,12 @@ class __$ShoutoutSettingsCopyWithImpl<$Res>
 
 /// Create a copy of ShoutoutSettings
 /// with the given fields replaced by the non-null parameter values.
-@override @pragma('vm:prefer-inline') $Res call({Object? featured = null,Object? linkedinUrl = freezed,Object? adultDeclared = null,}) {
+@override @pragma('vm:prefer-inline') $Res call({Object? featured = null,Object? linkedinUrl = freezed,Object? adultDeclared = null,Object? stale = null,}) {
   return _then(_ShoutoutSettings(
 featured: null == featured ? _self.featured : featured // ignore: cast_nullable_to_non_nullable
 as bool,linkedinUrl: freezed == linkedinUrl ? _self.linkedinUrl : linkedinUrl // ignore: cast_nullable_to_non_nullable
 as String?,adultDeclared: null == adultDeclared ? _self.adultDeclared : adultDeclared // ignore: cast_nullable_to_non_nullable
+as bool,stale: null == stale ? _self.stale : stale // ignore: cast_nullable_to_non_nullable
 as bool,
   ));
 }

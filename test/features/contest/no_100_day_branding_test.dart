@@ -51,7 +51,7 @@ void main() {
       files().map((File f) => f.path),
       containsAll(<String>[
         'lib/features/contest/presentation/pages/contest_page.dart',
-        'lib/features/contest/presentation/widgets/contest_join_card.dart',
+        'lib/features/contest/presentation/pages/contest_follow_page.dart',
         'lib/features/contest/presentation/widgets/path/path_view.dart',
         'lib/features/contest/domain/contest_words.dart',
         'lib/features/contest/data/fake_contest_world.dart',

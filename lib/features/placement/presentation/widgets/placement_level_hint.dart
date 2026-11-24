@@ -7,8 +7,9 @@ import '../../../../core/ui/zave/zave_kit.dart';
 import '../../application/placement_controllers.dart';
 import '../../domain/placement_repository.dart';
 
-/// "Set your level first" — the contest's way into the placement test. A
-/// port of the web's `SetLevelHint.tsx`, for the contest's join card.
+/// "Set your level first" — the levels page's way into the placement test.
+/// A port of the web's `SetLevelHint.tsx`, over the path since 24 Nov 2026,
+/// when the join card it sat on was retired.
 ///
 /// ## Why the contest points here
 ///
@@ -19,12 +20,15 @@ import '../../domain/placement_repository.dart';
 ///
 /// ## Quiet, and gone once it has done its job
 ///
-/// A line and a ghost button: the join card's one primary button is the join,
+/// A line and a ghost button: the page's one primary button is the path's,
 /// and this must not compete with it. Nothing renders while the status loads,
 /// if it fails, or once the learner has a placement — a hint that flashes in
 /// and out, or nags someone already placed, is noise.
 class PlacementLevelHint extends ConsumerWidget {
-  const PlacementLevelHint({super.key});
+  const PlacementLevelHint({this.padding = EdgeInsets.zero, super.key});
+
+  /// Around the hint when it shows — nothing at all when it does not.
+  final EdgeInsetsGeometry padding;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -34,23 +38,26 @@ class PlacementLevelHint extends ConsumerWidget {
     final PlacementStatus? value = status.hasError ? null : status.value;
     if (value == null || value.hasPlacement) return const SizedBox.shrink();
 
-    return Semantics(
-      label: 'Your level',
-      container: true,
-      child: ZaveCard(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: <Widget>[
-            Text(
-              'Set your level first. It decides how hard your lessons are.',
-              style: ZaveType.body,
-            ),
-            SizedBox(height: ZaveSpace.lg),
-            ZaveButton(
-              label: 'Take the placement test',
-              onPressed: () => context.push(ZaveRoutes.placement),
-            ),
-          ],
+    return Padding(
+      padding: padding,
+      child: Semantics(
+        label: 'Your level',
+        container: true,
+        child: ZaveCard(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: <Widget>[
+              Text(
+                'Set your level first. It decides how hard your lessons are.',
+                style: ZaveType.body,
+              ),
+              SizedBox(height: ZaveSpace.lg),
+              ZaveButton(
+                label: 'Take the placement test',
+                onPressed: () => context.push(ZaveRoutes.placement),
+              ),
+            ],
+          ),
         ),
       ),
     );

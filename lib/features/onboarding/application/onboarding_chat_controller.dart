@@ -5,6 +5,7 @@ import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 import '../../../core/access/company_brand.dart';
 import '../../../core/platform/checkout.dart';
+import '../../contest/domain/levels_words.dart';
 import '../../preferences/application/preferences_controller.dart';
 import '../../pricing/application/billing_state_controller.dart';
 import '../../pricing/application/plan_checkout.dart';
@@ -51,10 +52,6 @@ class OnboardingChatController extends _$OnboardingChatController {
   /// finished rather than two separate ones.
   static const Duration _seqFirst = Duration(milliseconds: 600);
   static const Duration _seqNext = Duration(milliseconds: 950);
-
-  /// Web: the pause between "your dashboard is ready" and the redirect. Long
-  /// enough to read the line, short enough not to feel stuck.
-  static const Duration _handover = Duration(milliseconds: 1100);
 
   /// The shortest writing sample that tells us anything. Web: `< 20` is
   /// rejected with a nudge rather than saved.
@@ -1078,17 +1075,7 @@ class OnboardingChatController extends _$OnboardingChatController {
       return;
     }
     if (_disposed) return;
-
-    // That PATCH is what set `onboardingCompleted` on the server, and the
-    // router's onboarding gate reads exactly that field — out of a cache
-    // still holding the `false` it was built with. Without this, the chat
-    // says "taking you there now", flips the device flag, and the guard sends
-    // the user straight back into the chat they just finished.
-    //
-    // Dropped here rather than after the handover so the refetch overlaps the
-    // closing lines: by the time the gate flips the answer has usually landed,
-    // and when it has not the guard holds the splash instead of guessing.
-    ref.invalidate(preferencesControllerProvider);
+    state = state.copyWith(isFinalising: false);
 
     // The post-finalise fan-out: grounding, audience, week one, the roadmap and
     // topics. It runs in the background so the handover is not held up, but
@@ -1096,12 +1083,25 @@ class OnboardingChatController extends _$OnboardingChatController {
     // without the week plan the planner is.
     unawaited(_repo.seedAfterOnboarding(state.answers));
 
-    await _sendBot(
-      'Your dashboard is ready — taking you there now.',
-      const Duration(milliseconds: 600),
-    );
-    await Future<void>.delayed(_handover);
-    if (_disposed) return;
+    // Saved — and the save entered them in the running round of levels (the
+    // server's user-preferences.service). One last step says how the levels
+    // work; its chip is the way to Level 1 ([startLevels]).
+    await _enter(OnboardingStep.levelsIntro);
+  }
+
+  /// "Start Level 1" — onboarding is done and saved: straight to the levels.
+  ///
+  /// The PATCH set `onboardingCompleted` on the server, and the router's
+  /// onboarding gate reads exactly that field — out of a cache still holding
+  /// the `false` it was built with. So the cache is dropped HERE, on the tap,
+  /// and not at the save: dropped at the save, the refetch would flip the
+  /// gate and carry the learner off to the levels in the middle of Plexa
+  /// explaining them. While the refetch is in flight the guard holds the
+  /// splash rather than guessing, and the home it lands on is the levels.
+  Future<void> startLevels() async {
+    if (state.step != OnboardingStep.levelsIntro || state.completed) return;
+    _echoUser(kLevelsIntroStart);
+    ref.invalidate(preferencesControllerProvider);
     state = state.copyWith(completed: true);
   }
 

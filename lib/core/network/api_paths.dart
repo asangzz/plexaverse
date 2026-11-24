@@ -273,17 +273,11 @@ class ApiPaths {
   // These routes were added to the web repo by the same effort as this
   // section. Push that commit first, or every constant here is a 404.
 
-  /// GET `{overview}` — the current contest and the user's entry in it.
-  /// `overview` is null when there is no contest, and that is still a 200.
+  /// GET `{overview}` — the current round of levels and the user's entry in
+  /// it. `overview` is null when there is none, and that is still a 200.
+  /// Reading is joining (24 Nov 2026): the server enters the caller in the
+  /// running round before it answers, so `POST /contest/join` is not used.
   static const String contest = '/contest';
-
-  /// POST `{showName: bool}` — joins the running contest; answers `{ok}`.
-  ///
-  /// `showName` is the leaderboard consent (`contest_leaderboard`), recorded
-  /// server-side when true, so it must be a literal bool the user ticked:
-  /// anything else is 400 VALIDATION_FAILED. 409 NOT_RUNNING when there is
-  /// nothing to join.
-  static const String contestJoin = '/contest/join';
 
   /// GET `?limit=` — the board, bare inside `data`:
   /// `{revealed, revealsOn, revealDay, rows, viewer, self}`.
@@ -428,6 +422,36 @@ class ApiPaths {
   /// record); `{featured: false}` withdraws and erases the link. Answers the
   /// same shape. 400 VALIDATION_FAILED / INVALID_LINKEDIN_URL; 401.
   static const String contestShoutout = '/contest/shoutout';
+
+  /// GET `{view}` — "Follow last round's top learners" (owner, 24 Nov 2026):
+  /// the top learners in the level, each with step 1 (Follow on LinkedIn) and
+  /// step 2 (Follow on Plexaverse). POST `{handle, step: 'linkedin' |
+  /// 'plexaverse'}` records step 1 (self-reported) or re-checks step 2
+  /// against the follow row → `{result: {view, pointsApplied}}`. 400
+  /// VALIDATION_FAILED, 409 NOT_RUNNING, 404 NOT_ENTERED / NOT_IN_LEVEL. Never
+  /// LOCKED: the level is outside the one-at-a-time order.
+  static const String contestTaskFollowWinners =
+      '/contest/tasks/follow-winners';
+
+  // ── Public profile (www.plexaverse.com/<handle>) ────────────────────────
+  // Owner, 24 Nov 2026. The page itself is web-only; the app opens it.
+
+  /// GET → `{handle, published, url, suggestedHandle, adultDeclared,
+  /// cvReady}`; `?handle=x` adds `availability: {handle, available, problem,
+  /// message}`. PUT `{published: true, handle, adult?}` publishes (the
+  /// `public_profile` consent, in context) and `{published: false}`
+  /// unpublishes — the handle erased and its follows deleted. 400
+  /// HANDLE_INVALID / HANDLE_REQUIRED, 409 HANDLE_TAKEN, 403 ADULT_REQUIRED.
+  static const String profile = '/profile';
+
+  /// POST `{handle}` follows a public profile; DELETE `?handle=` unfollows.
+  /// Both idempotent → `{following, followers}`. 404 NOT_FOUND unless the
+  /// handle is a public profile; 400 SELF_FOLLOW.
+  static const String profileFollow = '/profile/follow';
+
+  /// GET → the caller's own ATS CV as `application/pdf` (not the envelope);
+  /// 422 CV_EMPTY when there is nothing to put in it.
+  static const String profileCv = '/profile/cv';
 
   // ── Placement ───────────────────────────────────────────────────────────
   // The placement test that sets the lesson level. Same vocabulary rule as the

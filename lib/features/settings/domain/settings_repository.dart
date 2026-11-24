@@ -178,9 +178,14 @@ abstract class SettingsRepository {
   /// The server refuses to withdraw a REQUIRED purpose while the account
   /// exists, because there would be no lawful basis to keep serving it — the
   /// honest answer is deletion, not a withdrawal nobody honours.
+  ///
+  /// [inContext] records where the affirmative act happened: `in_context`
+  /// for a feature's own card (the levels page's "Show my name to other
+  /// learners"), `settings` — the default — for the consent list.
   Future<ConsentLedger> setConsent({
     required String purpose,
     required bool granted,
+    bool inContext = false,
   });
 
   /// DPDP s11 — everything held about the user, as a JSON map the app can

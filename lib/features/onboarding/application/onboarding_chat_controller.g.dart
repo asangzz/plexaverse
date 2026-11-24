@@ -99,7 +99,7 @@ final class OnboardingChatControllerProvider
 }
 
 String _$onboardingChatControllerHash() =>
-    r'4b948f0f892b1d0f3b666a46e5a8640308ed71be';
+    r'2bb80cc26fa5dba93aa7b51d6e3439f39cfc98a6';
 
 /// Drives the onboarding conversation.
 ///

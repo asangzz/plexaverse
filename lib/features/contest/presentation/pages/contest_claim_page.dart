@@ -81,7 +81,7 @@ class ContestClaimPage extends ConsumerWidget {
     }
     if (data.status != ContestPathStatus.running) {
       return Text(
-        'Links are claimed while the contest runs, by its entrants.',
+        'Links are claimed while a round of levels runs. Open your levels page first.',
         style: ContestType.meta,
       );
     }

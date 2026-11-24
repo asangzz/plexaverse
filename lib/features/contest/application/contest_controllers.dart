@@ -31,10 +31,26 @@ Future<ContestOverview?> contestOverview(Ref ref) {
   return ref.watch(contestRepositoryProvider).fetchOverview();
 }
 
-/// `GET /contest/path` — this week's levels and their states.
+/// `GET /contest/path` — this week's levels and their states, the follow
+/// level included.
 @riverpod
 Future<ContestPath> contestPath(Ref ref) =>
     ref.watch(contestRepositoryProvider).fetchPath();
+
+/// `GET /contest/tasks/follow-winners` — "Follow last round's top learners":
+/// who is in the level and each one's two steps. A pure read; everyone in it
+/// agreed to be featured and published a profile, checked on every read, so
+/// it is held only while the screen shows it.
+@riverpod
+class FollowWinners extends _$FollowWinners {
+  @override
+  Future<FollowWinnersView> build() =>
+      ref.watch(contestRepositoryProvider).fetchFollowWinners();
+
+  /// The level as a step's answer left it — the server's, never a guess.
+  void settle(FollowWinnersView view) =>
+      state = AsyncData<FollowWinnersView>(view);
+}
 
 /// `GET /contest/board?limit=` — the full board asks for 50, the rail's mini
 /// board for `max(rewardTopN, 3)`.
@@ -117,6 +133,7 @@ void refreshContestStanding(ContestInvalidate invalidate) {
   invalidate(contestBoardProvider);
   invalidate(todayQuizProvider);
   invalidate(contestConsistencyProvider);
+  invalidate(followWinnersProvider);
 }
 
 /// Whether today's level of a kind waits on an earlier one — read off the
@@ -173,8 +190,9 @@ String? contestLevelRoute(PathNode node) {
     PathNodeKind.feedComments => ZaveRoutes.contestFeedComments,
     PathNodeKind.weeklyInvites => ZaveRoutes.contestInvites,
     PathNodeKind.planWeek => ZaveRoutes.contestPlan,
-    // The Connection Sprint, in contest mode.
+    // The Connection Sprint, in levels mode.
     PathNodeKind.connectLeaders => '${ZaveRoutes.connections}?from=contest',
+    PathNodeKind.followWinners => ZaveRoutes.contestFollow,
     PathNodeKind.article || PathNodeKind.video => switch (node.claim) {
       final NodeClaim claim => contestClaimRoute(claim.kind, claim.occurrence),
       null => null,
@@ -255,6 +273,9 @@ void contestResumeRefresh(Ref ref) {
       ref.invalidate(todayQuizProvider);
       ref.invalidate(contestConsistencyProvider);
       ref.invalidate(contestFeaturedProvider);
+      // A top learner can withdraw, or the day turn over, while the learner
+      // is away following them on LinkedIn.
+      ref.invalidate(followWinnersProvider);
     },
   );
   ref.onDispose(listener.dispose);

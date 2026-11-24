@@ -7,14 +7,15 @@ import '../../../../core/platform/link_opening.dart';
 import '../../../../core/responsive/screen_util.dart';
 import '../../../../core/ui/app_icons.dart';
 import '../../../../core/ui/zave/zave_kit.dart';
+import '../../domain/levels_words.dart';
 import 'contest_kit.dart';
 
-/// A line that opens one of our own WEB pages — the contest's rules, or its
-/// removed claims and their appeals — in the browser.
+/// A line that opens one of our own WEB pages — the levels' rules, or the
+/// learner's removed claims and their appeals — in the browser.
 ///
 /// The link words are periwinkle with the open-outside glyph; [rest] carries
 /// on the sentence in the meta tone, so the line reads exactly as the web's
-/// does ("Contest rules — how XP works, …"). The whole line is the tap
+/// does ("How levels, XP and shoutouts work — how XP works, …"). The whole line is the tap
 /// target, at least 48 tall, and says it is a link. A page that cannot be
 /// opened is copied instead, and the learner is told so — in words about a
 /// page, not about LinkedIn, which `openLinkAndReport` would say.
@@ -103,16 +104,18 @@ class ContestWebLink extends ConsumerWidget {
   }
 }
 
-/// The way to the published rules, from every state of the contest page
-/// that shows a contest. The web's `RulesLine`.
+/// The way to the published rules, from every state of the levels page.
+/// The web's `RulesLine`.
 class ContestRulesLine extends StatelessWidget {
   const ContestRulesLine({super.key});
 
   @override
   Widget build(BuildContext context) => const ContestWebLink(
-    label: 'Contest rules',
-    rest: ' — how XP works, what the prize is, and how claims are checked.',
-    url: plexaverseContestRulesUrl,
+    label: kLevelsRulesTitle,
+    rest:
+        ' — how XP works, how the top learners are chosen, and how claims '
+        'are checked.',
+    url: plexaverseLevelsRulesUrl,
   );
 }
 
@@ -134,7 +137,7 @@ class ContestAppealLine extends StatelessWidget {
         Text('${before}Think we got it wrong?', style: ContestType.meta),
         const ContestWebLink(
           label: 'Appeal the decision',
-          url: plexaverseContestAppealsUrl,
+          url: plexaverseLevelsAppealsUrl,
         ),
       ],
     );

@@ -77,7 +77,8 @@ String feedProblemText(FeedCommentLinkProblem problem) => switch (problem) {
 /// The line under the header when there is no task to do.
 String feedUnavailableLine(FeedCommentsReason? reason) => switch (reason) {
   FeedCommentsReason.notJoined =>
-    'This task is for contest entrants. Join on the contest page; it is free.',
-  FeedCommentsReason.notRunning => 'This task runs while the contest does.',
+    'Open your levels page once and this level opens here. There is nothing to join.',
+  FeedCommentsReason.notRunning =>
+    'This level runs while a round of levels does. The next round starts soon.',
   _ => 'There is no comments task today.',
 };

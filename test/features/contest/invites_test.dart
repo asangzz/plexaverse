@@ -326,8 +326,8 @@ void main() {
       );
       expect(
         find.text(
-          'This task is for contest entrants. Join on the contest page; it is '
-          'free.',
+          'Open your levels page once and this level opens here. There is '
+          'nothing to join.',
         ),
         findsOneWidget,
       );

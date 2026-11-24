@@ -37,9 +37,16 @@ class ZaveRoutes {
   /// it.
   static const String dashboard = '/dashboard';
 
-  /// The Business English contest: the daily path, the standings and the
-  /// week's LinkedIn tasks. The web's signed-in home since 11 Nov 2026.
+  /// The learner's levels: the daily path, XP, the top learners and the
+  /// week's LinkedIn tasks. The web's signed-in home since 11 Nov 2026, at
+  /// `/levels` there since 24 Nov 2026. The app's own address keeps the old
+  /// word: a route is code, and no learner reads it.
   static const String contest = '/contest';
+
+  /// The web's address of [contest] since 24 Nov 2026, and the prefix of
+  /// every notification link it sends since (`/levels/lesson`,
+  /// `/levels/appeals`, …). Only a redirect here — see [levelsAlias].
+  static const String levels = '/levels';
 
   /// The 1000-day journey as a calendar, with the follower and connection
   /// check-ins — the web's "LinkedIn Personal Branding Roadmap", which hands
@@ -163,6 +170,34 @@ class ZaveRoutes {
   /// Claims the article or a video by the link of its post. Reads `kind` and
   /// `occurrence` from the query.
   static const String contestClaim = '/contest/claim';
+
+  /// "Follow last round's top learners" (24 Nov 2026): follow each of them
+  /// on LinkedIn and on Plexaverse.
+  static const String contestFollow = '/contest/follow';
+
+  /// Where a web `/levels…` address opens in the app: the level's own screen
+  /// for the ones the app has (query kept — `?part=2` on the lesson), the
+  /// levels page for the rest (the rules and the appeals are web pages the
+  /// levels page links to).
+  static String levelsAlias(Uri uri) {
+    final List<String> segments = uri.pathSegments;
+    final String section = segments.length > 1 ? segments[1] : '';
+    const Set<String> mirrored = <String>{
+      'lesson',
+      'quiz',
+      'comment',
+      'feed-comments',
+      'invites',
+      'plan',
+      'claim',
+      'follow',
+    };
+    if (segments.length != 2 || !mirrored.contains(section)) return contest;
+    return Uri(
+      path: '$contest/$section',
+      queryParameters: uri.queryParameters.isEmpty ? null : uri.queryParameters,
+    ).toString();
+  }
 
   /// The placement test that sets the lesson level.
   static const String placement = '/placement';

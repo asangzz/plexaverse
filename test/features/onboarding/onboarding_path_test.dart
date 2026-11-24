@@ -1,4 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:plexaverse/features/contest/domain/levels_words.dart';
 import 'package:plexaverse/features/onboarding/domain/onboarding_answers.dart';
 import 'package:plexaverse/features/onboarding/domain/onboarding_inputs.dart';
 import 'package:plexaverse/features/onboarding/domain/onboarding_step.dart';
@@ -24,6 +25,8 @@ void main() {
           OnboardingStep.cvUpload,
         OnboardingStep.styleChoice,
         OnboardingStep.finish,
+        // The web's order lists end on `levels-intro` (24 Nov 2026).
+        OnboardingStep.levelsIntro,
       ];
 
   const List<(bool, bool)> variants = <(bool, bool)>[
@@ -34,13 +37,25 @@ void main() {
   ];
 
   group('progress', () {
-    test('every path reaches 100% at finish', () {
+    test('every path reaches 100% on the levels intro, its last step', () {
       for (final (bool c, bool b) in variants) {
         expect(
-          OnboardingStep.finish.progressPercent(company: c, brandStep: b),
+          OnboardingStep.levelsIntro.progressPercent(company: c, brandStep: b),
           100,
         );
+        expect(
+          OnboardingStep.finish.progressPercent(company: c, brandStep: b),
+          lessThan(100),
+        );
       }
+    });
+
+    test('the levels intro says the web’s words, and answers with a chip', () {
+      expect(
+        OnboardingStep.levelsIntro.botLines(firstName: 'Riya', company: false),
+        kLevelsIntroLines,
+      );
+      expect(OnboardingStep.levelsIntro.lane(), OnboardingLane.reply);
     });
 
     test('matches the web: (index + 1) / path length, never below 5%', () {

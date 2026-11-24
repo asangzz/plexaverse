@@ -24,17 +24,31 @@ sealed class ContestRefusal implements Exception {
   String toString() => '$runtimeType: $message';
 }
 
-/// NOT_ENTERED: signed in, not a participant. Join first.
+/// NOT_ENTERED: signed in, with no place in the running round. There is no
+/// join step any more (owner, 24 Nov 2026): reading the levels page enters
+/// the learner, so the cure is to open it.
 final class ContestNotEntered extends ContestRefusal {
-  const ContestNotEntered([super.message = 'Join the contest first.']);
+  const ContestNotEntered([
+    super.message = 'Open your levels page first: today’s levels open there.',
+  ]);
 }
 
-/// NOT_RUNNING: no contest is running — none at all, one not started, or
-/// one over. From join it means there is nothing to join, which the join
-/// card says in a neutral tone rather than as a failure.
+/// NOT_RUNNING: no round of levels is running — none at all, one not
+/// started, or one over. Said in a neutral tone: the next round starts on
+/// its own.
 final class ContestNotRunning extends ContestRefusal {
   const ContestNotRunning([
-    super.message = 'There is no contest running right now.',
+    super.message =
+        'No round of levels is running right now. The next one starts soon.',
+  ]);
+}
+
+/// NOT_IN_LEVEL: that learner is not one of the top learners the follow
+/// level shows (yourself included). The cure is to re-read the level.
+final class ContestNotInLevel extends ContestRefusal {
+  const ContestNotInLevel([
+    super.message =
+        'That learner is not one of the top learners in this level.',
   ]);
 }
 

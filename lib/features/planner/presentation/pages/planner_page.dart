@@ -11,6 +11,7 @@ import '../../../../core/ui/app_icons.dart';
 import '../../../../core/ui/widgets/open_link.dart';
 import '../../../../core/ui/zave/zave_kit.dart';
 import '../../../posts/application/post_library_controllers.dart';
+import '../../../profile/application/profile_controllers.dart';
 import '../../../posts/domain/library_post.dart';
 import '../../application/planner_controller.dart';
 import '../../domain/display_phase.dart';
@@ -160,14 +161,33 @@ class _PlannerBody extends StatelessWidget {
             loading: () =>
                 const ZaveShimmer(child: ZaveSkeleton.block(height: 180)),
             error: (Object e, StackTrace _) => const SizedBox.shrink(),
-            data: (ArticleState a) => ArticleCard(
-              state: a,
-              onOpen: () => _openArticle(context, ref, a),
-              onCopy: () => _copyArticle(context, ref, a),
-              onMarkPublished: () =>
-                  ref.read(articleControllerProvider.notifier).markPublished(),
-              onNameNewsletter: () => _nameNewsletter(context, ref, a),
-              onSetReminder: () => _setReminder(context, ref, a),
+            data: (ArticleState a) => Consumer(
+              builder: (BuildContext context, WidgetRef ref, Widget? _) {
+                // Read only while "I published it" is on offer: a published
+                // public profile shows the article's prepared text once it is
+                // marked published, and the card says so (the web's
+                // PUBLIC_PROFILE_ARTICLE_LINE). A failed read draws no line.
+                final bool unpublished =
+                    a.article != null && !a.article!.isPublished;
+                final bool publicProfileOn =
+                    unpublished &&
+                    ref
+                            .watch(publicProfileSettingsControllerProvider)
+                            .value
+                            ?.published ==
+                        true;
+                return ArticleCard(
+                  state: a,
+                  publicProfileOn: publicProfileOn,
+                  onOpen: () => _openArticle(context, ref, a),
+                  onCopy: () => _copyArticle(context, ref, a),
+                  onMarkPublished: () => ref
+                      .read(articleControllerProvider.notifier)
+                      .markPublished(),
+                  onNameNewsletter: () => _nameNewsletter(context, ref, a),
+                  onSetReminder: () => _setReminder(context, ref, a),
+                );
+              },
             ),
           ),
           analytics: _WeekAnalytics(plan: plan, tileWidth: _tileWidth),

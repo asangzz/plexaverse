@@ -114,7 +114,7 @@ class _Unavailable extends StatelessWidget {
           Align(
             alignment: Alignment.centerLeft,
             child: ContestGhostPill(
-              label: 'See the contest',
+              label: 'Open your levels',
               onPressed: () => context.go(ZaveRoutes.contest),
             ),
           ),

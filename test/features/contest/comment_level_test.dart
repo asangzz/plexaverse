@@ -689,8 +689,8 @@ void main() {
         in <(CommentLevelReason?, String)>[
           (CommentLevelReason.notToday, 'No comment level today'),
           (CommentLevelReason.noPost, 'No post to comment on today'),
-          (CommentLevelReason.notRunning, 'The contest is not running'),
-          (CommentLevelReason.notJoined, 'Join the contest first'),
+          (CommentLevelReason.notRunning, 'New levels are on the way'),
+          (CommentLevelReason.notJoined, 'Open your levels first'),
           (CommentLevelReason.writing, 'Writing today’s comment'),
           (null, 'Today’s comment is not ready'),
         ]) {
@@ -704,7 +704,7 @@ void main() {
         );
         expect(find.text(title), findsOneWidget);
         expect(
-          find.bySemanticsLabel('See the contest'),
+          find.bySemanticsLabel('Open your levels'),
           reason == CommentLevelReason.notJoined
               ? findsOneWidget
               : findsNothing,

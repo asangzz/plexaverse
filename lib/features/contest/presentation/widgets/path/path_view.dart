@@ -165,7 +165,7 @@ class _PathViewState extends ConsumerState<PathView> {
       rows.add(_DayDivider(day));
       final List<PathNode> parts = lessonPartsOf(day);
       final String? lastPart = parts.isEmpty ? null : parts.last.id;
-      for (final PathNode node in day.nodes) {
+      for (final (int i, PathNode node) in day.nodes.indexed) {
         final double k = windAt(step++);
         final bool isCurrent = node.id == current;
         final bool open = node.id == openId;
@@ -174,6 +174,7 @@ class _PathViewState extends ConsumerState<PathView> {
             key: isCurrent ? _current : null,
             node: node,
             dayName: pathDaySpoken(day),
+            level: i + 1,
             offset: amp * k,
             current: isCurrent,
             progress: isCurrent && lesson != null
@@ -198,6 +199,7 @@ class _PathViewState extends ConsumerState<PathView> {
               child: NodeCard(
                 node: node,
                 dayName: pathDayName(day),
+                level: i + 1,
                 onOpen: () => _open(node),
                 onSkip: () => _skip(node),
                 skipping: skip.busyNodeId == node.id,
@@ -346,6 +348,7 @@ class _NodeRow extends StatelessWidget {
   const _NodeRow({
     required this.node,
     required this.dayName,
+    required this.level,
     required this.offset,
     required this.current,
     required this.progress,
@@ -358,6 +361,9 @@ class _NodeRow extends StatelessWidget {
 
   final PathNode node;
   final String dayName;
+
+  /// Its number in the day: Level 1, Level 2 …
+  final int level;
   final double offset;
   final bool current;
   final double progress;
@@ -376,6 +382,7 @@ class _NodeRow extends StatelessWidget {
       child: PathNodeButton(
         node: node,
         dayName: dayName,
+        level: level,
         current: current,
         progress: progress,
         expanded: expanded,

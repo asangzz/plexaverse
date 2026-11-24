@@ -333,17 +333,17 @@ class _NothingToAnswer extends StatelessWidget {
     // know, reads as the quietest one.
     final (String title, String? line) = switch (quiz.status) {
       QuizStatus.noContest => (
-        'No contest right now',
-        'The daily lesson runs inside a contest. The next one will show up on the contest page.',
+        'New levels are on the way',
+        'The levels reset between rounds, and the next round starts soon. Its lessons will show up on your levels page.',
       ),
-      QuizStatus.notJoined => ('Join the contest first', null),
+      QuizStatus.notJoined => ('Open your levels first', null),
       QuizStatus.upcoming => (
         'Not open yet',
-        'The daily lesson opens on day 1 of the contest.',
+        'The daily lesson opens on the first day of the round.',
       ),
       QuizStatus.ended => (
-        'The contest has ended',
-        'The daily lesson closed with it. The final standings are on the contest page.',
+        'This round has ended',
+        'The daily lesson closed with it. The next round’s lessons will show up on your levels page.',
       ),
       QuizStatus.noQuizToday ||
       QuizStatus.ready => ('No lesson today', noQuizLine(quiz)),
@@ -367,7 +367,7 @@ class _NothingToAnswer extends StatelessWidget {
           SizedBox(height: ZaveSpace.xl),
           _Hug(
             ContestGhostPill(
-              label: 'See the contest',
+              label: 'Open your levels',
               onPressed: () => context.go(ZaveRoutes.contest),
             ),
           ),
@@ -377,30 +377,27 @@ class _NothingToAnswer extends StatelessWidget {
   }
 }
 
-/// Why someone who has not joined cannot take the lesson, and when they
-/// could.
+/// Why someone with no place in the round cannot take the lesson yet.
 ///
-/// "Opens straight away" is true only of a running contest; a non-entrant of
-/// one that has not started is sent here too (the server answers not_joined
-/// before it looks at the phase). The lesson read does not carry the phase,
-/// so the overview — the contest page's own read — decides.
+/// There is no join step (owner, 24 Nov 2026): opening the levels page
+/// enters the learner. Someone who arrives here first — from an old link —
+/// is sent there. The overview — the same read the levels page makes —
+/// decides the line, and its read is itself what enters them.
 class _NotJoinedLine extends ConsumerWidget {
   const _NotJoinedLine();
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final ContestOverview? overview = ref.watch(contestOverviewProvider).value;
-    String line = 'The daily lesson is for entrants, and joining is free.';
-    if (overview?.phase == ContestPhase.running) {
-      line =
-          'The daily lesson is for entrants. Joining is free, and the lesson opens straight away.';
-    } else if (overview != null && overview.phase == ContestPhase.upcoming) {
-      // Day 1's calendar date as the contest counts it — never the start
+    String line =
+        'Open your levels page once and today’s lesson opens here. There is nothing to join.';
+    if (overview != null && overview.phase == ContestPhase.upcoming) {
+      // Day 1's calendar date as the round counts it — never the start
       // instant through this phone's clock, which reads a day early west of
-      // the contest's timezone.
+      // the round's timezone.
       final String starts = dayKeyShort(overview.contest.firstDayKey);
       line =
-          'The daily lesson is for entrants. Joining is free, and the lesson opens on day 1 of the contest${starts.isEmpty ? '' : ', $starts'}.';
+          'Your levels open on the first day of the round${starts.isEmpty ? '' : ', $starts'}. There is nothing to join.';
     }
     return Text(line, style: ContestType.lead);
   }

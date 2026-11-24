@@ -249,7 +249,8 @@ class _Completion extends ConsumerWidget {
         view.reason == PlanWeekReason.notToday
             ? 'You mark this week planned on Sunday, its first day, as that '
                   'day’s level.'
-            : 'Marking the week planned is a contest level, for its entrants.',
+            : 'Marking the week planned is one of your levels. Open your levels '
+                  'page first.',
         style: ContestType.meta,
       );
     }

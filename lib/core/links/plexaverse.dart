@@ -25,17 +25,23 @@ const String plexaverseTermsUrl = '$_site/terms';
 /// open it is the gap this closes.
 const String plexaversePrivacyUrl = '$_site/privacy';
 
-/// The contest's published rules — every figure, what the prize is, how
-/// claims are checked and how to appeal. `app/(legal)/contest/rules` on
-/// the web (LEGAL_CONSISTENCY_MEMO §3.A.5).
+/// The published rules of the levels — every figure, how the top learners
+/// are chosen, what a shoutout is, how claims are checked and how to appeal.
+/// `app/(legal)/levels/rules` on the web, titled "How levels, XP and
+/// shoutouts work" (LEGAL_CONSISTENCY_MEMO §3.A.5).
 ///
 /// Opened on the web rather than rebuilt here: every number on that page is
-/// read from the contest's own stored rules, and a second copy in the app
+/// read from the round's own stored rules, and a second copy in the app
 /// would be the one that drifts. The page is public: the browser it opens
-/// in has no web session.
-const String plexaverseContestRulesUrl = '$_site/contest/rules';
+/// in has no web session. (`/contest/rules`, which builds before 24 Nov 2026
+/// open, is a permanent redirect to it.)
+const String plexaverseLevelsRulesUrl = '$_site/levels/rules';
 
-/// The contest's removed claims and their appeals — where a revoke notice
+/// The learner's removed claims and their appeals — where a revoke notice
 /// leads (`CONTEST_APPEALS_PATH` on the web). The app has no appeal form of
 /// its own: a revoke is appealed there, once, within its window.
-const String plexaverseContestAppealsUrl = '$_site/contest/appeals';
+const String plexaverseLevelsAppealsUrl = '$_site/levels/appeals';
+
+/// Someone's public Plexaverse profile (owner, 24 Nov 2026) — the page at
+/// `www.plexaverse.com/<handle>`. Built only from a handle the server sent.
+String plexaverseProfileUrl(String handle) => '$_site/$handle';

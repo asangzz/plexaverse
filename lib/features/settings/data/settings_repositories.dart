@@ -6,6 +6,8 @@ import '../../../core/network/api_paths.dart';
 import '../../../core/network/dio_client.dart';
 import '../../../core/platform/web_auth.dart';
 // Re-exports `UserPreferences` alongside the Settings entities.
+import '../../contest/domain/shoutout_words.dart';
+import '../../profile/domain/public_profile_words.dart';
 import '../domain/settings_repository.dart';
 import 'package:dio/dio.dart';
 import '../../../core/consent/notice.dart';
@@ -457,10 +459,15 @@ class ApiSettingsRepository implements SettingsRepository {
   Future<ConsentLedger> setConsent({
     required String purpose,
     required bool granted,
+    bool inContext = false,
   }) => _readLedger(
     () => _client.patch<Map<String, dynamic>>(
       ApiPaths.userConsent,
-      data: <String, dynamic>{'purpose': purpose, 'granted': granted},
+      data: <String, dynamic>{
+        'purpose': purpose,
+        'granted': granted,
+        if (inContext) 'source': 'in_context',
+      },
     ),
   );
 
@@ -867,6 +874,31 @@ class FakeSettingsRepository implements SettingsRepository {
           required_: false,
           stale: false,
         ),
+        // The levels' and the public profile's, in the web's PURPOSE_LABELS.
+        ConsentPurposeState(
+          purpose: 'contest_leaderboard',
+          label:
+              'Show my name to other learners: your name and photo beside '
+              'your rank and XP among the top learners. Leave it off and you '
+              'still earn XP and a place — you are shown as "Learner"',
+          granted: false,
+          required_: false,
+          stale: false,
+        ),
+        ConsentPurposeState(
+          purpose: kShoutoutPurpose,
+          label: kShoutoutConsentText,
+          granted: false,
+          required_: false,
+          stale: false,
+        ),
+        ConsentPurposeState(
+          purpose: kPublicProfilePurpose,
+          label: kPublicProfileConsentText,
+          granted: false,
+          required_: false,
+          stale: false,
+        ),
       ],
     );
   }
@@ -875,6 +907,7 @@ class FakeSettingsRepository implements SettingsRepository {
   Future<ConsentLedger> setConsent({
     required String purpose,
     required bool granted,
+    bool inContext = false,
   }) async {
     await Future<void>.delayed(_latency);
     final ConsentLedger current = await fetchConsents();
