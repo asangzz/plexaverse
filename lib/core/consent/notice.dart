@@ -11,4 +11,13 @@
 ///
 /// So when the notice changes, this constant and the server's move together,
 /// and older installs are told to update rather than allowed to proceed.
-const String kNoticeVersion = '2026-10-22';
+/// `test/core/consent/notice_version_test.dart` reads the web's constant from
+/// the monorepo and fails when the two differ.
+///
+/// 2026-10-31 (was 2026-10-22, which left every email sign-up from the app
+/// refused for weeks): that notice added Meta (WhatsApp Cloud API) as a
+/// recipient and `whatsapp_notifications` as a purpose. Both are asked in
+/// context on the Settings connect card, never at sign-up, so this build's
+/// sign-up text is still true of that notice, and the link it shows opens
+/// the live web notice.
+const String kNoticeVersion = '2026-10-31';
