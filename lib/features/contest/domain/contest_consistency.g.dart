@@ -95,6 +95,7 @@ _ConsistencyView _$ConsistencyViewFromJson(Map<String, dynamic> json) =>
               ?.map((e) => ConsistencyDay.fromJson(e as Map<String, dynamic>))
               .toList() ??
           const <ConsistencyDay>[],
+      rawPrice: _mapOrNull(json['price']),
     );
 
 Map<String, dynamic> _$ConsistencyViewToJson(_ConsistencyView instance) =>
@@ -116,6 +117,7 @@ Map<String, dynamic> _$ConsistencyViewToJson(_ConsistencyView instance) =>
       'scoringPaused': instance.scoringPaused,
       'noContestRunning': instance.noContestRunning,
       'days': instance.days.map((e) => e.toJson()).toList(),
+      'price': _passThrough(instance.rawPrice),
     };
 
 const _$ConsistencyStateEnumMap = {

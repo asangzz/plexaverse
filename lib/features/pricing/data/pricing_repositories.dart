@@ -7,6 +7,7 @@ import '../../../core/config/env.dart';
 import '../../../core/network/api_paths.dart';
 import '../../../core/network/dio_client.dart';
 import '../../../core/network/failure.dart';
+import '../domain/consistency_reward.dart';
 import '../domain/pricing_repository.dart';
 
 /// Dio-backed [PricingRepository].
@@ -184,6 +185,63 @@ class ApiPricingRepository implements PricingRepository {
       rethrow;
     } on Object {
       throw const PricingUnavailable();
+    }
+  }
+
+  @override
+  Future<ConsistencyRewardConsent> fetchConsistencyReward() async {
+    try {
+      final response = await _client.get<Map<String, dynamic>>(
+        ApiPaths.billingConsistencyReward,
+      );
+      final Map<String, dynamic>? data = response.data;
+      if (data == null) throw const PricingUnavailable();
+      return ConsistencyRewardConsent.fromJson(data);
+    } on PricingUnavailable {
+      rethrow;
+    } on Object {
+      // A 404 (a server older than the route), a 401, a malformed body: the
+      // section is simply not shown — it never blocks Billing.
+      throw const PricingUnavailable();
+    }
+  }
+
+  @override
+  Future<ConsistencyRewardConsent> setConsistencyReward({
+    required bool consented,
+    String? wordsVersion,
+  }) async {
+    try {
+      final response = await _client.put<Map<String, dynamic>>(
+        ApiPaths.billingConsistencyReward,
+        data: <String, dynamic>{
+          'consented': consented,
+          // Only with a yes: a withdrawal never needs the words (DPDP s6(4)).
+          if (consented) 'wordsVersion': wordsVersion,
+        },
+      );
+      final Map<String, dynamic>? data = response.data;
+      if (data == null) throw const ConsistencyRewardFailure();
+      return ConsistencyRewardConsent.fromJson(data);
+    } on DioException catch (e) {
+      final Object? failure = e.error;
+      final String? message = failure is Failure ? failure.message : null;
+      final String? code = failure is Failure ? failure.errorCode : null;
+      if (code == 'UPDATE_REQUIRED') {
+        throw ConsistencyRewardUpdateRequired(
+          message == null || message.isEmpty
+              ? 'The words have changed — read them again below, then '
+                    'switch it on.'
+              : message,
+        );
+      }
+      throw ConsistencyRewardFailure(
+        message == null || message.isEmpty ? kRewardSaveFailed : message,
+      );
+    } on ConsistencyRewardFailure {
+      rethrow;
+    } on Object {
+      throw const ConsistencyRewardFailure();
     }
   }
 
@@ -499,6 +557,76 @@ class FakePricingRepository implements PricingRepository {
     );
   }
 
+  // ── The consistency reward ───────────────────────────────────────────────
+
+  /// The switch, as the fake server holds it. Never on until switched on.
+  bool _rewardConsented = false;
+
+  /// The words the server sends — a copy for the mock flavor only, kept here
+  /// beside the fake server it stands in for (the real app shows the
+  /// server's). Built as the route builds them, at its default 75% / 20 days.
+  static const ConsistencyRewardWords _rewardWords = ConsistencyRewardWords(
+    headline:
+        'Consistency reward — the more consistently you build your brand, the '
+        'less you pay.',
+    label: 'Use my consistency to set my monthly price',
+    consentText:
+        'Use my consistency to set my monthly price: my own consistency '
+        'record sets my next UPI AutoPay debit, never below ₹1 and never '
+        'above the plan price. Leave it off and you pay the plan price',
+    why:
+        'We look only at your own record: the share of what each day’s lesson '
+        'and LinkedIn tasks offered that you completed (right answers in the '
+        'lesson count), the days in a row you finished the day’s lesson, and '
+        'any claims our team removed as not genuine. The more consistent you '
+        'are, the lower your next debit — never below ₹1, never above the plan '
+        'price. Leave it off and you pay the plan price. Switch it off any '
+        'time: the next month not yet priced goes back to the plan price.',
+    conditions: <String>[
+      'India, on UPI AutoPay, with “Use my consistency to set my monthly '
+          'price” switched on.',
+      'At least 20 days of your consistency counted in the month.',
+      'At 75% consistency or more, your discount is your consistency — and '
+          'every 10 days in a row adds 1%.',
+      'Never below ₹1, never above the plan price. The price is fixed 3 days '
+          'before each debit, and the notice says it.',
+      '3 claims found not genuine in a month cancel that month’s reward.',
+    ],
+    appliesFromNextLine:
+        'Switching it on now applies from the debit after this one.',
+  );
+
+  static const String _rewardWordsVersion = '2026-11-25';
+
+  ConsistencyRewardConsent _rewardNow() => ConsistencyRewardConsent(
+    consented: _rewardConsented,
+    staleConsent: false,
+    wordsVersion: _rewardWordsVersion,
+    words: _rewardWords,
+  );
+
+  @override
+  Future<ConsistencyRewardConsent> fetchConsistencyReward() async {
+    await Future<void>.delayed(_latency);
+    return _rewardNow();
+  }
+
+  @override
+  Future<ConsistencyRewardConsent> setConsistencyReward({
+    required bool consented,
+    String? wordsVersion,
+  }) async {
+    await Future<void>.delayed(_latency);
+    // The server's rule: a yes only under the words it was given to.
+    if (consented && wordsVersion != _rewardWordsVersion) {
+      throw const ConsistencyRewardUpdateRequired(
+        'The words have changed — read them again below, then switch it on.',
+      );
+    }
+    _rewardConsented = consented;
+    return _rewardNow();
+  }
+
   @override
   Future<AutopayStatus> fetchAutopayStatus() async {
     await Future<void>.delayed(_latency);
@@ -514,6 +642,17 @@ class FakePricingRepository implements PricingRepository {
         accessUntil: _trialEndsAt,
         inTrial: true,
         trialEndsAt: _trialEndsAt,
+        // The reward as the server shows it for a test account in `shadow`:
+        // live, the coming debit not priced yet (the plan price is the most
+        // it can be).
+        nextChargePriceFixed: false,
+        nextChargeBasePaise: 39900,
+        consistencyReward: ConsistencyRewardStatus(
+          live: true,
+          consented: _rewardConsented,
+          minDays: 20,
+          thresholdPct: 75,
+        ),
       ),
       _MockMandate.stopped => AutopayStatus(
         rail: 'token',

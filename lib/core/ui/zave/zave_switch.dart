@@ -26,6 +26,8 @@ class ZaveSwitch extends StatelessWidget {
 
     return Semantics(
       toggled: value,
+      // Said, not only drawn at half opacity: a switch that takes no taps.
+      enabled: enabled,
       label: semanticLabel,
       child: GestureDetector(
         onTap: enabled ? () => onChanged!(!value) : null,

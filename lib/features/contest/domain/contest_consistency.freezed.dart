@@ -849,7 +849,9 @@ mixin _$ConsistencyView {
  int get pending;/// Earned, but self-reported and not yet audited.
  int get unaudited;/// XP more that puts the learner on the line.
  int get toLine; int get countedDays; ConsistencyWindow? get window; ConsistencyToday? get today; bool? get joined; bool get scoringPaused;/// No contest is running now: days without one don't count.
- bool get noContestRunning; List<ConsistencyDay> get days;
+ bool get noContestRunning; List<ConsistencyDay> get days;/// The consistency reward's coming debit (additive, 25 Nov 2026): a UPI
+/// AutoPay learner with a debit coming. Go through [price].
+@JsonKey(name: 'price', fromJson: _mapOrNull, toJson: _passThrough) Map<String, dynamic>? get rawPrice;
 /// Create a copy of ConsistencyView
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
@@ -862,16 +864,16 @@ $ConsistencyViewCopyWith<ConsistencyView> get copyWith => _$ConsistencyViewCopyW
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is ConsistencyView&&(identical(other.state, state) || other.state == state)&&(identical(other.mode, mode) || other.mode == mode)&&(identical(other.threshold, threshold) || other.threshold == threshold)&&(identical(other.percent, percent) || other.percent == percent)&&(identical(other.atOrAbove, atOrAbove) || other.atOrAbove == atOrAbove)&&(identical(other.earned, earned) || other.earned == earned)&&(identical(other.available, available) || other.available == available)&&(identical(other.pending, pending) || other.pending == pending)&&(identical(other.unaudited, unaudited) || other.unaudited == unaudited)&&(identical(other.toLine, toLine) || other.toLine == toLine)&&(identical(other.countedDays, countedDays) || other.countedDays == countedDays)&&(identical(other.window, window) || other.window == window)&&(identical(other.today, today) || other.today == today)&&(identical(other.joined, joined) || other.joined == joined)&&(identical(other.scoringPaused, scoringPaused) || other.scoringPaused == scoringPaused)&&(identical(other.noContestRunning, noContestRunning) || other.noContestRunning == noContestRunning)&&const DeepCollectionEquality().equals(other.days, days));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is ConsistencyView&&(identical(other.state, state) || other.state == state)&&(identical(other.mode, mode) || other.mode == mode)&&(identical(other.threshold, threshold) || other.threshold == threshold)&&(identical(other.percent, percent) || other.percent == percent)&&(identical(other.atOrAbove, atOrAbove) || other.atOrAbove == atOrAbove)&&(identical(other.earned, earned) || other.earned == earned)&&(identical(other.available, available) || other.available == available)&&(identical(other.pending, pending) || other.pending == pending)&&(identical(other.unaudited, unaudited) || other.unaudited == unaudited)&&(identical(other.toLine, toLine) || other.toLine == toLine)&&(identical(other.countedDays, countedDays) || other.countedDays == countedDays)&&(identical(other.window, window) || other.window == window)&&(identical(other.today, today) || other.today == today)&&(identical(other.joined, joined) || other.joined == joined)&&(identical(other.scoringPaused, scoringPaused) || other.scoringPaused == scoringPaused)&&(identical(other.noContestRunning, noContestRunning) || other.noContestRunning == noContestRunning)&&const DeepCollectionEquality().equals(other.days, days)&&const DeepCollectionEquality().equals(other.rawPrice, rawPrice));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
-int get hashCode => Object.hash(runtimeType,state,mode,threshold,percent,atOrAbove,earned,available,pending,unaudited,toLine,countedDays,window,today,joined,scoringPaused,noContestRunning,const DeepCollectionEquality().hash(days));
+int get hashCode => Object.hash(runtimeType,state,mode,threshold,percent,atOrAbove,earned,available,pending,unaudited,toLine,countedDays,window,today,joined,scoringPaused,noContestRunning,const DeepCollectionEquality().hash(days),const DeepCollectionEquality().hash(rawPrice));
 
 @override
 String toString() {
-  return 'ConsistencyView(state: $state, mode: $mode, threshold: $threshold, percent: $percent, atOrAbove: $atOrAbove, earned: $earned, available: $available, pending: $pending, unaudited: $unaudited, toLine: $toLine, countedDays: $countedDays, window: $window, today: $today, joined: $joined, scoringPaused: $scoringPaused, noContestRunning: $noContestRunning, days: $days)';
+  return 'ConsistencyView(state: $state, mode: $mode, threshold: $threshold, percent: $percent, atOrAbove: $atOrAbove, earned: $earned, available: $available, pending: $pending, unaudited: $unaudited, toLine: $toLine, countedDays: $countedDays, window: $window, today: $today, joined: $joined, scoringPaused: $scoringPaused, noContestRunning: $noContestRunning, days: $days, rawPrice: $rawPrice)';
 }
 
 
@@ -882,7 +884,7 @@ abstract mixin class $ConsistencyViewCopyWith<$Res>  {
   factory $ConsistencyViewCopyWith(ConsistencyView value, $Res Function(ConsistencyView) _then) = _$ConsistencyViewCopyWithImpl;
 @useResult
 $Res call({
-@JsonKey(unknownEnumValue: ConsistencyState.off) ConsistencyState state,@JsonKey(unknownEnumValue: ConsistencyMode.shadow) ConsistencyMode mode, int threshold, int? percent, bool? atOrAbove, int earned, int available, int pending, int unaudited, int toLine, int countedDays, ConsistencyWindow? window, ConsistencyToday? today, bool? joined, bool scoringPaused, bool noContestRunning, List<ConsistencyDay> days
+@JsonKey(unknownEnumValue: ConsistencyState.off) ConsistencyState state,@JsonKey(unknownEnumValue: ConsistencyMode.shadow) ConsistencyMode mode, int threshold, int? percent, bool? atOrAbove, int earned, int available, int pending, int unaudited, int toLine, int countedDays, ConsistencyWindow? window, ConsistencyToday? today, bool? joined, bool scoringPaused, bool noContestRunning, List<ConsistencyDay> days,@JsonKey(name: 'price', fromJson: _mapOrNull, toJson: _passThrough) Map<String, dynamic>? rawPrice
 });
 
 
@@ -899,7 +901,7 @@ class _$ConsistencyViewCopyWithImpl<$Res>
 
 /// Create a copy of ConsistencyView
 /// with the given fields replaced by the non-null parameter values.
-@pragma('vm:prefer-inline') @override $Res call({Object? state = null,Object? mode = null,Object? threshold = null,Object? percent = freezed,Object? atOrAbove = freezed,Object? earned = null,Object? available = null,Object? pending = null,Object? unaudited = null,Object? toLine = null,Object? countedDays = null,Object? window = freezed,Object? today = freezed,Object? joined = freezed,Object? scoringPaused = null,Object? noContestRunning = null,Object? days = null,}) {
+@pragma('vm:prefer-inline') @override $Res call({Object? state = null,Object? mode = null,Object? threshold = null,Object? percent = freezed,Object? atOrAbove = freezed,Object? earned = null,Object? available = null,Object? pending = null,Object? unaudited = null,Object? toLine = null,Object? countedDays = null,Object? window = freezed,Object? today = freezed,Object? joined = freezed,Object? scoringPaused = null,Object? noContestRunning = null,Object? days = null,Object? rawPrice = freezed,}) {
   return _then(_self.copyWith(
 state: null == state ? _self.state : state // ignore: cast_nullable_to_non_nullable
 as ConsistencyState,mode: null == mode ? _self.mode : mode // ignore: cast_nullable_to_non_nullable
@@ -918,7 +920,8 @@ as ConsistencyToday?,joined: freezed == joined ? _self.joined : joined // ignore
 as bool?,scoringPaused: null == scoringPaused ? _self.scoringPaused : scoringPaused // ignore: cast_nullable_to_non_nullable
 as bool,noContestRunning: null == noContestRunning ? _self.noContestRunning : noContestRunning // ignore: cast_nullable_to_non_nullable
 as bool,days: null == days ? _self.days : days // ignore: cast_nullable_to_non_nullable
-as List<ConsistencyDay>,
+as List<ConsistencyDay>,rawPrice: freezed == rawPrice ? _self.rawPrice : rawPrice // ignore: cast_nullable_to_non_nullable
+as Map<String, dynamic>?,
   ));
 }
 /// Create a copy of ConsistencyView
@@ -1027,10 +1030,10 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function(@JsonKey(unknownEnumValue: ConsistencyState.off)  ConsistencyState state, @JsonKey(unknownEnumValue: ConsistencyMode.shadow)  ConsistencyMode mode,  int threshold,  int? percent,  bool? atOrAbove,  int earned,  int available,  int pending,  int unaudited,  int toLine,  int countedDays,  ConsistencyWindow? window,  ConsistencyToday? today,  bool? joined,  bool scoringPaused,  bool noContestRunning,  List<ConsistencyDay> days)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function(@JsonKey(unknownEnumValue: ConsistencyState.off)  ConsistencyState state, @JsonKey(unknownEnumValue: ConsistencyMode.shadow)  ConsistencyMode mode,  int threshold,  int? percent,  bool? atOrAbove,  int earned,  int available,  int pending,  int unaudited,  int toLine,  int countedDays,  ConsistencyWindow? window,  ConsistencyToday? today,  bool? joined,  bool scoringPaused,  bool noContestRunning,  List<ConsistencyDay> days, @JsonKey(name: 'price', fromJson: _mapOrNull, toJson: _passThrough)  Map<String, dynamic>? rawPrice)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _ConsistencyView() when $default != null:
-return $default(_that.state,_that.mode,_that.threshold,_that.percent,_that.atOrAbove,_that.earned,_that.available,_that.pending,_that.unaudited,_that.toLine,_that.countedDays,_that.window,_that.today,_that.joined,_that.scoringPaused,_that.noContestRunning,_that.days);case _:
+return $default(_that.state,_that.mode,_that.threshold,_that.percent,_that.atOrAbove,_that.earned,_that.available,_that.pending,_that.unaudited,_that.toLine,_that.countedDays,_that.window,_that.today,_that.joined,_that.scoringPaused,_that.noContestRunning,_that.days,_that.rawPrice);case _:
   return orElse();
 
 }
@@ -1048,10 +1051,10 @@ return $default(_that.state,_that.mode,_that.threshold,_that.percent,_that.atOrA
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function(@JsonKey(unknownEnumValue: ConsistencyState.off)  ConsistencyState state, @JsonKey(unknownEnumValue: ConsistencyMode.shadow)  ConsistencyMode mode,  int threshold,  int? percent,  bool? atOrAbove,  int earned,  int available,  int pending,  int unaudited,  int toLine,  int countedDays,  ConsistencyWindow? window,  ConsistencyToday? today,  bool? joined,  bool scoringPaused,  bool noContestRunning,  List<ConsistencyDay> days)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function(@JsonKey(unknownEnumValue: ConsistencyState.off)  ConsistencyState state, @JsonKey(unknownEnumValue: ConsistencyMode.shadow)  ConsistencyMode mode,  int threshold,  int? percent,  bool? atOrAbove,  int earned,  int available,  int pending,  int unaudited,  int toLine,  int countedDays,  ConsistencyWindow? window,  ConsistencyToday? today,  bool? joined,  bool scoringPaused,  bool noContestRunning,  List<ConsistencyDay> days, @JsonKey(name: 'price', fromJson: _mapOrNull, toJson: _passThrough)  Map<String, dynamic>? rawPrice)  $default,) {final _that = this;
 switch (_that) {
 case _ConsistencyView():
-return $default(_that.state,_that.mode,_that.threshold,_that.percent,_that.atOrAbove,_that.earned,_that.available,_that.pending,_that.unaudited,_that.toLine,_that.countedDays,_that.window,_that.today,_that.joined,_that.scoringPaused,_that.noContestRunning,_that.days);case _:
+return $default(_that.state,_that.mode,_that.threshold,_that.percent,_that.atOrAbove,_that.earned,_that.available,_that.pending,_that.unaudited,_that.toLine,_that.countedDays,_that.window,_that.today,_that.joined,_that.scoringPaused,_that.noContestRunning,_that.days,_that.rawPrice);case _:
   throw StateError('Unexpected subclass');
 
 }
@@ -1068,10 +1071,10 @@ return $default(_that.state,_that.mode,_that.threshold,_that.percent,_that.atOrA
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function(@JsonKey(unknownEnumValue: ConsistencyState.off)  ConsistencyState state, @JsonKey(unknownEnumValue: ConsistencyMode.shadow)  ConsistencyMode mode,  int threshold,  int? percent,  bool? atOrAbove,  int earned,  int available,  int pending,  int unaudited,  int toLine,  int countedDays,  ConsistencyWindow? window,  ConsistencyToday? today,  bool? joined,  bool scoringPaused,  bool noContestRunning,  List<ConsistencyDay> days)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function(@JsonKey(unknownEnumValue: ConsistencyState.off)  ConsistencyState state, @JsonKey(unknownEnumValue: ConsistencyMode.shadow)  ConsistencyMode mode,  int threshold,  int? percent,  bool? atOrAbove,  int earned,  int available,  int pending,  int unaudited,  int toLine,  int countedDays,  ConsistencyWindow? window,  ConsistencyToday? today,  bool? joined,  bool scoringPaused,  bool noContestRunning,  List<ConsistencyDay> days, @JsonKey(name: 'price', fromJson: _mapOrNull, toJson: _passThrough)  Map<String, dynamic>? rawPrice)?  $default,) {final _that = this;
 switch (_that) {
 case _ConsistencyView() when $default != null:
-return $default(_that.state,_that.mode,_that.threshold,_that.percent,_that.atOrAbove,_that.earned,_that.available,_that.pending,_that.unaudited,_that.toLine,_that.countedDays,_that.window,_that.today,_that.joined,_that.scoringPaused,_that.noContestRunning,_that.days);case _:
+return $default(_that.state,_that.mode,_that.threshold,_that.percent,_that.atOrAbove,_that.earned,_that.available,_that.pending,_that.unaudited,_that.toLine,_that.countedDays,_that.window,_that.today,_that.joined,_that.scoringPaused,_that.noContestRunning,_that.days,_that.rawPrice);case _:
   return null;
 
 }
@@ -1083,7 +1086,7 @@ return $default(_that.state,_that.mode,_that.threshold,_that.percent,_that.atOrA
 @JsonSerializable()
 
 class _ConsistencyView extends ConsistencyView {
-  const _ConsistencyView({@JsonKey(unknownEnumValue: ConsistencyState.off) this.state = ConsistencyState.off, @JsonKey(unknownEnumValue: ConsistencyMode.shadow) this.mode = ConsistencyMode.shadow, this.threshold = 75, this.percent, this.atOrAbove, this.earned = 0, this.available = 0, this.pending = 0, this.unaudited = 0, this.toLine = 0, this.countedDays = 0, this.window, this.today, this.joined, this.scoringPaused = false, this.noContestRunning = false, final  List<ConsistencyDay> days = const <ConsistencyDay>[]}): _days = days,super._();
+  const _ConsistencyView({@JsonKey(unknownEnumValue: ConsistencyState.off) this.state = ConsistencyState.off, @JsonKey(unknownEnumValue: ConsistencyMode.shadow) this.mode = ConsistencyMode.shadow, this.threshold = 75, this.percent, this.atOrAbove, this.earned = 0, this.available = 0, this.pending = 0, this.unaudited = 0, this.toLine = 0, this.countedDays = 0, this.window, this.today, this.joined, this.scoringPaused = false, this.noContestRunning = false, final  List<ConsistencyDay> days = const <ConsistencyDay>[], @JsonKey(name: 'price', fromJson: _mapOrNull, toJson: _passThrough) final  Map<String, dynamic>? rawPrice}): _days = days,_rawPrice = rawPrice,super._();
   factory _ConsistencyView.fromJson(Map<String, dynamic> json) => _$ConsistencyViewFromJson(json);
 
 @override@JsonKey(unknownEnumValue: ConsistencyState.off) final  ConsistencyState state;
@@ -1116,6 +1119,19 @@ class _ConsistencyView extends ConsistencyView {
   return EqualUnmodifiableListView(_days);
 }
 
+/// The consistency reward's coming debit (additive, 25 Nov 2026): a UPI
+/// AutoPay learner with a debit coming. Go through [price].
+ final  Map<String, dynamic>? _rawPrice;
+/// The consistency reward's coming debit (additive, 25 Nov 2026): a UPI
+/// AutoPay learner with a debit coming. Go through [price].
+@override@JsonKey(name: 'price', fromJson: _mapOrNull, toJson: _passThrough) Map<String, dynamic>? get rawPrice {
+  final value = _rawPrice;
+  if (value == null) return null;
+  if (_rawPrice is EqualUnmodifiableMapView) return _rawPrice;
+  // ignore: implicit_dynamic_type
+  return EqualUnmodifiableMapView(value);
+}
+
 
 /// Create a copy of ConsistencyView
 /// with the given fields replaced by the non-null parameter values.
@@ -1130,16 +1146,16 @@ Map<String, dynamic> toJson() {
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is _ConsistencyView&&(identical(other.state, state) || other.state == state)&&(identical(other.mode, mode) || other.mode == mode)&&(identical(other.threshold, threshold) || other.threshold == threshold)&&(identical(other.percent, percent) || other.percent == percent)&&(identical(other.atOrAbove, atOrAbove) || other.atOrAbove == atOrAbove)&&(identical(other.earned, earned) || other.earned == earned)&&(identical(other.available, available) || other.available == available)&&(identical(other.pending, pending) || other.pending == pending)&&(identical(other.unaudited, unaudited) || other.unaudited == unaudited)&&(identical(other.toLine, toLine) || other.toLine == toLine)&&(identical(other.countedDays, countedDays) || other.countedDays == countedDays)&&(identical(other.window, window) || other.window == window)&&(identical(other.today, today) || other.today == today)&&(identical(other.joined, joined) || other.joined == joined)&&(identical(other.scoringPaused, scoringPaused) || other.scoringPaused == scoringPaused)&&(identical(other.noContestRunning, noContestRunning) || other.noContestRunning == noContestRunning)&&const DeepCollectionEquality().equals(other._days, _days));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is _ConsistencyView&&(identical(other.state, state) || other.state == state)&&(identical(other.mode, mode) || other.mode == mode)&&(identical(other.threshold, threshold) || other.threshold == threshold)&&(identical(other.percent, percent) || other.percent == percent)&&(identical(other.atOrAbove, atOrAbove) || other.atOrAbove == atOrAbove)&&(identical(other.earned, earned) || other.earned == earned)&&(identical(other.available, available) || other.available == available)&&(identical(other.pending, pending) || other.pending == pending)&&(identical(other.unaudited, unaudited) || other.unaudited == unaudited)&&(identical(other.toLine, toLine) || other.toLine == toLine)&&(identical(other.countedDays, countedDays) || other.countedDays == countedDays)&&(identical(other.window, window) || other.window == window)&&(identical(other.today, today) || other.today == today)&&(identical(other.joined, joined) || other.joined == joined)&&(identical(other.scoringPaused, scoringPaused) || other.scoringPaused == scoringPaused)&&(identical(other.noContestRunning, noContestRunning) || other.noContestRunning == noContestRunning)&&const DeepCollectionEquality().equals(other._days, _days)&&const DeepCollectionEquality().equals(other._rawPrice, _rawPrice));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
-int get hashCode => Object.hash(runtimeType,state,mode,threshold,percent,atOrAbove,earned,available,pending,unaudited,toLine,countedDays,window,today,joined,scoringPaused,noContestRunning,const DeepCollectionEquality().hash(_days));
+int get hashCode => Object.hash(runtimeType,state,mode,threshold,percent,atOrAbove,earned,available,pending,unaudited,toLine,countedDays,window,today,joined,scoringPaused,noContestRunning,const DeepCollectionEquality().hash(_days),const DeepCollectionEquality().hash(_rawPrice));
 
 @override
 String toString() {
-  return 'ConsistencyView(state: $state, mode: $mode, threshold: $threshold, percent: $percent, atOrAbove: $atOrAbove, earned: $earned, available: $available, pending: $pending, unaudited: $unaudited, toLine: $toLine, countedDays: $countedDays, window: $window, today: $today, joined: $joined, scoringPaused: $scoringPaused, noContestRunning: $noContestRunning, days: $days)';
+  return 'ConsistencyView(state: $state, mode: $mode, threshold: $threshold, percent: $percent, atOrAbove: $atOrAbove, earned: $earned, available: $available, pending: $pending, unaudited: $unaudited, toLine: $toLine, countedDays: $countedDays, window: $window, today: $today, joined: $joined, scoringPaused: $scoringPaused, noContestRunning: $noContestRunning, days: $days, rawPrice: $rawPrice)';
 }
 
 
@@ -1150,7 +1166,7 @@ abstract mixin class _$ConsistencyViewCopyWith<$Res> implements $ConsistencyView
   factory _$ConsistencyViewCopyWith(_ConsistencyView value, $Res Function(_ConsistencyView) _then) = __$ConsistencyViewCopyWithImpl;
 @override @useResult
 $Res call({
-@JsonKey(unknownEnumValue: ConsistencyState.off) ConsistencyState state,@JsonKey(unknownEnumValue: ConsistencyMode.shadow) ConsistencyMode mode, int threshold, int? percent, bool? atOrAbove, int earned, int available, int pending, int unaudited, int toLine, int countedDays, ConsistencyWindow? window, ConsistencyToday? today, bool? joined, bool scoringPaused, bool noContestRunning, List<ConsistencyDay> days
+@JsonKey(unknownEnumValue: ConsistencyState.off) ConsistencyState state,@JsonKey(unknownEnumValue: ConsistencyMode.shadow) ConsistencyMode mode, int threshold, int? percent, bool? atOrAbove, int earned, int available, int pending, int unaudited, int toLine, int countedDays, ConsistencyWindow? window, ConsistencyToday? today, bool? joined, bool scoringPaused, bool noContestRunning, List<ConsistencyDay> days,@JsonKey(name: 'price', fromJson: _mapOrNull, toJson: _passThrough) Map<String, dynamic>? rawPrice
 });
 
 
@@ -1167,7 +1183,7 @@ class __$ConsistencyViewCopyWithImpl<$Res>
 
 /// Create a copy of ConsistencyView
 /// with the given fields replaced by the non-null parameter values.
-@override @pragma('vm:prefer-inline') $Res call({Object? state = null,Object? mode = null,Object? threshold = null,Object? percent = freezed,Object? atOrAbove = freezed,Object? earned = null,Object? available = null,Object? pending = null,Object? unaudited = null,Object? toLine = null,Object? countedDays = null,Object? window = freezed,Object? today = freezed,Object? joined = freezed,Object? scoringPaused = null,Object? noContestRunning = null,Object? days = null,}) {
+@override @pragma('vm:prefer-inline') $Res call({Object? state = null,Object? mode = null,Object? threshold = null,Object? percent = freezed,Object? atOrAbove = freezed,Object? earned = null,Object? available = null,Object? pending = null,Object? unaudited = null,Object? toLine = null,Object? countedDays = null,Object? window = freezed,Object? today = freezed,Object? joined = freezed,Object? scoringPaused = null,Object? noContestRunning = null,Object? days = null,Object? rawPrice = freezed,}) {
   return _then(_ConsistencyView(
 state: null == state ? _self.state : state // ignore: cast_nullable_to_non_nullable
 as ConsistencyState,mode: null == mode ? _self.mode : mode // ignore: cast_nullable_to_non_nullable
@@ -1186,7 +1202,8 @@ as ConsistencyToday?,joined: freezed == joined ? _self.joined : joined // ignore
 as bool?,scoringPaused: null == scoringPaused ? _self.scoringPaused : scoringPaused // ignore: cast_nullable_to_non_nullable
 as bool,noContestRunning: null == noContestRunning ? _self.noContestRunning : noContestRunning // ignore: cast_nullable_to_non_nullable
 as bool,days: null == days ? _self._days : days // ignore: cast_nullable_to_non_nullable
-as List<ConsistencyDay>,
+as List<ConsistencyDay>,rawPrice: freezed == rawPrice ? _self._rawPrice : rawPrice // ignore: cast_nullable_to_non_nullable
+as Map<String, dynamic>?,
   ));
 }
 

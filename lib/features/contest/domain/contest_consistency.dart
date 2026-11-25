@@ -1,5 +1,6 @@
 import 'package:freezed_annotation/freezed_annotation.dart';
 
+import '../../pricing/domain/consistency_reward.dart' show ConsistencyPrice;
 import 'contest_path.dart';
 import 'contest_words.dart';
 
@@ -43,6 +44,12 @@ enum ConsistencyMode { off, shadow, on }
 
 /// The billing window the meter counts over, `[from, to)`. Mirrors the
 /// view's `window`.
+/// One malformed `price` must not fail the meter's parse.
+Map<String, dynamic>? _mapOrNull(Object? v) =>
+    v is Map ? Map<String, dynamic>.from(v) : null;
+
+Object? _passThrough(Map<String, dynamic>? v) => v;
+
 @freezed
 abstract class ConsistencyWindow with _$ConsistencyWindow {
   const factory ConsistencyWindow({
@@ -132,10 +139,19 @@ abstract class ConsistencyView with _$ConsistencyView {
     /// No contest is running now: days without one don't count.
     @Default(false) bool noContestRunning,
     @Default(<ConsistencyDay>[]) List<ConsistencyDay> days,
+
+    /// The consistency reward's coming debit (additive, 25 Nov 2026): a UPI
+    /// AutoPay learner with a debit coming. Go through [price].
+    @JsonKey(name: 'price', fromJson: _mapOrNull, toJson: _passThrough)
+    Map<String, dynamic>? rawPrice,
   }) = _ConsistencyView;
 
   factory ConsistencyView.fromJson(Map<String, dynamic> json) =>
       _$ConsistencyViewFromJson(json);
+
+  /// The reward's coming debit — shown only while `live`. Null on a server
+  /// older than it, for an account with no debit coming, or when unreadable.
+  ConsistencyPrice? get price => ConsistencyPrice.tryParse(rawPrice);
 
   /// The stats bar's figure: only while the meter is measuring. The web's
   /// `consistencyFigure`.

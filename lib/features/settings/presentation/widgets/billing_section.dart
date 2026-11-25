@@ -8,11 +8,17 @@ import '../../../../core/ui/app_icons.dart';
 // Re-exports `UserPreferences` alongside the Settings entities, so this file
 // needs one import for both rather than two that overlap.
 import '../../../../core/ui/zave/zave_kit.dart';
+import '../../../contest/application/contest_controllers.dart'
+    show contestConsistencyProvider;
+import '../../../contest/domain/contest_consistency.dart' show ConsistencyView;
 import '../../../pricing/application/billing_state_controller.dart';
+import '../../../pricing/application/consistency_reward_controller.dart';
 import '../../../pricing/application/plan_checkout.dart';
 import '../../../pricing/application/pricing_controller.dart';
+import '../../../pricing/domain/consistency_reward.dart';
 import '../../../pricing/domain/pricing_repository.dart';
 import '../../../pricing/presentation/widgets/billing_state_picker.dart';
+import '../../../pricing/presentation/widgets/consistency_reward_section.dart';
 import '../../application/settings_controllers.dart';
 import '../../domain/settings_repository.dart';
 import 'billing_state_row.dart';
@@ -420,6 +426,16 @@ class _AutopayPanelState extends ConsumerState<AutopayPanel> {
           child: Text(summary, style: ZaveType.label),
         ),
 
+        // The consistency reward, under a live mandate with a debit coming,
+        // and only while it applies to the account (the web's
+        // RewardInBilling). Nothing about a discount otherwise.
+        if (canStop &&
+            data.nextChargeAt != null &&
+            data.consistencyReward?.live == true) ...<Widget>[
+          SizedBox(height: ZaveSpace.md),
+          _RewardInBilling(status: data),
+        ],
+
         if (canStop && data.tokenStatus == 'paused') ...<Widget>[
           SizedBox(height: ZaveSpace.sm),
           Text(
@@ -590,15 +606,25 @@ class _AutopayPanelState extends ConsumerState<AutopayPanel> {
     final DateTime? access = data.accessUntil;
     final String payment = amount == null ? 'payment' : 'payment of $amount';
     if (data.canStop) {
+      // The reward is live and the price not fixed yet: the plan price is the
+      // most it can be, and the reward's estimate below says what it is
+      // heading for — never the same debit as two certain amounts.
+      final bool atMost =
+          amount != null &&
+          data.consistencyReward?.live == true &&
+          !data.nextChargePriceFixed;
       if (data.inTrial && trialEnds != null) {
-        return next != null
-            ? 'Free month until ${istDay(trialEnds)}. First $payment on '
-                  '${istDay(next)}.'
-            : 'Free month until ${istDay(trialEnds)}.';
+        if (next == null) return 'Free month until ${istDay(trialEnds)}.';
+        return atMost
+            ? 'Free month until ${istDay(trialEnds)}. First payment on '
+                  '${istDay(next)}, at most $amount.'
+            : 'Free month until ${istDay(trialEnds)}. First $payment on '
+                  '${istDay(next)}.';
       }
-      return next != null
-          ? 'Next $payment on ${istDay(next)}.'
-          : 'UPI AutoPay is on.';
+      if (next == null) return 'UPI AutoPay is on.';
+      return atMost
+          ? 'Next payment on ${istDay(next)}, at most $amount.'
+          : 'Next $payment on ${istDay(next)}.';
     }
     if (data.inTrial && trialEnds != null) {
       if (runsPastFreeMonth) {
@@ -665,6 +691,65 @@ class _AutopayPanelState extends ConsumerState<AutopayPanel> {
       return 'Start my free month';
     }
     return 'Set up AutoPay';
+  }
+}
+
+/// The reward under a live mandate. The fixed price and its breakdown come
+/// from the billing status (the charge row); the estimate before the fix from
+/// the consistency meter, read only while the price is not fixed and the
+/// switch is on — the web's `RewardInBilling`.
+class _RewardInBilling extends ConsumerStatefulWidget {
+  const _RewardInBilling({required this.status});
+
+  final AutopayStatus status;
+
+  @override
+  ConsumerState<_RewardInBilling> createState() => _RewardInBillingState();
+}
+
+class _RewardInBillingState extends ConsumerState<_RewardInBilling> {
+  @override
+  void initState() {
+    super.initState();
+    // Fetched on open: the levels card may have held the switch's read since
+    // the app started, and it may have been switched off on the web since.
+    // Only when it is already held — otherwise the section's own watch is
+    // this open's one read. After the frame: no provider changes in build.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted && ref.exists(consistencyRewardConsentControllerProvider)) {
+        ref.invalidate(consistencyRewardConsentControllerProvider);
+      }
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final AutopayStatus status = widget.status;
+    final ConsistencyRewardStatus reward = status.consistencyReward!;
+    final bool fixed = status.nextChargePriceFixed;
+    final bool consented =
+        ref.watch(consistencyRewardConsentControllerProvider).value?.consented ??
+        reward.consented;
+    // The meter, only while it can add something (an estimate before the
+    // fix, with the switch on) — and never a failed re-read's stale value.
+    final AsyncValue<ConsistencyView>? meter = !fixed && consented
+        ? ref.watch(contestConsistencyProvider)
+        : null;
+    final ConsistencyPrice? price = meter == null || meter.hasError
+        ? null
+        : meter.value?.price;
+    final int? amount = status.nextChargeAmountPaise;
+    return ConsistencyRewardSection(
+      nextDebitAt: status.nextChargeAt,
+      fixed: fixed && amount != null
+          ? FixedDebitPrice(amountPaise: amount, breakdown: reward.breakdown)
+          : null,
+      estimate: !fixed && price?.live == true ? price!.estimate : null,
+      estimateConsented: price?.consented,
+      fixesAt: price?.fixesAt,
+      fixing: !fixed && price?.fixing == true,
+      minDays: reward.minDays,
+    );
   }
 }
 

@@ -1,6 +1,7 @@
 import 'allowance.dart';
 import 'autopay.dart';
 import 'billing_state.dart';
+import 'consistency_reward.dart';
 import 'plan_offer.dart';
 import 'pricing.dart';
 import 'tax_document.dart';
@@ -101,6 +102,21 @@ abstract class PricingRepository {
   /// `GET /autopay/status` — the mandate, the next payment and how long the
   /// plan runs. Throws [PricingUnavailable] on any failure.
   Future<AutopayStatus> fetchAutopayStatus();
+
+  /// `GET /billing/consistency-reward` — the switch as the server has it and
+  /// the words to show beside it, verbatim. Throws [PricingUnavailable] on any
+  /// failure (a 404 from a server older than the route included): the
+  /// section is then not shown.
+  Future<ConsistencyRewardConsent> fetchConsistencyReward();
+
+  /// `PUT /billing/consistency-reward`. A yes sends the [wordsVersion] the
+  /// words shown came with; a withdrawal needs nothing else. Answers the GET
+  /// body. Throws [ConsistencyRewardUpdateRequired] on 409 UPDATE_REQUIRED
+  /// (the words changed) and [ConsistencyRewardFailure] otherwise.
+  Future<ConsistencyRewardConsent> setConsistencyReward({
+    required bool consented,
+    String? wordsVersion,
+  });
 
   /// `GET /billing/invoices` — the user's GST tax invoices, credit notes and
   /// refund vouchers, newest first (TOKEN_AUTOPAY_SPEC.md §5.9).

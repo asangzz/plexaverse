@@ -8,6 +8,13 @@ import '../../../auth/application/google_link_controller.dart';
 import '../../../auth/application/sign_out_controller.dart';
 import '../../../auth/domain/auth_repository.dart';
 import '../../../contest/domain/shoutout_words.dart';
+import '../../../pricing/application/pricing_controller.dart'
+    show autopayStatusProvider;
+import '../../../pricing/domain/consistency_reward.dart'
+    show
+        kConsistencyPricingPurpose,
+        kRewardGrantInContextLine,
+        kRewardNotOfferedLine;
 import '../../../profile/domain/public_profile_words.dart';
 import '../../application/privacy_controller.dart';
 import '../../application/settings_controllers.dart';
@@ -507,6 +514,9 @@ class _DataPrivacySectionState extends ConsumerState<DataPrivacySection> {
     // state, and watching it is also what holds the autoDispose controller
     // open for the length of a request this screen started.
     final bool busy = ref.watch(privacyControllerProvider);
+    // Whether Billing has the consistency reward's switch to send them to.
+    final bool rewardOffered =
+        ref.watch(autopayStatusProvider).value?.consistencyReward?.live == true;
 
     return SettingsSection(
       title: 'Your data',
@@ -530,6 +540,15 @@ class _DataPrivacySectionState extends ConsumerState<DataPrivacySection> {
                 for (final ConsentPurposeState p in value.purposes)
                   _ConsentRow(
                     purpose: p,
+                    rewardOffered: rewardOffered,
+                    onWithdraw: _staleInContextGrant(p)
+                        ? () async {
+                            final String? failure = await ref
+                                .read(consentControllerProvider.notifier)
+                                .set(p.purpose, false);
+                            if (failure != null) _say(failure);
+                          }
+                        : null,
                     // The shoutout and the public profile are switched ON
                     // only on their own cards (the link, the handle and the
                     // 18+ tick they need are given there; the server refuses
@@ -596,14 +615,36 @@ class _DataPrivacySectionState extends ConsumerState<DataPrivacySection> {
 /// public profile (in Settings → Public profile, with its handle). The
 /// consent routes refuse a grant of either. OFF works here like any other.
 bool _onlyOnItsCard(ConsentPurposeState p) =>
-    (p.purpose == kShoutoutPurpose || p.purpose == kPublicProfilePurpose) &&
-    !p.granted;
+    _grantedInContext(p.purpose) && !p.granted;
+
+/// The purposes the server grants only on their own card (409 from the
+/// consent routes): the shoutout, the public profile and the consistency
+/// reward (`consistency_pricing`, granted beside the reward in Billing).
+bool _grantedInContext(String purpose) =>
+    purpose == kShoutoutPurpose ||
+    purpose == kPublicProfilePurpose ||
+    purpose == kConsistencyPricingPurpose;
+
+/// An earlier yes to an in-context purpose under words since changed: its
+/// switch cannot grant here, but what was given for the old yes is held
+/// until it is withdrawn — so withdrawing it is offered, as easily as it was
+/// given (DPDP s6(4)). The web's `isStaleInContextGrant`.
+bool _staleInContextGrant(ConsentPurposeState p) =>
+    _grantedInContext(p.purpose) && p.stale && !p.granted;
 
 /// Where an [_onlyOnItsCard] purpose is switched on, in a sentence.
-String _whereToGrant(ConsentPurposeState p) =>
-    p.purpose == kPublicProfilePurpose
-    ? kPublicProfileGrantInContextLine
-    : kShoutoutGrantOnContestLine;
+/// [rewardOffered]: the consistency reward applies to this account now, so
+/// Billing has the switch to send them to.
+String _whereToGrant(ConsentPurposeState p, {required bool rewardOffered}) =>
+    switch (p.purpose) {
+      kPublicProfilePurpose => kPublicProfileGrantInContextLine,
+      kConsistencyPricingPurpose =>
+        rewardOffered ? kRewardGrantInContextLine : kRewardNotOfferedLine,
+      _ => kShoutoutGrantOnContestLine,
+    };
+
+/// The web's `STALE_WITHDRAW_LABEL`.
+const String _staleWithdrawLabel = 'Withdraw my earlier yes';
 
 /// One purpose and its switch.
 ///
@@ -614,10 +655,19 @@ String _whereToGrant(ConsentPurposeState p) =>
 /// `stale` means a decision exists but predates the current notice, so it is
 /// not a current yes — the row says so rather than showing it as granted.
 class _ConsentRow extends StatelessWidget {
-  const _ConsentRow({required this.purpose, required this.onChanged});
+  const _ConsentRow({
+    required this.purpose,
+    required this.onChanged,
+    this.rewardOffered = false,
+    this.onWithdraw,
+  });
 
   final ConsentPurposeState purpose;
   final ValueChanged<bool>? onChanged;
+  final bool rewardOffered;
+
+  /// Withdraws a stale in-context yes; null when there is none.
+  final VoidCallback? onWithdraw;
 
   @override
   Widget build(BuildContext context) {
@@ -640,7 +690,17 @@ class _ConsentRow extends StatelessWidget {
                   ),
                 ] else if (_onlyOnItsCard(purpose)) ...<Widget>[
                   SizedBox(height: ZaveSpace.xs),
-                  Text(_whereToGrant(purpose), style: ZaveType.caption),
+                  Text(
+                    _whereToGrant(purpose, rewardOffered: rewardOffered),
+                    style: ZaveType.caption,
+                  ),
+                  if (onWithdraw != null) ...<Widget>[
+                    SizedBox(height: ZaveSpace.sm),
+                    ZaveButton(
+                      label: _staleWithdrawLabel,
+                      onPressed: onWithdraw,
+                    ),
+                  ],
                 ] else if (purpose.stale) ...<Widget>[
                   SizedBox(height: ZaveSpace.xs),
                   Text(

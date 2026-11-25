@@ -3,6 +3,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 import '../../../../../core/ui/zave/zave_kit.dart';
+import '../../../../pricing/domain/consistency_reward.dart'
+    show ConsistencyPrice, RewardSurface;
+import '../../../../pricing/presentation/widgets/consistency_reward_section.dart';
 import '../../../application/contest_controllers.dart';
 import '../../../domain/contest_repository.dart';
 import '../contest_kit.dart';
@@ -38,9 +41,9 @@ ConsistencyView? watchConsistency(WidgetRef ref) {
 /// still holds an older meter — see [watchConsistency]), and in the states off,
 /// no_contest and not_joined — the meter is a quiet addition, never a wall.
 ///
-/// No price anywhere in this phase: mode `on` reads exactly like `shadow`,
-/// and no line here names a rupee. The billing phase's lines ship with the
-/// billing phase, never before.
+/// The meter's own lines name no rupee. A price appears only in the
+/// consistency reward under them (ConsistencyRewardSection), and only while
+/// `price.live` — for a UPI AutoPay learner the reward applies to.
 class ConsistencyCard extends ConsumerWidget {
   const ConsistencyCard({this.path, super.key});
 
@@ -92,6 +95,23 @@ class ConsistencyCard extends ConsumerWidget {
           for (int i = 0; i < lines.length; i++) ...<Widget>[
             if (i > 0) const SizedBox(height: 6),
             Text(lines[i], style: railMuted),
+          ],
+          // The consistency reward (25 Nov 2026): only for a UPI AutoPay
+          // learner with a debit coming, and only while the reward applies
+          // to them — nobody else is shown a price.
+          if (view.price case final ConsistencyPrice price
+              when price.live) ...<Widget>[
+            const SizedBox(height: 16),
+            ConsistencyRewardSection(
+              surface: RewardSurface.card,
+              estimateConsented: price.consented,
+              nextDebitAt: price.nextDebitAt,
+              fixed: price.fixed,
+              estimate: price.estimate,
+              fixesAt: price.fixesAt,
+              fixing: price.fixing,
+              minDays: price.minDays,
+            ),
           ],
         ],
       ),

@@ -3,6 +3,12 @@ import 'dart:ui' show PlatformDispatcher;
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 import '../../contest/application/contest_controllers.dart';
+import '../../pricing/application/consistency_reward_controller.dart'
+    show consistencyRewardConsentControllerProvider;
+import '../../pricing/application/pricing_controller.dart'
+    show autopayStatusProvider;
+import '../../pricing/domain/consistency_reward.dart'
+    show kConsistencyPricingPurpose;
 import '../../profile/application/profile_controllers.dart';
 import '../data/settings_repositories.dart';
 import '../domain/settings_repository.dart';
@@ -340,6 +346,15 @@ class ConsentController extends _$ConsentController {
       if (purpose == 'public_profile') {
         ref.invalidate(publicProfileSettingsControllerProvider);
         ref.invalidate(contestFeaturedProvider);
+      }
+      // The consistency reward's switch is drawn in Billing (above, on this
+      // same screen) and on the levels card (kept alive under it): a
+      // withdrawal here must reach both, with the price it no longer sets.
+      if (purpose == kConsistencyPricingPurpose) {
+        ref
+          ..invalidate(consistencyRewardConsentControllerProvider)
+          ..invalidate(autopayStatusProvider)
+          ..invalidate(contestConsistencyProvider);
       }
       return null;
     } on Object {

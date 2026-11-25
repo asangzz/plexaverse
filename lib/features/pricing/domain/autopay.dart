@@ -1,3 +1,4 @@
+import 'consistency_reward.dart' show ConsistencyRewardStatus;
 import 'plan_offer.dart';
 
 // UPI AutoPay (the token rail) as the app sees it — the bodies of the four
@@ -127,6 +128,9 @@ class AutopayStatus {
     this.inTrial = false,
     this.trialEndsAt,
     this.debitInFlight = false,
+    this.nextChargePriceFixed = false,
+    this.nextChargeBasePaise,
+    this.consistencyReward,
   });
 
   factory AutopayStatus.fromJson(Map<String, dynamic> json) => AutopayStatus(
@@ -141,6 +145,11 @@ class AutopayStatus {
     inTrial: json['inTrial'] == true,
     trialEndsAt: _instant(json['trialEndsAt']),
     debitInFlight: json['debitInFlight'] == true,
+    nextChargePriceFixed: json['nextChargePriceFixed'] == true,
+    nextChargeBasePaise: _paise(json['nextChargeBasePaise']),
+    consistencyReward: ConsistencyRewardStatus.tryParse(
+      json['consistencyReward'],
+    ),
   );
 
   /// `'token'` (UPI AutoPay), `'subscription'` (legacy), or null (no row).
@@ -173,6 +182,19 @@ class AutopayStatus {
 
   /// A debit already announced to the user's UPI app is in flight.
   final bool debitInFlight;
+
+  /// The coming debit's price is fixed (72h before it, when the notice goes
+  /// out): [nextChargeAmountPaise] is then exactly what is taken. Before
+  /// that it is the plan price, the most the debit can be. (Additive,
+  /// 25 Nov 2026.)
+  final bool nextChargePriceFixed;
+
+  /// The plan price the coming debit is priced against.
+  final int? nextChargeBasePaise;
+
+  /// The consistency reward for this account, or null with no debit coming
+  /// (or on a server older than it). Shown only while `live`.
+  final ConsistencyRewardStatus? consistencyReward;
 
   /// A UPI AutoPay account: the only kind Settings → Billing speaks about.
   bool get isToken => rail == 'token';

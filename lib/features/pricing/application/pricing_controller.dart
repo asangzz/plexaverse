@@ -1,6 +1,8 @@
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 import '../../../core/platform/checkout.dart';
+import '../../contest/application/contest_controllers.dart'
+    show contestConsistencyProvider;
 import '../data/pricing_repositories.dart';
 import '../domain/pricing_repository.dart';
 import 'billing_state_controller.dart';
@@ -140,7 +142,10 @@ void invalidatePlanState(Ref ref) {
     ..invalidate(autopayStatusProvider)
     ..invalidate(autopayRestartOfferProvider)
     // A paid registration is invoiced in the same transaction that applies it.
-    ..invalidate(taxDocumentsProvider);
+    ..invalidate(taxDocumentsProvider)
+    // The levels card's consistency reward follows the mandate: a stop leaves
+    // no debit to price, and a new mandate brings one.
+    ..invalidate(contestConsistencyProvider);
 }
 
 /// What the Pricing screen says once a checkout settles — the web's
