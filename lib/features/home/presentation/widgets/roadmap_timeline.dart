@@ -3,6 +3,7 @@ import 'package:intl/intl.dart';
 
 import '../../../../core/responsive/screen_util.dart';
 import '../../../../core/ui/zave/zave_kit.dart';
+import '../../domain/levels_finished.dart';
 import '../../domain/roadmap_level.dart';
 import '../../domain/roadmap_planets.dart';
 import '../roadmap_status_ui.dart';
@@ -17,6 +18,10 @@ import 'planet_node.dart';
 /// contest's daily path, so the rows are markers — behind, today, ahead
 /// ([roadmapDayStatus]) — and scrolling only moves the orbit of the planet the
 /// centred day belongs to. The timeline opens on today.
+///
+/// Since 25 Nov 2026 the rows behind today and today also say how much of
+/// that day's levels was finished ([LevelsFinishedLine]), read off the levels
+/// path by the server. A day ahead never says it.
 ///
 /// ## How the sticky planet is done
 ///
@@ -65,6 +70,7 @@ class RoadmapTimeline extends StatefulWidget {
     required this.levels,
     required this.today,
     required this.topInset,
+    this.levelsFinished = const <int, LevelsFinishedDay>{},
     super.key,
   });
 
@@ -80,6 +86,11 @@ class RoadmapTimeline extends StatefulWidget {
   /// header instead of sliding under its blur — a planet parked permanently
   /// behind the header would be the one thing on the screen you cannot see.
   final double topInset;
+
+  /// How much of each day's levels was finished, by journey day. A day with
+  /// no entry shows no figure — never 0% — and a day ahead never shows one,
+  /// whatever is here.
+  final Map<int, LevelsFinishedDay> levelsFinished;
 
   @override
   State<RoadmapTimeline> createState() => _RoadmapTimelineState();
@@ -248,6 +259,7 @@ class _RoadmapTimelineState extends State<RoadmapTimeline> {
                                 widget.levels[i].id,
                                 widget.today,
                               ),
+                              levelsFinished: widget.levelsFinished,
                             ),
                           ),
                       ],
@@ -387,10 +399,15 @@ class _PlanetOverlay extends StatelessWidget {
 /// the sheet showed; the missions are the contest's now, so there is nothing
 /// for a tap to open.
 class _DayRow extends StatelessWidget {
-  const _DayRow({required this.level, required this.status});
+  const _DayRow({
+    required this.level,
+    required this.status,
+    required this.levelsFinished,
+  });
 
   final RoadmapLevel level;
   final LevelStatus status;
+  final Map<int, LevelsFinishedDay> levelsFinished;
 
   @override
   Widget build(BuildContext context) {
@@ -398,6 +415,11 @@ class _DayRow extends StatelessWidget {
     final String? label = roadmapStatusLabel(status);
     final bool emphasised = status == LevelStatus.active;
     final ctx = planetContextForDay(level.id);
+    // Behind today and today only; a day ahead never shows one, whatever
+    // the server sent.
+    final LevelsFinishedDay? figure = status == LevelStatus.locked
+        ? null
+        : levelsFinished[level.id];
 
     return Semantics(
       selected: emphasised,
@@ -452,6 +474,10 @@ class _DayRow extends StatelessWidget {
                             : signal,
                       ),
                     ),
+                    if (figure != null) ...<Widget>[
+                      SizedBox(height: _levelsLineGap),
+                      LevelsFinishedLine(figure: figure, isToday: emphasised),
+                    ],
                   ],
                 ),
               ),
@@ -473,6 +499,90 @@ class _DayRow extends StatelessWidget {
 const double _statusLabelSize = 8;
 const double _dayLineSize = 8;
 const double _dayLineLargeSize = 9;
+
+/// The web's mobile `.roadmap-levels-line` (8px, 3px above) and
+/// `.roadmap-levels-bar` (32 × 4, 8 from the words).
+const double _levelsLineSize = 8;
+const double _levelsLineGap = 3;
+const double _levelsBarWidth = 32;
+const double _levelsBarHeight = 4;
+
+/// How much of a day's levels was finished — "3/5 LEVELS · 60%" and a thin
+/// bar, under the day line. The web's `LevelsFinishedLine`.
+///
+/// The words carry it and the bar only repeats them, so a screen reader
+/// hears the sentence instead ("3 of 5 levels finished, 60%"). Colour says
+/// nothing the words do not: today mint, a finished day green, a
+/// part-finished one muted.
+class LevelsFinishedLine extends StatelessWidget {
+  const LevelsFinishedLine({
+    required this.figure,
+    required this.isToday,
+    super.key,
+  });
+
+  final LevelsFinishedDay figure;
+  final bool isToday;
+
+  @override
+  Widget build(BuildContext context) {
+    final ({String short, String spoken}) words = levelsFinishedWords(figure);
+    final bool complete = figure.offered > 0 && figure.done >= figure.offered;
+    final Color text = isToday
+        ? ZaveColors.mint
+        : complete
+        ? ZaveColors.green
+        : ZaveColors.ink62;
+    final Color fill = isToday ? ZaveColors.mint : ZaveColors.green;
+    final double fraction = (figure.percent / 100).clamp(0.0, 1.0);
+
+    return Semantics(
+      container: true,
+      label: words.spoken,
+      excludeSemantics: true,
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        mainAxisAlignment: MainAxisAlignment.end,
+        children: <Widget>[
+          Flexible(
+            child: Text(
+              words.short.toUpperCase(),
+              textAlign: TextAlign.right,
+              style: ZaveType.kicker.copyWith(
+                fontSize: _levelsLineSize.sp,
+                fontWeight: FontWeight.w700,
+                letterSpacing: 0.04 * _levelsLineSize,
+                color: text,
+                fontFeatures: const <FontFeature>[FontFeature.tabularFigures()],
+              ),
+            ),
+          ),
+          SizedBox(width: ZaveSpace.sm),
+          ClipRRect(
+            borderRadius: ZaveRadius.pillBr,
+            child: SizedBox(
+              width: _levelsBarWidth,
+              height: _levelsBarHeight,
+              child: Stack(
+                children: <Widget>[
+                  const Positioned.fill(
+                    child: ColoredBox(color: ZaveColors.rule),
+                  ),
+                  FractionallySizedBox(
+                    alignment: Alignment.centerLeft,
+                    widthFactor: fraction,
+                    heightFactor: 1,
+                    child: ColoredBox(color: fill),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
 
 /// The vertical thread every planet hangs off.
 ///

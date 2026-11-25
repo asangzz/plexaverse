@@ -8,6 +8,8 @@ import 'package:plexaverse/features/home/application/connections_controller.dart
 import 'package:plexaverse/features/home/data/connections_repositories.dart';
 import 'package:plexaverse/features/home/domain/connections_repository.dart';
 import 'package:plexaverse/features/home/presentation/widgets/connection_checkpoint.dart';
+import 'package:plexaverse/features/home/presentation/widgets/connection_series_chart.dart';
+import 'package:plexaverse/features/home/presentation/widgets/follower_series_chart.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 /// The roadmap's weekly connections check-in, held to the web's
@@ -303,7 +305,7 @@ void main() {
       expect(text, contains('+50 since 1 Oct'));
     });
 
-    testWidgets('Update reopens the question, and Cancel does not snooze', (
+    testWidgets('this week\'s count has nothing to press — no Update', (
       WidgetTester tester,
     ) async {
       await pump(
@@ -311,21 +313,46 @@ void main() {
         _Repo(_summaryOf(<ConnectionReading>[_reading(480, daysAgo: 1)])),
       );
 
-      await tester.tap(find.text('Update'));
-      await tester.pumpAndSettle();
-      expect(
-        find.text('How many connections do you have now?'),
-        findsOneWidget,
-      );
-      expect(find.text('Cancel'), findsOneWidget);
-      expect(find.text('Not now'), findsNothing);
-
-      await tester.tap(find.text('Cancel'));
-      await tester.pumpAndSettle();
       expect(find.text('How many connections do you have now?'), findsNothing);
-      final SharedPreferences prefs = await SharedPreferences.getInstance();
-      expect(prefs.getInt(ConnectionPromptSnooze.storageKey), isNull);
+      expect(find.text('Update'), findsNothing);
+      expect(find.byType(ZaveButton), findsNothing);
+      expect(
+        find.bySemanticsLabel('Update your connection count'),
+        findsNothing,
+      );
     });
+
+    testWidgets(
+      '"Add your connection count" opens it; Cancel keeps the snooze',
+      (WidgetTester tester) async {
+        final int until = DateTime.now()
+            .add(const Duration(days: 2))
+            .millisecondsSinceEpoch;
+        SharedPreferences.setMockInitialValues(<String, Object>{
+          ConnectionPromptSnooze.storageKey: until,
+        });
+        await pump(tester, _Repo(const ConnectionSummary()));
+
+        await tester.tap(find.text('Add your connection count'));
+        await tester.pumpAndSettle();
+        expect(
+          find.text('How many connections do you have now?'),
+          findsOneWidget,
+        );
+        expect(find.text('Cancel'), findsOneWidget);
+        expect(find.text('Not now'), findsNothing);
+
+        await tester.tap(find.text('Cancel'));
+        await tester.pumpAndSettle();
+        expect(
+          find.text('How many connections do you have now?'),
+          findsNothing,
+        );
+        expect(find.text('Add your connection count'), findsOneWidget);
+        final SharedPreferences prefs = await SharedPreferences.getInstance();
+        expect(prefs.getInt(ConnectionPromptSnooze.storageKey), until);
+      },
+    );
   });
 
   group('the figure', () {
@@ -362,8 +389,24 @@ void main() {
       final String text = await lineFor(tester, week: 25, sinceFirst: 50);
       expect(text, contains('530 connections'));
       expect(text, contains('+25 this week · +50 since 1 Oct'));
-      expect(find.byType(ZaveSparkline), findsOneWidget);
+      expect(find.byType(ConnectionSeriesChart), findsOneWidget);
+      // Spaced by time, not the index-spaced sparkline.
+      expect(find.byType(FollowerSeriesChart), findsOneWidget);
+      expect(find.byType(ZaveSparkline), findsNothing);
       expect(find.text(why), findsOneWidget);
+      expect(find.text('Update'), findsNothing);
+    });
+
+    testWidgets('the graph is one accessible name for the whole chart', (
+      WidgetTester tester,
+    ) async {
+      final SemanticsHandle semantics = tester.ensureSemantics();
+      await lineFor(tester, week: 25, sinceFirst: 50);
+      expect(
+        find.bySemanticsLabel('Connections over time: 480 to 530'),
+        findsOneWidget,
+      );
+      semantics.dispose();
     });
 
     testWidgets('says a drop plainly, with a real minus sign', (
@@ -390,7 +433,53 @@ void main() {
         findsOneWidget,
       );
       expect(allText(tester), isNot(contains('this week')));
+      expect(find.byType(FollowerSeriesChart), findsNothing);
       expect(find.byType(ZaveSparkline), findsNothing);
+    });
+  });
+
+  group('the series', () {
+    test('is placed by date, oldest first, whatever order it arrives in', () {
+      final List<({DateTime at, double value})> points =
+          connectionSeries(<ConnectionReading>[
+            _fixed(530, '2026-11-20T10:00:00.000Z'),
+            _fixed(480, '2026-10-01T10:00:00.000Z'),
+            _fixed(500, '2026-10-03T10:00:00.000Z'),
+          ]);
+      expect(points.map((p) => p.value), <double>[480, 500, 530]);
+      // The dates ride along, so the chart can space a burst of readings
+      // apart from a seven-week gap.
+      expect(points.map((p) => p.at), <DateTime>[
+        DateTime.parse('2026-10-01T10:00:00.000Z'),
+        DateTime.parse('2026-10-03T10:00:00.000Z'),
+        DateTime.parse('2026-11-20T10:00:00.000Z'),
+      ]);
+    });
+
+    test('drops a reading whose date does not read', () {
+      expect(
+        connectionSeries(<ConnectionReading>[
+          _fixed(480, 'not a date'),
+          _fixed(500, '2026-10-03T10:00:00.000Z'),
+        ]),
+        hasLength(1),
+      );
+    });
+
+    testWidgets('draws nothing with fewer than two dated readings', (
+      WidgetTester tester,
+    ) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          home: ConnectionSeriesChart(
+            readings: <ConnectionReading>[
+              _fixed(480, 'not a date'),
+              _fixed(500, '2026-10-03T10:00:00.000Z'),
+            ],
+          ),
+        ),
+      );
+      expect(find.byType(FollowerSeriesChart), findsNothing);
     });
   });
 }

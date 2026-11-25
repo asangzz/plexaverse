@@ -66,7 +66,7 @@ void main() {
       expect(kindWord(PathNodeKind.comment), 'LinkedIn · Comment');
       expect(kindWord(PathNodeKind.feedComments), 'LinkedIn · Feed comments');
       expect(kindWord(PathNodeKind.weeklyInvites), 'LinkedIn · Invites');
-      expect(kindWord(PathNodeKind.planWeek), 'Planner · Plan this week');
+      expect(kindWord(PathNodeKind.planWeek), 'Planner · Set up the week');
       expect(kindWord(PathNodeKind.article), 'LinkedIn · Article link');
       expect(kindWord(PathNodeKind.video), 'LinkedIn · Video link');
     });
@@ -225,6 +225,104 @@ void main() {
       expect(currentNodeId(late), '2026-11-11:video');
       expect(openLevelOf(late)!.id, '2026-11-11:video');
       expect(openLevelOf(<PathDay>[_week[0]]), isNull);
+    });
+
+    test('START never lands on an open-all-week Sunday level while a gated '
+        'level of today is open, nor while one is skipped', () {
+      // Sunday with its own comment open and the set-up steps open after it.
+      final List<PathDay> sunday = <PathDay>[
+        _sunday(<PathNode>[
+          _task(PathNodeKind.comment, id: '2026-11-08:comment'),
+          _setup(0, SetupStep.post),
+          _setup(0, SetupStep.image, state: PathNodeState.locked),
+        ]),
+      ];
+      expect(currentNodeId(sunday), '2026-11-08:comment');
+      expect(openLevelOf(sunday)!.id, '2026-11-08:comment');
+      // A Sunday level listed FIRST still waits behind today's own level.
+      expect(
+        currentNodeId(<PathDay>[
+          _sunday(<PathNode>[
+            _setup(0, SetupStep.post),
+            _task(PathNodeKind.comment, id: '2026-11-08:comment'),
+          ]),
+        ]),
+        '2026-11-08:comment',
+      );
+      // A skipped level is something that can only be done today: it beats
+      // a Sunday level too.
+      final List<PathDay> skipped = <PathDay>[
+        _sunday(<PathNode>[
+          _task(
+            PathNodeKind.comment,
+            id: '2026-11-08:comment',
+            state: PathNodeState.skipped,
+          ),
+          _setup(0, SetupStep.post),
+        ]),
+      ];
+      expect(currentNodeId(skipped), '2026-11-08:comment');
+      // Nothing else left today: the first open Sunday level, never a
+      // locked one.
+      final List<PathDay> rest = <PathDay>[
+        _sunday(<PathNode>[
+          _task(
+            PathNodeKind.comment,
+            id: '2026-11-08:comment',
+            state: PathNodeState.done,
+          ),
+          _setup(0, SetupStep.post, state: PathNodeState.done),
+          _setup(0, SetupStep.image, state: PathNodeState.locked),
+          _setup(2, SetupStep.post),
+        ]),
+      ];
+      expect(currentNodeId(rest), '2026-11-08:plan_week:post:2');
+      expect(openLevelOf(rest)!.id, '2026-11-08:plan_week:post:2');
+    });
+
+    test('a Sunday level shown open on a past Sunday is never START', () {
+      final List<PathDay> week = <PathDay>[
+        PathDay(
+          dayNumber: 15,
+          dayKey: '2026-11-08',
+          nodes: <PathNode>[_setup(2, SetupStep.post)],
+        ),
+        _today(<PathNode>[_lesson(3, PathNodeState.done)]),
+      ];
+      expect(currentNodeId(week), isNull);
+      expect(openLevelOf(week), isNull);
+    });
+
+    test('a Sunday level says "Open all week", and "Day passed" with its '
+        'reason once its day has gone', () {
+      expect(nodeStateWord(_setup(2, SetupStep.post)), 'Open all week');
+      final PathNode passed = _setup(
+        0,
+        SetupStep.image,
+        state: PathNodeState.missed,
+        detail: 'Day passed — Monday’s image was not added',
+      );
+      expect(isDayPassed(passed), isTrue);
+      expect(nodeStateWord(passed), 'Day passed');
+      expect(dayPassedReason(passed), 'Monday’s image was not added');
+      expect(isOrange(passed), isFalse);
+      expect(isOrange(_setup(2, SetupStep.post)), isTrue);
+      expect(
+        isOrange(_setup(0, SetupStep.post, state: PathNodeState.done)),
+        isTrue,
+      );
+      expect(
+        isOrange(_setup(2, SetupStep.image, state: PathNodeState.locked)),
+        isFalse,
+      );
+      // Any other level keeps its own words: a missed past level is missed.
+      final PathNode missed = _task(
+        PathNodeKind.comment,
+        state: PathNodeState.missed,
+      );
+      expect(isDayPassed(missed), isFalse);
+      expect(nodeStateWord(missed), 'Missed');
+      expect(nodeStateWord(_task(PathNodeKind.comment)), 'Open today');
     });
 
     test('the day divider counts the day, never the length', () {
@@ -504,6 +602,47 @@ void main() {
       });
     });
 
+    test('a Sunday set-up level opens the Planner tab; "Plan this week" its '
+        'own page', () {
+      // Its day's sheet of this week: post and image steps alike.
+      final String? route = contestLevelRoute(_setup(2, SetupStep.post));
+      final Uri uri = Uri.parse(route!);
+      expect(uri.path, ZaveRoutes.planner);
+      expect(uri.queryParameters['day'], '2');
+      // The week the server's link names — counted on the round's day, not
+      // the planner's own "this week" (which can differ around midnight).
+      expect(uri.queryParameters['week'], '6');
+      expect(
+        Uri.parse(
+          contestLevelRoute(_setup(2, SetupStep.post, href: '/planner?setup=1'))!,
+        ).queryParameters.containsKey('week'),
+        isFalse,
+        reason: 'no week in the link: the planner opens its own week',
+      );
+      // A per-tap token, so tapping the same level again reopens its day.
+      expect(uri.queryParameters['at'], isNotEmpty);
+      expect(isContestTabRoute(route), isTrue);
+      expect(
+        Uri.parse(
+          contestLevelRoute(_setup(4, SetupStep.image))!,
+        ).queryParameters['day'],
+        '4',
+      );
+      expect(isContestTabRoute(ZaveRoutes.planner), isTrue);
+      expect(
+        contestLevelRoute(_task(PathNodeKind.planWeek)),
+        ZaveRoutes.contestPlan,
+      );
+      expect(isContestTabRoute(ZaveRoutes.contestPlan), isFalse);
+      // A passed one opens nothing.
+      expect(
+        contestLevelRoute(
+          _setup(0, SetupStep.post, state: PathNodeState.missed, href: null),
+        ),
+        isNull,
+      );
+    });
+
     test('a claim opens its piece, its occurrence sent back unchanged', () {
       final String route = contestLevelRoute(
         _task(PathNodeKind.video, claim: _claim, href: '/x'),
@@ -561,6 +700,24 @@ void main() {
       expect(next.label, 'Next: Comment on a top voice');
       expect(next.isBackToPath, isFalse);
 
+      // After "I've planned this week" the next level is Sunday's first
+      // set-up step — the same kind, plan_week, but a level of its own.
+      final ContestPath planned = ContestPath(
+        status: ContestPathStatus.running,
+        days: <PathDay>[
+          _sunday(<PathNode>[
+            _lesson(3, PathNodeState.done),
+            _setup(0, SetupStep.post),
+          ]),
+        ],
+      );
+      final NextLevel afterPlan = nextOpenLevel(
+        planned,
+        PathNodeKind.planWeek,
+      );
+      expect(afterPlan.isBackToPath, isFalse);
+      expect(Uri.parse(afterPlan.route).path, ZaveRoutes.planner);
+
       // The path still shows the level just finished: back to the path.
       expect(
         nextOpenLevel(path, PathNodeKind.comment).label,
@@ -617,8 +774,9 @@ PathNode _task(
   bool started = false,
   String? href = '/contest/x',
   NodeClaim? claim,
+  String? id,
 }) => PathNode(
-  id: '2026-11-11:${kind.wire}',
+  id: id ?? '2026-11-11:${kind.wire}',
   kind: kind,
   state: state,
   title: _titles[kind] ?? kind.name,
@@ -627,6 +785,28 @@ PathNode _task(
   started: started,
   claim: claim,
 );
+
+/// One of the open-all-week Sunday levels, on the week's Sunday.
+PathNode _setup(
+  int day,
+  SetupStep step, {
+  PathNodeState state = PathNodeState.today,
+  String? href = '/planner?week=6&setup=1',
+  String? detail,
+}) => PathNode(
+  id: '2026-11-08:plan_week:${step.wire}:$day',
+  kind: PathNodeKind.planWeek,
+  state: state,
+  title: step == SetupStep.post ? 'Write a post' : 'Add an image',
+  href: href,
+  detail: detail,
+  setup: NodeSetup(dayIndex: day, step: step),
+  openAllWeek: true,
+);
+
+/// Today, a Sunday.
+PathDay _sunday(List<PathNode> nodes) =>
+    PathDay(dayNumber: 15, dayKey: '2026-11-08', isToday: true, nodes: nodes);
 
 PathDay _today(List<PathNode> nodes) => PathDay(
   dayNumber: 17,

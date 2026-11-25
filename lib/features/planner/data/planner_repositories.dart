@@ -1,3 +1,5 @@
+import 'dart:typed_data';
+
 import 'package:flutter/foundation.dart' show kReleaseMode;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -8,9 +10,11 @@ import '../../../core/week/week_shape.dart';
 import '../../../core/network/dio_client.dart';
 import '../domain/plan_slot.dart';
 import '../domain/planner_repository.dart';
+import '../domain/post_formats.dart';
 import '../domain/video_script.dart';
 import '../domain/weekly_article.dart';
-import 'package:dio/dio.dart';
+import 'package:dio/dio.dart'
+    show DioException, DioMediaType, FormData, MultipartFile, Response;
 import '../../../core/network/failure.dart';
 import '../../../core/plan/plan_refusal.dart';
 
@@ -57,6 +61,7 @@ class ApiPlannerRepository implements PlannerRepository {
       plan: WeekPlan.fromJson(plan),
       scheduledFor: when == null ? null : DateTime.tryParse(when)?.toLocal(),
       postUpdated: data?['postUpdated'] == true,
+      held: data?['held'] == true,
     );
   }
 
@@ -454,6 +459,160 @@ class ApiPlannerRepository implements PlannerRepository {
         response.data?['article'] as Map<String, dynamic>?;
     return article == null ? null : WeeklyArticle.fromJson(article);
   }
+
+  // ── The playbook week: review, image step, news ─────────────────────────
+
+  /// Every playbook route answers with the same refusals: the plan gate's
+  /// 402 (details kept for [PlanLimitSheet]) or a code + the server's own
+  /// sentence.
+  static PlannerActionFailure _actionFailure(DioException e) {
+    final PlanRefusal? refusal = PlanRefusal.fromDioException(e);
+    if (refusal != null) {
+      return PlannerActionFailure(
+        code: refusal.isLimit ? 'LIMIT_REACHED' : 'NOT_ENTITLED',
+        message: refusal.displayMessage(),
+        refusal: refusal,
+      );
+    }
+    final Object? failure = e.error;
+    return PlannerActionFailure(
+      code: failure is Failure ? failure.errorCode : null,
+      message: _serverMessage(e),
+    );
+  }
+
+  Future<T> _action<T>(Future<T> Function() call) async {
+    try {
+      return await call();
+    } on DioException catch (e) {
+      throw _actionFailure(e);
+    } on PlannerActionFailure {
+      rethrow;
+    } on Object {
+      throw const PlannerActionFailure(code: 'FAILED');
+    }
+  }
+
+  @override
+  Future<RefineResult> refinePost({
+    required int weekNumber,
+    required int season,
+    required int dayIndex,
+  }) => _action(() async {
+    final response = await _client.post<Map<String, dynamic>>(
+      ApiPaths.plannerRefinePost,
+      data: <String, dynamic>{
+        'weekNumber': weekNumber,
+        'season': season,
+        'dayIndex': dayIndex,
+      },
+    );
+    return RefineResult.fromJson(response.data ?? const <String, dynamic>{});
+  });
+
+  @override
+  Future<SlotPhotoUpload> uploadSlotPhoto({
+    required int weekNumber,
+    required int season,
+    required int dayIndex,
+    required Uint8List bytes,
+    required String filename,
+  }) => _action(() async {
+    final FormData form = FormData.fromMap(<String, dynamic>{
+      // The content type is set explicitly: Dio's octet-stream fallback is
+      // refused as INVALID_IMAGE.
+      'file': MultipartFile.fromBytes(
+        bytes,
+        filename: filename,
+        contentType: _photoTypeOf(filename),
+      ),
+      'weekNumber': '$weekNumber',
+      'season': '$season',
+      'dayIndex': '$dayIndex',
+    });
+    final response = await _client.sendMultipart<Map<String, dynamic>>(
+      ApiPaths.plannerPhoto,
+      form,
+    );
+    final Map<String, dynamic> data = response.data ?? const <String, dynamic>{};
+    return SlotPhotoUpload(
+      previewUrl: data['previewUrl'] as String?,
+      photoGuide: data['photoGuide'] as String?,
+    );
+  });
+
+  static DioMediaType _photoTypeOf(String filename) {
+    final String n = filename.toLowerCase();
+    if (n.endsWith('.png')) return DioMediaType('image', 'png');
+    if (n.endsWith('.webp')) return DioMediaType('image', 'webp');
+    return DioMediaType('image', 'jpeg');
+  }
+
+  @override
+  Future<SlotImageMade> makeSlotImage({
+    required int weekNumber,
+    required int season,
+    required int dayIndex,
+    required SlotImageMode mode,
+    bool consent = false,
+  }) => _action(() async {
+    final response = await _client.post<Map<String, dynamic>>(
+      ApiPaths.plannerImage,
+      data: <String, dynamic>{
+        'weekNumber': weekNumber,
+        'season': season,
+        'dayIndex': dayIndex,
+        'mode': mode.wire,
+        if (consent) 'consent': true,
+      },
+    );
+    final Map<String, dynamic> data = response.data ?? const <String, dynamic>{};
+    final String? url = data['imageUrl'] as String?;
+    if (url == null || url.isEmpty) {
+      throw const PlannerActionFailure(code: 'FAILED');
+    }
+    return SlotImageMade(imageUrl: url, kindUsed: data['kindUsed'] as String?);
+  });
+
+  @override
+  Future<NewsStatus> fetchNewsStatus() async {
+    try {
+      final response = await _client.get<Map<String, dynamic>>(
+        ApiPaths.plannerNews,
+      );
+      final Map<String, dynamic>? data = response.data;
+      return data == null ? NewsStatus.off : NewsStatus.fromJson(data);
+    } on Object {
+      return NewsStatus.off;
+    }
+  }
+
+  @override
+  Future<NewsResult> findNews({required int weekNumber, required int season}) =>
+      _action(() async {
+        final response = await _client.post<Map<String, dynamic>>(
+          ApiPaths.plannerNews,
+          data: <String, dynamic>{'weekNumber': weekNumber, 'season': season},
+        );
+        return NewsResult.fromJson(response.data ?? const <String, dynamic>{});
+      });
+
+  @override
+  Future<NewsResult> pickNews({
+    required int weekNumber,
+    required int season,
+    required int pickedIndex,
+  }) => _action(() async {
+    final response = await _client.put<Map<String, dynamic>>(
+      ApiPaths.plannerNews,
+      data: <String, dynamic>{
+        'weekNumber': weekNumber,
+        'season': season,
+        'pickedIndex': pickedIndex,
+      },
+    );
+    return NewsResult.fromJson(response.data ?? const <String, dynamic>{});
+  });
 }
 
 /// In-memory [PlannerRepository] for the `mock` flavor.
@@ -501,25 +660,110 @@ class FakePlannerRepository implements PlannerRepository {
           rawKind: dayKindAt(i).wire,
           restDay: dayKindAt(i) == DayKind.rest,
           title: <String>[
-            'The first week decides the year',
-            'Three onboarding metrics nobody tracks',
-            'What a good day one actually looks like',
+            'Five steps to a first week that sticks',
+            '',
+            'The onboarding I got wrong, and what it cost',
             'The handover problem, and how to fix it',
-            'Which of these breaks your onboarding?',
-            'A checklist you can steal',
-            'Why onboarding is a design problem',
+            'What the new hiring report gets wrong',
+            '',
+            '',
           ][i],
-          // Only a post day has a publish ladder to climb. The two video days
-          // and Thursday stay `planned` for ever on the server too — their
-          // real state lives in the script and article rows.
+          // The playbook fields a week planned from 25 Nov 2026 carries on
+          // each post day. Monday teaches with an AI poster, Wednesday is a
+          // story that wants the user's photo, and Friday — week 3 is odd —
+          // is the week's news post, still open so the picker can be used.
+          rawRole: roleForDay(i)?.wire,
+          formatId: switch (i) {
+            0 => 'numbered_steps',
+            2 => 'mistake_lesson',
+            4 => 'industry_take',
+            _ => null,
+          },
+          rawImageKind: switch (i) {
+            0 || 4 => 'ai_poster',
+            2 => 'photo',
+            _ => null,
+          },
+          rawReview: switch (i) {
+            0 => <String, dynamic>{
+              'ok': true,
+              'errors': <String>[],
+              'warnings': <String>[],
+              'checkedAt': '2026-11-23T04:00:00.000Z',
+              'refined': true,
+            },
+            2 => <String, dynamic>{
+              'ok': false,
+              'errors': <String>[
+                'End with a real question for the reader (six words or more).',
+              ],
+              'warnings': <String>['Shorten the first line to under 60 characters.'],
+              'checkedAt': '2026-11-24T04:00:00.000Z',
+              'refined': false,
+            },
+            _ => null,
+          },
+          rawNews: i == 4 ? _fakeNews(0) : null,
+          // Only a post day has a publish ladder to climb. Thursday stays
+          // `planned` for ever on the server too — its real state lives in
+          // the article row.
           status: switch (i) {
-            0 || 1 => SlotStatus.published,
+            0 => SlotStatus.published,
+            2 => SlotStatus.generated,
             _ => SlotStatus.planned,
           },
-          postId: i <= 1 ? 'mock-post-$i' : null,
+          postId: switch (i) {
+            0 => 'mock-post-1',
+            2 => 'mock-post-2',
+            _ => null,
+          },
         ),
     ],
   );
+
+  /// Three headlines from the last week, as the server's search stores them.
+  static Map<String, dynamic> _fakeNews(int picked) {
+    final DateTime now = DateTime.now().toUtc();
+    String day(int back) =>
+        now.subtract(Duration(days: back)).toIso8601String().substring(0, 10);
+    return <String, dynamic>{
+      'candidates': <Map<String, dynamic>>[
+        <String, dynamic>{
+          'title': 'Companies cut onboarding budgets as hiring slows',
+          'source': 'The Economic Times',
+          'url': 'https://economictimes.indiatimes.com/jobs/onboarding-budgets',
+          'publishedAt': day(2),
+          'summary':
+              'A survey of 400 firms finds onboarding spend down this year. '
+              'Most moved it into manager time instead.',
+        },
+        <String, dynamic>{
+          'title': 'New report: first-90-day attrition at a five-year high',
+          'source': 'Mint',
+          'url': 'https://www.livemint.com/news/first-90-days-attrition',
+          'publishedAt': day(4),
+          'summary': 'Early attrition rose for the third year running.',
+        },
+        <String, dynamic>{
+          'title': 'Remote hires report weaker first-week support',
+          'source': 'Business Standard',
+          'url': 'https://www.business-standard.com/remote-first-week',
+          'publishedAt': null,
+          'summary': 'Remote joiners rated their first week lower than office ones.',
+        },
+      ],
+      'pickedIndex': picked,
+      'fetchedAt': now.subtract(const Duration(days: 1)).toIso8601String(),
+      'query': 'HR onboarding India',
+      'formatId': 'industry_take',
+      'fallback': <String, dynamic>{
+        'formatId': 'myth_flip',
+        'imageKind': 'text_card',
+        'posterTag': null,
+        'formatFellBack': false,
+      },
+    };
+  }
 
   /// The week the fake pretends it is. Weeks after this have no plan yet.
   static const int _currentWeek = 3;
@@ -970,6 +1214,148 @@ class FakePlannerRepository implements PlannerRepository {
     await Future<void>.delayed(const Duration(milliseconds: 250));
     _articlePublishedAt = DateTime.now().toUtc().toIso8601String();
     return _articleNow();
+  }
+
+  // ── The playbook week ────────────────────────────────────────────────────
+
+  PlanSlot _slotAt(int dayIndex) => _plan.posts[dayIndex];
+
+  void _replaceSlot(int dayIndex, PlanSlot Function(PlanSlot) edit) {
+    _plan = _plan.copyWith(
+      posts: <PlanSlot>[
+        for (int i = 0; i < _plan.posts.length; i++)
+          i == dayIndex ? edit(_plan.posts[i]) : _plan.posts[i],
+      ],
+    );
+  }
+
+  @override
+  Future<RefineResult> refinePost({
+    required int weekNumber,
+    required int season,
+    required int dayIndex,
+  }) async {
+    await Future<void>.delayed(const Duration(milliseconds: 900));
+    if (!_slotAt(dayIndex).hasPost) {
+      throw const PlannerActionFailure(
+        code: 'NO_POST',
+        message: 'Write the post first.',
+      );
+    }
+    const Map<String, dynamic> clean = <String, dynamic>{
+      'ok': true,
+      'errors': <String>[],
+      'warnings': <String>[],
+      'checkedAt': '2026-11-25T04:00:00.000Z',
+      'refined': true,
+    };
+    _replaceSlot(dayIndex, (PlanSlot s) => s.copyWith(rawReview: clean));
+    return RefineResult(
+      ok: true,
+      changed: true,
+      review: SlotReview.tryParse(clean)!,
+    );
+  }
+
+  @override
+  Future<SlotPhotoUpload> uploadSlotPhoto({
+    required int weekNumber,
+    required int season,
+    required int dayIndex,
+    required Uint8List bytes,
+    required String filename,
+  }) async {
+    await Future<void>.delayed(const Duration(milliseconds: 600));
+    _replaceSlot(
+      dayIndex,
+      (PlanSlot s) => s.copyWith(
+        rawReferencePhoto: <String, dynamic>{
+          'path': 'mock-user/$filename',
+          'uploadedAt': DateTime.now().toUtc().toIso8601String(),
+        },
+      ),
+    );
+    return SlotPhotoUpload(photoGuide: _slotAt(dayIndex).formatSpec?.photoGuide);
+  }
+
+  /// The fake keeps the consent the way the server does: once given in the
+  /// image step, the next reference generation needs no box.
+  bool _photoConsent = false;
+
+  @override
+  Future<SlotImageMade> makeSlotImage({
+    required int weekNumber,
+    required int season,
+    required int dayIndex,
+    required SlotImageMode mode,
+    bool consent = false,
+  }) async {
+    await Future<void>.delayed(const Duration(milliseconds: 900));
+    final PlanSlot slot = _slotAt(dayIndex);
+    if (!slot.hasPost) {
+      throw const PlannerActionFailure(
+        code: 'NO_POST',
+        message: 'Write the post first.',
+      );
+    }
+    if (mode == SlotImageMode.reference || mode == SlotImageMode.asIs) {
+      if (!slot.hasReferencePhoto) {
+        throw const PlannerActionFailure(
+          code: 'NO_PHOTO',
+          message: 'Add a photo first.',
+        );
+      }
+    }
+    if (consent) _photoConsent = true;
+    if (mode == SlotImageMode.reference && !_photoConsent) {
+      throw const PlannerActionFailure(
+        code: 'CONSENT_REQUIRED',
+        message: 'Tick the box to send your photo to OpenAI first.',
+      );
+    }
+    const String url = 'https://picsum.photos/seed/plexaverse-slot/1080/1350';
+    _replaceSlot(
+      dayIndex,
+      (PlanSlot s) => s.copyWith(previewImageUrl: url, fullImageUrl: url),
+    );
+    return const SlotImageMade(imageUrl: url, kindUsed: 'ai_poster');
+  }
+
+  @override
+  Future<NewsStatus> fetchNewsStatus() async =>
+      const NewsStatus(enabled: true, entitled: true);
+
+  @override
+  Future<NewsResult> findNews({
+    required int weekNumber,
+    required int season,
+  }) async {
+    await Future<void>.delayed(const Duration(milliseconds: 1200));
+    final int dayIndex = newsDayFor(weekNumber).dayIndex;
+    final PlanSlot slot = _slotAt(dayIndex);
+    if (!slot.isOpen) {
+      throw const PlannerActionFailure(
+        code: 'ALREADY_WRITTEN',
+        message: 'This post is already written.',
+      );
+    }
+    _replaceSlot(dayIndex, (PlanSlot s) => s.copyWith(rawNews: _fakeNews(0)));
+    return NewsResult(dayIndex: dayIndex, news: _slotAt(dayIndex).news);
+  }
+
+  @override
+  Future<NewsResult> pickNews({
+    required int weekNumber,
+    required int season,
+    required int pickedIndex,
+  }) async {
+    await Future<void>.delayed(const Duration(milliseconds: 300));
+    final int dayIndex = newsDayFor(weekNumber).dayIndex;
+    _replaceSlot(
+      dayIndex,
+      (PlanSlot s) => s.copyWith(rawNews: _fakeNews(pickedIndex)),
+    );
+    return NewsResult(dayIndex: dayIndex, news: _slotAt(dayIndex).news);
   }
 
   /// The one article every path in this fake reads from.

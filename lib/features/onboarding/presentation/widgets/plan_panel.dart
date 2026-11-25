@@ -85,10 +85,11 @@ class PlanPanel extends StatelessWidget {
   final VoidCallback onStart;
   final VoidCallback onRetry;
 
-  /// What the plan pays for — the web's `INCLUDED`, verbatim.
+  /// What the plan pays for — the web's `INCLUDED`, minus the video scripts
+  /// the playbook week (25 Nov 2026) dropped; the web line still names them.
   static const List<String> included = <String>[
     'Posts written and published for you',
-    'Your weekly plan, article and video scripts',
+    'Your weekly plan and newsletter article',
     'Business English practice with Plexa',
   ];
 

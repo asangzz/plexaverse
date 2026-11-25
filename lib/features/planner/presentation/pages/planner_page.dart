@@ -16,28 +16,128 @@ import '../../../posts/domain/library_post.dart';
 import '../../application/planner_controller.dart';
 import '../../domain/display_phase.dart';
 import '../../domain/plan_slot.dart';
+import '../../domain/post_formats.dart' show ImageKind;
 import '../../domain/planner_repository.dart';
 import '../../domain/video_script.dart';
 import '../../domain/weekly_article.dart';
 import '../widgets/article_card.dart';
+import '../widgets/playbook_panels.dart';
 import '../widgets/slot_card.dart';
 
 /// **Plan** — the content planner. The web's `/planner`.
 ///
 /// A week is not seven posts that share a topic. It is **one long-form
-/// newsletter on Thursday plus two posts and two video scripts that argue
-/// facets of it** (CLAUDE.md §6b), and the screen is laid out to say so: the
-/// article sits at the top as the week's spine, and the seven day slots —
-/// including the two weekend rest days — hang off it.
+/// newsletter on Thursday plus three posts — Monday teaches, Wednesday tells
+/// a story, Friday takes a position** (CLAUDE.md §6b, the playbook week of
+/// 25 Nov 2026), and the screen is laid out to say so: the article sits at
+/// the top as the week's spine, and the seven day slots — including the rest
+/// days — hang off it. Weeks planned before that may still carry a video
+/// script on a day already lived.
 ///
 /// The web renders the days as a seven-column grid on a wide screen and stacks
 /// them below its `lg` breakpoint. A phone always gets the stacked form, which
 /// is the web's own mobile rendering rather than a mobile-specific invention.
-class PlannerPage extends ConsumerWidget {
-  const PlannerPage({super.key});
+class PlannerPage extends ConsumerStatefulWidget {
+  const PlannerPage({
+    this.focusDay,
+    this.focusWeek,
+    this.focusToken,
+    super.key,
+  });
+
+  /// A day of THIS week to open on arrival (0 = Monday) — `/planner?day=N`,
+  /// which the Sunday set-up levels link to. Null opens the week as usual.
+  final int? focusDay;
+
+  /// `&week=` — the planner week [focusDay] belongs to. A Sunday set-up
+  /// level names its week, counted on the round's day, which around Sunday
+  /// midnight can differ from the planner's own "this week". Null = this week.
+  final int? focusWeek;
+
+  /// `&at=` — changes per tap, so linking the same day again reopens it.
+  final String? focusToken;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<PlannerPage> createState() => _PlannerPageState();
+}
+
+class _PlannerPageState extends ConsumerState<PlannerPage> {
+  /// The deep-linked day this page has already opened, so a rebuild does not
+  /// open it twice. Reset when a different day is linked.
+  int? _openedFocus;
+
+  @override
+  void initState() {
+    super.initState();
+    if (widget.focusDay != null) {
+      // A set-up level is about its own week, whichever week was being
+      // browsed. After the frame: a provider may not change during build.
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) _showFocusWeek();
+      });
+    }
+  }
+
+  void _showFocusWeek() {
+    final PlannerWeek weeks = ref.read(plannerWeekProvider.notifier);
+    final int? week = widget.focusWeek;
+    final int? current = ref
+        .read(plannerControllerProvider)
+        .value
+        ?.currentWeekNumber;
+    // Pinned only when the link is for ANOTHER week (around Sunday midnight).
+    // A link for this week shows the week as "this week" — pinning it would
+    // put up the browsing chip, hide Change, and outlive the week.
+    if (week == null || week == current) {
+      weeks.showCurrent();
+    } else {
+      weeks.showWeek(week);
+    }
+  }
+
+  @override
+  void didUpdateWidget(covariant PlannerPage oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.focusDay != oldWidget.focusDay ||
+        widget.focusWeek != oldWidget.focusWeek ||
+        widget.focusToken != oldWidget.focusToken) {
+      _openedFocus = null;
+      // After the frame: this runs inside the router's build, and a provider
+      // may not change while a widget is building.
+      if (widget.focusDay != null) {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (mounted) _showFocusWeek();
+        });
+      }
+    }
+  }
+
+  /// Opens the linked day once its week has loaded.
+  void _openFocus(PlannerState state) {
+    final int? day = widget.focusDay;
+    final WeekPlan? plan = state.plan;
+    if (day == null || _openedFocus == day || plan == null) return;
+    if (plan.weekNumber != (widget.focusWeek ?? state.currentWeekNumber)) {
+      return;
+    }
+    if (day < 0 || day >= plan.posts.length) return;
+    _openedFocus = day;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      // One day's sheet at a time: a level tapped while another day's sheet
+      // is still open (the tab keeps it) replaces it rather than stacking.
+      Navigator.of(context).popUntil((Route<dynamic> r) => r.isFirst);
+      showModalBottomSheet<void>(
+        context: context,
+        backgroundColor: Colors.transparent,
+        isScrollControlled: true,
+        builder: (BuildContext ctx) => _SlotSheet(slotIndex: day),
+      );
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final AsyncValue<PlannerState> planner = ref.watch(
       plannerControllerProvider,
     );
@@ -47,6 +147,7 @@ class PlannerPage extends ConsumerWidget {
     final AsyncValue<List<VideoScript>> scripts = ref.watch(
       videoScriptsControllerProvider,
     );
+    if (planner.value case final PlannerState s) _openFocus(s);
 
     return ZaveScaffold(
       // No header. The body opens with its own `Week N` / `planner` lockup,
@@ -143,9 +244,10 @@ class _PlannerBody extends StatelessWidget {
 
         // The week is a SETUP before it is a schedule.
         //
-        // Three things have to exist before a week is really planned: the
-        // Thursday article has to be scheduled, the two posts written, and
-        // the two scripts drafted. Previously all of that was one long
+        // Two things have to exist before a week is really planned: the
+        // Thursday article has to be scheduled, and the three posts written
+        // with their images (a legacy week also has its scripts to draft).
+        // Previously all of that was one long
         // column, so the only way to know what was still outstanding was to
         // scroll the whole week and work it out. As steps, the page says it.
         //
@@ -228,6 +330,14 @@ class _PlannerBody extends StatelessWidget {
     final String message;
     if (result == null) {
       message = "That didn't go through. Try again.";
+    } else if (result.held) {
+      // The web's `heldMessage`: the fixes, from the day's stored review.
+      final List<String> fixes =
+          result.plan.posts.elementAtOrNull(index)?.review?.errors.take(2).toList() ??
+          const <String>[];
+      message = fixes.isEmpty
+          ? 'Held — fix it first.'
+          : 'Held — fix it first: ${fixes.join(' ')}';
     } else if (result.scheduledFor != null) {
       message = 'Approved — publishing ${_whenLabel(result.scheduledFor!)}.';
     } else if (result.postUpdated) {
@@ -895,6 +1005,11 @@ class _SlotSheetState extends ConsumerState<_SlotSheet> {
   /// leaving the previous draft's text in a box labelled with the new one.
   String? _bodyLoadedFor;
 
+  /// The text the body field was last filled with. "Fix with AI" rewrites the
+  /// post IN PLACE (same id), so the id alone would keep showing the old text
+  /// — and a Save would then write it back over the fix.
+  String? _bodyLoadedText;
+
   /// The title the server last gave us, so an AI rewrite lands in the field
   /// while a half-typed edit is not thrown away by an unrelated rebuild.
   String? _titleLoadedFrom;
@@ -975,22 +1090,29 @@ class _SlotSheetState extends ConsumerState<_SlotSheet> {
   /// Null means "untouched": the dirty flags stay here because only the field
   /// can tell a typed edit from a value the sheet filled in.
   Future<void> _save() async {
+    // What goes up, as it is now: the field stays editable while the save
+    // runs, and anything typed after this moment is not part of it.
+    final String? sentTitle = _titleDirty.value ? _title.text : null;
+    final String? sentBody = _bodyDirty.value ? _body.text : null;
     final String? failure = await ref
         .read(plannerControllerProvider.notifier)
-        .saveSlotEdits(
-          widget.slotIndex,
-          title: _titleDirty.value ? _title.text : null,
-          body: _bodyDirty.value ? _body.text : null,
-        );
+        .saveSlotEdits(widget.slotIndex, title: sentTitle, body: sentBody);
     if (!mounted) return;
     if (failure != null) {
       _say(failure);
       return;
     }
-    // No `setState`: nothing but the Save button reads these, and neither
-    // marker moved, so there is nothing for a full rebuild to refill.
-    _titleDirty.value = false;
-    _bodyDirty.value = false;
+    // Clean only where the field still holds what was sent; text typed while
+    // the save ran stays dirty, and the refill below never overwrites it. The
+    // body marker is moved to the sent text so the save's own echo is not
+    // mistaken for an in-place rewrite (Fix with AI) and refilled.
+    if (sentTitle == null || _title.text == sentTitle) {
+      _titleDirty.value = false;
+    }
+    if (sentBody != null) {
+      _bodyLoadedText = sentBody;
+      if (_body.text == sentBody) _bodyDirty.value = false;
+    }
     _say('Saved.');
   }
 
@@ -1040,7 +1162,27 @@ class _SlotSheetState extends ConsumerState<_SlotSheet> {
         builder: (BuildContext ctx) => AlertDialog(
           title: const Text('Write it again?'),
           content: Text(
-            _bodyDirty.value
+            slot.imageKind == ImageKind.photo && !slot.hasReferencePhoto
+                // A photo day with no photo of its own: the new post keeps the
+                // image it had, and nothing new is made until a photo is given.
+                ? (_bodyDirty.value
+                      ? 'This replaces the current draft with a new one. Your '
+                            'unsaved edits to this post will be lost. The image '
+                            'stays; add a photo to make a new one.'
+                      : 'This replaces the current draft with a new one. The '
+                            'old draft is deleted. The image stays; add a photo '
+                            'to make a new one.')
+                : slot.isNewShape
+                // A playbook day makes its image again after the text (a
+                // poster or card at once; a photo day from its photo), so
+                // nothing about the old image is promised here.
+                ? (_bodyDirty.value
+                      ? 'This replaces the current draft with a new one and '
+                            'makes its image again. Your unsaved edits to this '
+                            'post will be lost.'
+                      : 'This replaces the current draft with a new one and '
+                            'makes its image again. The old draft is deleted.')
+                : _bodyDirty.value
                 // The edits are in a field that is about to be replaced, and
                 // the post behind it is about to be deleted. Saying so is the
                 // difference between a choice and a surprise.
@@ -1218,8 +1360,11 @@ class _SlotSheetState extends ConsumerState<_SlotSheet> {
     final AsyncValue<LibraryPost>? post = postId == null
         ? null
         : ref.watch(postDetailProvider(postId));
-    if (post?.value case final LibraryPost p when _bodyLoadedFor != p.id) {
+    if (post?.value case final LibraryPost p
+        when _bodyLoadedFor != p.id ||
+            (!_bodyDirty.value && _bodyLoadedText != p.content)) {
       _bodyLoadedFor = p.id;
+      _bodyLoadedText = p.content;
       _body.text = p.content;
       // A no-op on every path that gets here through [_run], which clears it
       // first. It only bites when the post changed from elsewhere while the
@@ -1248,6 +1393,12 @@ class _SlotSheetState extends ConsumerState<_SlotSheet> {
           ],
         ),
         SizedBox(height: ZaveSpace.lg),
+
+        // ── What the day is (a playbook day) ─────────────────────────────
+        if (slot.isNewShape) ...<Widget>[
+          SlotFormatBlock(slot: slot),
+          SizedBox(height: ZaveSpace.lg),
+        ],
 
         // ── Title ────────────────────────────────────────────────────────
         if (editable)
@@ -1280,6 +1431,13 @@ class _SlotSheetState extends ConsumerState<_SlotSheet> {
           SizedBox(height: ZaveSpace.sm),
           Text(slot.angle, style: ZaveType.bodyMuted),
         ],
+        // The week's news post: its headlines and the pick. Draws nothing on
+        // any other day.
+        if (slot.isPublishable) ...<Widget>[
+          SizedBox(height: ZaveSpace.lg),
+          NewsPicker(slotIndex: widget.slotIndex),
+        ],
+        // Legacy weeks only: playbook posts carry no hashtags.
         if (slot.hashtags.isNotEmpty) ...<Widget>[
           SizedBox(height: ZaveSpace.lg),
           Wrap(
@@ -1303,10 +1461,12 @@ class _SlotSheetState extends ConsumerState<_SlotSheet> {
             child: ClipRRect(
               borderRadius: BorderRadius.circular(ZaveRadius.cardSm),
               child: AspectRatio(
-                aspectRatio: 16 / 9,
+                // Playbook images are portrait 1080×1350 (4:5); a legacy
+                // poster keeps the crop it always had.
+                aspectRatio: slot.isNewShape ? 4 / 5 : 16 / 9,
                 child: ZaveImage(
                   source: src,
-                  errorMessage: 'That poster could not be loaded.',
+                  errorMessage: 'That image could not be loaded.',
                 ),
               ),
             ),
@@ -1333,6 +1493,16 @@ class _SlotSheetState extends ConsumerState<_SlotSheet> {
             ),
             _ => Text('Loading the post…', style: ZaveType.bodyMuted),
           },
+        ],
+
+        // ── The review and the image step (a playbook day) ───────────────
+        if (slot.isNewShape) ...<Widget>[
+          if (slot.hasPost) ...<Widget>[
+            SizedBox(height: ZaveSpace.lg),
+            SlotReviewPanel(slotIndex: widget.slotIndex),
+          ],
+          SizedBox(height: ZaveSpace.xl),
+          SlotImageStep(slotIndex: widget.slotIndex),
         ],
 
         // A video day. Without this the sheet offered one action — rewriting
@@ -1400,8 +1570,9 @@ class _SlotSheetState extends ConsumerState<_SlotSheet> {
               onPressed: busy ? null : () => _run(slot, force: true),
             ),
             // Only where the day actually carries one. Offering new artwork
-            // on a text-only day would charge for an image nothing shows.
-            if (slot.format == 'text_image') ...<Widget>[
+            // on a text-only day would charge for an image nothing shows. A
+            // playbook day makes its image in the image step above instead.
+            if (!slot.isNewShape && slot.format == 'text_image') ...<Widget>[
               SizedBox(height: ZaveSpace.md),
               ZaveButton(
                 label: poster == null ? 'Add an image' : 'New image',
@@ -1417,19 +1588,21 @@ class _SlotSheetState extends ConsumerState<_SlotSheet> {
   }
 }
 
-/// Which part of the week's setup is on screen.
+/// Which part of the week's setup is on screen. [scripts] only on a week
+/// planned before 25 Nov 2026 that still carries a video script.
 enum _SetupTab { article, posts, scripts, analytics }
 
 /// The week as a setup, then the week as a schedule.
 ///
 /// ## Why steps
 ///
-/// A planned week is three pieces of work with an order to them — the
-/// Thursday article is the spine, the weekday titles are chosen from ITS
-/// section headings, and the two scripts hang off the same topic (CLAUDE.md
-/// §6b). Shown as one column, that order was invisible and so was the
-/// progress: the only way to learn that Friday still had no script was to
-/// scroll to Friday.
+/// A planned week is work with an order to it — the Thursday article is the
+/// spine, the weekday titles are chosen from ITS section headings, and the
+/// three posts (Mon, Wed, Fri) each want their image (CLAUDE.md §6b).
+/// Shown as one column, that order was invisible and so was the progress:
+/// the only way to learn that Friday still had no image was to scroll to
+/// Friday. The Scripts step survives only for a legacy week whose script
+/// days are still on it.
 ///
 /// ## Why the tabs are not gated
 ///
@@ -1508,16 +1681,49 @@ class _WeekSetupState extends State<_WeekSetup> {
       if (widget.plan.posts[i].kind == DayKind.videoScript) i,
   ];
 
+  /// Every post day written and, where the day carries one, its image made
+  /// — the same rule the Sunday set-up levels use (a post step is done when
+  /// the slot has a post, an image step when that post has an image).
   bool get _postsDone =>
       _postDays.isNotEmpty &&
-      _postDays.every((int i) => widget.plan.posts[i].hasPost);
+      _postDays.every((int i) {
+        final PlanSlot slot = widget.plan.posts[i];
+        if (!slot.hasPost) return false;
+        if (!slot.wantsImage) return true;
+        return (slot.fullImageUrl ?? slot.previewImageUrl ?? '').isNotEmpty;
+      });
 
+  /// Done when every script day has its script — and trivially done on a
+  /// playbook week, which has none. It used to need a script day to exist,
+  /// so a week without video never finished setting up.
   bool get _scriptsDone {
+    final List<int> days = _scriptDays;
+    if (days.isEmpty) return true;
     final List<VideoScript>? written = widget.scripts.value;
     if (written == null) return false;
-    final List<int> days = _scriptDays;
-    return days.isNotEmpty &&
-        days.every((int i) => written.any((VideoScript v) => v.dayIndex == i));
+    return days.every(
+      (int i) => written.any((VideoScript v) => v.dayIndex == i),
+    );
+  }
+
+  /// The steps this week has: Scripts only while a legacy script day is on it.
+  List<_SetupTab> get _tabs => <_SetupTab>[
+    _SetupTab.article,
+    _SetupTab.posts,
+    if (_scriptDays.isNotEmpty) _SetupTab.scripts,
+    _SetupTab.analytics,
+  ];
+
+  /// "three posts" — counted off the week, so a legacy week reads right too.
+  String get _postsLabel {
+    const List<String> words = <String>[
+      'no', 'one', 'two', 'three', 'four', 'five', 'six', 'seven',
+    ];
+    final int n = _postDays.length;
+    final String count = n < words.length ? words[n] : '$n';
+    return n == 1
+        ? 'The one post this week publishes, and its image.'
+        : 'The $count posts this week publishes, and their images.';
   }
 
   bool _done(_SetupTab tab) => switch (tab) {
@@ -1536,9 +1742,10 @@ class _WeekSetupState extends State<_WeekSetup> {
     // scroll — the page itself scrolls vertically and those drags are rarely
     // perfectly straight.
     if (v.abs() < 200) return;
-    final int next = _tab.value.index + (v < 0 ? 1 : -1);
-    if (next < 0 || next >= _SetupTab.values.length) return;
-    _tab.value = _SetupTab.values[next];
+    final List<_SetupTab> tabs = _tabs;
+    final int next = tabs.indexOf(_tab.value) + (v < 0 ? 1 : -1);
+    if (next < 0 || next >= tabs.length) return;
+    _tab.value = tabs[next];
   }
 
   @override
@@ -1558,7 +1765,7 @@ class _WeekSetupState extends State<_WeekSetup> {
                 scrollDirection: Axis.horizontal,
                 child: Row(
                   children: <Widget>[
-                    for (final _SetupTab tab in _SetupTab.values) ...<Widget>[
+                    for (final _SetupTab tab in _tabs) ...<Widget>[
                       // A chevron between each pair, the way a stepper draws
                       // its connector. Not a control — the chips are the
                       // control, and a second tappable thing doing the same
@@ -1577,7 +1784,7 @@ class _WeekSetupState extends State<_WeekSetup> {
                         label: switch (tab) {
                           _SetupTab.article => '1 · Article',
                           _SetupTab.posts => '2 · Posts',
-                          _SetupTab.scripts => '3 · Scripts',
+                          _SetupTab.scripts => '3 · Scripts (earlier week)',
                           _SetupTab.analytics => 'Analytics',
                         },
                         selected: current == tab,
@@ -1627,7 +1834,7 @@ class _WeekSetupState extends State<_WeekSetup> {
                 switch (current) {
                   _SetupTab.article => widget.articleCard,
                   _SetupTab.posts => _StepDays(
-                    label: 'The two posts this week publishes.',
+                    label: _postsLabel,
                     days: _postDays,
                     dayCard: widget.dayCard,
                     width: widget.dayCardWidth,

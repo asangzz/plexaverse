@@ -33,3 +33,13 @@ Future<List<RoadmapLevel>> roadmapLevels(Ref ref) async {
   );
   return buildRoadmap(progress);
 }
+
+/// How much of each day's levels was finished, for the roadmap's day rows
+/// (web, 25 Nov 2026 — `useLevelsFinished`).
+///
+/// Its own read, never folded into [roadmapLevels]: a failure here must cost
+/// the rows their figures and nothing else, so the page reads an error as "no
+/// figures" rather than as a broken roadmap.
+@riverpod
+Future<LevelsFinished> levelsFinished(Ref ref) =>
+    ref.watch(homeRepositoryProvider).fetchLevelsFinished();

@@ -1,3 +1,4 @@
+import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
@@ -27,24 +28,36 @@ class PushMessage {
 /// platform config), the token is null, the streams simply never emit, and
 /// the inbox still works via the repository.
 class NotificationsService {
-  NotificationsService(this._messaging);
+  NotificationsService(FirebaseMessaging messaging) : _messaging = messaging;
 
-  final FirebaseMessaging _messaging;
+  /// No Firebase app — push is off and every call answers "nothing".
+  ///
+  /// `FirebaseMessaging.instance` THROWS when no Firebase app exists, so the
+  /// provider cannot simply build the real one: without platform config,
+  /// every screen that reads the notification repository would fail to
+  /// build. This keeps the doc above true — no token, streams that never
+  /// emit — instead of a provider error.
+  NotificationsService.unavailable() : _messaging = null;
+
+  final FirebaseMessaging? _messaging;
 
   Future<bool> requestPermission() async {
-    final settings = await _messaging.requestPermission();
+    final FirebaseMessaging? m = _messaging;
+    if (m == null) return false;
+    final settings = await m.requestPermission();
     return settings.authorizationStatus == AuthorizationStatus.authorized;
   }
 
   /// The current device token, or null when Firebase isn't configured.
-  Future<String?> deviceToken() => _messaging.getToken();
+  Future<String?> deviceToken() async => _messaging?.getToken();
 
   /// Invalidates the current token (called on sign-out so a signed-out
   /// device stops receiving push even if the server unregister is missed).
-  Future<void> deleteToken() => _messaging.deleteToken();
+  Future<void> deleteToken() async => _messaging?.deleteToken();
 
   /// Emits whenever FCM rotates the token — the app must re-register it.
-  Stream<String> get tokenRefreshes => _messaging.onTokenRefresh;
+  Stream<String> get tokenRefreshes =>
+      _messaging?.onTokenRefresh ?? const Stream<String>.empty();
 
   /// Foreground pushes mapped to the neutral [PushMessage]. Drives the
   /// in-app banner + inbox via the repository's `incoming` stream.
@@ -59,21 +72,25 @@ class NotificationsService {
   /// The push that *launched* the app from a terminated state (cold-start
   /// tap), or null. Checked once after sign-in so the deep link is honoured.
   Future<PushMessage?> initialMessage() async {
-    final message = await _messaging.getInitialMessage();
+    final FirebaseMessaging? m = _messaging;
+    if (m == null) return null;
+    final message = await m.getInitialMessage();
     return message == null ? null : _map(message);
   }
 
   static PushMessage _map(RemoteMessage m) => PushMessage(
-        id: m.messageId,
-        title: m.notification?.title,
-        body: m.notification?.body,
-        data: m.data.map((k, v) => MapEntry(k, '$v')),
-      );
+    id: m.messageId,
+    title: m.notification?.title,
+    body: m.notification?.body,
+    data: m.data.map((k, v) => MapEntry(k, '$v')),
+  );
 }
 
 @Riverpod(keepAlive: true)
 NotificationsService notificationsService(Ref ref) {
-  return NotificationsService(FirebaseMessaging.instance);
+  return Firebase.apps.isEmpty
+      ? NotificationsService.unavailable()
+      : NotificationsService(FirebaseMessaging.instance);
 }
 
 /// Background/terminated **data** message handler. Notification-payload

@@ -33,7 +33,7 @@ import '../../../../core/ui/zave/zave_kit.dart';
 class FollowerSeriesChart extends StatelessWidget {
   const FollowerSeriesChart({
     required this.points,
-    required this.target,
+    this.target = 0,
     this.height = 96,
     super.key,
   });
@@ -41,7 +41,8 @@ class FollowerSeriesChart extends StatelessWidget {
   /// Oldest first. Fewer than two and nothing is drawn.
   final List<({DateTime at, double value})> points;
 
-  /// The phase's follower checkpoint.
+  /// The phase's follower checkpoint. 0 draws no checkpoint line — the
+  /// connection series has no target (`ConnectionSeriesChart`).
   final int target;
 
   final double height;

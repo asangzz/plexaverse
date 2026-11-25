@@ -13,9 +13,11 @@ import '../domain/levels_words.dart';
 ///
 /// [running] is the default: a learner on a Wednesday mid-path — the
 /// lesson's second part half answered, the comment level locked behind it,
-/// the day's video claim behind that, and last round's top learners to
-/// follow at the end. The others are the states the levels page branches on,
-/// each reachable without a server:
+/// and last round's top learners to follow at the end; up on Sunday, the
+/// week's open-all-week set-up levels (Monday's post done, its image's day
+/// passed, Wednesday's and Friday's open, their images locked behind them).
+/// The others are the states the levels page branches on, each reachable
+/// without a server:
 ///
 /// ```sh
 /// flutter run -t lib/main_mock.dart --dart-define=FAKE_CONTEST=not_joined
@@ -97,7 +99,8 @@ class FakeContestWorld {
   // ── The calendar ─────────────────────────────────────────────────────────
   //
   // Fixed dates, so a fixture reads the same on any day it is run. Every
-  // "today" is a Wednesday, which carries a video claim.
+  // "today" is a Wednesday: a post day of the playbook week (Mon post, Tue
+  // rest, Wed post, Thu article, Fri post, the weekend off).
 
   late final String? _firstKey;
   late final String? _lastKey;
@@ -759,6 +762,9 @@ class FakeContestWorld {
 
     final String sunday = _addDays(_todayKey, -_weekday);
     final List<PathDay> days = <PathDay>[];
+    // The Sunday levels sit on the week's Sunday — or, when the round starts
+    // mid-week, on its first day — after that day's own levels.
+    final String setupDay = sunday.compareTo(_first) < 0 ? _first : sunday;
     for (int wd = 0; wd < 7; wd++) {
       final String key = _addDays(sunday, wd);
       if (key.compareTo(_first) < 0 || key.compareTo(_last) > 0) {
@@ -766,8 +772,17 @@ class FakeContestWorld {
       }
       final List<PathNode> nodes = <PathNode>[
         ..._lessonNodes(key),
-        for (final PathNodeKind kind in _tasksOn(wd)) _taskNode(kind, key),
+        for (final PathNodeKind kind in _tasksOn(wd))
+          // A planned week's Sunday sets it up step by step instead of
+          // "Plan this week", in its place.
+          if (kind == PathNodeKind.planWeek && _weekPlanned)
+            ..._weekSetupNodes(sunday)
+          else
+            _taskNode(kind, key),
         for (final _Piece piece in _piecesOn(key)) _claimNode(piece, key),
+        // No Sunday this week (a round that started mid-week): on the
+        // round's first day, after its own levels and claims.
+        if (key == setupDay && key != sunday) ..._weekSetupNodes(sunday),
       ];
       days.add(
         PathDay(
@@ -797,6 +812,134 @@ class FakeContestWorld {
       // they joined are not asked for.
       weekReward: const WeekReward(points: 500),
     );
+  }
+
+  /// This fake's planner week exists: Sunday carries the set-up levels, not
+  /// "Plan this week".
+  static const bool _weekPlanned = true;
+
+  /// The planner week's post days as the fake's Planner holds them: Monday's
+  /// post written (and published) without its image, Wednesday's and
+  /// Friday's not written yet. `(dayIndex, weekday, role, format, image
+  /// kind, photo guide, title, post written, image added)`.
+  static const List<
+    (int, String, String, String, String, String?, String, bool, bool)
+  >
+  _postDays =
+      <(int, String, String, String, String, String?, String, bool, bool)>[
+        (
+          0,
+          'Monday',
+          'teach',
+          'Numbered steps',
+          'ai_poster',
+          null,
+          'The status update nobody has to chase',
+          true,
+          false,
+        ),
+        (
+          2,
+          'Wednesday',
+          'story',
+          'Mistake → lesson',
+          'photo',
+          'a candid photo of you at your desk with your laptop and coffee',
+          'The deadline I said yes to, and what it cost',
+          false,
+          false,
+        ),
+        (
+          4,
+          'Friday',
+          'opinion',
+          'Industry take',
+          'ai_poster',
+          null,
+          'Status meetings are a symptom, not a habit',
+          false,
+          false,
+        ),
+      ];
+
+  /// `weekSetupNodes`: the SUNDAY LEVELS, open all week and outside the
+  /// gate. Done from the Planner's state, whatever the day; missed once the
+  /// post day has gone; an image locked until its post exists; else open.
+  /// Ids carry the week's Sunday, wherever they are drawn.
+  List<PathNode> _weekSetupNodes(String sunday) {
+    if (!_weekPlanned) return const <PathNode>[];
+    final List<PathNode> out = <PathNode>[];
+    for (final (
+          int day,
+          String weekday,
+          _,
+          String format,
+          String imageKind,
+          String? photoGuide,
+          String title,
+          bool postDone,
+          bool imageDone,
+        )
+        in _postDays) {
+      // Planner day 0 is Monday, the day after the week's Sunday.
+      final bool passed = _addDays(sunday, day + 1).compareTo(_todayKey) < 0;
+      String href(String step) =>
+          '/planner?week=$_plannerWeek&setup=1&day=$day&step=$step';
+      final String postTitle = 'Write $weekday’s post';
+      final PathNodeState post = postDone
+          ? PathNodeState.done
+          : (passed ? PathNodeState.missed : PathNodeState.today);
+      out.add(
+        PathNode(
+          id: '$sunday:plan_week:post:$day',
+          kind: PathNodeKind.planWeek,
+          state: post,
+          title: postTitle,
+          href: post == PathNodeState.missed ? null : href('post'),
+          detail: postDone
+              ? 'Written'
+              : (passed
+                    ? sundayLevelPassedLine(weekday, image: false)
+                    : '$format · $title'),
+          setup: NodeSetup(dayIndex: day, step: SetupStep.post),
+          openAllWeek: true,
+        ),
+      );
+      final PathNodeState image = imageDone
+          ? PathNodeState.done
+          : (passed
+                ? PathNodeState.missed
+                : (postDone ? PathNodeState.today : PathNodeState.locked));
+      final String? guide = photoGuide;
+      out.add(
+        PathNode(
+          id: '$sunday:plan_week:image:$day',
+          kind: PathNodeKind.planWeek,
+          state: image,
+          title: 'Add $weekday’s image',
+          href: image == PathNodeState.today || image == PathNodeState.done
+              ? href('image')
+              : null,
+          detail: switch (image) {
+            PathNodeState.done => 'Image added',
+            PathNodeState.missed => sundayLevelPassedLine(weekday, image: true),
+            PathNodeState.locked => 'Unlocks after $postTitle',
+            _ =>
+              guide == null
+                  ? 'We draw a poster for this post'
+                  : 'Give us $guide',
+          },
+          setup: NodeSetup(
+            dayIndex: day,
+            step: SetupStep.image,
+            imageKind: imageKind,
+            photoGuide: photoGuide,
+          ),
+          openAllWeek: true,
+        ),
+      );
+    }
+    return out;
   }
 
   /// `CONTEST_WEEK` in the web's `lib/contest-week.ts`: what follows the
@@ -984,7 +1127,7 @@ class FakeContestWorld {
           state = _planDone ? PathNodeState.done : PathNodeState.today;
           detail = _planDone
               ? 'This week is planned'
-              : 'Get this week’s posts, videos and article ready in the Planner';
+              : 'Get this week’s posts and article ready in the Planner';
         default:
           state = PathNodeState.today;
       }
@@ -1102,6 +1245,11 @@ class FakeContestWorld {
     bool canSkipMarked = false;
     final List<PathNode> out = <PathNode>[];
     for (final PathNode node in marked) {
+      // Outside the order: never locked, never a holder, never skipped.
+      if (node.openAllWeek) {
+        out.add(node);
+        continue;
+      }
       PathNode next = node;
       final bool open =
           node.state == PathNodeState.today ||
@@ -1154,13 +1302,20 @@ class FakeContestWorld {
     _ => false,
   };
 
-  /// `holderOf`: the nearest node before [i] that is not passable.
+  /// `holderOf`: the nearest node before [i] that is not passable — never
+  /// an open-all-week Sunday level, which holds nothing back.
   static PathNode? _holderOf(List<PathNode> nodes, int i) {
     for (int j = i - 1; j >= 0; j--) {
+      if (nodes[j].openAllWeek) continue;
       if (!_passable(nodes[j].state)) return nodes[j];
     }
     return null;
   }
+
+  /// Sunday's gated "Plan this week" — never a set-up step, which is outside
+  /// the order (`?setupLevels=1`'s layout).
+  static bool _isPlanThisWeek(PathNode n) =>
+      n.kind == PathNodeKind.planWeek && !n.openAllWeek;
 
   /// The level an action on [kind] waits on today, by the same gate the path
   /// draws with — `lockedLevel`.
@@ -1188,6 +1343,13 @@ class FakeContestWorld {
   SkipResult skip(String nodeId) {
     if (nodeId.isEmpty || nodeId.length > 200) {
       throw const ContestInvalid('Missing nodeId.');
+    }
+    // The Sunday levels are outside the order on every day of the week.
+    if (RegExp(r':plan_week:(post|image):\d+$').hasMatch(nodeId)) {
+      throw const ContestNotOpen(
+        'This level is open all week and never holds the others back, so it '
+        'needs no skip.',
+      );
     }
     _assertEntrant();
     if (!nodeId.startsWith('$_todayKey:')) {
@@ -1237,30 +1399,20 @@ class FakeContestWorld {
   List<_Piece> get _pieces {
     final String sunday = _addDays(_todayKey, -_weekday);
     return <_Piece>[
-      // Last week's Friday video, sent and sent back.
+      // Last week's Friday video, sent before the video levels were retired
+      // (25 Nov 2026) and sent back: it still shows, and can be sent again.
       _Piece(
         kind: ClaimKind.video,
         occurrence: '${_plannerWeek - 1}:$_journey:4',
         title: 'How I say no to a deadline without saying no',
         dayKey: _addDays(sunday, -2),
       ),
-      _Piece(
-        kind: ClaimKind.video,
-        occurrence: '$_plannerWeek:$_journey:2',
-        title: 'Three numbers I check before every client call',
-        dayKey: _addDays(sunday, 3),
-      ),
+      // This week has no videos: the article is its one claim.
       _Piece(
         kind: ClaimKind.article,
         occurrence: '$_plannerWeek:$_journey',
         title: 'Why your status update should start with the decision',
         dayKey: _addDays(sunday, 4),
-      ),
-      _Piece(
-        kind: ClaimKind.video,
-        occurrence: '$_plannerWeek:$_journey:4',
-        title: 'The one-line recap that ends a meeting on time',
-        dayKey: _addDays(sunday, 5),
       ),
     ];
   }
@@ -1311,7 +1463,7 @@ class FakeContestWorld {
   }) {
     if (kind == ClaimKind.unknown) {
       throw const ContestInvalid(
-        'Only the article and the videos are claimed by link.',
+        'Only the article (and a video already sent) is claimed by link.',
       );
     }
     if (occurrence.isEmpty || occurrence.length > 40) {
@@ -1324,6 +1476,11 @@ class FakeContestWorld {
       );
     }
     _assertEntrant();
+    // The video levels were retired on 25 Nov 2026: only a video claim
+    // already sent stays decidable and correctable.
+    if (kind == ClaimKind.video && !_claimRows.containsKey(occurrence)) {
+      throw const ContestNotOpen('Video levels were retired on 25 Nov 2026.');
+    }
     final List<PostClaim> claims = _claims();
     PostClaim? target;
     for (final PostClaim c in claims) {
@@ -1896,18 +2053,32 @@ class FakeContestWorld {
               ? PlanWeekReason.notJoined
               : (_weekday != 0 ? PlanWeekReason.notToday : null));
     final String? locked = reason == null
-        ? _lockedBehind((PathNode n) => n.kind == PathNodeKind.planWeek)
+        ? _lockedBehind(_isPlanThisWeek)
         : null;
     final String sunday = _addDays(_todayKey, -_weekday);
-    String instruction(DayKind kind, String key) => switch (kind) {
-      DayKind.post =>
-        'We publish this one for you — review it and make sure it is approved and scheduled.',
-      DayKind.videoScript =>
-        'Record this video and keep it ready. On ${planDate(dayKeyDate(key)!)}, this level will ask for the link to your posted video.',
-      DayKind.article =>
-        'Get the article ready to paste into LinkedIn’s newsletter. On ${planDate(dayKeyDate(key)!)}, this level will ask for the article’s link.',
-      DayKind.rest => 'Rest.',
-    };
+    // `planDayInstruction`: a post day by its role; a past one says so.
+    String instruction(DayKind kind, String key, String? role) {
+      final String when = planDate(dayKeyDate(key)!);
+      return switch (kind) {
+        DayKind.post when key.compareTo(_todayKey) < 0 =>
+          'This day has passed. If its post isn’t written yet, you can still '
+              'write it in the Planner and publish it now.',
+        DayKind.post =>
+          '${_roleLine[role] ?? ''}Write it and add its image in the Planner '
+              'today, then approve it — we publish it for you on its day.',
+        DayKind.videoScript =>
+          'Record and post this video if you like. The video levels were '
+              'retired on 25 Nov 2026, so no link is asked for it.',
+        DayKind.article =>
+          'Get the article ready to paste into LinkedIn’s newsletter. On '
+              '$when, this level will ask for the article’s link.',
+        DayKind.rest => 'Rest.',
+      };
+    }
+
+    // The playbook week (25 Nov 2026), in calendar order from its Sunday:
+    // `(index, weekday, kind, title, status)`; a post day's role, format
+    // and image come from [_postDays].
     const List<(int, String, DayKind, String?, String)> week =
         <(int, String, DayKind, String?, String)>[
           (6, 'Sunday', DayKind.rest, null, 'Rest'),
@@ -1918,19 +2089,13 @@ class FakeContestWorld {
             'The status update nobody has to chase',
             'Published',
           ),
-          (
-            1,
-            'Tuesday',
-            DayKind.post,
-            'Lead with the decision, not the background',
-            'Approved and scheduled',
-          ),
+          (1, 'Tuesday', DayKind.rest, null, 'Rest'),
           (
             2,
             'Wednesday',
-            DayKind.videoScript,
-            'Three numbers I check before every client call',
-            'Script ready',
+            DayKind.post,
+            'The deadline I said yes to, and what it cost',
+            'Planned — not written yet',
           ),
           (
             3,
@@ -1942,12 +2107,49 @@ class FakeContestWorld {
           (
             4,
             'Friday',
-            DayKind.videoScript,
-            'The one-line recap that ends a meeting on time',
-            'Script ready',
+            DayKind.post,
+            'Status meetings are a symptom, not a habit',
+            'Planned — not written yet',
           ),
           (5, 'Saturday', DayKind.rest, null, 'Rest'),
         ];
+    PlanWeekDay dayOf(int i) {
+      final (
+        int index,
+        String weekday,
+        DayKind kind,
+        String? title,
+        String status,
+      ) = week[i];
+      final String key = _addDays(sunday, i);
+      String? role;
+      String? format;
+      bool imageReady = false;
+      for (final (int d, _, String r, String f, _, _, _, _, bool img)
+          in _postDays) {
+        if (d != index || kind != DayKind.post) continue;
+        role = r;
+        format = f;
+        imageReady = img;
+      }
+      return PlanWeekDay(
+        index: index,
+        weekday: weekday,
+        dayKey: key,
+        kind: kind,
+        role: role,
+        formatName: format,
+        imageReady: imageReady,
+        title: title,
+        status: status,
+        ready: kind != DayKind.post || status == 'Published',
+        instruction: i == 0
+            ? 'Set up the week — write each post and add its image. Nothing '
+                  'to post today.'
+            : instruction(kind, key, role),
+      );
+    }
+
     return PlanWeekView(
       status: reason != null
           ? PlanWeekStatus.unavailable
@@ -1960,26 +2162,19 @@ class FakeContestWorld {
       lockedDetail: locked == null ? null : 'Unlocks after $locked',
       weekNumber: _plannerWeek,
       season: _journey,
-      planned: true,
+      planned: _weekPlanned,
       topic: 'Writing updates people act on',
       plannerHref: '/planner?week=$_plannerWeek',
-      days: <PlanWeekDay>[
-        for (int i = 0; i < week.length; i++)
-          PlanWeekDay(
-            index: week[i].$1,
-            weekday: week[i].$2,
-            dayKey: _addDays(sunday, i),
-            kind: week[i].$3,
-            title: week[i].$4,
-            status: week[i].$5,
-            ready: true,
-            instruction: i == 0
-                ? 'Plan the week — nothing to post today.'
-                : instruction(week[i].$3, _addDays(sunday, i)),
-          ),
-      ],
+      days: <PlanWeekDay>[for (int i = 0; i < week.length; i++) dayOf(i)],
     );
   }
+
+  /// `ROLE_LINE` in the web's `lib/contest-plan-copy.ts`, with its space.
+  static const Map<String, String> _roleLine = <String, String>{
+    'teach': 'This post teaches something worth saving. ',
+    'story': 'This post tells a real story of yours, with the evidence. ',
+    'opinion': 'This post takes a position you really hold. ',
+  };
 
   PlanWeekResult completePlanWeek() {
     _assertEntrant();
@@ -1989,7 +2184,7 @@ class FakeContestWorld {
     if (_planDone) {
       return PlanWeekResult(taskId: 'fake-plan-$_todayKey', alreadyDone: true);
     }
-    _assertUnlocked((PathNode n) => n.kind == PathNodeKind.planWeek);
+    _assertUnlocked(_isPlanThisWeek);
     _planDone = true;
     return PlanWeekResult(taskId: 'fake-plan-$_todayKey');
   }

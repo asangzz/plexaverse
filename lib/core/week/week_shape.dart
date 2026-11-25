@@ -22,9 +22,9 @@ enum DayKind {
   /// We write it and the chain publishes it.
   post,
 
-  /// We write a script; the user records and posts it themselves. LinkedIn
-  /// video upload is a different API (initialize → binary PUT → finalize →
-  /// a share referencing the video URN) and nothing in this product speaks it.
+  /// LEGACY (weeks planned before 25 Nov 2026): we wrote a script; the user
+  /// recorded and posted it. [weekShape] never produces it any more, but a
+  /// stored week's lived days still carry it.
   videoScript,
 
   /// The weekly newsletter. The user pastes it into LinkedIn and confirms.
@@ -56,10 +56,11 @@ enum DayKind {
 
   /// What this day produces, in the words the user sees.
   ///
-  /// Calling all three a "post" — "Write my post" on a Wednesday — is wrong
-  /// before it is confusing, because only two of the five working days become
-  /// a Post at all. `rest` falls to "post" only because nothing is ever
-  /// written on a rest day and the string is never reached.
+  /// Calling the newsletter a "post" — "Write my post" on a Thursday — is
+  /// wrong before it is confusing: it never becomes a Post. `rest` falls to
+  /// "post" only because nothing is ever written on a rest day and the string
+  /// is never reached. `videoScript` survives only on weeks planned before
+  /// 25 Nov 2026.
   String get madeThing => switch (this) {
     DayKind.videoScript => 'script',
     DayKind.article => 'newsletter',
@@ -67,57 +68,113 @@ enum DayKind {
   };
 }
 
-/// The seven days, in order. Mirrors `WEEK_SHAPE`.
+/// What a post day is FOR. Mirrors `PostRole` in the web's `lib/week-shape.ts`.
 ///
-/// Seven posted days became two. Monday carries an industry observation,
-/// Tuesday the week's biggest swing, and Wednesday, Thursday and Friday are
-/// work we prepare and the user does: two video scripts and the newsletter.
-/// The weekend is off.
+/// The role picks the day's format (the server's `pickFormat`) and, through
+/// the post type, how its image is made. A day that is not a post has none.
+enum PostRole {
+  /// Monday: teach the reader one thing.
+  teach,
+
+  /// Wednesday: a real story from the user's own work.
+  story,
+
+  /// Friday: a position the user holds.
+  opinion;
+
+  /// Unknown or absent → null, never a guess: a legacy slot has no role.
+  static PostRole? parse(String? raw) => switch (raw) {
+    'teach' => PostRole.teach,
+    'story' => PostRole.story,
+    'opinion' => PostRole.opinion,
+    _ => null,
+  };
+
+  String get wire => name;
+
+  /// The role in the words the planner shows on a day card.
+  String get label => switch (this) {
+    PostRole.teach => 'Teach',
+    PostRole.story => 'Story',
+    PostRole.opinion => 'Opinion',
+  };
+}
+
+/// The seven days, in order. Mirrors `WEEK_SHAPE` (the playbook week, owner,
+/// 25 Nov 2026 — PLANNER_REDESIGN.md §0):
 ///
-/// That is a real reduction in what this product publishes on a user's behalf,
-/// and it was the deliberate trade — at seven, the server's grounding runs out
-/// of banked material after the first two or three and the rest come from its
-/// generic no-story branch.
+///   Mon  post, role teach
+///   Tue  rest
+///   Wed  post, role story
+///   Thu  the newsletter article (the user pastes it in)
+///   Fri  post, role opinion
+///   Sat  rest
+///   Sun  rest
+///
+/// Video scripts were dropped from the week. [DayKind.videoScript] stays
+/// parseable because weeks planned before 25 Nov 2026 still carry it — the
+/// server switches a stored week's days still to come on read, but a day
+/// already lived keeps what it was.
 const List<DayKind> weekShape = <DayKind>[
-  DayKind.post, // Monday
-  DayKind.post, // Tuesday — the hero
-  DayKind.videoScript, // Wednesday
+  DayKind.post, // Monday — teach
+  DayKind.rest, // Tuesday
+  DayKind.post, // Wednesday — story
   DayKind.article, // Thursday — the newsletter
-  DayKind.videoScript, // Friday
+  DayKind.post, // Friday — opinion
   DayKind.rest, // Saturday
   DayKind.rest, // Sunday
+];
+
+/// The role per day. Mirrors `WEEK_SHAPE[i].role`.
+const List<PostRole?> weekRoles = <PostRole?>[
+  PostRole.teach, // Monday
+  null, // Tuesday
+  PostRole.story, // Wednesday
+  null, // Thursday
+  PostRole.opinion, // Friday
+  null, // Saturday
+  null, // Sunday
 ];
 
 /// The post format per day. Mirrors `WEEK_SHAPE[i].format`.
 ///
 /// These are the SERVER's `PostFormat` values — `text`, `text_image`,
-/// `carousel`, `poll` — not prettier short ones. The planner renders the
-/// string straight onto a pill, so a client-side spelling would show the user
-/// a word the server never sends.
-///
-/// Note what is NOT here: a poll. The pre-pivot week had one on Friday;
-/// Friday is a video script now and no day carries a poll, so a fixture
-/// offering one is offering a day the product cannot produce.
+/// `carousel`, `poll` — not prettier short ones. Shipped builds print this
+/// raw, which is why the playbook's format (`formatId`) is a separate key
+/// and never this one.
 const List<String> weekFormats = <String>[
   'text_image', // Monday
-  'text_image', // Tuesday
-  'text', // Wednesday — the script itself is text
+  'text', // Tuesday
+  'text_image', // Wednesday
   'text', // Thursday — the newsletter
-  'text', // Friday
+  'text_image', // Friday
   'text', // Saturday
   'text', // Sunday
 ];
 
-/// The post type per day. Mirrors `WEEK_SHAPE[i].type`.
+/// The post type per day. Mirrors `WEEK_SHAPE[i].type` (teach → niche,
+/// story → productive, opinion → general).
 const List<String> weekTypes = <String>[
   'niche', // Monday
-  'general', // Tuesday — the hero
+  'general', // Tuesday
   'productive', // Wednesday
   'niche', // Thursday
   'general', // Friday
   'productive', // Saturday
   'light', // Sunday
 ];
+
+/// The day indexes that take a post — Mon, Wed, Fri. Mirrors `postingDays()`.
+List<int> postingDays() => <int>[
+  for (int i = 0; i < weekShape.length; i++)
+    if (weekShape[i] == DayKind.post) i,
+];
+
+/// Mirrors `roleForDay(index)`.
+PostRole? roleForDay(int index) {
+  if (index < 0 || index >= weekRoles.length) return weekRoles.first;
+  return weekRoles[index];
+}
 
 /// Mirrors `daySpec(index).format`.
 String dayFormatAt(int index) {

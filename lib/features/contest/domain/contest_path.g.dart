@@ -29,6 +29,33 @@ _FollowProgress _$FollowProgressFromJson(Map<String, dynamic> json) =>
 Map<String, dynamic> _$FollowProgressToJson(_FollowProgress instance) =>
     <String, dynamic>{'done': instance.done, 'total': instance.total};
 
+_NodeSetup _$NodeSetupFromJson(Map<String, dynamic> json) => _NodeSetup(
+  dayIndex: (json['dayIndex'] as num?)?.toInt() ?? 0,
+  step:
+      $enumDecodeNullable(
+        _$SetupStepEnumMap,
+        json['step'],
+        unknownValue: SetupStep.unknown,
+      ) ??
+      SetupStep.unknown,
+  imageKind: json['imageKind'] as String?,
+  photoGuide: json['photoGuide'] as String?,
+);
+
+Map<String, dynamic> _$NodeSetupToJson(_NodeSetup instance) =>
+    <String, dynamic>{
+      'dayIndex': instance.dayIndex,
+      'step': _$SetupStepEnumMap[instance.step]!,
+      'imageKind': instance.imageKind,
+      'photoGuide': instance.photoGuide,
+    };
+
+const _$SetupStepEnumMap = {
+  SetupStep.post: 'post',
+  SetupStep.image: 'image',
+  SetupStep.unknown: 'unknown',
+};
+
 _NodeClaim _$NodeClaimFromJson(Map<String, dynamic> json) => _NodeClaim(
   kind:
       $enumDecodeNullable(
@@ -83,6 +110,10 @@ _PathNode _$PathNodeFromJson(Map<String, dynamic> json) => _PathNode(
       ? null
       : FollowProgress.fromJson(json['follow'] as Map<String, dynamic>),
   canSkip: _canSkipUnlessUnknown(json, 'canSkip') as bool? ?? false,
+  setup: json['setup'] == null
+      ? null
+      : NodeSetup.fromJson(json['setup'] as Map<String, dynamic>),
+  openAllWeek: _openAllWeekUnlessUnknown(json, 'openAllWeek') as bool? ?? false,
 );
 
 Map<String, dynamic> _$PathNodeToJson(_PathNode instance) => <String, dynamic>{
@@ -98,6 +129,8 @@ Map<String, dynamic> _$PathNodeToJson(_PathNode instance) => <String, dynamic>{
   'claim': instance.claim?.toJson(),
   'follow': instance.follow?.toJson(),
   'canSkip': instance.canSkip,
+  'setup': instance.setup?.toJson(),
+  'openAllWeek': instance.openAllWeek,
 };
 
 const _$PathNodeKindEnumMap = {

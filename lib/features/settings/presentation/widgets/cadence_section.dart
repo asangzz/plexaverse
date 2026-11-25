@@ -188,10 +188,10 @@ class AutoPostSection extends ConsumerWidget {
               Expanded(
                 child: Text(
                   'Plexaverse writes your week’s posts for approval on the days '
-                  'your plan posts — not every day. The video scripts and the '
-                  'newsletter are prepared for you to post yourself, and the '
-                  'weekend rests. Disable to stop generation and stop incurring '
-                  'AI costs; you can re-enable anytime.',
+                  'your plan posts — Monday, Wednesday and Friday, not every '
+                  'day. The newsletter is prepared for you to post yourself, '
+                  'and the other days rest. Disable to stop generation and stop '
+                  'incurring AI costs; you can re-enable anytime.',
                   style: ZaveType.caption,
                 ),
               ),

@@ -212,7 +212,21 @@ GoRouter appRouter(Ref ref) {
                 path: ZaveRoutes.planner,
                 pageBuilder: (context, state) => NoTransitionPage<void>(
                   key: state.pageKey,
-                  child: const PlannerPage(),
+                  // `?day=<0..6>` (0 = Monday) opens that day of THIS week —
+                  // the Sunday set-up levels link here.
+                  child: PlannerPage(
+                    focusDay: int.tryParse(
+                      state.uri.queryParameters['day'] ?? '',
+                    ),
+                    // The planner week the link is for (a Sunday level's
+                    // week, counted on the round's day); null = this week.
+                    focusWeek: int.tryParse(
+                      state.uri.queryParameters['week'] ?? '',
+                    ),
+                    // A fresh `at` per tap, so the same level tapped again
+                    // opens its day again.
+                    focusToken: state.uri.queryParameters['at'],
+                  ),
                 ),
               ),
             ],

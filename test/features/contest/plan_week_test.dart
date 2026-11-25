@@ -54,24 +54,59 @@ void main() {
   ) async {
     await _pump(tester, _Repo(_view()));
     expect(find.text('Writing updates people act on'), findsOneWidget);
-    expect(find.text('Wed 18 Nov · Video'), findsOneWidget);
+    expect(find.text('Mon 16 Nov · Post'), findsOneWidget);
+    expect(find.text('Wed 18 Nov · Post'), findsOneWidget);
     expect(find.text('Thu 19 Nov · Newsletter article'), findsOneWidget);
+    // A post day says its role and format, and whether its image is in.
+    expect(find.text('Teach · Numbered steps · image in'), findsOneWidget);
+    expect(find.text('Story · Mistake → lesson'), findsOneWidget);
     expect(
-      find.text('Three numbers I check before every client call'),
+      find.text('The deadline I said yes to, and what it cost'),
       findsOneWidget,
     );
-    expect(find.text('Script ready'), findsOneWidget);
+    expect(find.text('Planned — not written yet'), findsOneWidget);
     expect(find.text('Article not written yet'), findsOneWidget);
+    // No video promised anywhere on a new week.
+    expect(find.textContaining('video'), findsNothing);
+    expect(find.textContaining('Video'), findsNothing);
+    // A rest day is a quiet line, not a panel.
+    expect(find.text('Sun 15 Nov'), findsOneWidget);
+    expect(find.text('Tue 17 Nov'), findsOneWidget);
     expect(
       find.text(
-        'Record this video and keep it ready. On Wednesday, 18 Nov, this '
-        'level will ask for the link to your posted video.',
+        'Set up the week — write each post and add its image. Nothing to '
+        'post today.',
       ),
       findsOneWidget,
     );
-    // A rest day is a quiet line, not a panel.
-    expect(find.text('Sun 15 Nov'), findsOneWidget);
-    expect(find.text('Plan the week — nothing to post today.'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('a week planned before the video levels were retired still '
+      'labels its video day', (WidgetTester tester) async {
+    await _pump(
+      tester,
+      _Repo(
+        _view().copyWith(
+          days: const <PlanWeekDay>[
+            PlanWeekDay(
+              index: 2,
+              weekday: 'Wednesday',
+              dayKey: '2026-11-18',
+              kind: DayKind.videoScript,
+              title: 'Three numbers I check before every client call',
+              status: 'Script ready',
+              ready: true,
+              instruction:
+                  'Record and post this video if you like. The video levels '
+                  'were retired on 25 Nov 2026, so no link is asked for it.',
+            ),
+          ],
+        ),
+      ),
+    );
+    expect(find.text('Wed 18 Nov · Video'), findsOneWidget);
+    expect(find.text('Script ready'), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
 
@@ -90,8 +125,8 @@ void main() {
     expect(repo.marks, 1);
     expect(
       find.text(
-        'This week is planned. Each video’s and the article’s link is a level '
-        'of its own day.',
+        'This week is planned. Today’s next levels write each post and add '
+        'its image; the article’s link is a level of its own day.',
       ),
       findsOneWidget,
     );
@@ -158,7 +193,7 @@ void main() {
       ),
       findsOneWidget,
     );
-    expect(find.text('Wed 18 Nov · Video'), findsOneWidget);
+    expect(find.text('Wed 18 Nov · Post'), findsOneWidget);
   });
 
   testWidgets('"Open the Planner" opens the app’s own Planner, not the web '
@@ -202,19 +237,48 @@ PlanWeekView _view({
       kind: DayKind.rest,
       status: 'Rest',
       ready: true,
-      instruction: 'Plan the week — nothing to post today.',
+      instruction:
+          'Set up the week — write each post and add its image. Nothing to '
+          'post today.',
+    ),
+    PlanWeekDay(
+      index: 0,
+      weekday: 'Monday',
+      dayKey: '2026-11-16',
+      kind: DayKind.post,
+      role: 'teach',
+      formatName: 'Numbered steps',
+      imageReady: true,
+      title: 'The status update nobody has to chase',
+      status: 'Approved and scheduled',
+      ready: true,
+      instruction:
+          'This post teaches something worth saving. Write it and add its '
+          'image in the Planner today, then approve it — we publish it for '
+          'you on its day.',
+    ),
+    PlanWeekDay(
+      index: 1,
+      weekday: 'Tuesday',
+      dayKey: '2026-11-17',
+      kind: DayKind.rest,
+      status: 'Rest',
+      ready: true,
+      instruction: 'Rest.',
     ),
     PlanWeekDay(
       index: 2,
       weekday: 'Wednesday',
       dayKey: '2026-11-18',
-      kind: DayKind.videoScript,
-      title: 'Three numbers I check before every client call',
-      status: 'Script ready',
-      ready: true,
+      kind: DayKind.post,
+      role: 'story',
+      formatName: 'Mistake → lesson',
+      title: 'The deadline I said yes to, and what it cost',
+      status: 'Planned — not written yet',
       instruction:
-          'Record this video and keep it ready. On Wednesday, 18 Nov, this '
-          'level will ask for the link to your posted video.',
+          'This post tells a real story of yours, with the evidence. Write it '
+          'and add its image in the Planner today, then approve it — we '
+          'publish it for you on its day.',
     ),
     PlanWeekDay(
       index: 3,

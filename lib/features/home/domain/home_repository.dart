@@ -1,5 +1,7 @@
+import 'levels_finished.dart';
 import 'roadmap_progress.dart';
 
+export 'levels_finished.dart';
 export 'roadmap_progress.dart';
 
 /// Thrown when the home screen cannot be loaded. One sentinel per feature,
@@ -11,7 +13,7 @@ class HomeUnavailable implements Exception {
 
 /// Seam between the home screen and the backend.
 ///
-/// One read, no writes. That is not an oversight: on the web the roadmap
+/// Reads only, no writes. That is not an oversight: on the web the roadmap
 /// **never** POSTs a completion from the dashboard. The step rows only
 /// navigate — completion happens server-side when the work actually lands.
 /// Adding a tick-to-complete affordance here would let a user mark a post
@@ -24,4 +26,9 @@ class HomeUnavailable implements Exception {
 abstract class HomeRepository {
   /// `GET /roadmap/progress`.
   Future<RoadmapProgress> fetchRoadmapProgress();
+
+  /// `GET /roadmap/levels-finished` — how much of each day's levels was
+  /// finished, for the day rows behind today and today. Throws
+  /// [HomeUnavailable]; the roadmap then draws no figures and nothing else.
+  Future<LevelsFinished> fetchLevelsFinished();
 }

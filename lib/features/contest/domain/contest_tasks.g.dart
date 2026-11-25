@@ -262,6 +262,9 @@ _PlanWeekDay _$PlanWeekDayFromJson(Map<String, dynamic> json) => _PlanWeekDay(
   kind: json['kind'] == null
       ? DayKind.post
       : DayKind.parse(json['kind'] as String?),
+  role: json['role'] as String?,
+  formatName: json['formatName'] as String?,
+  imageReady: json['imageReady'] as bool? ?? false,
   title: json['title'] as String?,
   status: json['status'] as String? ?? '',
   ready: json['ready'] as bool? ?? false,
@@ -274,6 +277,9 @@ Map<String, dynamic> _$PlanWeekDayToJson(_PlanWeekDay instance) =>
       'weekday': instance.weekday,
       'dayKey': instance.dayKey,
       'kind': _dayKindWire(instance.kind),
+      'role': instance.role,
+      'formatName': instance.formatName,
+      'imageReady': instance.imageReady,
       'title': instance.title,
       'status': instance.status,
       'ready': instance.ready,

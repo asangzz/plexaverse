@@ -8,6 +8,7 @@ import '../../../../../core/ui/app_icons.dart';
 import '../../../../../core/ui/zave/zave_kit.dart';
 import '../../../domain/contest_repository.dart';
 import '../../../domain/contest_words.dart';
+import '../../../domain/levels_words.dart';
 import '../contest_kit.dart';
 
 /// A level's node: the web's 76×70 ellipse. Logical pixels, not scaled: the
@@ -69,6 +70,15 @@ final _Skin _followSkin = _kindSkin(
   const Color(0x73FFD166),
 );
 
+/// The Sunday levels, open or done: orange, so they stay recognisable as
+/// the levels that are open all week.
+final _Skin _sundaySkin = _kindSkin(
+  ContestColors.sundayLight,
+  ContestColors.sunday,
+  ContestColors.sundayLedge,
+  ContestColors.sundayNodeGlow,
+);
+
 final _Skin _planSkin = _kindSkin(
   const Color(0xFF34D399),
   const Color(0xFF0F9F6E),
@@ -94,8 +104,10 @@ const _Skin _darkSkin = _Skin(
 /// The KIND is the base colour, so a glance down the week tells lesson from
 /// task; the STATE then overrides it — green once finished, the dark slab
 /// while there is nothing to open. An unknown kind arrives locked, and draws
-/// as the slab.
+/// as the slab. A Sunday level open or done is orange ([isOrange]), done
+/// keeping its check.
 _Skin _skinFor(PathNode node) {
+  if (isOrange(node)) return _sundaySkin;
   if (isFinished(node.state)) return _doneSkin;
   if (isDarkState(node.state)) return _darkSkin;
   return switch (node.kind) {
@@ -122,6 +134,14 @@ const BorderRadius _ellipse = BorderRadius.all(
 /// periwinkle ring, a dimmed icon and a skip badge.
 /// Colour is never the only signal — the label carries the state in words,
 /// and the card spells it out.
+///
+/// ## The Sunday levels are orange (25 Nov 2026)
+///
+/// This planner week's set-up levels (`openAllWeek`) sit in the week's
+/// Sunday and stay open all week: orange while open, orange with the check
+/// once done; an image waiting for its post has the locked slab like any
+/// locked level. One whose post day has gone undone is DISABLED: the dark
+/// slab, no press, "Day passed" under it and the reason in its semantics.
 ///
 /// ## The press, and nothing else
 ///
@@ -160,9 +180,13 @@ class PathNodeButton extends StatelessWidget {
   /// Its card is open.
   final bool expanded;
 
+  /// A Sunday level whose post day has gone: no card, no press.
+  bool get disabled => isDayPassed(node);
+
   /// "Wed, day 17: Lesson part 2 of 3. Open today." — and, for a level of
   /// today waiting on an earlier one, what it waits for, so a screen reader
-  /// hears why without opening the card.
+  /// hears why without opening the card; for a Sunday level whose day has
+  /// passed, why it is closed.
   String get semanticsLabel {
     final String? detail = node.detail;
     final String waits =
@@ -171,9 +195,11 @@ class PathNodeButton extends StatelessWidget {
             detail.startsWith('Unlocks after ')
         ? ' $detail.'
         : '';
+    final String? reason = disabled ? dayPassedReason(node) : null;
+    final String why = reason == null ? '' : ' $reason.';
     final String number = level == null ? '' : 'Level $level, ';
     return '$dayName: $number${levelName(node)}. '
-        '${stateWord(node.state)}.$waits';
+        '${nodeStateWord(node)}.$waits$why';
   }
 
   @override
@@ -220,14 +246,16 @@ class PathNodeButton extends StatelessWidget {
       child: face,
     );
 
+    final bool off = disabled;
     return Semantics(
       button: true,
-      expanded: expanded,
+      enabled: !off,
+      expanded: off ? null : expanded,
       label: semanticsLabel,
       excludeSemantics: true,
-      onTap: onPressed,
+      onTap: off ? null : onPressed,
       child: GestureDetector(
-        onTap: onPressed,
+        onTap: off ? null : onPressed,
         behavior: HitTestBehavior.opaque,
         child: Stack(
           clipBehavior: Clip.none,
@@ -267,7 +295,16 @@ class PathNodeButton extends StatelessWidget {
                 bottom: -7,
                 child: CustomPaint(painter: _DashedRing()),
               ),
-            ZavePress(child: body),
+            if (off) body else ZavePress(child: body),
+            // The label beside a node is the web's desktop only; on a phone
+            // "Day passed" sits under it, clear of the node's ledge.
+            if (off)
+              const Positioned(
+                top: kPathNodeHeight + 12,
+                left: -40,
+                right: -40,
+                child: Center(child: _DayPassedTag()),
+              ),
             if (skipped)
               Positioned(
                 top: -4,
@@ -316,6 +353,35 @@ class PathNodeButton extends StatelessWidget {
                 child: Center(child: _StartBubble()),
               ),
           ],
+        ),
+      ),
+    );
+  }
+}
+
+/// "Day passed", under a Sunday level whose post day has gone: muted, as
+/// the web's phone draws it. Its words are in the node's semantics already.
+class _DayPassedTag extends StatelessWidget {
+  const _DayPassedTag();
+
+  @override
+  Widget build(BuildContext context) {
+    return ExcludeSemantics(
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 1),
+        decoration: BoxDecoration(
+          color: const Color(0x0DFFFFFF),
+          borderRadius: ZaveRadius.pillBr,
+          border: Border.all(color: const Color(0x1AFFFFFF)),
+        ),
+        child: Text(
+          kSundayLevelDayPassed,
+          maxLines: 1,
+          style: GoogleFonts.manrope(
+            fontSize: 10,
+            fontWeight: FontWeight.w700,
+            color: const Color(0x99FFFFFF),
+          ),
         ),
       ),
     );

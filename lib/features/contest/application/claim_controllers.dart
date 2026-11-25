@@ -11,9 +11,12 @@ part 'claim_controllers.g.dart';
 // `components/contest/tasks/ClaimLevel.tsx`.
 //
 // WHERE IT LIVES
-//   The Wednesday video's link is a level on Wednesday's path, after that
-//   day's other levels; the article's, Thursday's. A late claim — a past
-//   day's, or last week's still unpaid — opens here from the week card.
+//   The article's link is a level on Thursday's path, after that day's
+//   other levels. The video levels were retired on 25 Nov 2026: a video
+//   claim already sent still shows (pending, approved or rejected) and can
+//   be corrected or sent again here; no new one is offered. A late claim —
+//   a past day's, or last week's still unpaid — opens here from the week
+//   card.
 //   Either way the level is named by the piece's `kind` and `occurrence`,
 //   which arrive in the route and are sent back to the server unchanged.
 //

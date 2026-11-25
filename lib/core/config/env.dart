@@ -9,7 +9,7 @@ part 'env.g.dart';
 ///   mock    — bundled JSON fixtures (assets/mock/), no backend needed
 ///   dev     — the local backend on your machine
 ///   staging — the staging API
-///   prod    — the live plexaverse.com API
+///   prod    — the live API (the Tokyo Cloud Run service)
 enum Env { mock, dev, staging, prod }
 
 /// Overridden in `bootstrap()` from the flavored entry point.

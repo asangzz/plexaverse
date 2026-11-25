@@ -145,3 +145,28 @@ String followWinnersLead(int pointsEach) {
       'them on LinkedIn and on Plexaverse$xp. It is paid once for each of '
       'them this round; unfollowing later does not take it back.';
 }
+
+// ── The Sunday levels (`SUNDAY_LEVELS`, 25 Nov 2026) ───────────────────────
+
+/// The tags above the Sunday that holds this week's set-up levels, in order —
+/// text, never colour alone.
+const List<String> kSundayLevelTags = <String>[
+  'Open all week',
+  'Set up your week',
+  '0 XP',
+];
+
+/// The tags as a group, to a screen reader.
+const String kSundayLevelTagsLabel = 'About this Sunday’s set-up levels';
+
+/// Where an open Sunday level stands, in words — instead of "Open today".
+const String kSundayLevelOpen = 'Open all week';
+
+/// Where a Sunday level whose post day has gone stands.
+const String kSundayLevelDayPassed = 'Day passed';
+
+/// A closed Sunday level's reason: "Day passed — Monday’s post was not
+/// written". The web's `sundayLevelPassedLine`.
+String sundayLevelPassedLine(String weekday, {required bool image}) => image
+    ? '$kSundayLevelDayPassed — $weekday’s image was not added'
+    : '$kSundayLevelDayPassed — $weekday’s post was not written';

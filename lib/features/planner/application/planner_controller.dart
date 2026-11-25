@@ -1,5 +1,7 @@
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
+import '../../../core/platform/image_picking.dart' show PickedImage;
+
 import '../../../core/network/failure.dart';
 import '../../../core/plan/plan_refusal.dart';
 import '../../settings/application/settings_controllers.dart';
@@ -8,6 +10,7 @@ import '../../posts/application/post_library_controllers.dart';
 import '../data/planner_repositories.dart';
 import '../domain/plan_slot.dart';
 import '../domain/planner_repository.dart';
+import '../domain/post_formats.dart';
 import '../domain/video_script.dart';
 import '../domain/weekly_article.dart';
 
@@ -28,6 +31,9 @@ class PlannerWeek extends _$PlannerWeek {
 
   /// Back to the server's idea of now.
   void showCurrent() => state = (week: null, season: null);
+
+  /// A week of the current journey (the server fills in its season).
+  void showWeek(int week) => state = (week: week, season: null);
 }
 
 /// One unit of work the planner can have open on a day.
@@ -46,6 +52,18 @@ enum SlotWork {
 
   /// Writing the day's video script, or recording that it went out.
   script,
+
+  /// "Fix with AI" — the review's rewrite.
+  refine,
+
+  /// The day's photo is uploading.
+  photo,
+
+  /// The day's image is being made through /planner/image.
+  image,
+
+  /// The week's news is being searched or picked.
+  news,
 }
 
 /// What the planner has in flight, per day.
@@ -233,9 +251,19 @@ class PlannerController extends _$PlannerController {
     // `alreadyGenerated` means another request wrote this slot — its poster
     // went with it, and drawing a second one would charge for an image that
     // replaces one already on the post.
-    if (slot.format != 'text_image' || result.alreadyGenerated) return;
+    if (result.alreadyGenerated) return;
     final String? postId = result.postId;
     if (postId == null || postId.isEmpty) return;
+
+    // A playbook day's image is made by the kind its format wants, through
+    // /planner/image — never the old poster: a photo day wants the user's
+    // photo and a card day a card, and an AI poster on either would charge
+    // for an image the format does not use (PLANNER_REDESIGN.md §3.8).
+    if (slot.isNewShape) {
+      await _attachSlotImage(repo, plan, slotIndex);
+      return;
+    }
+    if (slot.format != 'text_image') return;
 
     // The badge is decoration. The web sends an empty name and no avatar when
     // the session has not loaded and gets a poster back regardless, so a
@@ -289,6 +317,297 @@ class PlannerController extends _$PlannerController {
   /// The one use case with NO server-side marker: nothing about the slot
   /// changes while the image is being drawn, so [PlannerBusy] is the only
   /// record that a paid-for poster is already on its way.
+  /// The image a playbook day gets right after its text is written — the
+  /// web's `autoImageMode`. Posters and cards are made at once. A photo day
+  /// only when the user already gave a photo (`auto` then honours their
+  /// consent: the photo as a reference with it, as it is without); with no
+  /// photo the image step asks for one instead of drawing a fallback card.
+  ///
+  /// Swallows every failure, like the poster before it: a missing image is a
+  /// step the user can redo, never a lost post.
+  Future<void> _attachSlotImage(
+    PlannerRepository repo,
+    WeekPlan plan,
+    int slotIndex,
+  ) async {
+    // The image follows the format the post was WRITTEN in, not the planned
+    // one: generation moves a day to a fallback format when its facts were
+    // spent in between, or when a news pick went stale, and rewrites the
+    // slot's formatId / imageKind to match (the web's `writtenSlot`). So the
+    // day is re-read rather than trusted from the plan captured before the
+    // call — that also carries the company photo → text card rule.
+    final PlanSlot slot;
+    try {
+      final PlannerState fresh = await repo.fetchWeek(
+        week: plan.weekNumber,
+        season: plan.season,
+      );
+      final PlanSlot? written = fresh.plan?.posts.elementAtOrNull(slotIndex);
+      if (written == null) return;
+      slot = written;
+    } on Object {
+      return;
+    }
+    final ImageKind? kind = slot.imageKind;
+    if (kind == null || !slot.hasPost) return;
+    if (kind == ImageKind.photo && !slot.hasReferencePhoto) return;
+    try {
+      await repo.makeSlotImage(
+        weekNumber: plan.weekNumber,
+        season: plan.season,
+        dayIndex: slotIndex,
+        mode: SlotImageMode.auto,
+      );
+    } on Object {
+      // Nothing to undo: the post is written and the image step stays open.
+    }
+  }
+
+  // ── The playbook week: review, image step, news ─────────────────────────
+
+  /// "Fix with AI" for one day. Says what came back on [plannerNotesProvider]
+  /// and rethrows a [PlannerActionFailure] (a plan refusal carries
+  /// `refusal`, for the sheet).
+  Future<RefineResult> refine(int slotIndex) => _noted(
+    slotIndex,
+    SlotWork.refine,
+    fallback: 'Could not fix this post.',
+    () async {
+      final WeekPlan plan = _requirePlan(slotIndex);
+      final ({int week, int season})? asked = _weekOnScreen();
+      try {
+        final RefineResult r = await ref
+            .read(plannerRepositoryProvider)
+            .refinePost(
+              weekNumber: plan.weekNumber,
+              season: plan.season,
+              dayIndex: slotIndex,
+            );
+        _note(
+          slotIndex,
+          SlotWork.refine,
+          r.ok && r.changed
+              ? 'Rewritten to pass the review.'
+              : r.ok
+              ? 'It already passes.'
+              : 'Plexa could not fix every rule — edit the post, or write it '
+                    'again.',
+          week: asked,
+        );
+        return r;
+      } finally {
+        _refreshSlot(plan, slotIndex);
+      }
+    },
+  );
+
+  /// Stores the day's photo; its 10-minute preview goes on
+  /// [plannerPhotoPreviewsProvider]. Rethrows [PlannerActionFailure].
+  Future<SlotPhotoUpload> uploadPhoto(int slotIndex, PickedImage photo) =>
+      _noted(
+        slotIndex,
+        SlotWork.photo,
+        fallback: 'Could not upload the photo.',
+        () async {
+          final WeekPlan plan = _requirePlan(slotIndex);
+          final ({int week, int season})? asked = _weekOnScreen();
+          try {
+            final SlotPhotoUpload r = await ref
+                .read(plannerRepositoryProvider)
+                .uploadSlotPhoto(
+                  weekNumber: plan.weekNumber,
+                  season: plan.season,
+                  dayIndex: slotIndex,
+                  bytes: photo.bytes,
+                  filename: photo.name,
+                );
+            // Not onto another week's same weekday (see [_note]).
+            if (_weekOnScreen() == asked) {
+              ref
+                  .read(plannerPhotoPreviewsProvider.notifier)
+                  .set(slotIndex, r.previewUrl);
+            }
+            _note(slotIndex, SlotWork.photo, 'Photo added.', week: asked);
+            return r;
+          } finally {
+            ref.invalidateSelf();
+          }
+        },
+      );
+
+  /// Makes the day's image in [mode]. `consent` is the user's tick on "send
+  /// my photo to OpenAI" — never set unasked. Rethrows
+  /// [PlannerActionFailure].
+  Future<SlotImageMade> makeImage(
+    int slotIndex,
+    SlotImageMode mode, {
+    bool consent = false,
+  }) => _noted(
+    slotIndex,
+    SlotWork.image,
+    fallback: 'Could not create the image.',
+    () async {
+      final WeekPlan plan = _requirePlan(slotIndex);
+      final ({int week, int season})? asked = _weekOnScreen();
+      try {
+        final SlotImageMade r = await ref
+            .read(plannerRepositoryProvider)
+            .makeSlotImage(
+              weekNumber: plan.weekNumber,
+              season: plan.season,
+              dayIndex: slotIndex,
+              mode: mode,
+              consent: consent,
+            );
+        _note(
+          slotIndex,
+          SlotWork.image,
+          'Image added to the post.',
+          week: asked,
+        );
+        return r;
+      } on PlannerActionFailure catch (e) {
+        // The image step's own words for the refusals it can act on.
+        final String? line = switch (e.code) {
+          'CONSENT_REQUIRED' =>
+            'Tick the box to send your photo to OpenAI first.',
+          'NO_PHOTO' => 'Add a photo first.',
+          'NO_POST' => 'Write the post first — then make its image.',
+          _ => null,
+        };
+        if (line == null) rethrow;
+        throw PlannerActionFailure(code: e.code, message: line);
+      } finally {
+        _refreshSlot(plan, slotIndex);
+      }
+    },
+  );
+
+  /// Finds (or refreshes) the week's headlines. Rethrows
+  /// [PlannerActionFailure].
+  Future<NewsResult> findNews() {
+    final int day = _newsDay();
+    return _noted(
+      day,
+      SlotWork.news,
+      fallback: 'Could not reach the news just now.',
+      () async {
+        final WeekPlan plan = _requirePlan(day);
+        final ({int week, int season})? asked = _weekOnScreen();
+        try {
+          final NewsResult r = await ref
+              .read(plannerRepositoryProvider)
+              .findNews(weekNumber: plan.weekNumber, season: plan.season);
+          if (r.refreshFoundNone) {
+            _note(
+              day,
+              SlotWork.news,
+              'No newer headlines — kept the ones you had.',
+              week: asked,
+            );
+          }
+          return r;
+        } finally {
+          ref.invalidateSelf();
+        }
+      },
+    );
+  }
+
+  /// Picks the headline the news post is written from. Rethrows
+  /// [PlannerActionFailure].
+  Future<NewsResult> pickNews(int pickedIndex) {
+    final int day = _newsDay();
+    return _noted(
+      day,
+      SlotWork.news,
+      fallback: 'Could not save your pick.',
+      () async {
+        final WeekPlan plan = _requirePlan(day);
+        try {
+          return await ref
+              .read(plannerRepositoryProvider)
+              .pickNews(
+                weekNumber: plan.weekNumber,
+                season: plan.season,
+                pickedIndex: pickedIndex,
+              );
+        } finally {
+          ref.invalidateSelf();
+        }
+      },
+    );
+  }
+
+  int _newsDay() => newsDayFor(state.value?.plan?.weekNumber ?? 0).dayIndex;
+
+  /// Runs [action] under the day's busy flag, clearing the day's note for
+  /// [work] first and writing the failure's sentence there after. The note
+  /// lives on [plannerNotesProvider], so it outlives a sheet dismissed
+  /// mid-call (ARCHITECTURE.md: no widget holds an async outcome).
+  Future<T> _noted<T>(
+    int slotIndex,
+    SlotWork work,
+    Future<T> Function() action, {
+    required String fallback,
+  }) => ref.read(plannerBusyProvider.notifier).run(slotIndex, work, () async {
+    ref.read(plannerNotesProvider.notifier).clear(slotIndex, work);
+    final ({int week, int season})? asked = _weekOnScreen();
+    try {
+      return await action();
+    } on PlannerActionFailure catch (e) {
+      _note(slotIndex, work, e.message ?? fallback, isError: true, week: asked);
+      rethrow;
+    } on Object {
+      _note(slotIndex, work, fallback, isError: true, week: asked);
+      throw PlannerActionFailure(code: 'FAILED', message: fallback);
+    }
+  });
+
+  /// Writes a day's note — unless the planner moved to another week while
+  /// the call ran: the notes are keyed by day index, so a late note would
+  /// land on the same weekday of the week now on screen.
+  void _note(
+    int slotIndex,
+    SlotWork work,
+    String text, {
+    bool isError = false,
+    ({int week, int season})? week,
+  }) {
+    if (week != null && _weekOnScreen() != week) return;
+    ref
+        .read(plannerNotesProvider.notifier)
+        .say(slotIndex, work, text, isError: isError);
+  }
+
+  /// The week actually on screen — not the request record, which can name
+  /// the same week two ways ((null, null) for "this week", or its number).
+  ({int week, int season})? _weekOnScreen() {
+    final WeekPlan? plan = state.value?.plan;
+    return plan == null ? null : (week: plan.weekNumber, season: plan.season);
+  }
+
+  WeekPlan _requirePlan(int slotIndex) {
+    final WeekPlan? plan = state.value?.plan;
+    if (plan == null || slotIndex < 0 || slotIndex >= plan.posts.length) {
+      throw const PlannerActionFailure(
+        code: 'NOT_FOUND',
+        message: 'That day is no longer in this week.',
+      );
+    }
+    return plan;
+  }
+
+  /// The plan (review, image, news) and the post body (refined text, new
+  /// image) both moved on the server.
+  void _refreshSlot(WeekPlan plan, int slotIndex) {
+    final String? postId = plan.posts[slotIndex].postId;
+    if (postId != null && postId.isNotEmpty) {
+      ref.invalidate(postDetailProvider(postId));
+    }
+    ref.invalidateSelf();
+  }
+
   Future<bool> regeneratePoster(int slotIndex) => ref
       .read(plannerBusyProvider.notifier)
       .run(slotIndex, SlotWork.poster, () => _regeneratePoster(slotIndex));
@@ -418,7 +737,16 @@ class PlannerController extends _$PlannerController {
       final result = await ref
           .read(plannerRepositoryProvider)
           .approveSlot(planId: plan.id, slotIndex: slotIndex);
-      state = AsyncData<PlannerState>(current.copyWith(plan: result.plan));
+      // Every approve answer carries the RAW stored row — no read-time
+      // reconciliation, no previews — so it never replaces the planner's
+      // state: thumbnails would vanish, a day the publish gate held would
+      // read "approved" again, and a held answer's own day too. Keep the
+      // optimistic flip (none for a held answer, which moved nothing) and
+      // re-read.
+      if (result.held) {
+        state = AsyncData<PlannerState>(current);
+      }
+      ref.invalidateSelf();
       return result;
     } on Object {
       // Put the server's truth back. A failed approve that still looks
@@ -491,10 +819,13 @@ class PlannerController extends _$PlannerController {
       // the user's own trailing blank line is theirs to keep.
       final String? postId = slot.postId;
       if (body != null && body.trim().isNotEmpty && postId != null) {
-        // No invalidation after this, deliberately. [PostDetail.save]
-        // publishes the row the write returned into its own cache, so the
-        // sheet's body and the library row behind it are already current.
         await ref.read(postDetailProvider(postId).notifier).save(content: body);
+        // Then re-read both sides. The PATCH answers with the list shape,
+        // which carries no `contentEdited`, and the server mirrors a fresh
+        // ADVISORY review onto the slot — so without these the review panel
+        // would go on saying the user's own words will be "held".
+        ref.invalidate(postDetailProvider(postId));
+        ref.invalidateSelf();
       }
       return null;
     } on PlannerGenerateFailure catch (e) {
@@ -832,5 +1163,69 @@ class ArticleController extends _$ArticleController {
           publishedUrl: url,
         );
     ref.invalidateSelf();
+  }
+}
+
+/// Whether the week's news search is switched on, and whether the system
+/// searches for this user. Off on any failure — the picker then hides itself
+/// on a day with no headlines (the web's `useNewsStatus`).
+@riverpod
+Future<NewsStatus> plannerNewsStatus(Ref ref) =>
+    ref.watch(plannerRepositoryProvider).fetchNewsStatus();
+
+/// One line the planner says about a day's playbook action — what came back,
+/// or why not.
+class PlannerNote {
+  const PlannerNote(this.text, {this.isError = false});
+
+  final String text;
+  final bool isError;
+}
+
+/// The latest note per day and action (refine, photo, image, news). Owned
+/// here rather than by the sheet's widgets, so a note survives the sheet
+/// being swiped away mid-call. Reset when the planner shows another week —
+/// the notes are keyed by day index.
+@Riverpod(keepAlive: true)
+class PlannerNotes extends _$PlannerNotes {
+  @override
+  Map<String, PlannerNote> build() {
+    ref.watch(plannerWeekProvider);
+    return const <String, PlannerNote>{};
+  }
+
+  static String keyOf(int slotIndex, SlotWork work) => '$slotIndex:${work.name}';
+
+  void say(int slotIndex, SlotWork work, String text, {bool isError = false}) =>
+      state = <String, PlannerNote>{
+        ...state,
+        keyOf(slotIndex, work): PlannerNote(text, isError: isError),
+      };
+
+  void clear(int slotIndex, SlotWork work) {
+    final String k = keyOf(slotIndex, work);
+    if (!state.containsKey(k)) return;
+    state = <String, PlannerNote>{...state}..remove(k);
+  }
+}
+
+/// The 10-minute signed preview of a photo uploaded this session, per day.
+/// Shown, never stored on the server or reused after the week changes.
+@Riverpod(keepAlive: true)
+class PlannerPhotoPreviews extends _$PlannerPhotoPreviews {
+  @override
+  Map<int, String> build() {
+    ref.watch(plannerWeekProvider);
+    return const <int, String>{};
+  }
+
+  void set(int slotIndex, String? url) {
+    final Map<int, String> next = <int, String>{...state};
+    if (url == null || url.isEmpty) {
+      next.remove(slotIndex);
+    } else {
+      next[slotIndex] = url;
+    }
+    state = next;
   }
 }

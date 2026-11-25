@@ -77,8 +77,34 @@ List<Quest> questsFor(PathDay? today, LessonProgress? lesson) {
       ),
     );
   }
+  // Sunday's planner set-up steps are one quest: a bar step per post and
+  // per image. On the weekdays after it they are Sunday's levels, not
+  // today's, so only Sunday counts them.
+  final List<PathNode> setupSteps = <PathNode>[
+    for (final PathNode n in today.nodes)
+      if (n.isSetupStep) n,
+  ];
+  bool setupShown = false;
   for (final PathNode n in today.nodes) {
     if (n.kind == PathNodeKind.lesson || n.state == PathNodeState.unavailable) {
+      continue;
+    }
+    if (n.isSetupStep) {
+      if (setupShown) continue;
+      setupShown = true;
+      out.add(
+        Quest(
+          id: 'plan_week:setup',
+          title: 'Set up this week in the Planner',
+          done: setupSteps.where((PathNode s) => isHandedIn(s.state)).length,
+          goal: setupSteps.length,
+          icon: QuestIcon.task,
+          kind: PathNodeKind.planWeek,
+          note: setupSteps.any((PathNode s) => s.state == PathNodeState.skipped)
+              ? 'A step is skipped, still open today'
+              : null,
+        ),
+      );
       continue;
     }
     final String? detail = n.detail;

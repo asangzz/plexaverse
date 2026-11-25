@@ -7,27 +7,32 @@ import 'package:intl/intl.dart';
 import '../../../../core/ui/zave/zave_kit.dart';
 import '../../application/connections_controller.dart';
 import '../../domain/connection_summary.dart';
+import 'connection_series_chart.dart';
 
-/// "How many connections do you have now?" — the roadmap's weekly check-in.
+/// "How many connections do you have now?" — the roadmap's weekly check-in,
+/// and since 25 Nov 2026 the ONLY thing the roadmap asks for (the follower
+/// card left it, web and app).
 ///
 /// ## Why it stands where the day's missions used to
 ///
-/// The roadmap handed out a day's tasks until the contest's daily path took
+/// The roadmap handed out a day's tasks until the levels' daily path took
 /// that job over (web, 12 Nov 2026). What the roadmap keeps is the long view,
 /// and for connections the long view is one number a week: connection growth
-/// is where the contest's connect and invite tasks actually show up.
+/// is where the connect and invite levels actually show up.
 ///
-/// ## Why weekly
+/// ## Why weekly, and no Update button
 ///
-/// Connections move faster than followers — a week against the follower
-/// card's month ([ConnectionReading.staleAfter]) — and the contest runs in
-/// weeks, so a week is the grain the growth line is worth reading on.
+/// Connections move faster than followers ([ConnectionReading.staleAfter] is
+/// a week) and the levels run in weeks. It asks while there is no count for
+/// the current week; once this week's count is in, the card shows the count,
+/// how it moved and the graph ([ConnectionSeriesChart]) — and nothing to
+/// press (owner, 25 Nov 2026). The next ask comes when the reading goes stale.
 ///
-/// Same shape as [FollowerCheckpoint] on purpose: a strip, never a dialog,
-/// and the answer turns into the figure rather than vanishing. "Not now" is a
-/// per-device convenience ([ConnectionPromptSnooze]). LinkedIn gives no app a
-/// member's connection count, so the number only exists because the user
-/// typed it. The copy is the web's `ConnectionCheckpoint`, word for word.
+/// A strip, never a dialog, and the answer turns into the figure rather than
+/// vanishing. "Not now" is a per-device convenience ([ConnectionPromptSnooze]).
+/// LinkedIn gives no app a member's connection count, so the number only
+/// exists because the user typed it. The copy is the web's
+/// `ConnectionCheckpoint`, word for word.
 class ConnectionCheckpoint extends ConsumerStatefulWidget {
   const ConnectionCheckpoint({super.key});
 
@@ -49,8 +54,8 @@ const String _whereToFind =
 class _ConnectionCheckpointState extends ConsumerState<ConnectionCheckpoint> {
   final TextEditingController _draft = TextEditingController();
 
-  /// Re-answering a count that is not stale yet. Separate from "the reading is
-  /// stale" so Update can reopen the question without waiting a week for it.
+  /// The question opened from "Add your connection count" (snoozed before
+  /// ever answering). A count already in has no Update, as on the web.
   bool _editing = false;
 
   @override
@@ -65,7 +70,7 @@ class _ConnectionCheckpointState extends ConsumerState<ConnectionCheckpoint> {
     setState(() => _editing = true);
   }
 
-  /// "Cancel" closes an Update; "Not now" puts an unanswered question away.
+  /// "Cancel" closes an opened question; "Not now" puts one away.
   void _dismiss() {
     ref.read(connectionActionsProvider.notifier).clearError();
     if (!_editing) ref.read(connectionPromptSnoozeProvider.notifier).snooze();
@@ -127,7 +132,6 @@ class _ConnectionCheckpointState extends ConsumerState<ConnectionCheckpoint> {
         reading: reading,
         growth: data.growth,
         history: data.history,
-        onUpdate: _openEditor,
       );
     }
 
@@ -246,70 +250,39 @@ class _AddCount extends StatelessWidget {
   );
 }
 
-/// What the number bought: the count, the week, and the line it draws.
+/// What the number bought: the count, the graph and how it moved — and no
+/// Update button (owner, 25 Nov 2026).
 class _Progress extends StatelessWidget {
   const _Progress({
     required this.reading,
     required this.growth,
     required this.history,
-    required this.onUpdate,
   });
 
   final ConnectionReading reading;
   final ConnectionGrowth? growth;
   final List<ConnectionReading> history;
-  final VoidCallback onUpdate;
 
   @override
   Widget build(BuildContext context) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: <Widget>[
-        Row(
-          crossAxisAlignment: CrossAxisAlignment.center,
-          children: <Widget>[
-            Expanded(
-              child: Text.rich(
-                TextSpan(
-                  children: <InlineSpan>[
-                    TextSpan(text: _grouped(reading.count), style: ZaveType.h2),
-                    TextSpan(text: ' connections', style: ZaveType.bodyMuted),
-                  ],
-                ),
-              ),
-            ),
-            if (history.length >= 2) ...<Widget>[
-              SizedBox(width: ZaveSpace.md),
-              Semantics(
-                label:
-                    'Connections over time: ${_grouped(history.first.count)} '
-                    'to ${_grouped(history.last.count)}',
-                child: SizedBox(
-                  width: 96,
-                  height: 24,
-                  child: ZaveSparkline(
-                    values: <double>[
-                      for (final ConnectionReading r in history)
-                        r.count.toDouble(),
-                    ],
-                  ),
-                ),
-              ),
+        Text.rich(
+          TextSpan(
+            children: <InlineSpan>[
+              TextSpan(text: _grouped(reading.count), style: ZaveType.h2),
+              TextSpan(text: ' connections', style: ZaveType.bodyMuted),
             ],
-          ],
+          ),
         ),
+        // Spaced by time; draws nothing with fewer than two readings.
+        if (history.length >= 2) ...<Widget>[
+          SizedBox(height: ZaveSpace.md),
+          ConnectionSeriesChart(readings: history),
+        ],
         SizedBox(height: ZaveSpace.sm),
-        Row(
-          children: <Widget>[
-            Expanded(child: Text.rich(_movement(), style: ZaveType.caption)),
-            SizedBox(width: ZaveSpace.md),
-            Semantics(
-              label: 'Update your connection count',
-              excludeSemantics: true,
-              child: ZaveButton(label: 'Update', onPressed: onUpdate),
-            ),
-          ],
-        ),
+        Text.rich(_movement(), style: ZaveType.caption),
         SizedBox(height: ZaveSpace.sm),
         Text(_why, style: ZaveType.caption),
       ],

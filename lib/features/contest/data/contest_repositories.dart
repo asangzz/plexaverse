@@ -36,6 +36,13 @@ class ApiContestRepository implements ContestRepository {
 
   final DioClient _client;
 
+  /// The layout this build draws: the open-all-week Sunday levels. Sent on
+  /// the path, the skip and both plan calls alike — the server decides a
+  /// lock or a skip on the layout the caller says it draws.
+  static const Map<String, dynamic> _setupLevels = <String, dynamic>{
+    'setupLevels': '1',
+  };
+
   @override
   Future<ContestOverview?> fetchOverview() => _call(() async {
     final Response<Map<String, dynamic>> r = await _client
@@ -63,12 +70,20 @@ class ApiContestRepository implements ContestRepository {
   /// With `followLevel=1`: this build draws "Follow last round's top
   /// learners" and opens its screen. Without the flag the server leaves the
   /// node out, for the builds before it that would draw it as a dead lock.
+  ///
+  /// With `setupLevels=1` (25 Nov 2026): this build draws the open-all-week
+  /// Sunday levels — the week's set-up steps as Sunday's nodes, outside the
+  /// gate. The same flag goes on the skip and the plan routes, so a lock or a
+  /// skip is decided on the layout drawn here.
   @override
   Future<ContestPath> fetchPath() => _call(() async {
     final Response<Map<String, dynamic>> r = await _client
         .get<Map<String, dynamic>>(
           ApiPaths.contestPath,
-          queryParameters: <String, dynamic>{'followLevel': '1'},
+          queryParameters: <String, dynamic>{
+            'followLevel': '1',
+            ..._setupLevels,
+          },
         );
     return ContestPath.fromJson(_inner(_body(r), 'path'));
   });
@@ -198,14 +213,20 @@ class ApiContestRepository implements ContestRepository {
   @override
   Future<PlanWeekView> fetchPlanWeek() => _call(() async {
     final Response<Map<String, dynamic>> r = await _client
-        .get<Map<String, dynamic>>(ApiPaths.contestTaskPlan);
+        .get<Map<String, dynamic>>(
+          ApiPaths.contestTaskPlan,
+          queryParameters: _setupLevels,
+        );
     return PlanWeekView.fromJson(_inner(_body(r), 'view'));
   });
 
   @override
   Future<PlanWeekResult> completePlanWeek() => _call(() async {
     final Response<Map<String, dynamic>> r = await _client
-        .post<Map<String, dynamic>>(ApiPaths.contestTaskPlan);
+        .post<Map<String, dynamic>>(
+          ApiPaths.contestTaskPlan,
+          queryParameters: _setupLevels,
+        );
     return PlanWeekResult.fromJson(_inner(_body(r), 'result'));
   });
 
@@ -238,6 +259,7 @@ class ApiContestRepository implements ContestRepository {
     final Response<Map<String, dynamic>> r = await _client
         .post<Map<String, dynamic>>(
           ApiPaths.contestSkip,
+          queryParameters: _setupLevels,
           data: <String, dynamic>{'nodeId': nodeId},
         );
     return SkipResult.fromJson(_inner(_body(r), 'result'));

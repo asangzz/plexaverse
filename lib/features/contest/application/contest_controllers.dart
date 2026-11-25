@@ -2,6 +2,10 @@ import 'package:flutter/widgets.dart' show AppLifecycleListener;
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 import '../../../core/router/zave_routes.dart';
+import '../../pricing/application/consistency_reward_controller.dart'
+    show consistencyRewardConsentControllerProvider;
+import '../../home/application/home_controllers.dart'
+    show levelsFinishedProvider;
 import '../../placement/application/placement_controllers.dart';
 import '../data/contest_repositories.dart';
 import '../domain/contest_repository.dart';
@@ -128,6 +132,8 @@ typedef ContestInvalidate = void Function(ProviderOrFamily provider);
 /// moved), but a guess at the new state is how the screen and the server
 /// drift apart.
 void refreshContestStanding(ContestInvalidate invalidate) {
+  // The roadmap's per-day "levels finished" figures move with every level.
+  invalidate(levelsFinishedProvider);
   invalidate(contestOverviewProvider);
   invalidate(contestPathProvider);
   invalidate(contestBoardProvider);
@@ -177,6 +183,14 @@ TodayLock todayLock(Ref ref, PathNodeKind kind) {
 /// is the web's path for it, which the web can change without the app
 /// knowing. Null for a level [canOpen] refuses — locked, missed, revoked,
 /// nothing to do — and for a kind this build does not know.
+///
+/// A Sunday set-up level ("Write Monday's post", `setup` set) is done in the
+/// Planner, so it opens the Planner tab on its day — `/planner?day=<0..6>`
+/// (0 = Monday), that day's sheet of THIS week, where the post and its image
+/// step both live — a shell branch, gone to rather than pushed
+/// ([isContestTabRoute]). The web's link also names the step and the week
+/// (`/planner?week=&setup=1&day=&step=`); the app's day sheet holds both
+/// steps, and its week is the one holding today.
 String? contestLevelRoute(PathNode node) {
   if (!canOpen(node)) return null;
   return switch (node.kind) {
@@ -189,7 +203,23 @@ String? contestLevelRoute(PathNode node) {
     PathNodeKind.comment => ZaveRoutes.contestComment,
     PathNodeKind.feedComments => ZaveRoutes.contestFeedComments,
     PathNodeKind.weeklyInvites => ZaveRoutes.contestInvites,
-    PathNodeKind.planWeek => ZaveRoutes.contestPlan,
+    PathNodeKind.planWeek => switch (node.setup) {
+      final NodeSetup setup => Uri(
+        path: ZaveRoutes.planner,
+        queryParameters: <String, String>{
+          'day': '${setup.dayIndex}',
+          // The planner week the level sets up, as the server's own link
+          // names it (`/planner?week=N&setup=1&…`). Counted on the round's
+          // day, which can differ from the planner's own "this week" (the
+          // user's timezone) for hours around Sunday midnight.
+          if (_hrefWeek(node.href) case final String week) 'week': week,
+          // Per tap: the Planner reopens the day even when it was the last
+          // one linked (the tab keeps its page, so the same URL is no change).
+          'at': '${DateTime.now().millisecondsSinceEpoch}',
+        },
+      ).toString(),
+      null => ZaveRoutes.contestPlan,
+    },
     // The Connection Sprint, in levels mode.
     PathNodeKind.connectLeaders => '${ZaveRoutes.connections}?from=contest',
     PathNodeKind.followWinners => ZaveRoutes.contestFollow,
@@ -200,6 +230,18 @@ String? contestLevelRoute(PathNode node) {
     PathNodeKind.unknown => null,
   };
 }
+
+/// The `week=` of a server set-up link, or null.
+String? _hrefWeek(String? href) {
+  if (href == null) return null;
+  final String? week = Uri.tryParse(href)?.queryParameters['week'];
+  return week != null && int.tryParse(week) != null ? week : null;
+}
+
+/// A route that is one of the shell's tabs (the Planner, with or without its
+/// `?day=`): gone to, never pushed over the path.
+bool isContestTabRoute(String route) =>
+    Uri.parse(route).path == ZaveRoutes.planner;
 
 /// The claim level for one piece — from its node, or from the week card's
 /// "Share link" for a piece whose day has passed. Null for a piece this
@@ -246,7 +288,12 @@ NextLevel nextOpenLevel(ContestPath? path, PathNodeKind finished) {
   for (final PathNode n in path?.today?.nodes ?? const <PathNode>[]) {
     if (n.id == id) node = n;
   }
-  if (node == null || node.kind == finished) return back;
+  // The same kind is the level just finished — except a Sunday set-up step
+  // after "I've planned this week": that is the next level, in the Planner
+  // ("Next: Write Monday's post", as the web says).
+  if (node == null || (node.kind == finished && node.setup == null)) {
+    return back;
+  }
   final String? route = contestLevelRoute(node);
   if (route == null) return back;
   return NextLevel(route: route, label: 'Next: ${levelName(node)}');
@@ -276,6 +323,10 @@ void contestResumeRefresh(Ref ref) {
       // A top learner can withdraw, or the day turn over, while the learner
       // is away following them on LinkedIn.
       ref.invalidate(followWinnersProvider);
+      // The consistency reward's switch, drawn on the card: it may have been
+      // switched off on the web, or its words changed, while away. One read
+      // per resume — never polled (the route's bucket is AUTH, 5 a minute).
+      ref.invalidate(consistencyRewardConsentControllerProvider);
     },
   );
   ref.onDispose(listener.dispose);

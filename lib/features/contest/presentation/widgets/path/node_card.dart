@@ -36,6 +36,13 @@ import 'path_node.dart';
 /// nothing; the level stays open until the day ends. On success the path
 /// closes the card and START moves on; [skipHidden] covers a card opened
 /// again within the double-tap guard's window.
+///
+/// ## A Sunday level's card is orange (25 Nov 2026)
+///
+/// This planner week's set-up levels (`openAllWeek`) open in an orange card
+/// that says "Open all week", not "Open today": they stay open on the days
+/// after their Sunday. They are outside the gate, so they never offer Skip.
+/// One whose day has passed opens no card at all (the path's).
 class NodeCard extends StatelessWidget {
   const NodeCard({
     required this.node,
@@ -85,7 +92,10 @@ class NodeCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final bool dark = isDarkState(node.state);
     final bool opens = canOpen(node);
-    final Color fill = dark ? ContestColors.slab : fillFor(node.kind);
+    final bool orange = isOrange(node);
+    final Color fill = dark
+        ? ContestColors.slab
+        : (orange ? ContestColors.sundayCard : fillFor(node.kind));
     final TextStyle line = ZaveType.body.copyWith(
       fontSize: 14,
       height: 1.5,
@@ -107,7 +117,9 @@ class NodeCard extends StatelessWidget {
               ? null
               : <BoxShadow>[
                   BoxShadow(
-                    color: node.kind == PathNodeKind.planWeek
+                    color: orange
+                        ? ContestColors.sundayGlow
+                        : node.kind == PathNodeKind.planWeek
                         ? const Color(0x6610A37F)
                         : const Color(0x732F3AF7),
                     blurRadius: 40,
@@ -152,7 +164,7 @@ class NodeCard extends StatelessWidget {
             Text.rich(
               TextSpan(
                 children: <InlineSpan>[
-                  TextSpan(text: stateWord(node.state)),
+                  TextSpan(text: nodeStateWord(node)),
                   if (node.points > 0) ...<InlineSpan>[
                     const TextSpan(text: ' · '),
                     TextSpan(
@@ -180,7 +192,11 @@ class NodeCard extends StatelessWidget {
                     ? 'Locked'
                     : 'Nothing to open',
               ),
-            if (node.canSkip && !skipHidden && onSkip != null) ...<Widget>[
+            // Never on a Sunday level: it is outside the order.
+            if (node.canSkip &&
+                !node.openAllWeek &&
+                !skipHidden &&
+                onSkip != null) ...<Widget>[
               const SizedBox(height: 8),
               SizedBox(
                 width: double.infinity,

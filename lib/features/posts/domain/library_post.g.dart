@@ -62,6 +62,9 @@ _LibraryPost _$LibraryPostFromJson(Map<String, dynamic> json) => _LibraryPost(
   account: json['account'] == null
       ? null
       : PostAuthor.fromJson(json['account'] as Map<String, dynamic>),
+  contentEdited: json['contentEdited'] == null
+      ? false
+      : _trueOnly(json['contentEdited']),
 );
 
 Map<String, dynamic> _$LibraryPostToJson(_LibraryPost instance) =>
@@ -80,6 +83,7 @@ Map<String, dynamic> _$LibraryPostToJson(_LibraryPost instance) =>
       'scheduledFor': instance.scheduledFor?.toIso8601String(),
       'metrics': instance.metrics?.toJson(),
       'account': instance.account?.toJson(),
+      'contentEdited': instance.contentEdited,
     };
 
 const _$PostLibraryStatusEnumMap = {

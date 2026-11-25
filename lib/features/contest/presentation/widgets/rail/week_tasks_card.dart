@@ -29,14 +29,23 @@ const List<PathNodeKind> _dailyKinds = <PathNodeKind>[
 /// one row — "Daily", with how many are done of how many — and the header's
 /// total still counts every day's points.
 ///
+/// ## Sunday's set-up is one row too
+///
+/// Since 25 Nov 2026 Sunday sets up the week in the Planner — a level per
+/// post and per image (kind plan_week, the open-all-week Sunday levels).
+/// They are one "Set up the week" row, with how many are done of how many;
+/// they pay nothing. A single "Plan this week" (a week not planned yet)
+/// keeps its own title and status word.
+///
 /// ## The claims are listed from the claims
 ///
-/// What pays for the planner's pieces is each going out — the article and
-/// the videos — claimed by its link on the day it is posted. That level is
-/// on the path too, but the claims are listed here from `path.claims`, so a
-/// late one (a past day's, or last week's still unpaid) stays one tap away;
-/// the claim NODES are left out of the task rows, so nothing counts twice.
-/// "Share link" opens the claim by its kind and occurrence, never a URL.
+/// What pays for the planner's work is the article going out, claimed by its
+/// link on the day it is posted (and a video claim sent before the video
+/// levels were retired, until it is decided). That level is on the path
+/// too, but the claims are listed here from `path.claims`, so a late one (a
+/// past day's, or last week's still unpaid) stays one tap away; the claim
+/// NODES are left out of the task rows, so nothing counts twice. "Share
+/// link" opens the claim by its kind and occurrence, never a URL.
 class WeekTasksCard extends StatelessWidget {
   const WeekTasksCard({
     required this.days,
@@ -66,8 +75,15 @@ class WeekTasksCard extends StatelessWidget {
       for (final PathNodeKind kind in _dailyKinds)
         all.where(((PathDay, PathNode) t) => t.$2.kind == kind).toList(),
     ].where((List<(PathDay, PathNode)> g) => g.isNotEmpty).toList();
+    final List<(PathDay, PathNode)> setup = all
+        .where(((PathDay, PathNode) t) => t.$2.kind == PathNodeKind.planWeek)
+        .toList();
     final List<(PathDay, PathNode)> tasks = all
-        .where(((PathDay, PathNode) t) => !_dailyKinds.contains(t.$2.kind))
+        .where(
+          ((PathDay, PathNode) t) =>
+              !_dailyKinds.contains(t.$2.kind) &&
+              t.$2.kind != PathNodeKind.planWeek,
+        )
         .toList();
     // Today's claim levels still waiting their turn: the card must not offer
     // a link the path shows locked and the server refuses.
@@ -99,6 +115,8 @@ class WeekTasksCard extends StatelessWidget {
       body = Column(
         children: <Widget>[
           for (final List<(PathDay, PathNode)> group in daily) _dailyRow(group),
+          if (setup.length == 1) _taskRow(setup.single.$1, setup.single.$2),
+          if (setup.length > 1) _setupRow(setup),
           for (final (PathDay day, PathNode node) in tasks) _taskRow(day, node),
           for (final PostClaim c in claims)
             _claimRow(
@@ -119,8 +137,8 @@ class WeekTasksCard extends StatelessWidget {
           body,
           const SizedBox(height: 8),
           Text(
-            'Article and video XP land when you share the post link — from '
-            'the day it goes out — and our team checks it.',
+            'Article XP lands when you share the post link — from the day it '
+            'goes out — and our team checks it.',
             style: railMuted,
           ),
         ],
@@ -141,6 +159,34 @@ class WeekTasksCard extends StatelessWidget {
         excludeSemantics: true,
         child: Text(
           '$done/${group.length}',
+          style: _statusStyle(done > 0 ? ContestColors.mint : ZaveColors.ink45),
+        ),
+      ),
+    );
+  }
+
+  /// Sunday's set-up levels as one row: "Set up the week", done of total —
+  /// counted over the steps (`setup`), not "Plan this week" before them.
+  Widget _setupRow(List<(PathDay, PathNode)> setup) {
+    final List<(PathDay, PathNode)> steps = setup
+        .where(((PathDay, PathNode) t) => t.$2.setup != null)
+        .toList();
+    final List<(PathDay, PathNode)> counted = steps.isNotEmpty ? steps : setup;
+    final int done = counted
+        .where(((PathDay, PathNode) t) => isFinished(t.$2.state))
+        .length;
+    final PathDay first = setup.first.$1;
+    return _TaskRow(
+      chip: first.weekday >= 0 && first.weekday < 7
+          ? kWeekdayShort[first.weekday]
+          : '',
+      now: setup.any(((PathDay, PathNode) t) => t.$1.isToday),
+      title: 'Set up the week',
+      status: Semantics(
+        label: '$done of ${counted.length} done',
+        excludeSemantics: true,
+        child: Text(
+          '$done/${counted.length}',
           style: _statusStyle(done > 0 ? ContestColors.mint : ZaveColors.ink45),
         ),
       ),

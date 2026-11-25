@@ -712,4 +712,4 @@ final class ContestResumeRefreshProvider
 }
 
 String _$contestResumeRefreshHash() =>
-    r'e76d9934018e35ae6d3a18a09e2027fbbe880cd5';
+    r'36ca3ccdc8566051d133d5979acbdd97082732dd';

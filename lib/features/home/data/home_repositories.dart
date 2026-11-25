@@ -37,6 +37,22 @@ class ApiHomeRepository implements HomeRepository {
       throw const HomeUnavailable();
     }
   }
+
+  @override
+  Future<LevelsFinished> fetchLevelsFinished() async {
+    try {
+      final response = await _client.get<Map<String, dynamic>>(
+        ApiPaths.roadmapLevelsFinished,
+      );
+      final Map<String, dynamic>? data = response.data;
+      if (data == null) throw const HomeUnavailable();
+      return LevelsFinished.fromJson(data);
+    } on HomeUnavailable {
+      rethrow;
+    } on Object {
+      throw const HomeUnavailable();
+    }
+  }
 }
 
 /// In-memory [HomeRepository] for the `mock` flavor.
@@ -81,6 +97,28 @@ class FakeHomeRepository implements HomeRepository {
       pendingPostIdToday: FakeAutoPostState.pendingPostId,
       scheduledPostId: FakeAutoPostState.scheduledPostId,
       scheduledPostAt: FakeAutoPostState.scheduledAt,
+    );
+  }
+
+  /// Entered in the levels on day 9: the days before it carry no figure, as
+  /// the server sends none for a day the learner had no levels on.
+  @override
+  Future<LevelsFinished> fetchLevelsFinished() async {
+    await Future<void>.delayed(const Duration(milliseconds: 350));
+    LevelsFinishedDay figure(int day, int done, int offered) =>
+        LevelsFinishedDay(
+          day: day,
+          done: done,
+          offered: offered,
+          percent: (100 * done) ~/ offered,
+        );
+    return LevelsFinished(
+      days: <LevelsFinishedDay>[
+        figure(9, 5, 5),
+        figure(10, 3, 5),
+        figure(11, 2, 6),
+        figure(_currentDay, 1, 5),
+      ],
     );
   }
 }

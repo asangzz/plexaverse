@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 
 import '../../../../core/ui/zave/zave_kit.dart';
+import '../../../../core/week/week_shape.dart' show PostRole;
 import '../../domain/plan_slot.dart';
+import '../../domain/post_formats.dart';
 import '../../domain/video_script.dart';
 
 /// Maps a slot's status onto a Zave signal colour.
@@ -205,6 +207,12 @@ class SlotCard extends StatelessWidget {
               ),
             ],
           ),
+          // A playbook day says what it is FOR and how it is written: the
+          // role and the format the server picked from the user's facts.
+          if (slot.isNewShape) ...<Widget>[
+            SizedBox(height: ZaveSpace.sm),
+            _PlaybookLines(slot: slot),
+          ],
           // A hand-off day says who does what, because that is the only thing
           // about it the user needs and it is the opposite of a post day.
           if (slot.isHandoff) ...<Widget>[
@@ -262,7 +270,15 @@ class SlotCard extends StatelessWidget {
                 // fetched, but on a script or a newsletter it describes a
                 // LinkedIn shape we never send — drawing it claims the day
                 // produces a text post.
-                if (slot.kind == DayKind.post) ...<Widget>[
+                // A playbook day names its format and its image kind instead:
+                // `format` is the LinkedIn shape (`text_image`), which says
+                // nothing about which of fifteen posts this is.
+                if (slot.isNewShape) ...<Widget>[
+                  if (slot.imageKind case final ImageKind k)
+                    _FormatChip(format: k.label),
+                  if (slot.artifact != null)
+                    _FormatChip(format: slot.artifact!),
+                ] else if (slot.kind == DayKind.post) ...<Widget>[
                   _FormatChip(format: slot.format),
                   if (slot.posterTag != null)
                     _FormatChip(format: slot.posterTag!),
@@ -283,6 +299,98 @@ class SlotCard extends StatelessWidget {
           ],
         ],
       ),
+    );
+  }
+}
+
+/// A role's colour. The web's `ROLE_ACCENT`, restated in Zave: teach is the
+/// brand violet, story green, opinion amber.
+Color roleAccent(PostRole role) => switch (role) {
+  PostRole.teach => ZaveColors.peri,
+  PostRole.story => ZaveColors.green,
+  PostRole.opinion => ZaveColors.amber,
+};
+
+/// "TEACH · Numbered steps", the review, the news pick and the fall-back
+/// note — the lines a playbook day carries under its title.
+class _PlaybookLines extends StatelessWidget {
+  const _PlaybookLines({required this.slot});
+
+  final PlanSlot slot;
+
+  @override
+  Widget build(BuildContext context) {
+    final PostRole? role = slot.role;
+    final PostFormatInfo? format = slot.formatSpec;
+    final SlotReview? review = slot.hasPost ? slot.review : null;
+    final SlotNews? news = slot.news;
+    // Only while the day is (or was written as) the news post: a stale pick
+    // makes the server write the day in its usual format and rewrite
+    // formatId, but it leaves the headlines on the slot.
+    final NewsCandidate? headline =
+        news != null && slot.formatId == news.formatId ? news.chosen : null;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: <Widget>[
+        Text.rich(
+          TextSpan(
+            children: <InlineSpan>[
+              if (role != null)
+                TextSpan(
+                  text: '${role.label.toUpperCase()} · ',
+                  style: ZaveType.kicker.copyWith(color: roleAccent(role)),
+                ),
+              TextSpan(text: format?.name ?? '', style: ZaveType.caption),
+            ],
+          ),
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+        ),
+        if (headline != null) ...<Widget>[
+          SizedBox(height: ZaveSpace.xs),
+          Text(
+            '${slot.hasPost ? 'Written from' : 'News'}: ${headline.title}',
+            style: ZaveType.caption.copyWith(color: ZaveColors.peri),
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+          ),
+        ],
+        // The web's review chip: "Checked" / "N to fix", never once the post
+        // is out. The full list (and whether the user's own edits make it
+        // advice) is in the day's sheet.
+        if (review != null && slot.status != SlotStatus.published)
+          ...<Widget>[
+            SizedBox(height: ZaveSpace.xs),
+            Row(
+              children: <Widget>[
+                ZaveDot(
+                  review.ok && review.errors.isEmpty
+                      ? ZaveColors.green
+                      : ZaveColors.amber,
+                ),
+                SizedBox(width: ZaveSpace.sm),
+                Text(
+                  review.ok && review.errors.isEmpty
+                      ? 'Checked'
+                      : '${review.errors.length} to fix',
+                  style: ZaveType.caption.copyWith(
+                    color: review.ok && review.errors.isEmpty
+                        ? ZaveColors.green
+                        : ZaveColors.amber,
+                  ),
+                ),
+              ],
+            ),
+          ],
+        if (slot.formatFellBack && role == PostRole.story) ...<Widget>[
+          SizedBox(height: ZaveSpace.xs),
+          Text(
+            'Add a real story to unlock story posts.',
+            style: ZaveType.caption,
+          ),
+        ],
+      ],
     );
   }
 }

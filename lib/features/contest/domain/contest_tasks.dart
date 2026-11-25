@@ -298,6 +298,9 @@ abstract class InvitesSubmitResult with _$InvitesSubmitResult {
 }
 
 // ── Plan this week (Sun) ────────────────────────────────────────────────────
+//
+// Read and marked with `?setupLevels=1`: whether today's level is locked is
+// answered on the layout this build draws (the open-all-week Sunday levels).
 
 /// Mirrors `PlanWeekView['status']`.
 enum PlanWeekStatus { unavailable, locked, open, done }
@@ -328,9 +331,24 @@ abstract class PlanWeekDay with _$PlanWeekDay {
     /// `YYYY-MM-DD`, the planner's own date for the slot, in the USER's
     /// timezone.
     @Default('') String dayKey,
+
+    /// The stored slot's kind once the week is planned — a week planned
+    /// before 25 Nov 2026 keeps its own shape, so `video_script` only ever
+    /// comes from such a legacy week — else the week shape's.
     @JsonKey(fromJson: DayKind.parse, toJson: _dayKindWire)
     @Default(DayKind.post)
     DayKind kind,
+
+    /// A post day's role (`teach` / `story` / `opinion`), when its slot has
+    /// one — weeks planned from 25 Nov 2026. The server's word, shown
+    /// capitalised.
+    String? role,
+
+    /// A post day's format by name ("Numbered steps"), when its slot has one.
+    String? formatName,
+
+    /// A post day's post exists and carries its image.
+    @Default(false) bool imageReady,
     String? title,
 
     /// The server's words: "Approved and scheduled", "Script ready", "Rest".

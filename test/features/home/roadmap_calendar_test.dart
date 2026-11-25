@@ -9,6 +9,7 @@ import 'package:plexaverse/features/home/domain/roadmap_planets.dart';
 import 'package:plexaverse/features/home/domain/roadmap_progress.dart';
 import 'package:plexaverse/features/home/presentation/pages/home_page.dart';
 import 'package:plexaverse/features/home/presentation/roadmap_status_ui.dart';
+import 'package:plexaverse/features/home/presentation/widgets/follower_checkpoint.dart';
 import 'package:plexaverse/features/home/presentation/widgets/roadmap_timeline.dart';
 import 'package:plexaverse/features/preferences/application/preferences_controller.dart';
 import 'package:plexaverse/features/preferences/domain/user_preferences.dart';
@@ -16,8 +17,8 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 /// The roadmap is a calendar of the journey (web, 12 Nov 2026): a day's place
 /// on it is the date and nothing else, a day opens nothing, and the sheet
-/// holds the planner and the two check-ins — not the day's missions, which are
-/// the contest's now.
+/// holds the planner and the connections check-in — not the day's missions,
+/// which are the levels' now, and not the follower card (25 Nov 2026).
 void main() {
   group('a day is behind, today, or ahead', () {
     test('read off the date alone', () {
@@ -200,7 +201,7 @@ void main() {
       return router;
     }
 
-    testWidgets('holds the planner and the two check-ins, and no missions', (
+    testWidgets('holds the planner and the connections check-in only', (
       WidgetTester tester,
     ) async {
       await pumpRoadmap(tester);
@@ -211,6 +212,9 @@ void main() {
         find.text('How many connections do you have now?'),
         findsOneWidget,
       );
+      // The follower card left the sheet (web, 25 Nov 2026).
+      expect(find.byType(FollowerCheckpoint), findsNothing);
+      expect(find.text('How many followers do you have?'), findsNothing);
       expect(find.text('Open Plexa'), findsNothing);
       expect(find.textContaining('small things'), findsNothing);
       expect(tester.takeException(), isNull);

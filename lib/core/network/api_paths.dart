@@ -174,6 +174,12 @@ class ApiPaths {
   /// GET returns roadmap progress; POST records a completed step.
   static const String roadmapProgress = '/roadmap/progress';
 
+  /// GET → `{ days: [{ day, dayKey, done, offered, percent }] }`: how much of
+  /// each day's levels was finished, one entry per roadmap row behind today
+  /// and today that has a figure. A row with no figure is absent — draw
+  /// nothing, never 0%. `day` is the journey day (as `currentDay`).
+  static const String roadmapLevelsFinished = '/roadmap/levels-finished';
+
   /// The roadmap's weekly connections check-in. GET answers
   /// `{reading, growth, history}`; POST `{count}` answers `{id}`.
   ///
@@ -257,6 +263,25 @@ class ApiPaths {
 
   /// POST `{planId, slotIndex}` — rewrites one day's title. Free.
   static const String plannerRegenerateTitle = '/planner/regenerate-title';
+
+  /// POST `{weekNumber, dayIndex}` — "Fix with AI": reviews the day's post
+  /// against its format's rules and rewrites it until it complies. Counts
+  /// `ai_refine_post` only when a model rewrite ran; 402 LIMIT_REACHED.
+  static const String plannerRefinePost = '/planner/refine-post';
+
+  /// POST multipart `{file, weekNumber, dayIndex, season}` — the day's photo,
+  /// kept in the PRIVATE bucket. Answers a 10-minute signed `previewUrl`.
+  static const String plannerPhoto = '/planner/photo';
+
+  /// POST `{weekNumber, dayIndex, season, mode, consent?}` — makes the day's
+  /// image and writes it to the post. `mode` auto | reference | as_is | card
+  /// | poster; 409 CONSENT_REQUIRED / NO_PHOTO, 404 NO_POST.
+  static const String plannerImage = '/planner/image';
+
+  /// GET `{enabled, entitled}`; POST `{weekNumber, season}` finds or
+  /// refreshes the week's headlines; PUT `{weekNumber, season, pickedIndex}`
+  /// picks one while the day is open. 409 DAY_PASSED / TOO_EARLY / …
+  static const String plannerNews = '/planner/news';
 
   // ── Contest ─────────────────────────────────────────────────────────────
   // The Business English contest: the daily path, its lesson and its LinkedIn
@@ -649,6 +674,13 @@ class ApiPaths {
 
   /// GET — the mandate, the next payment and how long the plan runs.
   static const String autopayStatus = '/autopay/status';
+
+  /// GET `{consented, staleConsent, wordsVersion, words}` / PUT
+  /// `{consented: true, wordsVersion}` or `{consented: false}` — the
+  /// consistency reward's in-context consent (25 Nov 2026). AUTH bucket
+  /// (5/min): read when the billing section opens, never polled. 409
+  /// UPDATE_REQUIRED on a yes sent without the current words.
+  static const String billingConsistencyReward = '/billing/consistency-reward';
 
   /// GET — the caller's own GST documents (tax invoices, credit notes,
   /// refund vouchers), newest first (TOKEN_AUTOPAY_SPEC.md §5.9).

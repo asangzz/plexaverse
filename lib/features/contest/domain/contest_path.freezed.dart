@@ -551,6 +551,286 @@ as int,
 
 
 /// @nodoc
+mixin _$NodeSetup {
+
+/// The planner day: 0 = Monday … 6 = Sunday.
+ int get dayIndex;@JsonKey(unknownEnumValue: SetupStep.unknown) SetupStep get step;/// What image the post gets (`photo`, `ai_poster`, …), image steps only.
+/// Kept as the server's word: nothing here dispatches on it.
+ String? get imageKind;/// For a photo, what photo to give. The node's `detail` says it in words.
+ String? get photoGuide;
+/// Create a copy of NodeSetup
+/// with the given fields replaced by the non-null parameter values.
+@JsonKey(includeFromJson: false, includeToJson: false)
+@pragma('vm:prefer-inline')
+$NodeSetupCopyWith<NodeSetup> get copyWith => _$NodeSetupCopyWithImpl<NodeSetup>(this as NodeSetup, _$identity);
+
+  /// Serializes this NodeSetup to a JSON map.
+  Map<String, dynamic> toJson();
+
+
+@override
+bool operator ==(Object other) {
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is NodeSetup&&(identical(other.dayIndex, dayIndex) || other.dayIndex == dayIndex)&&(identical(other.step, step) || other.step == step)&&(identical(other.imageKind, imageKind) || other.imageKind == imageKind)&&(identical(other.photoGuide, photoGuide) || other.photoGuide == photoGuide));
+}
+
+@JsonKey(includeFromJson: false, includeToJson: false)
+@override
+int get hashCode => Object.hash(runtimeType,dayIndex,step,imageKind,photoGuide);
+
+@override
+String toString() {
+  return 'NodeSetup(dayIndex: $dayIndex, step: $step, imageKind: $imageKind, photoGuide: $photoGuide)';
+}
+
+
+}
+
+/// @nodoc
+abstract mixin class $NodeSetupCopyWith<$Res>  {
+  factory $NodeSetupCopyWith(NodeSetup value, $Res Function(NodeSetup) _then) = _$NodeSetupCopyWithImpl;
+@useResult
+$Res call({
+ int dayIndex,@JsonKey(unknownEnumValue: SetupStep.unknown) SetupStep step, String? imageKind, String? photoGuide
+});
+
+
+
+
+}
+/// @nodoc
+class _$NodeSetupCopyWithImpl<$Res>
+    implements $NodeSetupCopyWith<$Res> {
+  _$NodeSetupCopyWithImpl(this._self, this._then);
+
+  final NodeSetup _self;
+  final $Res Function(NodeSetup) _then;
+
+/// Create a copy of NodeSetup
+/// with the given fields replaced by the non-null parameter values.
+@pragma('vm:prefer-inline') @override $Res call({Object? dayIndex = null,Object? step = null,Object? imageKind = freezed,Object? photoGuide = freezed,}) {
+  return _then(_self.copyWith(
+dayIndex: null == dayIndex ? _self.dayIndex : dayIndex // ignore: cast_nullable_to_non_nullable
+as int,step: null == step ? _self.step : step // ignore: cast_nullable_to_non_nullable
+as SetupStep,imageKind: freezed == imageKind ? _self.imageKind : imageKind // ignore: cast_nullable_to_non_nullable
+as String?,photoGuide: freezed == photoGuide ? _self.photoGuide : photoGuide // ignore: cast_nullable_to_non_nullable
+as String?,
+  ));
+}
+
+}
+
+
+/// Adds pattern-matching-related methods to [NodeSetup].
+extension NodeSetupPatterns on NodeSetup {
+/// A variant of `map` that fallback to returning `orElse`.
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case final Subclass value:
+///     return ...;
+///   case _:
+///     return orElse();
+/// }
+/// ```
+
+@optionalTypeArgs TResult maybeMap<TResult extends Object?>(TResult Function( _NodeSetup value)?  $default,{required TResult orElse(),}){
+final _that = this;
+switch (_that) {
+case _NodeSetup() when $default != null:
+return $default(_that);case _:
+  return orElse();
+
+}
+}
+/// A `switch`-like method, using callbacks.
+///
+/// Callbacks receives the raw object, upcasted.
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case final Subclass value:
+///     return ...;
+///   case final Subclass2 value:
+///     return ...;
+/// }
+/// ```
+
+@optionalTypeArgs TResult map<TResult extends Object?>(TResult Function( _NodeSetup value)  $default,){
+final _that = this;
+switch (_that) {
+case _NodeSetup():
+return $default(_that);case _:
+  throw StateError('Unexpected subclass');
+
+}
+}
+/// A variant of `map` that fallback to returning `null`.
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case final Subclass value:
+///     return ...;
+///   case _:
+///     return null;
+/// }
+/// ```
+
+@optionalTypeArgs TResult? mapOrNull<TResult extends Object?>(TResult? Function( _NodeSetup value)?  $default,){
+final _that = this;
+switch (_that) {
+case _NodeSetup() when $default != null:
+return $default(_that);case _:
+  return null;
+
+}
+}
+/// A variant of `when` that fallback to an `orElse` callback.
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case Subclass(:final field):
+///     return ...;
+///   case _:
+///     return orElse();
+/// }
+/// ```
+
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( int dayIndex, @JsonKey(unknownEnumValue: SetupStep.unknown)  SetupStep step,  String? imageKind,  String? photoGuide)?  $default,{required TResult orElse(),}) {final _that = this;
+switch (_that) {
+case _NodeSetup() when $default != null:
+return $default(_that.dayIndex,_that.step,_that.imageKind,_that.photoGuide);case _:
+  return orElse();
+
+}
+}
+/// A `switch`-like method, using callbacks.
+///
+/// As opposed to `map`, this offers destructuring.
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case Subclass(:final field):
+///     return ...;
+///   case Subclass2(:final field2):
+///     return ...;
+/// }
+/// ```
+
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( int dayIndex, @JsonKey(unknownEnumValue: SetupStep.unknown)  SetupStep step,  String? imageKind,  String? photoGuide)  $default,) {final _that = this;
+switch (_that) {
+case _NodeSetup():
+return $default(_that.dayIndex,_that.step,_that.imageKind,_that.photoGuide);case _:
+  throw StateError('Unexpected subclass');
+
+}
+}
+/// A variant of `when` that fallback to returning `null`
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case Subclass(:final field):
+///     return ...;
+///   case _:
+///     return null;
+/// }
+/// ```
+
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( int dayIndex, @JsonKey(unknownEnumValue: SetupStep.unknown)  SetupStep step,  String? imageKind,  String? photoGuide)?  $default,) {final _that = this;
+switch (_that) {
+case _NodeSetup() when $default != null:
+return $default(_that.dayIndex,_that.step,_that.imageKind,_that.photoGuide);case _:
+  return null;
+
+}
+}
+
+}
+
+/// @nodoc
+@JsonSerializable()
+
+class _NodeSetup implements NodeSetup {
+  const _NodeSetup({this.dayIndex = 0, @JsonKey(unknownEnumValue: SetupStep.unknown) this.step = SetupStep.unknown, this.imageKind, this.photoGuide});
+  factory _NodeSetup.fromJson(Map<String, dynamic> json) => _$NodeSetupFromJson(json);
+
+/// The planner day: 0 = Monday … 6 = Sunday.
+@override@JsonKey() final  int dayIndex;
+@override@JsonKey(unknownEnumValue: SetupStep.unknown) final  SetupStep step;
+/// What image the post gets (`photo`, `ai_poster`, …), image steps only.
+/// Kept as the server's word: nothing here dispatches on it.
+@override final  String? imageKind;
+/// For a photo, what photo to give. The node's `detail` says it in words.
+@override final  String? photoGuide;
+
+/// Create a copy of NodeSetup
+/// with the given fields replaced by the non-null parameter values.
+@override @JsonKey(includeFromJson: false, includeToJson: false)
+@pragma('vm:prefer-inline')
+_$NodeSetupCopyWith<_NodeSetup> get copyWith => __$NodeSetupCopyWithImpl<_NodeSetup>(this, _$identity);
+
+@override
+Map<String, dynamic> toJson() {
+  return _$NodeSetupToJson(this, );
+}
+
+@override
+bool operator ==(Object other) {
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is _NodeSetup&&(identical(other.dayIndex, dayIndex) || other.dayIndex == dayIndex)&&(identical(other.step, step) || other.step == step)&&(identical(other.imageKind, imageKind) || other.imageKind == imageKind)&&(identical(other.photoGuide, photoGuide) || other.photoGuide == photoGuide));
+}
+
+@JsonKey(includeFromJson: false, includeToJson: false)
+@override
+int get hashCode => Object.hash(runtimeType,dayIndex,step,imageKind,photoGuide);
+
+@override
+String toString() {
+  return 'NodeSetup(dayIndex: $dayIndex, step: $step, imageKind: $imageKind, photoGuide: $photoGuide)';
+}
+
+
+}
+
+/// @nodoc
+abstract mixin class _$NodeSetupCopyWith<$Res> implements $NodeSetupCopyWith<$Res> {
+  factory _$NodeSetupCopyWith(_NodeSetup value, $Res Function(_NodeSetup) _then) = __$NodeSetupCopyWithImpl;
+@override @useResult
+$Res call({
+ int dayIndex,@JsonKey(unknownEnumValue: SetupStep.unknown) SetupStep step, String? imageKind, String? photoGuide
+});
+
+
+
+
+}
+/// @nodoc
+class __$NodeSetupCopyWithImpl<$Res>
+    implements _$NodeSetupCopyWith<$Res> {
+  __$NodeSetupCopyWithImpl(this._self, this._then);
+
+  final _NodeSetup _self;
+  final $Res Function(_NodeSetup) _then;
+
+/// Create a copy of NodeSetup
+/// with the given fields replaced by the non-null parameter values.
+@override @pragma('vm:prefer-inline') $Res call({Object? dayIndex = null,Object? step = null,Object? imageKind = freezed,Object? photoGuide = freezed,}) {
+  return _then(_NodeSetup(
+dayIndex: null == dayIndex ? _self.dayIndex : dayIndex // ignore: cast_nullable_to_non_nullable
+as int,step: null == step ? _self.step : step // ignore: cast_nullable_to_non_nullable
+as SetupStep,imageKind: freezed == imageKind ? _self.imageKind : imageKind // ignore: cast_nullable_to_non_nullable
+as String?,photoGuide: freezed == photoGuide ? _self.photoGuide : photoGuide // ignore: cast_nullable_to_non_nullable
+as String?,
+  ));
+}
+
+
+}
+
+
+/// @nodoc
 mixin _$NodeClaim {
 
 @JsonKey(unknownEnumValue: ClaimKind.unknown) ClaimKind get kind;/// Opaque. Sent back unchanged with the link — `"<week>:<journey>"` for
@@ -845,7 +1125,16 @@ mixin _$PathNode {
 /// most one node, and absent everywhere else. Forced false for an
 /// [PathNodeKind.unknown] kind — a level this build cannot open is not
 /// one to pass over either.
-@JsonKey(readValue: _canSkipUnlessUnknown) bool get canSkip;
+@JsonKey(readValue: _canSkipUnlessUnknown) bool get canSkip;/// Sunday's planner set-up levels only (kind plan_week): which day and
+/// step. Absent on "Plan this week".
+ NodeSetup? get setup;/// One of the SUNDAY LEVELS (25 Nov 2026; sent because this build asks
+/// with `?setupLevels=1`): this planner week's set-up levels, drawn in
+/// the week's Sunday on every day of the week, in orange. Outside the
+/// one-at-a-time order — never locked behind another level, never
+/// holding one back, never [canSkip], and START only once nothing else
+/// today is open. State `missed` means its post day has gone: drawn
+/// disabled with its "Day passed" reason. False for an unknown kind.
+@JsonKey(readValue: _openAllWeekUnlessUnknown) bool get openAllWeek;
 /// Create a copy of PathNode
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
@@ -858,16 +1147,16 @@ $PathNodeCopyWith<PathNode> get copyWith => _$PathNodeCopyWithImpl<PathNode>(thi
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is PathNode&&(identical(other.id, id) || other.id == id)&&(identical(other.kind, kind) || other.kind == kind)&&(identical(other.state, state) || other.state == state)&&(identical(other.title, title) || other.title == title)&&(identical(other.points, points) || other.points == points)&&(identical(other.href, href) || other.href == href)&&(identical(other.detail, detail) || other.detail == detail)&&(identical(other.started, started) || other.started == started)&&(identical(other.part, part) || other.part == part)&&(identical(other.claim, claim) || other.claim == claim)&&(identical(other.follow, follow) || other.follow == follow)&&(identical(other.canSkip, canSkip) || other.canSkip == canSkip));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is PathNode&&(identical(other.id, id) || other.id == id)&&(identical(other.kind, kind) || other.kind == kind)&&(identical(other.state, state) || other.state == state)&&(identical(other.title, title) || other.title == title)&&(identical(other.points, points) || other.points == points)&&(identical(other.href, href) || other.href == href)&&(identical(other.detail, detail) || other.detail == detail)&&(identical(other.started, started) || other.started == started)&&(identical(other.part, part) || other.part == part)&&(identical(other.claim, claim) || other.claim == claim)&&(identical(other.follow, follow) || other.follow == follow)&&(identical(other.canSkip, canSkip) || other.canSkip == canSkip)&&(identical(other.setup, setup) || other.setup == setup)&&(identical(other.openAllWeek, openAllWeek) || other.openAllWeek == openAllWeek));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
-int get hashCode => Object.hash(runtimeType,id,kind,state,title,points,href,detail,started,part,claim,follow,canSkip);
+int get hashCode => Object.hash(runtimeType,id,kind,state,title,points,href,detail,started,part,claim,follow,canSkip,setup,openAllWeek);
 
 @override
 String toString() {
-  return 'PathNode(id: $id, kind: $kind, state: $state, title: $title, points: $points, href: $href, detail: $detail, started: $started, part: $part, claim: $claim, follow: $follow, canSkip: $canSkip)';
+  return 'PathNode(id: $id, kind: $kind, state: $state, title: $title, points: $points, href: $href, detail: $detail, started: $started, part: $part, claim: $claim, follow: $follow, canSkip: $canSkip, setup: $setup, openAllWeek: $openAllWeek)';
 }
 
 
@@ -878,11 +1167,11 @@ abstract mixin class $PathNodeCopyWith<$Res>  {
   factory $PathNodeCopyWith(PathNode value, $Res Function(PathNode) _then) = _$PathNodeCopyWithImpl;
 @useResult
 $Res call({
- String id,@JsonKey(unknownEnumValue: PathNodeKind.unknown) PathNodeKind kind,@JsonKey(readValue: _stateUnlessUnknown, unknownEnumValue: PathNodeState.locked) PathNodeState state, String title, int points,@JsonKey(readValue: _hrefUnlessUnknown) String? href, String? detail, bool started, NodePart? part, NodeClaim? claim, FollowProgress? follow,@JsonKey(readValue: _canSkipUnlessUnknown) bool canSkip
+ String id,@JsonKey(unknownEnumValue: PathNodeKind.unknown) PathNodeKind kind,@JsonKey(readValue: _stateUnlessUnknown, unknownEnumValue: PathNodeState.locked) PathNodeState state, String title, int points,@JsonKey(readValue: _hrefUnlessUnknown) String? href, String? detail, bool started, NodePart? part, NodeClaim? claim, FollowProgress? follow,@JsonKey(readValue: _canSkipUnlessUnknown) bool canSkip, NodeSetup? setup,@JsonKey(readValue: _openAllWeekUnlessUnknown) bool openAllWeek
 });
 
 
-$NodePartCopyWith<$Res>? get part;$NodeClaimCopyWith<$Res>? get claim;$FollowProgressCopyWith<$Res>? get follow;
+$NodePartCopyWith<$Res>? get part;$NodeClaimCopyWith<$Res>? get claim;$FollowProgressCopyWith<$Res>? get follow;$NodeSetupCopyWith<$Res>? get setup;
 
 }
 /// @nodoc
@@ -895,7 +1184,7 @@ class _$PathNodeCopyWithImpl<$Res>
 
 /// Create a copy of PathNode
 /// with the given fields replaced by the non-null parameter values.
-@pragma('vm:prefer-inline') @override $Res call({Object? id = null,Object? kind = null,Object? state = null,Object? title = null,Object? points = null,Object? href = freezed,Object? detail = freezed,Object? started = null,Object? part = freezed,Object? claim = freezed,Object? follow = freezed,Object? canSkip = null,}) {
+@pragma('vm:prefer-inline') @override $Res call({Object? id = null,Object? kind = null,Object? state = null,Object? title = null,Object? points = null,Object? href = freezed,Object? detail = freezed,Object? started = null,Object? part = freezed,Object? claim = freezed,Object? follow = freezed,Object? canSkip = null,Object? setup = freezed,Object? openAllWeek = null,}) {
   return _then(_self.copyWith(
 id: null == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
 as String,kind: null == kind ? _self.kind : kind // ignore: cast_nullable_to_non_nullable
@@ -909,6 +1198,8 @@ as bool,part: freezed == part ? _self.part : part // ignore: cast_nullable_to_no
 as NodePart?,claim: freezed == claim ? _self.claim : claim // ignore: cast_nullable_to_non_nullable
 as NodeClaim?,follow: freezed == follow ? _self.follow : follow // ignore: cast_nullable_to_non_nullable
 as FollowProgress?,canSkip: null == canSkip ? _self.canSkip : canSkip // ignore: cast_nullable_to_non_nullable
+as bool,setup: freezed == setup ? _self.setup : setup // ignore: cast_nullable_to_non_nullable
+as NodeSetup?,openAllWeek: null == openAllWeek ? _self.openAllWeek : openAllWeek // ignore: cast_nullable_to_non_nullable
 as bool,
   ));
 }
@@ -947,6 +1238,18 @@ $FollowProgressCopyWith<$Res>? get follow {
 
   return $FollowProgressCopyWith<$Res>(_self.follow!, (value) {
     return _then(_self.copyWith(follow: value));
+  });
+}/// Create a copy of PathNode
+/// with the given fields replaced by the non-null parameter values.
+@override
+@pragma('vm:prefer-inline')
+$NodeSetupCopyWith<$Res>? get setup {
+    if (_self.setup == null) {
+    return null;
+  }
+
+  return $NodeSetupCopyWith<$Res>(_self.setup!, (value) {
+    return _then(_self.copyWith(setup: value));
   });
 }
 }
@@ -1030,10 +1333,10 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String id, @JsonKey(unknownEnumValue: PathNodeKind.unknown)  PathNodeKind kind, @JsonKey(readValue: _stateUnlessUnknown, unknownEnumValue: PathNodeState.locked)  PathNodeState state,  String title,  int points, @JsonKey(readValue: _hrefUnlessUnknown)  String? href,  String? detail,  bool started,  NodePart? part,  NodeClaim? claim,  FollowProgress? follow, @JsonKey(readValue: _canSkipUnlessUnknown)  bool canSkip)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String id, @JsonKey(unknownEnumValue: PathNodeKind.unknown)  PathNodeKind kind, @JsonKey(readValue: _stateUnlessUnknown, unknownEnumValue: PathNodeState.locked)  PathNodeState state,  String title,  int points, @JsonKey(readValue: _hrefUnlessUnknown)  String? href,  String? detail,  bool started,  NodePart? part,  NodeClaim? claim,  FollowProgress? follow, @JsonKey(readValue: _canSkipUnlessUnknown)  bool canSkip,  NodeSetup? setup, @JsonKey(readValue: _openAllWeekUnlessUnknown)  bool openAllWeek)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _PathNode() when $default != null:
-return $default(_that.id,_that.kind,_that.state,_that.title,_that.points,_that.href,_that.detail,_that.started,_that.part,_that.claim,_that.follow,_that.canSkip);case _:
+return $default(_that.id,_that.kind,_that.state,_that.title,_that.points,_that.href,_that.detail,_that.started,_that.part,_that.claim,_that.follow,_that.canSkip,_that.setup,_that.openAllWeek);case _:
   return orElse();
 
 }
@@ -1051,10 +1354,10 @@ return $default(_that.id,_that.kind,_that.state,_that.title,_that.points,_that.h
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String id, @JsonKey(unknownEnumValue: PathNodeKind.unknown)  PathNodeKind kind, @JsonKey(readValue: _stateUnlessUnknown, unknownEnumValue: PathNodeState.locked)  PathNodeState state,  String title,  int points, @JsonKey(readValue: _hrefUnlessUnknown)  String? href,  String? detail,  bool started,  NodePart? part,  NodeClaim? claim,  FollowProgress? follow, @JsonKey(readValue: _canSkipUnlessUnknown)  bool canSkip)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String id, @JsonKey(unknownEnumValue: PathNodeKind.unknown)  PathNodeKind kind, @JsonKey(readValue: _stateUnlessUnknown, unknownEnumValue: PathNodeState.locked)  PathNodeState state,  String title,  int points, @JsonKey(readValue: _hrefUnlessUnknown)  String? href,  String? detail,  bool started,  NodePart? part,  NodeClaim? claim,  FollowProgress? follow, @JsonKey(readValue: _canSkipUnlessUnknown)  bool canSkip,  NodeSetup? setup, @JsonKey(readValue: _openAllWeekUnlessUnknown)  bool openAllWeek)  $default,) {final _that = this;
 switch (_that) {
 case _PathNode():
-return $default(_that.id,_that.kind,_that.state,_that.title,_that.points,_that.href,_that.detail,_that.started,_that.part,_that.claim,_that.follow,_that.canSkip);case _:
+return $default(_that.id,_that.kind,_that.state,_that.title,_that.points,_that.href,_that.detail,_that.started,_that.part,_that.claim,_that.follow,_that.canSkip,_that.setup,_that.openAllWeek);case _:
   throw StateError('Unexpected subclass');
 
 }
@@ -1071,10 +1374,10 @@ return $default(_that.id,_that.kind,_that.state,_that.title,_that.points,_that.h
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String id, @JsonKey(unknownEnumValue: PathNodeKind.unknown)  PathNodeKind kind, @JsonKey(readValue: _stateUnlessUnknown, unknownEnumValue: PathNodeState.locked)  PathNodeState state,  String title,  int points, @JsonKey(readValue: _hrefUnlessUnknown)  String? href,  String? detail,  bool started,  NodePart? part,  NodeClaim? claim,  FollowProgress? follow, @JsonKey(readValue: _canSkipUnlessUnknown)  bool canSkip)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String id, @JsonKey(unknownEnumValue: PathNodeKind.unknown)  PathNodeKind kind, @JsonKey(readValue: _stateUnlessUnknown, unknownEnumValue: PathNodeState.locked)  PathNodeState state,  String title,  int points, @JsonKey(readValue: _hrefUnlessUnknown)  String? href,  String? detail,  bool started,  NodePart? part,  NodeClaim? claim,  FollowProgress? follow, @JsonKey(readValue: _canSkipUnlessUnknown)  bool canSkip,  NodeSetup? setup, @JsonKey(readValue: _openAllWeekUnlessUnknown)  bool openAllWeek)?  $default,) {final _that = this;
 switch (_that) {
 case _PathNode() when $default != null:
-return $default(_that.id,_that.kind,_that.state,_that.title,_that.points,_that.href,_that.detail,_that.started,_that.part,_that.claim,_that.follow,_that.canSkip);case _:
+return $default(_that.id,_that.kind,_that.state,_that.title,_that.points,_that.href,_that.detail,_that.started,_that.part,_that.claim,_that.follow,_that.canSkip,_that.setup,_that.openAllWeek);case _:
   return null;
 
 }
@@ -1086,7 +1389,7 @@ return $default(_that.id,_that.kind,_that.state,_that.title,_that.points,_that.h
 @JsonSerializable()
 
 class _PathNode extends PathNode {
-  const _PathNode({this.id = '', @JsonKey(unknownEnumValue: PathNodeKind.unknown) this.kind = PathNodeKind.unknown, @JsonKey(readValue: _stateUnlessUnknown, unknownEnumValue: PathNodeState.locked) this.state = PathNodeState.locked, this.title = '', this.points = 0, @JsonKey(readValue: _hrefUnlessUnknown) this.href, this.detail, this.started = false, this.part, this.claim, this.follow, @JsonKey(readValue: _canSkipUnlessUnknown) this.canSkip = false}): super._();
+  const _PathNode({this.id = '', @JsonKey(unknownEnumValue: PathNodeKind.unknown) this.kind = PathNodeKind.unknown, @JsonKey(readValue: _stateUnlessUnknown, unknownEnumValue: PathNodeState.locked) this.state = PathNodeState.locked, this.title = '', this.points = 0, @JsonKey(readValue: _hrefUnlessUnknown) this.href, this.detail, this.started = false, this.part, this.claim, this.follow, @JsonKey(readValue: _canSkipUnlessUnknown) this.canSkip = false, this.setup, @JsonKey(readValue: _openAllWeekUnlessUnknown) this.openAllWeek = false}): super._();
   factory _PathNode.fromJson(Map<String, dynamic> json) => _$PathNodeFromJson(json);
 
 /// Opaque and stable within the path: `<day>:lesson:<k>`, `<day>:<kind>`,
@@ -1121,6 +1424,17 @@ class _PathNode extends PathNode {
 /// [PathNodeKind.unknown] kind — a level this build cannot open is not
 /// one to pass over either.
 @override@JsonKey(readValue: _canSkipUnlessUnknown) final  bool canSkip;
+/// Sunday's planner set-up levels only (kind plan_week): which day and
+/// step. Absent on "Plan this week".
+@override final  NodeSetup? setup;
+/// One of the SUNDAY LEVELS (25 Nov 2026; sent because this build asks
+/// with `?setupLevels=1`): this planner week's set-up levels, drawn in
+/// the week's Sunday on every day of the week, in orange. Outside the
+/// one-at-a-time order — never locked behind another level, never
+/// holding one back, never [canSkip], and START only once nothing else
+/// today is open. State `missed` means its post day has gone: drawn
+/// disabled with its "Day passed" reason. False for an unknown kind.
+@override@JsonKey(readValue: _openAllWeekUnlessUnknown) final  bool openAllWeek;
 
 /// Create a copy of PathNode
 /// with the given fields replaced by the non-null parameter values.
@@ -1135,16 +1449,16 @@ Map<String, dynamic> toJson() {
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is _PathNode&&(identical(other.id, id) || other.id == id)&&(identical(other.kind, kind) || other.kind == kind)&&(identical(other.state, state) || other.state == state)&&(identical(other.title, title) || other.title == title)&&(identical(other.points, points) || other.points == points)&&(identical(other.href, href) || other.href == href)&&(identical(other.detail, detail) || other.detail == detail)&&(identical(other.started, started) || other.started == started)&&(identical(other.part, part) || other.part == part)&&(identical(other.claim, claim) || other.claim == claim)&&(identical(other.follow, follow) || other.follow == follow)&&(identical(other.canSkip, canSkip) || other.canSkip == canSkip));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is _PathNode&&(identical(other.id, id) || other.id == id)&&(identical(other.kind, kind) || other.kind == kind)&&(identical(other.state, state) || other.state == state)&&(identical(other.title, title) || other.title == title)&&(identical(other.points, points) || other.points == points)&&(identical(other.href, href) || other.href == href)&&(identical(other.detail, detail) || other.detail == detail)&&(identical(other.started, started) || other.started == started)&&(identical(other.part, part) || other.part == part)&&(identical(other.claim, claim) || other.claim == claim)&&(identical(other.follow, follow) || other.follow == follow)&&(identical(other.canSkip, canSkip) || other.canSkip == canSkip)&&(identical(other.setup, setup) || other.setup == setup)&&(identical(other.openAllWeek, openAllWeek) || other.openAllWeek == openAllWeek));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
-int get hashCode => Object.hash(runtimeType,id,kind,state,title,points,href,detail,started,part,claim,follow,canSkip);
+int get hashCode => Object.hash(runtimeType,id,kind,state,title,points,href,detail,started,part,claim,follow,canSkip,setup,openAllWeek);
 
 @override
 String toString() {
-  return 'PathNode(id: $id, kind: $kind, state: $state, title: $title, points: $points, href: $href, detail: $detail, started: $started, part: $part, claim: $claim, follow: $follow, canSkip: $canSkip)';
+  return 'PathNode(id: $id, kind: $kind, state: $state, title: $title, points: $points, href: $href, detail: $detail, started: $started, part: $part, claim: $claim, follow: $follow, canSkip: $canSkip, setup: $setup, openAllWeek: $openAllWeek)';
 }
 
 
@@ -1155,11 +1469,11 @@ abstract mixin class _$PathNodeCopyWith<$Res> implements $PathNodeCopyWith<$Res>
   factory _$PathNodeCopyWith(_PathNode value, $Res Function(_PathNode) _then) = __$PathNodeCopyWithImpl;
 @override @useResult
 $Res call({
- String id,@JsonKey(unknownEnumValue: PathNodeKind.unknown) PathNodeKind kind,@JsonKey(readValue: _stateUnlessUnknown, unknownEnumValue: PathNodeState.locked) PathNodeState state, String title, int points,@JsonKey(readValue: _hrefUnlessUnknown) String? href, String? detail, bool started, NodePart? part, NodeClaim? claim, FollowProgress? follow,@JsonKey(readValue: _canSkipUnlessUnknown) bool canSkip
+ String id,@JsonKey(unknownEnumValue: PathNodeKind.unknown) PathNodeKind kind,@JsonKey(readValue: _stateUnlessUnknown, unknownEnumValue: PathNodeState.locked) PathNodeState state, String title, int points,@JsonKey(readValue: _hrefUnlessUnknown) String? href, String? detail, bool started, NodePart? part, NodeClaim? claim, FollowProgress? follow,@JsonKey(readValue: _canSkipUnlessUnknown) bool canSkip, NodeSetup? setup,@JsonKey(readValue: _openAllWeekUnlessUnknown) bool openAllWeek
 });
 
 
-@override $NodePartCopyWith<$Res>? get part;@override $NodeClaimCopyWith<$Res>? get claim;@override $FollowProgressCopyWith<$Res>? get follow;
+@override $NodePartCopyWith<$Res>? get part;@override $NodeClaimCopyWith<$Res>? get claim;@override $FollowProgressCopyWith<$Res>? get follow;@override $NodeSetupCopyWith<$Res>? get setup;
 
 }
 /// @nodoc
@@ -1172,7 +1486,7 @@ class __$PathNodeCopyWithImpl<$Res>
 
 /// Create a copy of PathNode
 /// with the given fields replaced by the non-null parameter values.
-@override @pragma('vm:prefer-inline') $Res call({Object? id = null,Object? kind = null,Object? state = null,Object? title = null,Object? points = null,Object? href = freezed,Object? detail = freezed,Object? started = null,Object? part = freezed,Object? claim = freezed,Object? follow = freezed,Object? canSkip = null,}) {
+@override @pragma('vm:prefer-inline') $Res call({Object? id = null,Object? kind = null,Object? state = null,Object? title = null,Object? points = null,Object? href = freezed,Object? detail = freezed,Object? started = null,Object? part = freezed,Object? claim = freezed,Object? follow = freezed,Object? canSkip = null,Object? setup = freezed,Object? openAllWeek = null,}) {
   return _then(_PathNode(
 id: null == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
 as String,kind: null == kind ? _self.kind : kind // ignore: cast_nullable_to_non_nullable
@@ -1186,6 +1500,8 @@ as bool,part: freezed == part ? _self.part : part // ignore: cast_nullable_to_no
 as NodePart?,claim: freezed == claim ? _self.claim : claim // ignore: cast_nullable_to_non_nullable
 as NodeClaim?,follow: freezed == follow ? _self.follow : follow // ignore: cast_nullable_to_non_nullable
 as FollowProgress?,canSkip: null == canSkip ? _self.canSkip : canSkip // ignore: cast_nullable_to_non_nullable
+as bool,setup: freezed == setup ? _self.setup : setup // ignore: cast_nullable_to_non_nullable
+as NodeSetup?,openAllWeek: null == openAllWeek ? _self.openAllWeek : openAllWeek // ignore: cast_nullable_to_non_nullable
 as bool,
   ));
 }
@@ -1225,6 +1541,18 @@ $FollowProgressCopyWith<$Res>? get follow {
 
   return $FollowProgressCopyWith<$Res>(_self.follow!, (value) {
     return _then(_self.copyWith(follow: value));
+  });
+}/// Create a copy of PathNode
+/// with the given fields replaced by the non-null parameter values.
+@override
+@pragma('vm:prefer-inline')
+$NodeSetupCopyWith<$Res>? get setup {
+    if (_self.setup == null) {
+    return null;
+  }
+
+  return $NodeSetupCopyWith<$Res>(_self.setup!, (value) {
+    return _then(_self.copyWith(setup: value));
   });
 }
 }
@@ -2387,8 +2715,9 @@ mixin _$ContestPath {
 /// starts in. Shown as "Week W".
  int? get weekNumber;/// This calendar week, SUNDAY to Saturday in the contest's timezone,
 /// clipped to the contest. Empty unless [status] is running.
- List<PathDay> get days;/// This planner week's article and videos, plus last week's still
-/// unpaid ones. The week card lists claims from here, not from nodes.
+ List<PathDay> get days;/// This planner week's article (and a video claim already sent before
+/// the video levels were retired), plus last week's still unpaid ones.
+/// The week card lists claims from here, not from nodes.
  List<PostClaim> get claims; FeedCommentsRule? get feedComments; WeekReward? get weekReward;
 /// Create a copy of ContestPath
 /// with the given fields replaced by the non-null parameter values.
@@ -2639,11 +2968,13 @@ class _ContestPath extends ContestPath {
   return EqualUnmodifiableListView(_days);
 }
 
-/// This planner week's article and videos, plus last week's still
-/// unpaid ones. The week card lists claims from here, not from nodes.
+/// This planner week's article (and a video claim already sent before
+/// the video levels were retired), plus last week's still unpaid ones.
+/// The week card lists claims from here, not from nodes.
  final  List<PostClaim> _claims;
-/// This planner week's article and videos, plus last week's still
-/// unpaid ones. The week card lists claims from here, not from nodes.
+/// This planner week's article (and a video claim already sent before
+/// the video levels were retired), plus last week's still unpaid ones.
+/// The week card lists claims from here, not from nodes.
 @override@JsonKey() List<PostClaim> get claims {
   if (_claims is EqualUnmodifiableListView) return _claims;
   // ignore: implicit_dynamic_type

@@ -12,10 +12,10 @@ import '../../../missions/application/journey_controller.dart';
 import '../../../preferences/domain/user_preferences.dart';
 import '../../application/connections_controller.dart';
 import '../../application/home_controllers.dart';
+import '../../domain/levels_finished.dart';
 import '../../domain/roadmap_level.dart';
 import '../../domain/roadmap_progress.dart';
 import '../widgets/connection_checkpoint.dart';
-import '../widgets/follower_checkpoint.dart';
 import '../widgets/home_states.dart';
 import '../widgets/roadmap_timeline.dart';
 
@@ -32,10 +32,14 @@ import '../widgets/roadmap_timeline.dart';
 /// later is simply at their own roadmap day on the same view.
 ///
 /// **It hands out no daily missions** (web, 12 Nov 2026). The day's comment,
-/// connection and post moved to the contest's daily path, so the "Open Plexa"
-/// day chat and the missions panel are gone, a day row opens nothing, and the
-/// sheet holds the two numbers the long view runs on: followers, and the
-/// weekly connection count.
+/// connection and post moved to the levels' daily path, so the "Open Plexa"
+/// day chat and the missions panel are gone and a day row opens nothing. Each
+/// row behind today, and today, says how much of that day's levels was
+/// finished instead (25 Nov 2026).
+///
+/// **The sheet asks for connections only** (web, 25 Nov 2026): the weekly
+/// connection count. The follower card left it; `FollowerCheckpoint` is kept,
+/// unrendered, until the owner decides to delete it.
 ///
 /// Day 1000 is a finish line. When the journey is finished this screen still
 /// renders normally, and offers the journey-complete screen once per app
@@ -45,7 +49,8 @@ import '../widgets/roadmap_timeline.dart';
 /// used to fire an eight-query dashboard fetch here whose result was never
 /// drawn, and blocked first paint on it; it was removed, and re-adding one on
 /// mobile would re-import the same mistake. What this screen asks the server
-/// for is the roadmap, the preferences and the two check-ins — nothing else.
+/// for is the roadmap, the levels finished per day, the preferences and the
+/// connections check-in — nothing else.
 ///
 /// The wallet XP pill that sat in the top-right corner is gone with wallet XP
 /// itself: the plan pays for AI features now, and "XP" means only the contest
@@ -172,8 +177,9 @@ class _JourneyBody extends ConsumerWidget {
   ///
   /// The collapsed size was 0.56 while the sheet led with the day's step card,
   /// which was the screen's action and had to be readable without a drag. The
-  /// two check-ins are all the sheet holds now, as on the web, so it is the
-  /// web's 0.40 again and the timeline gets its space back.
+  /// planner button and the connections check-in are all the sheet holds now,
+  /// as on the web, so it is the web's 0.40 again and the timeline gets its
+  /// space back.
   static const double _timelineFraction = 0.58;
   static const double _sheetCollapsed = 0.40;
   static const double _sheetExpanded = 0.82;
@@ -186,6 +192,14 @@ class _JourneyBody extends ConsumerWidget {
     final AsyncValue<List<RoadmapLevel>> levels = ref.watch(
       roadmapLevelsProvider,
     );
+    // A failed read draws no figures, as the web's `useLevelsFinished` does,
+    // and never holds the roadmap back: it is watched, not awaited.
+    final AsyncValue<LevelsFinished> finished = ref.watch(
+      levelsFinishedProvider,
+    );
+    final Map<int, LevelsFinishedDay> figures = finished.hasError
+        ? const <int, LevelsFinishedDay>{}
+        : finished.value?.byDay ?? const <int, LevelsFinishedDay>{};
 
     // A VALUE beats a refresh. `isLoading` was checked first, and that is what
     // made the timeline flicker: every rebuild of a provider this screen
@@ -239,6 +253,7 @@ class _JourneyBody extends ConsumerWidget {
                 levels: days,
                 today: today,
                 topInset: topInset,
+                levelsFinished: figures,
               ),
             ),
             DraggableScrollableSheet(
@@ -248,12 +263,12 @@ class _JourneyBody extends ConsumerWidget {
               snap: true,
               builder: (BuildContext context, ScrollController controller) =>
                   _CheckInSheet(
-                    today: today,
                     controller: controller,
                     onRefresh: () async {
                       ref
                           .read(roadmapProgressControllerProvider.notifier)
                           .refresh();
+                      ref.invalidate(levelsFinishedProvider);
                       ref.invalidate(connectionSummaryProvider);
                       await ref.read(roadmapProgressControllerProvider.future);
                     },
@@ -266,7 +281,7 @@ class _JourneyBody extends ConsumerWidget {
   }
 }
 
-/// The check-ins, as a sheet.
+/// The connections check-in, as a sheet.
 ///
 /// The web renders this as a sticky right-hand card on desktop and a fixed
 /// 40vh/82vh sheet on mobile, expanding once its content is scrolled. A
@@ -279,14 +294,8 @@ class _JourneyBody extends ConsumerWidget {
 /// top of the sheet's own content instead, which is where it reads in the same
 /// order.
 class _CheckInSheet extends StatelessWidget {
-  const _CheckInSheet({
-    required this.today,
-    required this.controller,
-    required this.onRefresh,
-  });
+  const _CheckInSheet({required this.controller, required this.onRefresh});
 
-  /// Today's day of the journey. The follower card reads its phase off it.
-  final int today;
   final ScrollController controller;
   final Future<void> Function() onRefresh;
 
@@ -344,15 +353,9 @@ class _CheckInSheet extends StatelessWidget {
                 onPressed: () => _openPlanner(context),
               ),
               SizedBox(height: ZaveSpace.xl),
-              // The arc's two instruments. The phase checkpoints ARE follower
-              // counts, and this is the only way one can reach us — so
-              // without it the roadmap names a target it cannot measure the
-              // user against.
-              FollowerCheckpoint(currentDay: today),
-              SizedBox(height: ZaveSpace.md),
-              // Asked weekly, and standing where the day's missions used to:
-              // connection growth is where the contest's connect and invite
-              // tasks show up over time.
+              // The one thing the roadmap asks for (web, 25 Nov 2026): asked
+              // weekly, standing where the day's missions used to. Connection
+              // growth is where the connect and invite levels show up.
               const ConnectionCheckpoint(),
             ],
           ),

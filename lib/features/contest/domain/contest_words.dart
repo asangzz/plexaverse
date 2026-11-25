@@ -18,6 +18,7 @@ import 'contest_board.dart';
 import 'contest_dates.dart';
 import 'contest_path.dart';
 import 'lesson_parts.dart';
+import 'levels_words.dart';
 import 'today_quiz.dart';
 
 /// The last days of a round in which the board is shown.
@@ -66,7 +67,7 @@ String kindWord(PathNodeKind kind) => switch (kind) {
   PathNodeKind.comment => 'LinkedIn · Comment',
   PathNodeKind.feedComments => 'LinkedIn · Feed comments',
   PathNodeKind.weeklyInvites => 'LinkedIn · Invites',
-  PathNodeKind.planWeek => 'Planner · Plan this week',
+  PathNodeKind.planWeek => 'Planner · Set up the week',
   PathNodeKind.article => 'LinkedIn · Article link',
   PathNodeKind.video => 'LinkedIn · Video link',
   PathNodeKind.followWinners => 'LinkedIn + Plexaverse · Top learners',
@@ -86,6 +87,41 @@ String stateWord(PathNodeState state) => switch (state) {
   PathNodeState.unavailable => 'Nothing to do today',
   PathNodeState.skipped => 'Skipped, still open today',
 };
+
+/// One of the open-all-week Sunday levels whose post day has passed undone
+/// (25 Nov 2026): drawn disabled — no card, no link — with "Day passed" and
+/// the reason in words. Any other missed level is an ordinary past one.
+bool isDayPassed(PathNode node) =>
+    node.openAllWeek && node.state == PathNodeState.missed;
+
+/// Drawn orange: one of the Sunday levels, open or done. One whose image
+/// waits for its post is locked like any locked level, and one whose day
+/// has passed wears the muted locked look.
+bool isOrange(PathNode node) =>
+    node.openAllWeek &&
+    (node.state == PathNodeState.today || isFinished(node.state));
+
+/// Where a level stands, in words — [stateWord], except for the Sunday
+/// levels: an open one is "Open all week" (not "Open today": it stays open
+/// on the days after its Sunday), and one whose day has gone is "Day
+/// passed". The web's `stateWord(node)`.
+String nodeStateWord(PathNode node) {
+  if (node.openAllWeek && node.state == PathNodeState.today) {
+    return kSundayLevelOpen;
+  }
+  if (isDayPassed(node)) return kSundayLevelDayPassed;
+  return stateWord(node.state);
+}
+
+/// Why a Sunday level's day has passed, without the "Day passed — " its
+/// detail starts with: "Monday’s post was not written". Null when there is
+/// nothing to say.
+String? dayPassedReason(PathNode node) {
+  final String d = node.detail ?? '';
+  const String prefix = '$kSundayLevelDayPassed — ';
+  final String reason = d.startsWith(prefix) ? d.substring(prefix.length) : d;
+  return reason.isEmpty ? null : reason;
+}
 
 /// The Skip button on the current level (owner, 17 Nov 2026).
 const String kSkipLabel = 'Skip this level';
@@ -159,14 +195,23 @@ String actionWord(PathNode node) {
 /// until the last is done or skipped, then the comment, the feed comments,
 /// the weekday's own task and the day's claim. A skipped level gets START
 /// back only once nothing else is open.
+///
+/// The open-all-week Sunday levels (`openAllWeek`, 25 Nov 2026) come LAST:
+/// they are outside today's order and stay open until their post day, so
+/// anything that can only be done today takes START first. A Sunday level
+/// gets it only once nothing else today is open, and only on its own Sunday
+/// — on a later day it is not among today's nodes.
 String? currentNodeId(List<PathDay> days) {
   for (final PathDay day in days) {
     if (!day.isToday) continue;
     for (final PathNode n in day.nodes) {
-      if (_isOpen(n.state)) return n.id;
+      if (!n.openAllWeek && _isOpen(n.state)) return n.id;
     }
     for (final PathNode n in day.nodes) {
       if (n.state == PathNodeState.skipped) return n.id;
+    }
+    for (final PathNode n in day.nodes) {
+      if (n.openAllWeek && n.state == PathNodeState.today) return n.id;
     }
     return null;
   }
@@ -174,12 +219,16 @@ String? currentNodeId(List<PathDay> days) {
 }
 
 /// Today's open level only — the first today/rejected node, never a skipped
-/// one. Where a skip leads next.
+/// one; an open-all-week Sunday level only once nothing of today's own is
+/// open (as [currentNodeId]). Where a skip leads next.
 PathNode? openLevelOf(List<PathDay> days) {
   for (final PathDay day in days) {
     if (!day.isToday) continue;
     for (final PathNode n in day.nodes) {
-      if (_isOpen(n.state)) return n;
+      if (!n.openAllWeek && _isOpen(n.state)) return n;
+    }
+    for (final PathNode n in day.nodes) {
+      if (n.openAllWeek && n.state == PathNodeState.today) return n;
     }
     return null;
   }

@@ -15,9 +15,18 @@ import '../widgets/skip_level.dart';
 /// `/contest/plan` — Sunday's level: plan this week, day by day. The web's
 /// `WeekPlanGuide`.
 ///
-/// No links are asked for here: each piece the learner posts by hand has its
-/// link asked for on the day it goes out, as that day's own level. The day
-/// list is the Planner's own data with the server's words; the page draws it.
+/// No links are asked for here: the article's link is asked for on the day
+/// it goes out, as that day's own level. The day list is the Planner's own
+/// data with the server's words; the page draws it — each post day with its
+/// role and format, and whether its image is in.
+///
+/// ## Since 25 Nov 2026 the path sets up the week step by step
+///
+/// Once the week is planned, Sunday's levels are "Write Monday's post", "Add
+/// Monday's image", … — the open-all-week Sunday levels, done in the Planner.
+/// This page is where "Plan this week" opens while the week is not planned
+/// yet. A week planned before then keeps its own shape, so a legacy video
+/// day still reads as one ("Video"); no link is asked for it.
 ///
 /// ## What the web has that this does not
 ///
@@ -48,9 +57,10 @@ class ContestPlanPage extends ConsumerWidget {
           // No counts or weekdays here: the week's shape is the server's, and
           // the day-by-day list below is read off it.
           lead:
-              'Get this week ready in the Planner, day by day below. Nothing to '
-              'share today: each piece you post yourself has its link asked '
-              'for on the day it goes out.',
+              'Get this week ready in the Planner, day by day below — today’s '
+              'levels then write each post and add its image. Nothing to '
+              'share today: the article’s link is asked for on the day it '
+              'goes out.',
         ),
         plan.when(
           data: (PlanWeekView view) => _ThisWeek(view: view),
@@ -61,6 +71,21 @@ class ContestPlanPage extends ConsumerWidget {
       ],
     );
   }
+}
+
+/// "Teach · Numbered steps · image in" — what a post day is, when its slot
+/// says. Null for any other day, or a post day whose slot says nothing (a
+/// week planned before roles and formats). The web's `postLine`.
+String? planPostLine(PlanWeekDay day) {
+  if (day.kind != DayKind.post) return null;
+  final String? role = day.role;
+  final List<String> parts = <String>[
+    if (role != null && role.isNotEmpty)
+      '${role[0].toUpperCase()}${role.substring(1)}',
+    if (day.formatName case final String name when name.isNotEmpty) name,
+    if (day.imageReady) 'image in',
+  ];
+  return parts.isEmpty ? null : parts.join(' · ');
 }
 
 /// "This week": the topic, the way to the Planner, the days, and marking it
@@ -130,7 +155,8 @@ class _DayRow extends StatelessWidget {
 
   final PlanWeekDay day;
 
-  /// The web's `KIND_LABEL`.
+  /// The web's `KIND_LABEL`. "Video" only ever labels a day of a week
+  /// planned before the video levels were retired (25 Nov 2026).
   static String _kindLabel(DayKind kind) => switch (kind) {
     DayKind.post => 'Post',
     DayKind.videoScript => 'Video',
@@ -185,6 +211,10 @@ class _DayRow extends StatelessWidget {
               title == null || title.isEmpty ? 'Not planned yet' : title,
               style: ContestType.cardTitle,
             ),
+            if (planPostLine(day) case final String line) ...<Widget>[
+              SizedBox(height: ZaveSpace.xs),
+              Text(line, style: ContestType.meta),
+            ],
             SizedBox(height: ZaveSpace.sm),
             ContestDot(
               tone: day.ready ? ContestTone.live : ContestTone.idle,
@@ -227,8 +257,8 @@ class _Completion extends ConsumerWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: <Widget>[
             Text(
-              'This week is planned. Each video’s and the article’s link is a '
-              'level of its own day.',
+              'This week is planned. Today’s next levels write each post and '
+              'add its image; the article’s link is a level of its own day.',
               style: line,
             ),
             SizedBox(height: ZaveSpace.lg),

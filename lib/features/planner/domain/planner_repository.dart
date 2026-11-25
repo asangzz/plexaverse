@@ -1,5 +1,8 @@
+import 'dart:typed_data';
+
 import '../../../core/plan/plan_refusal.dart';
 import 'plan_slot.dart';
+import 'post_formats.dart';
 import 'video_script.dart';
 import 'weekly_article.dart';
 
@@ -158,6 +161,51 @@ abstract class PlannerRepository {
   });
 
   /// The week's long-form article — Thursday's newsletter.
+  /// "Fix with AI" for one post day (POST /planner/refine-post). Throws
+  /// [PlannerActionFailure].
+  Future<RefineResult> refinePost({
+    required int weekNumber,
+    required int season,
+    required int dayIndex,
+  });
+
+  /// Stores the day's photo privately (POST /planner/photo multipart).
+  /// Throws [PlannerActionFailure].
+  Future<SlotPhotoUpload> uploadSlotPhoto({
+    required int weekNumber,
+    required int season,
+    required int dayIndex,
+    required Uint8List bytes,
+    required String filename,
+  });
+
+  /// Makes the day's image and writes it to the post (POST /planner/image).
+  /// `consent` is the user ticking "send my photo to OpenAI" — never sent
+  /// unasked. Throws [PlannerActionFailure].
+  Future<SlotImageMade> makeSlotImage({
+    required int weekNumber,
+    required int season,
+    required int dayIndex,
+    required SlotImageMode mode,
+    bool consent = false,
+  });
+
+  /// Whether the news search is on, and whether the system searches for
+  /// this user (GET /planner/news). Never throws: off on any failure.
+  Future<NewsStatus> fetchNewsStatus();
+
+  /// Finds or refreshes the week's headlines (POST /planner/news). Throws
+  /// [PlannerActionFailure].
+  Future<NewsResult> findNews({required int weekNumber, required int season});
+
+  /// Picks a headline while the day is open (PUT /planner/news). Throws
+  /// [PlannerActionFailure].
+  Future<NewsResult> pickNews({
+    required int weekNumber,
+    required int season,
+    required int pickedIndex,
+  });
+
   Future<ArticleState> fetchArticle({int? week, int? season});
 
   /// The article's BODY, fetched when it is actually read.
@@ -224,7 +272,13 @@ class ApproveResult {
     required this.plan,
     this.scheduledFor,
     this.postUpdated = false,
+    this.held = false,
   });
+
+  /// The publish gate held this AI-written post (it still breaks a playbook
+  /// rule) and nothing changed since, so it was NOT approved again — it would
+  /// only be held again at send time. Additive on the server (25 Nov 2026).
+  final bool held;
 
   final WeekPlan plan;
 
@@ -307,4 +361,21 @@ enum PlannerGenerateFailureKind {
 
   /// Anything else — the slot has been rolled back and a retry is sensible.
   failed,
+}
+
+/// A refusal from one of the playbook routes (refine, photo, image, news).
+///
+/// [refusal] is set for the plan gate (402 NOT_ENTITLED / LIMIT_REACHED) so
+/// the screen can show [PlanLimitSheet]; otherwise [code] is the server's
+/// (CONSENT_REQUIRED, NO_PHOTO, NO_POST, DAY_PASSED, TOO_EARLY, …) and
+/// [message] its own sentence, shown as it is.
+class PlannerActionFailure implements Exception {
+  const PlannerActionFailure({this.code, this.message, this.refusal});
+
+  final String? code;
+  final String? message;
+  final PlanRefusal? refusal;
+
+  @override
+  String toString() => message ?? code ?? 'PlannerActionFailure';
 }

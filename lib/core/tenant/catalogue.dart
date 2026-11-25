@@ -24,9 +24,10 @@ class TenantCatalogue {
     'plexaverse': TenantConfig(
       key: 'plexaverse',
       displayName: 'Plexaverse',
-      // Live API. Flavored builds still route through ApiEnvironment for the
-      // dev/staging/mock base URLs; this is the tenant's canonical prod root.
-      apiBaseUrl: 'https://www.plexaverse.com/api/mobile/v1',
+      // Live API — the Tokyo Cloud Run service (see ApiEnvironment, which is
+      // what requests actually use); this is the tenant's canonical prod root.
+      apiBaseUrl:
+          'https://dfy-plexaverse-lrthghbmsq-an.a.run.app/api/mobile/v1',
       // The Plexaverse brand schemes (violet #6C63FF, dark-default). Real
       // additional tenants would override with their own schemes.
       theme: TenantTheme(

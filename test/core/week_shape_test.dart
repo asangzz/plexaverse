@@ -9,26 +9,42 @@ import 'package:plexaverse/core/week/week_shape.dart';
 /// days of seven that no longer produce one.
 void main() {
   group('the shape', () {
-    test('two posts, two scripts, one newsletter, two rest days', () {
-      // The pivot, counted. If any of these move, the web moved them, and the
-      // mobile planner and roadmap both need to know.
+    test('three posts, one newsletter, three rest days, no video', () {
+      // The playbook week (25 Nov 2026), counted. If any of these move, the
+      // web moved them, and the mobile planner and roadmap both need to know.
       int count(DayKind k) => weekShape.where((DayKind d) => d == k).length;
 
-      expect(count(DayKind.post), 2);
-      expect(count(DayKind.videoScript), 2);
+      expect(count(DayKind.post), 3);
+      expect(count(DayKind.videoScript), 0);
       expect(count(DayKind.article), 1);
-      expect(count(DayKind.rest), 2);
+      expect(count(DayKind.rest), 3);
       expect(weekShape, hasLength(7));
     });
 
     test('each day is the kind WEEK_SHAPE gives it', () {
-      expect(dayKindAt(0), DayKind.post); // Monday
-      expect(dayKindAt(1), DayKind.post); // Tuesday — the hero
-      expect(dayKindAt(2), DayKind.videoScript); // Wednesday
+      expect(dayKindAt(0), DayKind.post); // Monday — teach
+      expect(dayKindAt(1), DayKind.rest); // Tuesday
+      expect(dayKindAt(2), DayKind.post); // Wednesday — story
       expect(dayKindAt(3), DayKind.article); // Thursday — the newsletter
-      expect(dayKindAt(4), DayKind.videoScript); // Friday
+      expect(dayKindAt(4), DayKind.post); // Friday — opinion
       expect(dayKindAt(5), DayKind.rest); // Saturday
       expect(dayKindAt(6), DayKind.rest); // Sunday
+    });
+
+    test('each post day has its role, and no other day has one', () {
+      expect(roleForDay(0), PostRole.teach);
+      expect(roleForDay(2), PostRole.story);
+      expect(roleForDay(4), PostRole.opinion);
+      for (final int i in <int>[1, 3, 5, 6]) {
+        expect(roleForDay(i), isNull, reason: 'day $i is not a post day');
+      }
+      expect(postingDays(), <int>[0, 2, 4]);
+    });
+
+    test('a legacy video_script day still parses', () {
+      // Weeks planned before 25 Nov 2026 keep it on their lived days.
+      expect(DayKind.parse('video_script'), DayKind.videoScript);
+      expect(DayKind.videoScript.isPublishable, isFalse);
     });
 
     test('Sunday is a rest day, and Thursday carries the newsletter', () {
@@ -63,14 +79,15 @@ void main() {
       expect(weekdayIndexForDay(8, mon), 0); // back to Monday
     });
 
-    test('a roadmap that began on a Monday posts on days 1 and 2', () {
+    test('a roadmap that began on a Monday posts on days 1, 3 and 5', () {
       // The join the roadmap actually makes: roadmap day → weekday → kind.
       final DateTime mon = DateTime(2026, 10, 5);
       DayKind kindOfDay(int d) => dayKindAt(weekdayIndexForDay(d, mon));
 
       expect(kindOfDay(1).isPublishable, isTrue);
-      expect(kindOfDay(2).isPublishable, isTrue);
-      for (final int d in <int>[3, 4, 5, 6, 7]) {
+      expect(kindOfDay(3).isPublishable, isTrue);
+      expect(kindOfDay(5).isPublishable, isTrue);
+      for (final int d in <int>[2, 4, 6, 7]) {
         expect(
           kindOfDay(d).isPublishable,
           isFalse,
@@ -98,9 +115,9 @@ void main() {
 
   group('the next posting day', () {
     // The roadmap deep-links "generate the next post" at a planner slot. It
-    // used to use (today + 1) % 7, which lands on a video script, the
-    // newsletter or a rest day five times in seven — and the planner refuses
-    // to generate on every one of them, so the link was a dead end most days.
+    // used to use (today + 1) % 7, which lands on the newsletter or a rest
+    // day four times in seven — and the planner refuses to generate on every
+    // one of them, so the link was a dead end most days.
     int nextAfter(int slot) {
       for (int i = 1; i <= 7; i++) {
         final int c = (slot + i) % 7;
@@ -125,9 +142,10 @@ void main() {
       }
     });
 
-    test('from Monday the next one is Tuesday, and from Tuesday it wraps', () {
-      expect(nextAfter(0), 1); // Mon -> Tue
-      expect(nextAfter(1), 0); // Tue -> Mon, the week's only other post day
+    test('Mon -> Wed -> Fri, and Friday wraps over the weekend', () {
+      expect(nextAfter(0), 2); // Mon -> Wed
+      expect(nextAfter(1), 2); // Tue (rest) -> Wed
+      expect(nextAfter(2), 4); // Wed -> Fri
       expect(nextAfter(4), 0); // Fri -> Mon, over the weekend
     });
   });

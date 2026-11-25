@@ -44,8 +44,9 @@ abstract class ContestRepository {
   /// null, clamped to 1–200.
   Future<BoardResult> fetchBoard({int? limit});
 
-  /// `GET /contest/path?followLevel=1` — this week's levels, fully decided
-  /// by the server, with the follow level: this build draws it.
+  /// `GET /contest/path?followLevel=1&setupLevels=1` — this week's levels,
+  /// fully decided by the server, with the follow level and the open-all-week
+  /// Sunday levels: this build draws both.
   Future<ContestPath> fetchPath();
 
   /// `GET /contest/lesson` — today's lesson as it stands. A pure read.
@@ -121,16 +122,19 @@ abstract class ContestRepository {
   /// [ContestConflict], [ContestNotRunning], [ContestNotEntered].
   Future<InvitesSubmitResult> submitInvites(Uint8List bytes, String filename);
 
-  /// `GET /contest/tasks/plan` — this planner week, day by day.
+  /// `GET /contest/tasks/plan?setupLevels=1` — this planner week, day by day.
   Future<PlanWeekView> fetchPlanWeek();
 
-  /// `POST /contest/tasks/plan` — "I've planned this week". [ContestNotReady]
+  /// `POST /contest/tasks/plan?setupLevels=1` — "I've planned this week",
+  /// which closes only the "Plan this week" level. [ContestNotReady]
   /// until the week exists in the Planner; [ContestWrongDay],
   /// [ContestLocked], [ContestNotRunning], [ContestNotEntered].
   Future<PlanWeekResult> completePlanWeek();
 
   /// `POST /contest/tasks/claim` `{kind, occurrence, postUrl}` — claims the
-  /// article or a video by its post's link; waits for an admin's approval.
+  /// article by its post's link (or corrects / resends a video claim sent
+  /// before the video levels were retired; a NEW video claim is
+  /// [ContestNotOpen]); waits for an admin's approval.
   /// [occurrence] is the path's, sent back unchanged. [ContestBadUrl],
   /// [ContestTooEarly], [ContestNotReady], [ContestAlreadyDone],
   /// [ContestDuplicateUrl], [ContestLocked], [ContestConflict],
@@ -141,8 +145,9 @@ abstract class ContestRepository {
     required String postUrl,
   });
 
-  /// `POST /contest/skip` `{nodeId}` — skip today's CURRENT level, the one
-  /// node the path marks `canSkip`. Pays nothing; the level stays open as
+  /// `POST /contest/skip?setupLevels=1` `{nodeId}` — skip today's CURRENT
+  /// level, the one node the path marks `canSkip` (never an open-all-week
+  /// Sunday level: those are refused with [ContestNotOpen]). Pays nothing; the level stays open as
   /// `skipped` until the day ends. A repeat is a success with
   /// `alreadySkipped`. [ContestInvalid] (not on today's path),
   /// [ContestWrongDay] (the day rolled over — re-read the path),

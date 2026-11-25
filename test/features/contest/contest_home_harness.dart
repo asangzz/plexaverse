@@ -19,6 +19,8 @@ const List<String> kContestDestinations = <String>[
   ZaveRoutes.contestPlan,
   ZaveRoutes.contestClaim,
   ZaveRoutes.connections,
+  // A Sunday set-up level is done in the Planner (25 Nov 2026).
+  ZaveRoutes.planner,
   ZaveRoutes.roadmap,
   ZaveRoutes.pricing,
   ZaveRoutes.placement,

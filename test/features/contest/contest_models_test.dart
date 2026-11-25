@@ -305,6 +305,113 @@ void main() {
       expect(p.todayNodeFor(PathNodeKind.video, occurrence: '5:1:4'), isNull);
     });
 
+    test('a Sunday set-up level reads its step and openAllWeek; a missed one '
+        'keeps its reason', () {
+      final PathNode open = PathNode.fromJson(<String, dynamic>{
+        'id': '2026-11-08:plan_week:image:2',
+        'kind': 'plan_week',
+        'state': 'today',
+        'title': 'Add Wednesday’s image',
+        'points': 0,
+        'href': '/planner?week=6&setup=1&day=2&step=image',
+        'detail': 'Give us a candid photo of you at your desk',
+        'setup': <String, dynamic>{
+          'dayIndex': 2,
+          'step': 'image',
+          'imageKind': 'photo',
+          'photoGuide': 'a candid photo of you at your desk',
+        },
+        'openAllWeek': true,
+      });
+      expect(open.kind, PathNodeKind.planWeek);
+      expect(open.openAllWeek, isTrue);
+      expect(open.isSetupStep, isTrue);
+      expect(open.canSkip, isFalse);
+      expect(
+        open.setup,
+        const NodeSetup(
+          dayIndex: 2,
+          step: SetupStep.image,
+          imageKind: 'photo',
+          photoGuide: 'a candid photo of you at your desk',
+        ),
+      );
+      // The JSON round trip keeps both.
+      expect(PathNode.fromJson(jsonDecode(jsonEncode(open.toJson()))), open);
+
+      final PathNode passed = PathNode.fromJson(<String, dynamic>{
+        'id': '2026-11-08:plan_week:post:0',
+        'kind': 'plan_week',
+        'state': 'missed',
+        'title': 'Write Monday’s post',
+        'points': 0,
+        'href': null,
+        'detail': 'Day passed — Monday’s post was not written',
+        'setup': <String, dynamic>{'dayIndex': 0, 'step': 'post'},
+        'openAllWeek': true,
+      });
+      expect(passed.state, PathNodeState.missed);
+      expect(passed.href, isNull);
+      expect(passed.detail, 'Day passed — Monday’s post was not written');
+      expect(passed.setup!.step, SetupStep.post);
+    });
+
+    test('openAllWeek and setup are absent on every other level, and only a '
+        'true openAllWeek counts', () {
+      final PathNode plan = PathNode.fromJson(_node(kind: 'plan_week'));
+      expect(plan.openAllWeek, isFalse);
+      expect(plan.setup, isNull);
+      expect(plan.isSetupStep, isFalse);
+      expect(
+        PathNode.fromJson(<String, dynamic>{
+          ..._node(kind: 'plan_week'),
+          'openAllWeek': 'yes',
+        }).openAllWeek,
+        isFalse,
+      );
+      // A level this build cannot name is not one of them either.
+      expect(
+        PathNode.fromJson(<String, dynamic>{
+          ..._node(kind: 'voice_duel'),
+          'openAllWeek': true,
+        }).openAllWeek,
+        isFalse,
+      );
+      // A step this build cannot name reads as unknown, not as a post.
+      expect(
+        NodeSetup.fromJson(<String, dynamic>{
+          'dayIndex': 4,
+          'step': 'video',
+        }).step,
+        SetupStep.unknown,
+      );
+    });
+
+    test('a level’s own page never finds a Sunday level: they are outside '
+        'today’s order', () {
+      final ContestPath p = ContestPath.fromJson(<String, dynamic>{
+        'status': 'running',
+        'days': <Map<String, dynamic>>[
+          <String, dynamic>{
+            'dayNumber': 8,
+            'dayKey': '2026-11-08',
+            'weekday': 0,
+            'isToday': true,
+            'nodes': <Map<String, dynamic>>[
+              <String, dynamic>{
+                ..._node(kind: 'plan_week'),
+                'id': '2026-11-08:plan_week:post:0',
+                'setup': <String, dynamic>{'dayIndex': 0, 'step': 'post'},
+                'openAllWeek': true,
+              },
+            ],
+          },
+        ],
+      });
+      expect(p.todayNode(PathNodeKind.planWeek), isNull);
+      expect(p.todayNodeFor(PathNodeKind.planWeek), isNull);
+    });
+
     test('an unknown STATE is locked', () {
       final PathNode n = PathNode.fromJson(_node(state: 'frozen'));
       expect(n.state, PathNodeState.locked);
@@ -634,9 +741,15 @@ void main() {
         'plannerHref': '/planner?week=6',
         'days': <Object>[
           _planDay(6, 'Sunday', 'rest'),
+          // A week planned before 25 Nov 2026 keeps its video day.
           _planDay(2, 'Wednesday', 'video_script'),
           _planDay(3, 'Thursday', 'article'),
-          _planDay(0, 'Monday', 'post'),
+          <String, dynamic>{
+            ..._planDay(0, 'Monday', 'post'),
+            'role': 'teach',
+            'formatName': 'Numbered steps',
+            'imageReady': true,
+          },
         ],
       });
       expect(v.status, PlanWeekStatus.locked);
@@ -648,6 +761,14 @@ void main() {
         DayKind.post,
       ]);
       expect(v.days.first.index, 6);
+      final PlanWeekDay monday = v.days.last;
+      expect(monday.role, 'teach');
+      expect(monday.formatName, 'Numbered steps');
+      expect(monday.imageReady, isTrue);
+      // Absent on a day that is not a post, and from an older server.
+      expect(v.days[1].role, isNull);
+      expect(v.days[1].formatName, isNull);
+      expect(v.days[1].imageReady, isFalse);
     });
 
     test('the write results read as the web returns them', () {

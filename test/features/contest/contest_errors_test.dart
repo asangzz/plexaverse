@@ -418,8 +418,9 @@ void main() {
     });
 
     // There is no join call any more (24 Nov 2026): reading is joining.
-    // The path asks for the follow level, which this build draws.
-    test('the path asks for the follow level with followLevel=1', () async {
+    // The path asks for the follow level and the open-all-week Sunday
+    // levels, both of which this build draws.
+    test('the path asks for the follow level and the Sunday levels', () async {
       final (ApiContestRepository repo, _Canned wire) = _stack(
         200,
         _ok(<String, dynamic>{
@@ -431,6 +432,53 @@ void main() {
       expect(wire.seen.single.path, '/contest/path');
       expect(wire.seen.single.queryParameters, <String, dynamic>{
         'followLevel': '1',
+        'setupLevels': '1',
+      });
+    });
+
+    // A lock or a skip is decided on the layout the build draws, so the
+    // skip and both plan calls carry the path's flag too (25 Nov 2026).
+    test('the skip and the plan calls carry setupLevels=1', () async {
+      final (ApiContestRepository skip, _Canned skipWire) = _stack(
+        200,
+        _ok(<String, dynamic>{
+          'result': <String, dynamic>{'nodeId': '2026-11-11:comment'},
+        }),
+      );
+      await skip.skipLevel('2026-11-11:comment');
+      expect(skipWire.seen.single.method, 'POST');
+      expect(skipWire.seen.single.path, '/contest/skip');
+      expect(skipWire.seen.single.queryParameters, <String, dynamic>{
+        'setupLevels': '1',
+      });
+      expect(skipWire.seen.single.data, <String, dynamic>{
+        'nodeId': '2026-11-11:comment',
+      });
+
+      final (ApiContestRepository read, _Canned readWire) = _stack(
+        200,
+        _ok(<String, dynamic>{
+          'view': <String, dynamic>{'status': 'open'},
+        }),
+      );
+      await read.fetchPlanWeek();
+      expect(readWire.seen.single.method, 'GET');
+      expect(readWire.seen.single.path, '/contest/tasks/plan');
+      expect(readWire.seen.single.queryParameters, <String, dynamic>{
+        'setupLevels': '1',
+      });
+
+      final (ApiContestRepository mark, _Canned markWire) = _stack(
+        200,
+        _ok(<String, dynamic>{
+          'result': <String, dynamic>{'taskId': 't', 'status': 'done'},
+        }),
+      );
+      await mark.completePlanWeek();
+      expect(markWire.seen.single.method, 'POST');
+      expect(markWire.seen.single.path, '/contest/tasks/plan');
+      expect(markWire.seen.single.queryParameters, <String, dynamic>{
+        'setupLevels': '1',
       });
     });
 

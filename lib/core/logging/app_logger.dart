@@ -1,3 +1,4 @@
+import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_crashlytics/firebase_crashlytics.dart';
 import 'package:flutter/foundation.dart';
 import 'package:logger/logger.dart';
@@ -37,14 +38,12 @@ abstract class AppLogger {
 }
 
 class AppLoggerImpl implements AppLogger {
-  AppLoggerImpl({
-    this.env = Env.prod,
-    CrashlyticsSink? crashlytics,
-  })  : _delegate = Logger(
-          level: env == Env.prod ? Level.warning : Level.debug,
-          printer: PrettyPrinter(methodCount: 0, colors: false),
-        ),
-        _crashlytics = crashlytics ?? _CrashlyticsSinkImpl();
+  AppLoggerImpl({this.env = Env.prod, CrashlyticsSink? crashlytics})
+    : _delegate = Logger(
+        level: env == Env.prod ? Level.warning : Level.debug,
+        printer: PrettyPrinter(methodCount: 0, colors: false),
+      ),
+      _crashlytics = crashlytics ?? _CrashlyticsSinkImpl();
 
   final Env env;
   final Logger _delegate;
@@ -114,11 +113,7 @@ class AppLoggerImpl implements AppLogger {
     _userId = null;
     _tenantKey = null;
     _requestId = null;
-    _crashlytics.setIdentifiers(
-      userId: null,
-      tenantKey: null,
-      requestId: null,
-    );
+    _crashlytics.setIdentifiers(userId: null, tenantKey: null, requestId: null);
   }
 
   String _decorate(String message) {
@@ -165,6 +160,17 @@ abstract class CrashlyticsSink {
 }
 
 class _CrashlyticsSinkImpl implements CrashlyticsSink {
+  /// Off in debug, and off whenever no Firebase app exists.
+  ///
+  /// The second half is not optional. Firebase is best-effort here
+  /// (`initFirebase` carries on without it when the platform config is
+  /// missing), but `FirebaseCrashlytics.instance` THROWS `[core/no-app]` when
+  /// there is no app — and the first call is `setContext` during boot, before
+  /// `runApp`. In a release build without Firebase config that one throw
+  /// escaped to the zone and the app never drew a frame: a black screen on
+  /// every launch. A logger must never be the thing that stops the app.
+  static bool get _crashlyticsUsable => !kDebugMode && Firebase.apps.isNotEmpty;
+
   @override
   void recordError({
     required String reason,
@@ -172,7 +178,7 @@ class _CrashlyticsSinkImpl implements CrashlyticsSink {
     StackTrace? stackTrace,
     Map<String, String> context = const <String, String>{},
   }) {
-    if (kDebugMode) return;
+    if (!_crashlyticsUsable) return;
     final c = FirebaseCrashlytics.instance;
     for (final entry in context.entries) {
       // Best-effort; Crashlytics keys are length-limited (64 chars) and
@@ -184,7 +190,7 @@ class _CrashlyticsSinkImpl implements CrashlyticsSink {
 
   @override
   void setIdentifiers({String? userId, String? tenantKey, String? requestId}) {
-    if (kDebugMode) return;
+    if (!_crashlyticsUsable) return;
     final c = FirebaseCrashlytics.instance;
     if (userId != null) c.setUserIdentifier(userId);
     if (tenantKey != null) c.setCustomKey('tenantKey', tenantKey);

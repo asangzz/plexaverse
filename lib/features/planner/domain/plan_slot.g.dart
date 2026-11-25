@@ -30,6 +30,16 @@ _PlanSlot _$PlanSlotFromJson(Map<String, dynamic> json) => _PlanSlot(
   restDay: json['restDay'] as bool? ?? false,
   artifact: json['artifact'] as String?,
   posterTag: json['posterTag'] as String?,
+  rawRole: _stringOrNull(json['role']),
+  formatId: _stringOrNull(json['formatId']),
+  rawImageKind: _stringOrNull(json['imageKind']),
+  formatFellBack: json['formatFellBack'] == null
+      ? false
+      : _boolOrFalse(json['formatFellBack']),
+  rawReview: _mapOrNull(json['review']),
+  cardText: _stringOrNull(json['cardText']),
+  rawReferencePhoto: _mapOrNull(json['referencePhoto']),
+  rawNews: _mapOrNull(json['news']),
 );
 
 Map<String, dynamic> _$PlanSlotToJson(_PlanSlot instance) => <String, dynamic>{
@@ -48,6 +58,14 @@ Map<String, dynamic> _$PlanSlotToJson(_PlanSlot instance) => <String, dynamic>{
   'restDay': instance.restDay,
   'artifact': instance.artifact,
   'posterTag': instance.posterTag,
+  'role': instance.rawRole,
+  'formatId': instance.formatId,
+  'imageKind': instance.rawImageKind,
+  'formatFellBack': instance.formatFellBack,
+  'review': _passThrough(instance.rawReview),
+  'cardText': instance.cardText,
+  'referencePhoto': _passThrough(instance.rawReferencePhoto),
+  'news': _passThrough(instance.rawNews),
 };
 
 const _$SlotStatusEnumMap = {

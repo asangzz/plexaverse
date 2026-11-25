@@ -6,6 +6,7 @@ import 'package:freezed_annotation/freezed_annotation.dart';
 export '../../../core/week/week_shape.dart' show DayKind;
 
 import '../../../core/week/week_shape.dart';
+import 'post_formats.dart';
 
 part 'plan_slot.freezed.dart';
 part 'plan_slot.g.dart';
@@ -47,27 +48,35 @@ enum SlotStatus {
   String get wire => name;
 }
 
+/// Tolerant reader for the slot's JSON objects (`review`, `news`,
+/// `referencePhoto`): one malformed value must not fail the week's parse.
+Map<String, dynamic>? _mapOrNull(Object? v) =>
+    v is Map ? Map<String, dynamic>.from(v) : null;
+
+Object? _passThrough(Map<String, dynamic>? v) => v;
+
+bool _boolOrFalse(Object? v) => v == true;
+
+String? _stringOrNull(Object? v) => v is String && v.isNotEmpty ? v : null;
+
 /// One day of the week's plan.
 ///
-/// ## The week is no longer seven posts
+/// ## The playbook week (25 Nov 2026)
 ///
-/// It is two posts, two video scripts, one newsletter and a weekend off —
 /// `WEEK_SHAPE` in the web's `lib/week-shape.ts`:
 ///
-///   Mon  post            we write it, the chain publishes it
-///   Tue  post (hero)     the week's biggest swing
-///   Wed  video script    we write it, the user records and posts it
-///   Thu  article         the newsletter, pasted in by the user
-///   Fri  video script
+///   Mon  post, role teach     we write it, the chain publishes it
+///   Tue  rest
+///   Wed  post, role story
+///   Thu  article              the newsletter, pasted in by the user
+///   Fri  post, role opinion
 ///   Sat  rest
 ///   Sun  rest
 ///
-/// That is a deliberate reduction from seven published posts to two: at seven,
-/// the server's grounding runs out of banked material after the first few and
-/// the rest come from its generic no-story branch.
-///
-/// **Sunday is a rest day now.** The article moved to Thursday. Anything still
-/// drawing an article card on Sunday is describing the previous product.
+/// A post day planned in the playbook week also carries `role`, `formatId`,
+/// `imageKind`, `formatFellBack`, `review`, `cardText`, `referencePhoto` and,
+/// on the week's news day, `news` — all additive and absent on legacy rows.
+/// Weeks planned before the change keep `video_script` on their lived days.
 @freezed
 abstract class PlanSlot with _$PlanSlot {
   const PlanSlot._();
@@ -130,6 +139,36 @@ abstract class PlanSlot with _$PlanSlot {
     /// Which poster style this day gets — 'comparison', 'infographic', …
     /// A property of the WEEK, not a coin flip per post.
     String? posterTag,
+
+    /// The role the day asked for (`teach | story | opinion`). Go through
+    /// [role], which falls back to the format's own.
+    @JsonKey(name: 'role', fromJson: _stringOrNull) String? rawRole,
+
+    /// The playbook format (`numbered_steps`, `timeline`, …). Null on a
+    /// legacy day — never [format], which shipped builds print raw.
+    @JsonKey(fromJson: _stringOrNull) String? formatId,
+
+    /// How the image is made. Go through [imageKind].
+    @JsonKey(name: 'imageKind', fromJson: _stringOrNull) String? rawImageKind,
+
+    /// The role's own formats had no facts behind them, so the day fell back
+    /// to another list ("Add a real story to unlock story posts").
+    @JsonKey(fromJson: _boolOrFalse) @Default(false) bool formatFellBack,
+
+    /// The playbook review the server stored. Go through [review].
+    @JsonKey(name: 'review', fromJson: _mapOrNull, toJson: _passThrough)
+    Map<String, dynamic>? rawReview,
+
+    /// The text a quote or text card prints.
+    @JsonKey(fromJson: _stringOrNull) String? cardText,
+
+    /// `{ path, uploadedAt }` in the PRIVATE bucket — a path, never a URL.
+    @JsonKey(name: 'referencePhoto', fromJson: _mapOrNull, toJson: _passThrough)
+    Map<String, dynamic>? rawReferencePhoto,
+
+    /// The week's news headlines, on the news day only. Go through [news].
+    @JsonKey(name: 'news', fromJson: _mapOrNull, toJson: _passThrough)
+    Map<String, dynamic>? rawNews,
   }) = _PlanSlot;
 
   factory PlanSlot.fromJson(Map<String, dynamic> json) =>
@@ -156,6 +195,42 @@ abstract class PlanSlot with _$PlanSlot {
 
   /// The user has to do something about this one.
   bool get needsApproval => status == SlotStatus.generated;
+
+  /// The day's format, or null for a legacy day (or an id this build does
+  /// not know). The web's `slotFormat`.
+  PostFormatInfo? get formatSpec => formatInfo(formatId);
+
+  /// A post day planned in the playbook week. Only these get the format, the
+  /// image step and the review; every other post day keeps the old UI. The
+  /// web's `isNewShapeSlot`.
+  bool get isNewShape => isPublishable && formatSpec != null;
+
+  /// The role the day asked for — the stored one, which stays the day's even
+  /// when its format fell back. The web's `slotRole`.
+  PostRole? get role => PostRole.parse(rawRole) ?? formatSpec?.role;
+
+  /// How this day's image is made, or null on a legacy day. The web's
+  /// `slotImageKind`.
+  ImageKind? get imageKind => isNewShape
+      ? (ImageKind.parse(rawImageKind) ?? formatSpec!.imageKind)
+      : null;
+
+  SlotReview? get review => SlotReview.tryParse(rawReview);
+
+  SlotNews? get news => SlotNews.tryParse(rawNews);
+
+  /// The user has given this day a photo (the server holds it privately).
+  bool get hasReferencePhoto {
+    final Object? path = rawReferencePhoto?['path'];
+    return path is String && path.isNotEmpty;
+  }
+
+  /// Nothing written yet: a news pick or a search can still change the post.
+  bool get isOpen => status == SlotStatus.planned && !hasPost;
+
+  /// Whether the day carries an image at all — a playbook day always does; a
+  /// legacy day only when it was planned as `text_image`.
+  bool get wantsImage => isNewShape || format == 'text_image';
 }
 
 /// A whole week's plan.
@@ -179,7 +254,11 @@ abstract class WeekPlan with _$WeekPlan {
   int get publishedCount =>
       posts.where((PlanSlot s) => s.status == SlotStatus.published).length;
 
-  int get liveSlotCount => posts.where((PlanSlot s) => !s.restDay).length;
+  /// Days the chain publishes — the denominator of "N/M published". The
+  /// newsletter and a legacy script are never published by us, so they do not
+  /// count against it.
+  int get liveSlotCount =>
+      posts.where((PlanSlot s) => s.isPublishable).length;
 
   /// Slots waiting on the user.
   List<PlanSlot> get awaitingApproval =>

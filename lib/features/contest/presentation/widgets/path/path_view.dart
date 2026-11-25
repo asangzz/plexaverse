@@ -18,12 +18,17 @@ import '../labelled_rule.dart';
 import 'lesson_chest.dart';
 import 'node_card.dart';
 import 'path_node.dart';
+import 'sunday_tags.dart';
 import 'week_trophy.dart';
 
 /// A level's row on the path; the current level's is taller, with the node
 /// at its foot, to leave room for the START bubble above it.
 const double kPathRowHeight = 96;
 const double kPathCurrentRowHeight = 132;
+
+/// A Sunday level whose day has passed draws "Day passed" under its node:
+/// room for it before the next.
+const double kPathPassedRowHeight = 112;
 
 /// Wide enough for the web's `sm` swing and for Plexa beside today's level.
 /// The app is drawn for phones; a tablet gets the roomier path.
@@ -74,6 +79,16 @@ String _weekday(PathDay day) =>
 /// path is drawn — the way Duolingo opens on the current lesson — and again
 /// only when the current level moves to a node not yet scrolled to. Instant
 /// under reduced motion.
+///
+/// ## The Sunday levels are Sunday's, in orange (25 Nov 2026)
+///
+/// This planner week's set-up levels ("Write Monday's post", "Add Monday's
+/// image", …) arrive as ordinary nodes of the week's Sunday — or of the
+/// round's first day, when the round started mid-week — after its other
+/// levels (`openAllWeek`), so they are numbered on from them and drawn like
+/// every level, but orange, on every day of the week. Directly above that
+/// day's title, [SundayLevelTags] say so in words, and only there. One whose
+/// day has passed opens no card; an open one goes to the Planner on its day.
 class PathView extends ConsumerStatefulWidget {
   const PathView({
     required this.path,
@@ -124,8 +139,11 @@ class _PathViewState extends ConsumerState<PathView> {
     });
   }
 
-  void _toggle(PathNode node) =>
-      ref.read(contestOpenNodeProvider.notifier).toggle(node.id);
+  void _toggle(PathNode node) {
+    // A Sunday level whose day has passed opens nothing; any card closes.
+    if (isDayPassed(node)) return _close();
+    ref.read(contestOpenNodeProvider.notifier).toggle(node.id);
+  }
 
   void _close() => ref.read(contestOpenNodeProvider.notifier).close();
 
@@ -143,6 +161,8 @@ class _PathViewState extends ConsumerState<PathView> {
     final String? route = contestLevelRoute(node);
     if (route == null) return;
     _close();
+    // The Planner is a tab of the shell, not a page over the path.
+    if (isContestTabRoute(route)) return context.go(route);
     unawaited(context.push(route));
   }
 
@@ -162,7 +182,18 @@ class _PathViewState extends ConsumerState<PathView> {
     int step = 0;
     final List<Widget> rows = <Widget>[];
     for (final PathDay day in days) {
-      rows.add(_DayDivider(day));
+      // The day that holds this week's Sunday levels: its tags go above
+      // its title.
+      final bool sundayLevels = day.nodes.any((PathNode n) => n.openAllWeek);
+      if (sundayLevels) {
+        rows.add(
+          const Padding(
+            padding: EdgeInsets.only(top: 18),
+            child: SundayLevelTags(),
+          ),
+        );
+      }
+      rows.add(_DayDivider(day, top: sundayLevels ? 8 : 18));
       final List<PathNode> parts = lessonPartsOf(day);
       final String? lastPart = parts.isEmpty ? null : parts.last.id;
       for (final (int i, PathNode node) in day.nodes.indexed) {
@@ -311,14 +342,17 @@ class _UnitBanner extends StatelessWidget {
 /// "MON · DAY 9", "WED · DAY 11 · TODAY" between two rules. Today in
 /// periwinkle.
 class _DayDivider extends StatelessWidget {
-  const _DayDivider(this.day);
+  const _DayDivider(this.day, {this.top = 18});
 
   final PathDay day;
+
+  /// Closer under the Sunday levels' tags, which sit right above it.
+  final double top;
 
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.only(top: 18, bottom: 14),
+      padding: EdgeInsets.only(top: top, bottom: 14),
       child: LabelledRule(
         colour: ZaveColors.rule,
         thickness: 2,
@@ -377,20 +411,25 @@ class _NodeRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final Widget button = TapRegion(
-      groupId: region,
-      child: PathNodeButton(
-        node: node,
-        dayName: dayName,
-        level: level,
-        current: current,
-        progress: progress,
-        expanded: expanded,
-        onPressed: onPressed,
-      ),
+    final bool passed = isDayPassed(node);
+    final Widget nodeButton = PathNodeButton(
+      node: node,
+      dayName: dayName,
+      level: level,
+      current: current,
+      progress: progress,
+      expanded: expanded,
+      onPressed: onPressed,
     );
+    // A disabled node is outside the card's region: a press on it closes
+    // the card, as a press anywhere else does.
+    final Widget button = passed
+        ? nodeButton
+        : TapRegion(groupId: region, child: nodeButton);
     return SizedBox(
-      height: current ? kPathCurrentRowHeight : kPathRowHeight,
+      height: current
+          ? kPathCurrentRowHeight
+          : (passed ? kPathPassedRowHeight : kPathRowHeight),
       width: double.infinity,
       child: Stack(
         clipBehavior: Clip.none,

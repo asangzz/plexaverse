@@ -40,6 +40,15 @@ class NetworkConfig {
     '/planner/video-script',
     '/planner/newsletter',
     '/planner/change-topic',
+    // The playbook week's model calls (25 Nov 2026): the day's image (an AI
+    // poster or an OpenAI portrait, up to 120 s on the server), the week's
+    // news search (an OpenAI web search, 55 s abort) and "Fix with AI" (up to
+    // two model rewrites). Each is counted when the server finishes, so a
+    // client that hangs up at 30 s reports a failure the user then pays for
+    // again on retry. The GET news status rides along, which costs it nothing.
+    '/planner/image',
+    '/planner/news',
+    '/planner/refine-post',
     '/festive/generate',
     '/studio/ai-designer',
     '/studio/customize',

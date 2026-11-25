@@ -59,7 +59,7 @@ final class PlannerWeekProvider
   }
 }
 
-String _$plannerWeekHash() => r'5d4061bffbd049b5c9218c5ad0e767231cdf2ac8';
+String _$plannerWeekHash() => r'9ac67e62786fb16af335254aee63cc168dcc2cf9';
 
 /// Which week the planner is showing.
 ///
@@ -294,7 +294,7 @@ final class PlannerControllerProvider
   PlannerController create() => PlannerController();
 }
 
-String _$plannerControllerHash() => r'093a3ab1bfb12689a2dfae7f2b6d99ddca3370f0';
+String _$plannerControllerHash() => r'330b3a878eec12fb7ccacda76db4c0e6b1c5ffa7';
 
 /// The week plan.
 
@@ -476,6 +476,189 @@ abstract class _$ArticleController extends $AsyncNotifier<ArticleState> {
             as $ClassProviderElement<
               AnyNotifier<AsyncValue<ArticleState>, ArticleState>,
               AsyncValue<ArticleState>,
+              Object?,
+              Object?
+            >;
+    element.handleCreate(ref, build);
+  }
+}
+
+/// Whether the week's news search is switched on, and whether the system
+/// searches for this user. Off on any failure — the picker then hides itself
+/// on a day with no headlines (the web's `useNewsStatus`).
+
+@ProviderFor(plannerNewsStatus)
+final plannerNewsStatusProvider = PlannerNewsStatusProvider._();
+
+/// Whether the week's news search is switched on, and whether the system
+/// searches for this user. Off on any failure — the picker then hides itself
+/// on a day with no headlines (the web's `useNewsStatus`).
+
+final class PlannerNewsStatusProvider
+    extends
+        $FunctionalProvider<
+          AsyncValue<NewsStatus>,
+          NewsStatus,
+          FutureOr<NewsStatus>
+        >
+    with $FutureModifier<NewsStatus>, $FutureProvider<NewsStatus> {
+  /// Whether the week's news search is switched on, and whether the system
+  /// searches for this user. Off on any failure — the picker then hides itself
+  /// on a day with no headlines (the web's `useNewsStatus`).
+  PlannerNewsStatusProvider._()
+    : super(
+        from: null,
+        argument: null,
+        retry: null,
+        name: r'plannerNewsStatusProvider',
+        isAutoDispose: true,
+        dependencies: null,
+        $allTransitiveDependencies: null,
+      );
+
+  @override
+  String debugGetCreateSourceHash() => _$plannerNewsStatusHash();
+
+  @$internal
+  @override
+  $FutureProviderElement<NewsStatus> $createElement($ProviderPointer pointer) =>
+      $FutureProviderElement(pointer);
+
+  @override
+  FutureOr<NewsStatus> create(Ref ref) {
+    return plannerNewsStatus(ref);
+  }
+}
+
+String _$plannerNewsStatusHash() => r'f74bc5ae9f03eee79de7a9800b09cbbd56ead4cd';
+
+/// The latest note per day and action (refine, photo, image, news). Owned
+/// here rather than by the sheet's widgets, so a note survives the sheet
+/// being swiped away mid-call. Reset when the planner shows another week —
+/// the notes are keyed by day index.
+
+@ProviderFor(PlannerNotes)
+final plannerNotesProvider = PlannerNotesProvider._();
+
+/// The latest note per day and action (refine, photo, image, news). Owned
+/// here rather than by the sheet's widgets, so a note survives the sheet
+/// being swiped away mid-call. Reset when the planner shows another week —
+/// the notes are keyed by day index.
+final class PlannerNotesProvider
+    extends $NotifierProvider<PlannerNotes, Map<String, PlannerNote>> {
+  /// The latest note per day and action (refine, photo, image, news). Owned
+  /// here rather than by the sheet's widgets, so a note survives the sheet
+  /// being swiped away mid-call. Reset when the planner shows another week —
+  /// the notes are keyed by day index.
+  PlannerNotesProvider._()
+    : super(
+        from: null,
+        argument: null,
+        retry: null,
+        name: r'plannerNotesProvider',
+        isAutoDispose: false,
+        dependencies: null,
+        $allTransitiveDependencies: null,
+      );
+
+  @override
+  String debugGetCreateSourceHash() => _$plannerNotesHash();
+
+  @$internal
+  @override
+  PlannerNotes create() => PlannerNotes();
+
+  /// {@macro riverpod.override_with_value}
+  Override overrideWithValue(Map<String, PlannerNote> value) {
+    return $ProviderOverride(
+      origin: this,
+      providerOverride: $SyncValueProvider<Map<String, PlannerNote>>(value),
+    );
+  }
+}
+
+String _$plannerNotesHash() => r'cb3e3e9f409dc14184349cef0e0168f0c8161d0a';
+
+/// The latest note per day and action (refine, photo, image, news). Owned
+/// here rather than by the sheet's widgets, so a note survives the sheet
+/// being swiped away mid-call. Reset when the planner shows another week —
+/// the notes are keyed by day index.
+
+abstract class _$PlannerNotes extends $Notifier<Map<String, PlannerNote>> {
+  Map<String, PlannerNote> build();
+  @$mustCallSuper
+  @override
+  void runBuild() {
+    final ref =
+        this.ref as $Ref<Map<String, PlannerNote>, Map<String, PlannerNote>>;
+    final element =
+        ref.element
+            as $ClassProviderElement<
+              AnyNotifier<Map<String, PlannerNote>, Map<String, PlannerNote>>,
+              Map<String, PlannerNote>,
+              Object?,
+              Object?
+            >;
+    element.handleCreate(ref, build);
+  }
+}
+
+/// The 10-minute signed preview of a photo uploaded this session, per day.
+/// Shown, never stored on the server or reused after the week changes.
+
+@ProviderFor(PlannerPhotoPreviews)
+final plannerPhotoPreviewsProvider = PlannerPhotoPreviewsProvider._();
+
+/// The 10-minute signed preview of a photo uploaded this session, per day.
+/// Shown, never stored on the server or reused after the week changes.
+final class PlannerPhotoPreviewsProvider
+    extends $NotifierProvider<PlannerPhotoPreviews, Map<int, String>> {
+  /// The 10-minute signed preview of a photo uploaded this session, per day.
+  /// Shown, never stored on the server or reused after the week changes.
+  PlannerPhotoPreviewsProvider._()
+    : super(
+        from: null,
+        argument: null,
+        retry: null,
+        name: r'plannerPhotoPreviewsProvider',
+        isAutoDispose: false,
+        dependencies: null,
+        $allTransitiveDependencies: null,
+      );
+
+  @override
+  String debugGetCreateSourceHash() => _$plannerPhotoPreviewsHash();
+
+  @$internal
+  @override
+  PlannerPhotoPreviews create() => PlannerPhotoPreviews();
+
+  /// {@macro riverpod.override_with_value}
+  Override overrideWithValue(Map<int, String> value) {
+    return $ProviderOverride(
+      origin: this,
+      providerOverride: $SyncValueProvider<Map<int, String>>(value),
+    );
+  }
+}
+
+String _$plannerPhotoPreviewsHash() =>
+    r'2bdbfd0f4bd82b21f7132ff82dd26b4845ae33f1';
+
+/// The 10-minute signed preview of a photo uploaded this session, per day.
+/// Shown, never stored on the server or reused after the week changes.
+
+abstract class _$PlannerPhotoPreviews extends $Notifier<Map<int, String>> {
+  Map<int, String> build();
+  @$mustCallSuper
+  @override
+  void runBuild() {
+    final ref = this.ref as $Ref<Map<int, String>, Map<int, String>>;
+    final element =
+        ref.element
+            as $ClassProviderElement<
+              AnyNotifier<Map<int, String>, Map<int, String>>,
+              Map<int, String>,
               Object?,
               Object?
             >;

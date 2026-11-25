@@ -45,7 +45,18 @@ mixin _$PlanSlot {
 /// will have one before any of them are written.
  String? get artifact;/// Which poster style this day gets — 'comparison', 'infographic', …
 /// A property of the WEEK, not a coin flip per post.
- String? get posterTag;
+ String? get posterTag;/// The role the day asked for (`teach | story | opinion`). Go through
+/// [role], which falls back to the format's own.
+@JsonKey(name: 'role', fromJson: _stringOrNull) String? get rawRole;/// The playbook format (`numbered_steps`, `timeline`, …). Null on a
+/// legacy day — never [format], which shipped builds print raw.
+@JsonKey(fromJson: _stringOrNull) String? get formatId;/// How the image is made. Go through [imageKind].
+@JsonKey(name: 'imageKind', fromJson: _stringOrNull) String? get rawImageKind;/// The role's own formats had no facts behind them, so the day fell back
+/// to another list ("Add a real story to unlock story posts").
+@JsonKey(fromJson: _boolOrFalse) bool get formatFellBack;/// The playbook review the server stored. Go through [review].
+@JsonKey(name: 'review', fromJson: _mapOrNull, toJson: _passThrough) Map<String, dynamic>? get rawReview;/// The text a quote or text card prints.
+@JsonKey(fromJson: _stringOrNull) String? get cardText;/// `{ path, uploadedAt }` in the PRIVATE bucket — a path, never a URL.
+@JsonKey(name: 'referencePhoto', fromJson: _mapOrNull, toJson: _passThrough) Map<String, dynamic>? get rawReferencePhoto;/// The week's news headlines, on the news day only. Go through [news].
+@JsonKey(name: 'news', fromJson: _mapOrNull, toJson: _passThrough) Map<String, dynamic>? get rawNews;
 /// Create a copy of PlanSlot
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
@@ -58,16 +69,16 @@ $PlanSlotCopyWith<PlanSlot> get copyWith => _$PlanSlotCopyWithImpl<PlanSlot>(thi
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is PlanSlot&&(identical(other.day, day) || other.day == day)&&(identical(other.type, type) || other.type == type)&&(identical(other.format, format) || other.format == format)&&(identical(other.previewImageUrl, previewImageUrl) || other.previewImageUrl == previewImageUrl)&&(identical(other.fullImageUrl, fullImageUrl) || other.fullImageUrl == fullImageUrl)&&(identical(other.angle, angle) || other.angle == angle)&&(identical(other.title, title) || other.title == title)&&(identical(other.titleEditedByUser, titleEditedByUser) || other.titleEditedByUser == titleEditedByUser)&&const DeepCollectionEquality().equals(other.hashtags, hashtags)&&(identical(other.status, status) || other.status == status)&&(identical(other.postId, postId) || other.postId == postId)&&(identical(other.rawKind, rawKind) || other.rawKind == rawKind)&&(identical(other.restDay, restDay) || other.restDay == restDay)&&(identical(other.artifact, artifact) || other.artifact == artifact)&&(identical(other.posterTag, posterTag) || other.posterTag == posterTag));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is PlanSlot&&(identical(other.day, day) || other.day == day)&&(identical(other.type, type) || other.type == type)&&(identical(other.format, format) || other.format == format)&&(identical(other.previewImageUrl, previewImageUrl) || other.previewImageUrl == previewImageUrl)&&(identical(other.fullImageUrl, fullImageUrl) || other.fullImageUrl == fullImageUrl)&&(identical(other.angle, angle) || other.angle == angle)&&(identical(other.title, title) || other.title == title)&&(identical(other.titleEditedByUser, titleEditedByUser) || other.titleEditedByUser == titleEditedByUser)&&const DeepCollectionEquality().equals(other.hashtags, hashtags)&&(identical(other.status, status) || other.status == status)&&(identical(other.postId, postId) || other.postId == postId)&&(identical(other.rawKind, rawKind) || other.rawKind == rawKind)&&(identical(other.restDay, restDay) || other.restDay == restDay)&&(identical(other.artifact, artifact) || other.artifact == artifact)&&(identical(other.posterTag, posterTag) || other.posterTag == posterTag)&&(identical(other.rawRole, rawRole) || other.rawRole == rawRole)&&(identical(other.formatId, formatId) || other.formatId == formatId)&&(identical(other.rawImageKind, rawImageKind) || other.rawImageKind == rawImageKind)&&(identical(other.formatFellBack, formatFellBack) || other.formatFellBack == formatFellBack)&&const DeepCollectionEquality().equals(other.rawReview, rawReview)&&(identical(other.cardText, cardText) || other.cardText == cardText)&&const DeepCollectionEquality().equals(other.rawReferencePhoto, rawReferencePhoto)&&const DeepCollectionEquality().equals(other.rawNews, rawNews));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
-int get hashCode => Object.hash(runtimeType,day,type,format,previewImageUrl,fullImageUrl,angle,title,titleEditedByUser,const DeepCollectionEquality().hash(hashtags),status,postId,rawKind,restDay,artifact,posterTag);
+int get hashCode => Object.hashAll([runtimeType,day,type,format,previewImageUrl,fullImageUrl,angle,title,titleEditedByUser,const DeepCollectionEquality().hash(hashtags),status,postId,rawKind,restDay,artifact,posterTag,rawRole,formatId,rawImageKind,formatFellBack,const DeepCollectionEquality().hash(rawReview),cardText,const DeepCollectionEquality().hash(rawReferencePhoto),const DeepCollectionEquality().hash(rawNews)]);
 
 @override
 String toString() {
-  return 'PlanSlot(day: $day, type: $type, format: $format, previewImageUrl: $previewImageUrl, fullImageUrl: $fullImageUrl, angle: $angle, title: $title, titleEditedByUser: $titleEditedByUser, hashtags: $hashtags, status: $status, postId: $postId, rawKind: $rawKind, restDay: $restDay, artifact: $artifact, posterTag: $posterTag)';
+  return 'PlanSlot(day: $day, type: $type, format: $format, previewImageUrl: $previewImageUrl, fullImageUrl: $fullImageUrl, angle: $angle, title: $title, titleEditedByUser: $titleEditedByUser, hashtags: $hashtags, status: $status, postId: $postId, rawKind: $rawKind, restDay: $restDay, artifact: $artifact, posterTag: $posterTag, rawRole: $rawRole, formatId: $formatId, rawImageKind: $rawImageKind, formatFellBack: $formatFellBack, rawReview: $rawReview, cardText: $cardText, rawReferencePhoto: $rawReferencePhoto, rawNews: $rawNews)';
 }
 
 
@@ -78,7 +89,7 @@ abstract mixin class $PlanSlotCopyWith<$Res>  {
   factory $PlanSlotCopyWith(PlanSlot value, $Res Function(PlanSlot) _then) = _$PlanSlotCopyWithImpl;
 @useResult
 $Res call({
- String day, String type, String format, String? previewImageUrl, String? fullImageUrl, String angle, String title, bool titleEditedByUser, List<String> hashtags,@JsonKey(unknownEnumValue: SlotStatus.planned) SlotStatus status, String? postId,@JsonKey(name: 'kind') String? rawKind, bool restDay, String? artifact, String? posterTag
+ String day, String type, String format, String? previewImageUrl, String? fullImageUrl, String angle, String title, bool titleEditedByUser, List<String> hashtags,@JsonKey(unknownEnumValue: SlotStatus.planned) SlotStatus status, String? postId,@JsonKey(name: 'kind') String? rawKind, bool restDay, String? artifact, String? posterTag,@JsonKey(name: 'role', fromJson: _stringOrNull) String? rawRole,@JsonKey(fromJson: _stringOrNull) String? formatId,@JsonKey(name: 'imageKind', fromJson: _stringOrNull) String? rawImageKind,@JsonKey(fromJson: _boolOrFalse) bool formatFellBack,@JsonKey(name: 'review', fromJson: _mapOrNull, toJson: _passThrough) Map<String, dynamic>? rawReview,@JsonKey(fromJson: _stringOrNull) String? cardText,@JsonKey(name: 'referencePhoto', fromJson: _mapOrNull, toJson: _passThrough) Map<String, dynamic>? rawReferencePhoto,@JsonKey(name: 'news', fromJson: _mapOrNull, toJson: _passThrough) Map<String, dynamic>? rawNews
 });
 
 
@@ -95,7 +106,7 @@ class _$PlanSlotCopyWithImpl<$Res>
 
 /// Create a copy of PlanSlot
 /// with the given fields replaced by the non-null parameter values.
-@pragma('vm:prefer-inline') @override $Res call({Object? day = null,Object? type = null,Object? format = null,Object? previewImageUrl = freezed,Object? fullImageUrl = freezed,Object? angle = null,Object? title = null,Object? titleEditedByUser = null,Object? hashtags = null,Object? status = null,Object? postId = freezed,Object? rawKind = freezed,Object? restDay = null,Object? artifact = freezed,Object? posterTag = freezed,}) {
+@pragma('vm:prefer-inline') @override $Res call({Object? day = null,Object? type = null,Object? format = null,Object? previewImageUrl = freezed,Object? fullImageUrl = freezed,Object? angle = null,Object? title = null,Object? titleEditedByUser = null,Object? hashtags = null,Object? status = null,Object? postId = freezed,Object? rawKind = freezed,Object? restDay = null,Object? artifact = freezed,Object? posterTag = freezed,Object? rawRole = freezed,Object? formatId = freezed,Object? rawImageKind = freezed,Object? formatFellBack = null,Object? rawReview = freezed,Object? cardText = freezed,Object? rawReferencePhoto = freezed,Object? rawNews = freezed,}) {
   return _then(_self.copyWith(
 day: null == day ? _self.day : day // ignore: cast_nullable_to_non_nullable
 as String,type: null == type ? _self.type : type // ignore: cast_nullable_to_non_nullable
@@ -112,7 +123,15 @@ as String?,rawKind: freezed == rawKind ? _self.rawKind : rawKind // ignore: cast
 as String?,restDay: null == restDay ? _self.restDay : restDay // ignore: cast_nullable_to_non_nullable
 as bool,artifact: freezed == artifact ? _self.artifact : artifact // ignore: cast_nullable_to_non_nullable
 as String?,posterTag: freezed == posterTag ? _self.posterTag : posterTag // ignore: cast_nullable_to_non_nullable
-as String?,
+as String?,rawRole: freezed == rawRole ? _self.rawRole : rawRole // ignore: cast_nullable_to_non_nullable
+as String?,formatId: freezed == formatId ? _self.formatId : formatId // ignore: cast_nullable_to_non_nullable
+as String?,rawImageKind: freezed == rawImageKind ? _self.rawImageKind : rawImageKind // ignore: cast_nullable_to_non_nullable
+as String?,formatFellBack: null == formatFellBack ? _self.formatFellBack : formatFellBack // ignore: cast_nullable_to_non_nullable
+as bool,rawReview: freezed == rawReview ? _self.rawReview : rawReview // ignore: cast_nullable_to_non_nullable
+as Map<String, dynamic>?,cardText: freezed == cardText ? _self.cardText : cardText // ignore: cast_nullable_to_non_nullable
+as String?,rawReferencePhoto: freezed == rawReferencePhoto ? _self.rawReferencePhoto : rawReferencePhoto // ignore: cast_nullable_to_non_nullable
+as Map<String, dynamic>?,rawNews: freezed == rawNews ? _self.rawNews : rawNews // ignore: cast_nullable_to_non_nullable
+as Map<String, dynamic>?,
   ));
 }
 
@@ -197,10 +216,10 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String day,  String type,  String format,  String? previewImageUrl,  String? fullImageUrl,  String angle,  String title,  bool titleEditedByUser,  List<String> hashtags, @JsonKey(unknownEnumValue: SlotStatus.planned)  SlotStatus status,  String? postId, @JsonKey(name: 'kind')  String? rawKind,  bool restDay,  String? artifact,  String? posterTag)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String day,  String type,  String format,  String? previewImageUrl,  String? fullImageUrl,  String angle,  String title,  bool titleEditedByUser,  List<String> hashtags, @JsonKey(unknownEnumValue: SlotStatus.planned)  SlotStatus status,  String? postId, @JsonKey(name: 'kind')  String? rawKind,  bool restDay,  String? artifact,  String? posterTag, @JsonKey(name: 'role', fromJson: _stringOrNull)  String? rawRole, @JsonKey(fromJson: _stringOrNull)  String? formatId, @JsonKey(name: 'imageKind', fromJson: _stringOrNull)  String? rawImageKind, @JsonKey(fromJson: _boolOrFalse)  bool formatFellBack, @JsonKey(name: 'review', fromJson: _mapOrNull, toJson: _passThrough)  Map<String, dynamic>? rawReview, @JsonKey(fromJson: _stringOrNull)  String? cardText, @JsonKey(name: 'referencePhoto', fromJson: _mapOrNull, toJson: _passThrough)  Map<String, dynamic>? rawReferencePhoto, @JsonKey(name: 'news', fromJson: _mapOrNull, toJson: _passThrough)  Map<String, dynamic>? rawNews)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _PlanSlot() when $default != null:
-return $default(_that.day,_that.type,_that.format,_that.previewImageUrl,_that.fullImageUrl,_that.angle,_that.title,_that.titleEditedByUser,_that.hashtags,_that.status,_that.postId,_that.rawKind,_that.restDay,_that.artifact,_that.posterTag);case _:
+return $default(_that.day,_that.type,_that.format,_that.previewImageUrl,_that.fullImageUrl,_that.angle,_that.title,_that.titleEditedByUser,_that.hashtags,_that.status,_that.postId,_that.rawKind,_that.restDay,_that.artifact,_that.posterTag,_that.rawRole,_that.formatId,_that.rawImageKind,_that.formatFellBack,_that.rawReview,_that.cardText,_that.rawReferencePhoto,_that.rawNews);case _:
   return orElse();
 
 }
@@ -218,10 +237,10 @@ return $default(_that.day,_that.type,_that.format,_that.previewImageUrl,_that.fu
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String day,  String type,  String format,  String? previewImageUrl,  String? fullImageUrl,  String angle,  String title,  bool titleEditedByUser,  List<String> hashtags, @JsonKey(unknownEnumValue: SlotStatus.planned)  SlotStatus status,  String? postId, @JsonKey(name: 'kind')  String? rawKind,  bool restDay,  String? artifact,  String? posterTag)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String day,  String type,  String format,  String? previewImageUrl,  String? fullImageUrl,  String angle,  String title,  bool titleEditedByUser,  List<String> hashtags, @JsonKey(unknownEnumValue: SlotStatus.planned)  SlotStatus status,  String? postId, @JsonKey(name: 'kind')  String? rawKind,  bool restDay,  String? artifact,  String? posterTag, @JsonKey(name: 'role', fromJson: _stringOrNull)  String? rawRole, @JsonKey(fromJson: _stringOrNull)  String? formatId, @JsonKey(name: 'imageKind', fromJson: _stringOrNull)  String? rawImageKind, @JsonKey(fromJson: _boolOrFalse)  bool formatFellBack, @JsonKey(name: 'review', fromJson: _mapOrNull, toJson: _passThrough)  Map<String, dynamic>? rawReview, @JsonKey(fromJson: _stringOrNull)  String? cardText, @JsonKey(name: 'referencePhoto', fromJson: _mapOrNull, toJson: _passThrough)  Map<String, dynamic>? rawReferencePhoto, @JsonKey(name: 'news', fromJson: _mapOrNull, toJson: _passThrough)  Map<String, dynamic>? rawNews)  $default,) {final _that = this;
 switch (_that) {
 case _PlanSlot():
-return $default(_that.day,_that.type,_that.format,_that.previewImageUrl,_that.fullImageUrl,_that.angle,_that.title,_that.titleEditedByUser,_that.hashtags,_that.status,_that.postId,_that.rawKind,_that.restDay,_that.artifact,_that.posterTag);case _:
+return $default(_that.day,_that.type,_that.format,_that.previewImageUrl,_that.fullImageUrl,_that.angle,_that.title,_that.titleEditedByUser,_that.hashtags,_that.status,_that.postId,_that.rawKind,_that.restDay,_that.artifact,_that.posterTag,_that.rawRole,_that.formatId,_that.rawImageKind,_that.formatFellBack,_that.rawReview,_that.cardText,_that.rawReferencePhoto,_that.rawNews);case _:
   throw StateError('Unexpected subclass');
 
 }
@@ -238,10 +257,10 @@ return $default(_that.day,_that.type,_that.format,_that.previewImageUrl,_that.fu
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String day,  String type,  String format,  String? previewImageUrl,  String? fullImageUrl,  String angle,  String title,  bool titleEditedByUser,  List<String> hashtags, @JsonKey(unknownEnumValue: SlotStatus.planned)  SlotStatus status,  String? postId, @JsonKey(name: 'kind')  String? rawKind,  bool restDay,  String? artifact,  String? posterTag)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String day,  String type,  String format,  String? previewImageUrl,  String? fullImageUrl,  String angle,  String title,  bool titleEditedByUser,  List<String> hashtags, @JsonKey(unknownEnumValue: SlotStatus.planned)  SlotStatus status,  String? postId, @JsonKey(name: 'kind')  String? rawKind,  bool restDay,  String? artifact,  String? posterTag, @JsonKey(name: 'role', fromJson: _stringOrNull)  String? rawRole, @JsonKey(fromJson: _stringOrNull)  String? formatId, @JsonKey(name: 'imageKind', fromJson: _stringOrNull)  String? rawImageKind, @JsonKey(fromJson: _boolOrFalse)  bool formatFellBack, @JsonKey(name: 'review', fromJson: _mapOrNull, toJson: _passThrough)  Map<String, dynamic>? rawReview, @JsonKey(fromJson: _stringOrNull)  String? cardText, @JsonKey(name: 'referencePhoto', fromJson: _mapOrNull, toJson: _passThrough)  Map<String, dynamic>? rawReferencePhoto, @JsonKey(name: 'news', fromJson: _mapOrNull, toJson: _passThrough)  Map<String, dynamic>? rawNews)?  $default,) {final _that = this;
 switch (_that) {
 case _PlanSlot() when $default != null:
-return $default(_that.day,_that.type,_that.format,_that.previewImageUrl,_that.fullImageUrl,_that.angle,_that.title,_that.titleEditedByUser,_that.hashtags,_that.status,_that.postId,_that.rawKind,_that.restDay,_that.artifact,_that.posterTag);case _:
+return $default(_that.day,_that.type,_that.format,_that.previewImageUrl,_that.fullImageUrl,_that.angle,_that.title,_that.titleEditedByUser,_that.hashtags,_that.status,_that.postId,_that.rawKind,_that.restDay,_that.artifact,_that.posterTag,_that.rawRole,_that.formatId,_that.rawImageKind,_that.formatFellBack,_that.rawReview,_that.cardText,_that.rawReferencePhoto,_that.rawNews);case _:
   return null;
 
 }
@@ -253,7 +272,7 @@ return $default(_that.day,_that.type,_that.format,_that.previewImageUrl,_that.fu
 @JsonSerializable()
 
 class _PlanSlot extends PlanSlot {
-  const _PlanSlot({required this.day, this.type = 'general', this.format = 'text', this.previewImageUrl, this.fullImageUrl, this.angle = '', this.title = '', this.titleEditedByUser = false, final  List<String> hashtags = const <String>[], @JsonKey(unknownEnumValue: SlotStatus.planned) this.status = SlotStatus.planned, this.postId, @JsonKey(name: 'kind') this.rawKind, this.restDay = false, this.artifact, this.posterTag}): _hashtags = hashtags,super._();
+  const _PlanSlot({required this.day, this.type = 'general', this.format = 'text', this.previewImageUrl, this.fullImageUrl, this.angle = '', this.title = '', this.titleEditedByUser = false, final  List<String> hashtags = const <String>[], @JsonKey(unknownEnumValue: SlotStatus.planned) this.status = SlotStatus.planned, this.postId, @JsonKey(name: 'kind') this.rawKind, this.restDay = false, this.artifact, this.posterTag, @JsonKey(name: 'role', fromJson: _stringOrNull) this.rawRole, @JsonKey(fromJson: _stringOrNull) this.formatId, @JsonKey(name: 'imageKind', fromJson: _stringOrNull) this.rawImageKind, @JsonKey(fromJson: _boolOrFalse) this.formatFellBack = false, @JsonKey(name: 'review', fromJson: _mapOrNull, toJson: _passThrough) final  Map<String, dynamic>? rawReview, @JsonKey(fromJson: _stringOrNull) this.cardText, @JsonKey(name: 'referencePhoto', fromJson: _mapOrNull, toJson: _passThrough) final  Map<String, dynamic>? rawReferencePhoto, @JsonKey(name: 'news', fromJson: _mapOrNull, toJson: _passThrough) final  Map<String, dynamic>? rawNews}): _hashtags = hashtags,_rawReview = rawReview,_rawReferencePhoto = rawReferencePhoto,_rawNews = rawNews,super._();
   factory _PlanSlot.fromJson(Map<String, dynamic> json) => _$PlanSlotFromJson(json);
 
 /// 'Monday' … 'Sunday'.
@@ -307,6 +326,52 @@ class _PlanSlot extends PlanSlot {
 /// Which poster style this day gets — 'comparison', 'infographic', …
 /// A property of the WEEK, not a coin flip per post.
 @override final  String? posterTag;
+/// The role the day asked for (`teach | story | opinion`). Go through
+/// [role], which falls back to the format's own.
+@override@JsonKey(name: 'role', fromJson: _stringOrNull) final  String? rawRole;
+/// The playbook format (`numbered_steps`, `timeline`, …). Null on a
+/// legacy day — never [format], which shipped builds print raw.
+@override@JsonKey(fromJson: _stringOrNull) final  String? formatId;
+/// How the image is made. Go through [imageKind].
+@override@JsonKey(name: 'imageKind', fromJson: _stringOrNull) final  String? rawImageKind;
+/// The role's own formats had no facts behind them, so the day fell back
+/// to another list ("Add a real story to unlock story posts").
+@override@JsonKey(fromJson: _boolOrFalse) final  bool formatFellBack;
+/// The playbook review the server stored. Go through [review].
+ final  Map<String, dynamic>? _rawReview;
+/// The playbook review the server stored. Go through [review].
+@override@JsonKey(name: 'review', fromJson: _mapOrNull, toJson: _passThrough) Map<String, dynamic>? get rawReview {
+  final value = _rawReview;
+  if (value == null) return null;
+  if (_rawReview is EqualUnmodifiableMapView) return _rawReview;
+  // ignore: implicit_dynamic_type
+  return EqualUnmodifiableMapView(value);
+}
+
+/// The text a quote or text card prints.
+@override@JsonKey(fromJson: _stringOrNull) final  String? cardText;
+/// `{ path, uploadedAt }` in the PRIVATE bucket — a path, never a URL.
+ final  Map<String, dynamic>? _rawReferencePhoto;
+/// `{ path, uploadedAt }` in the PRIVATE bucket — a path, never a URL.
+@override@JsonKey(name: 'referencePhoto', fromJson: _mapOrNull, toJson: _passThrough) Map<String, dynamic>? get rawReferencePhoto {
+  final value = _rawReferencePhoto;
+  if (value == null) return null;
+  if (_rawReferencePhoto is EqualUnmodifiableMapView) return _rawReferencePhoto;
+  // ignore: implicit_dynamic_type
+  return EqualUnmodifiableMapView(value);
+}
+
+/// The week's news headlines, on the news day only. Go through [news].
+ final  Map<String, dynamic>? _rawNews;
+/// The week's news headlines, on the news day only. Go through [news].
+@override@JsonKey(name: 'news', fromJson: _mapOrNull, toJson: _passThrough) Map<String, dynamic>? get rawNews {
+  final value = _rawNews;
+  if (value == null) return null;
+  if (_rawNews is EqualUnmodifiableMapView) return _rawNews;
+  // ignore: implicit_dynamic_type
+  return EqualUnmodifiableMapView(value);
+}
+
 
 /// Create a copy of PlanSlot
 /// with the given fields replaced by the non-null parameter values.
@@ -321,16 +386,16 @@ Map<String, dynamic> toJson() {
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is _PlanSlot&&(identical(other.day, day) || other.day == day)&&(identical(other.type, type) || other.type == type)&&(identical(other.format, format) || other.format == format)&&(identical(other.previewImageUrl, previewImageUrl) || other.previewImageUrl == previewImageUrl)&&(identical(other.fullImageUrl, fullImageUrl) || other.fullImageUrl == fullImageUrl)&&(identical(other.angle, angle) || other.angle == angle)&&(identical(other.title, title) || other.title == title)&&(identical(other.titleEditedByUser, titleEditedByUser) || other.titleEditedByUser == titleEditedByUser)&&const DeepCollectionEquality().equals(other._hashtags, _hashtags)&&(identical(other.status, status) || other.status == status)&&(identical(other.postId, postId) || other.postId == postId)&&(identical(other.rawKind, rawKind) || other.rawKind == rawKind)&&(identical(other.restDay, restDay) || other.restDay == restDay)&&(identical(other.artifact, artifact) || other.artifact == artifact)&&(identical(other.posterTag, posterTag) || other.posterTag == posterTag));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is _PlanSlot&&(identical(other.day, day) || other.day == day)&&(identical(other.type, type) || other.type == type)&&(identical(other.format, format) || other.format == format)&&(identical(other.previewImageUrl, previewImageUrl) || other.previewImageUrl == previewImageUrl)&&(identical(other.fullImageUrl, fullImageUrl) || other.fullImageUrl == fullImageUrl)&&(identical(other.angle, angle) || other.angle == angle)&&(identical(other.title, title) || other.title == title)&&(identical(other.titleEditedByUser, titleEditedByUser) || other.titleEditedByUser == titleEditedByUser)&&const DeepCollectionEquality().equals(other._hashtags, _hashtags)&&(identical(other.status, status) || other.status == status)&&(identical(other.postId, postId) || other.postId == postId)&&(identical(other.rawKind, rawKind) || other.rawKind == rawKind)&&(identical(other.restDay, restDay) || other.restDay == restDay)&&(identical(other.artifact, artifact) || other.artifact == artifact)&&(identical(other.posterTag, posterTag) || other.posterTag == posterTag)&&(identical(other.rawRole, rawRole) || other.rawRole == rawRole)&&(identical(other.formatId, formatId) || other.formatId == formatId)&&(identical(other.rawImageKind, rawImageKind) || other.rawImageKind == rawImageKind)&&(identical(other.formatFellBack, formatFellBack) || other.formatFellBack == formatFellBack)&&const DeepCollectionEquality().equals(other._rawReview, _rawReview)&&(identical(other.cardText, cardText) || other.cardText == cardText)&&const DeepCollectionEquality().equals(other._rawReferencePhoto, _rawReferencePhoto)&&const DeepCollectionEquality().equals(other._rawNews, _rawNews));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
-int get hashCode => Object.hash(runtimeType,day,type,format,previewImageUrl,fullImageUrl,angle,title,titleEditedByUser,const DeepCollectionEquality().hash(_hashtags),status,postId,rawKind,restDay,artifact,posterTag);
+int get hashCode => Object.hashAll([runtimeType,day,type,format,previewImageUrl,fullImageUrl,angle,title,titleEditedByUser,const DeepCollectionEquality().hash(_hashtags),status,postId,rawKind,restDay,artifact,posterTag,rawRole,formatId,rawImageKind,formatFellBack,const DeepCollectionEquality().hash(_rawReview),cardText,const DeepCollectionEquality().hash(_rawReferencePhoto),const DeepCollectionEquality().hash(_rawNews)]);
 
 @override
 String toString() {
-  return 'PlanSlot(day: $day, type: $type, format: $format, previewImageUrl: $previewImageUrl, fullImageUrl: $fullImageUrl, angle: $angle, title: $title, titleEditedByUser: $titleEditedByUser, hashtags: $hashtags, status: $status, postId: $postId, rawKind: $rawKind, restDay: $restDay, artifact: $artifact, posterTag: $posterTag)';
+  return 'PlanSlot(day: $day, type: $type, format: $format, previewImageUrl: $previewImageUrl, fullImageUrl: $fullImageUrl, angle: $angle, title: $title, titleEditedByUser: $titleEditedByUser, hashtags: $hashtags, status: $status, postId: $postId, rawKind: $rawKind, restDay: $restDay, artifact: $artifact, posterTag: $posterTag, rawRole: $rawRole, formatId: $formatId, rawImageKind: $rawImageKind, formatFellBack: $formatFellBack, rawReview: $rawReview, cardText: $cardText, rawReferencePhoto: $rawReferencePhoto, rawNews: $rawNews)';
 }
 
 
@@ -341,7 +406,7 @@ abstract mixin class _$PlanSlotCopyWith<$Res> implements $PlanSlotCopyWith<$Res>
   factory _$PlanSlotCopyWith(_PlanSlot value, $Res Function(_PlanSlot) _then) = __$PlanSlotCopyWithImpl;
 @override @useResult
 $Res call({
- String day, String type, String format, String? previewImageUrl, String? fullImageUrl, String angle, String title, bool titleEditedByUser, List<String> hashtags,@JsonKey(unknownEnumValue: SlotStatus.planned) SlotStatus status, String? postId,@JsonKey(name: 'kind') String? rawKind, bool restDay, String? artifact, String? posterTag
+ String day, String type, String format, String? previewImageUrl, String? fullImageUrl, String angle, String title, bool titleEditedByUser, List<String> hashtags,@JsonKey(unknownEnumValue: SlotStatus.planned) SlotStatus status, String? postId,@JsonKey(name: 'kind') String? rawKind, bool restDay, String? artifact, String? posterTag,@JsonKey(name: 'role', fromJson: _stringOrNull) String? rawRole,@JsonKey(fromJson: _stringOrNull) String? formatId,@JsonKey(name: 'imageKind', fromJson: _stringOrNull) String? rawImageKind,@JsonKey(fromJson: _boolOrFalse) bool formatFellBack,@JsonKey(name: 'review', fromJson: _mapOrNull, toJson: _passThrough) Map<String, dynamic>? rawReview,@JsonKey(fromJson: _stringOrNull) String? cardText,@JsonKey(name: 'referencePhoto', fromJson: _mapOrNull, toJson: _passThrough) Map<String, dynamic>? rawReferencePhoto,@JsonKey(name: 'news', fromJson: _mapOrNull, toJson: _passThrough) Map<String, dynamic>? rawNews
 });
 
 
@@ -358,7 +423,7 @@ class __$PlanSlotCopyWithImpl<$Res>
 
 /// Create a copy of PlanSlot
 /// with the given fields replaced by the non-null parameter values.
-@override @pragma('vm:prefer-inline') $Res call({Object? day = null,Object? type = null,Object? format = null,Object? previewImageUrl = freezed,Object? fullImageUrl = freezed,Object? angle = null,Object? title = null,Object? titleEditedByUser = null,Object? hashtags = null,Object? status = null,Object? postId = freezed,Object? rawKind = freezed,Object? restDay = null,Object? artifact = freezed,Object? posterTag = freezed,}) {
+@override @pragma('vm:prefer-inline') $Res call({Object? day = null,Object? type = null,Object? format = null,Object? previewImageUrl = freezed,Object? fullImageUrl = freezed,Object? angle = null,Object? title = null,Object? titleEditedByUser = null,Object? hashtags = null,Object? status = null,Object? postId = freezed,Object? rawKind = freezed,Object? restDay = null,Object? artifact = freezed,Object? posterTag = freezed,Object? rawRole = freezed,Object? formatId = freezed,Object? rawImageKind = freezed,Object? formatFellBack = null,Object? rawReview = freezed,Object? cardText = freezed,Object? rawReferencePhoto = freezed,Object? rawNews = freezed,}) {
   return _then(_PlanSlot(
 day: null == day ? _self.day : day // ignore: cast_nullable_to_non_nullable
 as String,type: null == type ? _self.type : type // ignore: cast_nullable_to_non_nullable
@@ -375,7 +440,15 @@ as String?,rawKind: freezed == rawKind ? _self.rawKind : rawKind // ignore: cast
 as String?,restDay: null == restDay ? _self.restDay : restDay // ignore: cast_nullable_to_non_nullable
 as bool,artifact: freezed == artifact ? _self.artifact : artifact // ignore: cast_nullable_to_non_nullable
 as String?,posterTag: freezed == posterTag ? _self.posterTag : posterTag // ignore: cast_nullable_to_non_nullable
-as String?,
+as String?,rawRole: freezed == rawRole ? _self.rawRole : rawRole // ignore: cast_nullable_to_non_nullable
+as String?,formatId: freezed == formatId ? _self.formatId : formatId // ignore: cast_nullable_to_non_nullable
+as String?,rawImageKind: freezed == rawImageKind ? _self.rawImageKind : rawImageKind // ignore: cast_nullable_to_non_nullable
+as String?,formatFellBack: null == formatFellBack ? _self.formatFellBack : formatFellBack // ignore: cast_nullable_to_non_nullable
+as bool,rawReview: freezed == rawReview ? _self._rawReview : rawReview // ignore: cast_nullable_to_non_nullable
+as Map<String, dynamic>?,cardText: freezed == cardText ? _self.cardText : cardText // ignore: cast_nullable_to_non_nullable
+as String?,rawReferencePhoto: freezed == rawReferencePhoto ? _self._rawReferencePhoto : rawReferencePhoto // ignore: cast_nullable_to_non_nullable
+as Map<String, dynamic>?,rawNews: freezed == rawNews ? _self._rawNews : rawNews // ignore: cast_nullable_to_non_nullable
+as Map<String, dynamic>?,
   ));
 }
 

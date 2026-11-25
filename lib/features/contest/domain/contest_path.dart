@@ -53,10 +53,22 @@ enum PathNodeKind {
     return PathNodeKind.unknown;
   }
 
-  /// A post-link claim: the planner's article or one of its videos, claimed
-  /// as a level of the day it goes out.
+  /// A post-link claim: the planner's article, claimed as a level of the day
+  /// it goes out — or a video claim sent before the video levels were
+  /// retired (25 Nov 2026), still shown until it is decided.
   bool get isClaim =>
       this == PathNodeKind.article || this == PathNodeKind.video;
+}
+
+/// Which step of a planner post day a Sunday set-up level is. The same
+/// [unknown] guard as [PathNodeKind]: a step this build cannot name opens
+/// nothing of its own.
+enum SetupStep {
+  post,
+  image,
+  unknown;
+
+  String get wire => name;
 }
 
 /// Where a level stands. Mirrors `PathNodeState`.
@@ -78,7 +90,9 @@ enum PathNodeState {
 
   /// A past day's level left undone. It does not come back — and a late
   /// joiner's days before they joined read as missed too, which is the
-  /// server's choice and is not a failure of theirs.
+  /// server's choice and is not a failure of theirs. On a Sunday level
+  /// (`openAllWeek`) it means its post day has gone undone: "Day passed",
+  /// drawn disabled with its reason.
   missed,
 
   /// Proof sent, waiting for an admin.
@@ -175,6 +189,30 @@ abstract class FollowProgress with _$FollowProgress {
       _$FollowProgressFromJson(json);
 }
 
+/// A Sunday set-up level's planner day and step — the web's
+/// `PathNode['setup']`: "Write Monday's post" is `{dayIndex: 0, step: post}`.
+/// Absent on "Plan this week" and on every other kind.
+@freezed
+abstract class NodeSetup with _$NodeSetup {
+  const factory NodeSetup({
+    /// The planner day: 0 = Monday … 6 = Sunday.
+    @Default(0) int dayIndex,
+    @JsonKey(unknownEnumValue: SetupStep.unknown)
+    @Default(SetupStep.unknown)
+    SetupStep step,
+
+    /// What image the post gets (`photo`, `ai_poster`, …), image steps only.
+    /// Kept as the server's word: nothing here dispatches on it.
+    String? imageKind,
+
+    /// For a photo, what photo to give. The node's `detail` says it in words.
+    String? photoGuide,
+  }) = _NodeSetup;
+
+  factory NodeSetup.fromJson(Map<String, dynamic> json) =>
+      _$NodeSetupFromJson(json);
+}
+
 /// The piece a claim node stands for, as the claim endpoint takes it.
 @freezed
 abstract class NodeClaim with _$NodeClaim {
@@ -256,12 +294,31 @@ abstract class PathNode with _$PathNode {
     /// [PathNodeKind.unknown] kind — a level this build cannot open is not
     /// one to pass over either.
     @JsonKey(readValue: _canSkipUnlessUnknown) @Default(false) bool canSkip,
+
+    /// Sunday's planner set-up levels only (kind plan_week): which day and
+    /// step. Absent on "Plan this week".
+    NodeSetup? setup,
+
+    /// One of the SUNDAY LEVELS (25 Nov 2026; sent because this build asks
+    /// with `?setupLevels=1`): this planner week's set-up levels, drawn in
+    /// the week's Sunday on every day of the week, in orange. Outside the
+    /// one-at-a-time order — never locked behind another level, never
+    /// holding one back, never [canSkip], and START only once nothing else
+    /// today is open. State `missed` means its post day has gone: drawn
+    /// disabled with its "Day passed" reason. False for an unknown kind.
+    @JsonKey(readValue: _openAllWeekUnlessUnknown)
+    @Default(false)
+    bool openAllWeek,
   }) = _PathNode;
 
   factory PathNode.fromJson(Map<String, dynamic> json) =>
       _$PathNodeFromJson(json);
 
   bool get isLesson => kind == PathNodeKind.lesson;
+
+  /// A planner set-up step ("Write Monday's post"), opened in the Planner
+  /// rather than on the plan page.
+  bool get isSetupStep => kind == PathNodeKind.planWeek && setup != null;
 }
 
 bool _knownKind(Map<dynamic, dynamic> json) =>
@@ -274,6 +331,9 @@ Object? _hrefUnlessUnknown(Map<dynamic, dynamic> json, String key) =>
     _knownKind(json) ? json[key] : null;
 
 Object? _canSkipUnlessUnknown(Map<dynamic, dynamic> json, String key) =>
+    _knownKind(json) && json[key] == true;
+
+Object? _openAllWeekUnlessUnknown(Map<dynamic, dynamic> json, String key) =>
     _knownKind(json) && json[key] == true;
 
 /// One day of the shown week. Mirrors `PathDay`.
@@ -422,8 +482,9 @@ abstract class ContestPath with _$ContestPath {
     /// clipped to the contest. Empty unless [status] is running.
     @Default(<PathDay>[]) List<PathDay> days,
 
-    /// This planner week's article and videos, plus last week's still
-    /// unpaid ones. The week card lists claims from here, not from nodes.
+    /// This planner week's article (and a video claim already sent before
+    /// the video levels were retired), plus last week's still unpaid ones.
+    /// The week card lists claims from here, not from nodes.
     @Default(<PostClaim>[]) List<PostClaim> claims,
     FeedCommentsRule? feedComments,
     WeekReward? weekReward,
@@ -446,19 +507,24 @@ abstract class ContestPath with _$ContestPath {
   }
 
   /// Today's level of [kind] — the first, for a kind a day can hold twice.
+  ///
+  /// Only levels in today's one-at-a-time order: the open-all-week Sunday
+  /// levels (`openAllWeek`, kind plan_week too) are left out, as the web's
+  /// `todayNodes()` leaves them out of every lock and skip.
   PathNode? todayNode(PathNodeKind kind) {
     for (final PathNode n in today?.nodes ?? const <PathNode>[]) {
-      if (n.kind == kind) return n;
+      if (n.kind == kind && !n.openAllWeek) return n;
     }
     return null;
   }
 
   /// Today's level of [kind] — for a claim, the one for [occurrence] (a day
   /// can hold two pieces); otherwise the first of the kind. What a level's
-  /// own page reads its Skip off.
+  /// own page reads its Skip off, so the open-all-week Sunday levels, which
+  /// are never skipped, are left out.
   PathNode? todayNodeFor(PathNodeKind kind, {String? occurrence}) {
     for (final PathNode n in today?.nodes ?? const <PathNode>[]) {
-      if (n.kind != kind) continue;
+      if (n.kind != kind || n.openAllWeek) continue;
       if (occurrence != null && n.claim?.occurrence != occurrence) continue;
       return n;
     }

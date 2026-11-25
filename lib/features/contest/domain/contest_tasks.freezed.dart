@@ -2398,7 +2398,15 @@ mixin _$PlanWeekDay {
  int get index;/// "Wednesday".
  String get weekday;/// `YYYY-MM-DD`, the planner's own date for the slot, in the USER's
 /// timezone.
- String get dayKey;@JsonKey(fromJson: DayKind.parse, toJson: _dayKindWire) DayKind get kind; String? get title;/// The server's words: "Approved and scheduled", "Script ready", "Rest".
+ String get dayKey;/// The stored slot's kind once the week is planned — a week planned
+/// before 25 Nov 2026 keeps its own shape, so `video_script` only ever
+/// comes from such a legacy week — else the week shape's.
+@JsonKey(fromJson: DayKind.parse, toJson: _dayKindWire) DayKind get kind;/// A post day's role (`teach` / `story` / `opinion`), when its slot has
+/// one — weeks planned from 25 Nov 2026. The server's word, shown
+/// capitalised.
+ String? get role;/// A post day's format by name ("Numbered steps"), when its slot has one.
+ String? get formatName;/// A post day's post exists and carries its image.
+ bool get imageReady; String? get title;/// The server's words: "Approved and scheduled", "Script ready", "Rest".
  String get status;/// Ready for its day. Drives the tick.
  bool get ready;/// What to do with it, and when its link is asked for — written by the
 /// server, date included.
@@ -2415,16 +2423,16 @@ $PlanWeekDayCopyWith<PlanWeekDay> get copyWith => _$PlanWeekDayCopyWithImpl<Plan
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is PlanWeekDay&&(identical(other.index, index) || other.index == index)&&(identical(other.weekday, weekday) || other.weekday == weekday)&&(identical(other.dayKey, dayKey) || other.dayKey == dayKey)&&(identical(other.kind, kind) || other.kind == kind)&&(identical(other.title, title) || other.title == title)&&(identical(other.status, status) || other.status == status)&&(identical(other.ready, ready) || other.ready == ready)&&(identical(other.instruction, instruction) || other.instruction == instruction));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is PlanWeekDay&&(identical(other.index, index) || other.index == index)&&(identical(other.weekday, weekday) || other.weekday == weekday)&&(identical(other.dayKey, dayKey) || other.dayKey == dayKey)&&(identical(other.kind, kind) || other.kind == kind)&&(identical(other.role, role) || other.role == role)&&(identical(other.formatName, formatName) || other.formatName == formatName)&&(identical(other.imageReady, imageReady) || other.imageReady == imageReady)&&(identical(other.title, title) || other.title == title)&&(identical(other.status, status) || other.status == status)&&(identical(other.ready, ready) || other.ready == ready)&&(identical(other.instruction, instruction) || other.instruction == instruction));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
-int get hashCode => Object.hash(runtimeType,index,weekday,dayKey,kind,title,status,ready,instruction);
+int get hashCode => Object.hash(runtimeType,index,weekday,dayKey,kind,role,formatName,imageReady,title,status,ready,instruction);
 
 @override
 String toString() {
-  return 'PlanWeekDay(index: $index, weekday: $weekday, dayKey: $dayKey, kind: $kind, title: $title, status: $status, ready: $ready, instruction: $instruction)';
+  return 'PlanWeekDay(index: $index, weekday: $weekday, dayKey: $dayKey, kind: $kind, role: $role, formatName: $formatName, imageReady: $imageReady, title: $title, status: $status, ready: $ready, instruction: $instruction)';
 }
 
 
@@ -2435,7 +2443,7 @@ abstract mixin class $PlanWeekDayCopyWith<$Res>  {
   factory $PlanWeekDayCopyWith(PlanWeekDay value, $Res Function(PlanWeekDay) _then) = _$PlanWeekDayCopyWithImpl;
 @useResult
 $Res call({
- int index, String weekday, String dayKey,@JsonKey(fromJson: DayKind.parse, toJson: _dayKindWire) DayKind kind, String? title, String status, bool ready, String instruction
+ int index, String weekday, String dayKey,@JsonKey(fromJson: DayKind.parse, toJson: _dayKindWire) DayKind kind, String? role, String? formatName, bool imageReady, String? title, String status, bool ready, String instruction
 });
 
 
@@ -2452,13 +2460,16 @@ class _$PlanWeekDayCopyWithImpl<$Res>
 
 /// Create a copy of PlanWeekDay
 /// with the given fields replaced by the non-null parameter values.
-@pragma('vm:prefer-inline') @override $Res call({Object? index = null,Object? weekday = null,Object? dayKey = null,Object? kind = null,Object? title = freezed,Object? status = null,Object? ready = null,Object? instruction = null,}) {
+@pragma('vm:prefer-inline') @override $Res call({Object? index = null,Object? weekday = null,Object? dayKey = null,Object? kind = null,Object? role = freezed,Object? formatName = freezed,Object? imageReady = null,Object? title = freezed,Object? status = null,Object? ready = null,Object? instruction = null,}) {
   return _then(_self.copyWith(
 index: null == index ? _self.index : index // ignore: cast_nullable_to_non_nullable
 as int,weekday: null == weekday ? _self.weekday : weekday // ignore: cast_nullable_to_non_nullable
 as String,dayKey: null == dayKey ? _self.dayKey : dayKey // ignore: cast_nullable_to_non_nullable
 as String,kind: null == kind ? _self.kind : kind // ignore: cast_nullable_to_non_nullable
-as DayKind,title: freezed == title ? _self.title : title // ignore: cast_nullable_to_non_nullable
+as DayKind,role: freezed == role ? _self.role : role // ignore: cast_nullable_to_non_nullable
+as String?,formatName: freezed == formatName ? _self.formatName : formatName // ignore: cast_nullable_to_non_nullable
+as String?,imageReady: null == imageReady ? _self.imageReady : imageReady // ignore: cast_nullable_to_non_nullable
+as bool,title: freezed == title ? _self.title : title // ignore: cast_nullable_to_non_nullable
 as String?,status: null == status ? _self.status : status // ignore: cast_nullable_to_non_nullable
 as String,ready: null == ready ? _self.ready : ready // ignore: cast_nullable_to_non_nullable
 as bool,instruction: null == instruction ? _self.instruction : instruction // ignore: cast_nullable_to_non_nullable
@@ -2547,10 +2558,10 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( int index,  String weekday,  String dayKey, @JsonKey(fromJson: DayKind.parse, toJson: _dayKindWire)  DayKind kind,  String? title,  String status,  bool ready,  String instruction)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( int index,  String weekday,  String dayKey, @JsonKey(fromJson: DayKind.parse, toJson: _dayKindWire)  DayKind kind,  String? role,  String? formatName,  bool imageReady,  String? title,  String status,  bool ready,  String instruction)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _PlanWeekDay() when $default != null:
-return $default(_that.index,_that.weekday,_that.dayKey,_that.kind,_that.title,_that.status,_that.ready,_that.instruction);case _:
+return $default(_that.index,_that.weekday,_that.dayKey,_that.kind,_that.role,_that.formatName,_that.imageReady,_that.title,_that.status,_that.ready,_that.instruction);case _:
   return orElse();
 
 }
@@ -2568,10 +2579,10 @@ return $default(_that.index,_that.weekday,_that.dayKey,_that.kind,_that.title,_t
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( int index,  String weekday,  String dayKey, @JsonKey(fromJson: DayKind.parse, toJson: _dayKindWire)  DayKind kind,  String? title,  String status,  bool ready,  String instruction)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( int index,  String weekday,  String dayKey, @JsonKey(fromJson: DayKind.parse, toJson: _dayKindWire)  DayKind kind,  String? role,  String? formatName,  bool imageReady,  String? title,  String status,  bool ready,  String instruction)  $default,) {final _that = this;
 switch (_that) {
 case _PlanWeekDay():
-return $default(_that.index,_that.weekday,_that.dayKey,_that.kind,_that.title,_that.status,_that.ready,_that.instruction);case _:
+return $default(_that.index,_that.weekday,_that.dayKey,_that.kind,_that.role,_that.formatName,_that.imageReady,_that.title,_that.status,_that.ready,_that.instruction);case _:
   throw StateError('Unexpected subclass');
 
 }
@@ -2588,10 +2599,10 @@ return $default(_that.index,_that.weekday,_that.dayKey,_that.kind,_that.title,_t
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( int index,  String weekday,  String dayKey, @JsonKey(fromJson: DayKind.parse, toJson: _dayKindWire)  DayKind kind,  String? title,  String status,  bool ready,  String instruction)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( int index,  String weekday,  String dayKey, @JsonKey(fromJson: DayKind.parse, toJson: _dayKindWire)  DayKind kind,  String? role,  String? formatName,  bool imageReady,  String? title,  String status,  bool ready,  String instruction)?  $default,) {final _that = this;
 switch (_that) {
 case _PlanWeekDay() when $default != null:
-return $default(_that.index,_that.weekday,_that.dayKey,_that.kind,_that.title,_that.status,_that.ready,_that.instruction);case _:
+return $default(_that.index,_that.weekday,_that.dayKey,_that.kind,_that.role,_that.formatName,_that.imageReady,_that.title,_that.status,_that.ready,_that.instruction);case _:
   return null;
 
 }
@@ -2603,7 +2614,7 @@ return $default(_that.index,_that.weekday,_that.dayKey,_that.kind,_that.title,_t
 @JsonSerializable()
 
 class _PlanWeekDay implements PlanWeekDay {
-  const _PlanWeekDay({this.index = 0, this.weekday = '', this.dayKey = '', @JsonKey(fromJson: DayKind.parse, toJson: _dayKindWire) this.kind = DayKind.post, this.title, this.status = '', this.ready = false, this.instruction = ''});
+  const _PlanWeekDay({this.index = 0, this.weekday = '', this.dayKey = '', @JsonKey(fromJson: DayKind.parse, toJson: _dayKindWire) this.kind = DayKind.post, this.role, this.formatName, this.imageReady = false, this.title, this.status = '', this.ready = false, this.instruction = ''});
   factory _PlanWeekDay.fromJson(Map<String, dynamic> json) => _$PlanWeekDayFromJson(json);
 
 /// WEEK_SHAPE's index: 0 = Monday … 6 = Sunday. The days ARRIVE in
@@ -2614,7 +2625,18 @@ class _PlanWeekDay implements PlanWeekDay {
 /// `YYYY-MM-DD`, the planner's own date for the slot, in the USER's
 /// timezone.
 @override@JsonKey() final  String dayKey;
+/// The stored slot's kind once the week is planned — a week planned
+/// before 25 Nov 2026 keeps its own shape, so `video_script` only ever
+/// comes from such a legacy week — else the week shape's.
 @override@JsonKey(fromJson: DayKind.parse, toJson: _dayKindWire) final  DayKind kind;
+/// A post day's role (`teach` / `story` / `opinion`), when its slot has
+/// one — weeks planned from 25 Nov 2026. The server's word, shown
+/// capitalised.
+@override final  String? role;
+/// A post day's format by name ("Numbered steps"), when its slot has one.
+@override final  String? formatName;
+/// A post day's post exists and carries its image.
+@override@JsonKey() final  bool imageReady;
 @override final  String? title;
 /// The server's words: "Approved and scheduled", "Script ready", "Rest".
 @override@JsonKey() final  String status;
@@ -2637,16 +2659,16 @@ Map<String, dynamic> toJson() {
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is _PlanWeekDay&&(identical(other.index, index) || other.index == index)&&(identical(other.weekday, weekday) || other.weekday == weekday)&&(identical(other.dayKey, dayKey) || other.dayKey == dayKey)&&(identical(other.kind, kind) || other.kind == kind)&&(identical(other.title, title) || other.title == title)&&(identical(other.status, status) || other.status == status)&&(identical(other.ready, ready) || other.ready == ready)&&(identical(other.instruction, instruction) || other.instruction == instruction));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is _PlanWeekDay&&(identical(other.index, index) || other.index == index)&&(identical(other.weekday, weekday) || other.weekday == weekday)&&(identical(other.dayKey, dayKey) || other.dayKey == dayKey)&&(identical(other.kind, kind) || other.kind == kind)&&(identical(other.role, role) || other.role == role)&&(identical(other.formatName, formatName) || other.formatName == formatName)&&(identical(other.imageReady, imageReady) || other.imageReady == imageReady)&&(identical(other.title, title) || other.title == title)&&(identical(other.status, status) || other.status == status)&&(identical(other.ready, ready) || other.ready == ready)&&(identical(other.instruction, instruction) || other.instruction == instruction));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
-int get hashCode => Object.hash(runtimeType,index,weekday,dayKey,kind,title,status,ready,instruction);
+int get hashCode => Object.hash(runtimeType,index,weekday,dayKey,kind,role,formatName,imageReady,title,status,ready,instruction);
 
 @override
 String toString() {
-  return 'PlanWeekDay(index: $index, weekday: $weekday, dayKey: $dayKey, kind: $kind, title: $title, status: $status, ready: $ready, instruction: $instruction)';
+  return 'PlanWeekDay(index: $index, weekday: $weekday, dayKey: $dayKey, kind: $kind, role: $role, formatName: $formatName, imageReady: $imageReady, title: $title, status: $status, ready: $ready, instruction: $instruction)';
 }
 
 
@@ -2657,7 +2679,7 @@ abstract mixin class _$PlanWeekDayCopyWith<$Res> implements $PlanWeekDayCopyWith
   factory _$PlanWeekDayCopyWith(_PlanWeekDay value, $Res Function(_PlanWeekDay) _then) = __$PlanWeekDayCopyWithImpl;
 @override @useResult
 $Res call({
- int index, String weekday, String dayKey,@JsonKey(fromJson: DayKind.parse, toJson: _dayKindWire) DayKind kind, String? title, String status, bool ready, String instruction
+ int index, String weekday, String dayKey,@JsonKey(fromJson: DayKind.parse, toJson: _dayKindWire) DayKind kind, String? role, String? formatName, bool imageReady, String? title, String status, bool ready, String instruction
 });
 
 
@@ -2674,13 +2696,16 @@ class __$PlanWeekDayCopyWithImpl<$Res>
 
 /// Create a copy of PlanWeekDay
 /// with the given fields replaced by the non-null parameter values.
-@override @pragma('vm:prefer-inline') $Res call({Object? index = null,Object? weekday = null,Object? dayKey = null,Object? kind = null,Object? title = freezed,Object? status = null,Object? ready = null,Object? instruction = null,}) {
+@override @pragma('vm:prefer-inline') $Res call({Object? index = null,Object? weekday = null,Object? dayKey = null,Object? kind = null,Object? role = freezed,Object? formatName = freezed,Object? imageReady = null,Object? title = freezed,Object? status = null,Object? ready = null,Object? instruction = null,}) {
   return _then(_PlanWeekDay(
 index: null == index ? _self.index : index // ignore: cast_nullable_to_non_nullable
 as int,weekday: null == weekday ? _self.weekday : weekday // ignore: cast_nullable_to_non_nullable
 as String,dayKey: null == dayKey ? _self.dayKey : dayKey // ignore: cast_nullable_to_non_nullable
 as String,kind: null == kind ? _self.kind : kind // ignore: cast_nullable_to_non_nullable
-as DayKind,title: freezed == title ? _self.title : title // ignore: cast_nullable_to_non_nullable
+as DayKind,role: freezed == role ? _self.role : role // ignore: cast_nullable_to_non_nullable
+as String?,formatName: freezed == formatName ? _self.formatName : formatName // ignore: cast_nullable_to_non_nullable
+as String?,imageReady: null == imageReady ? _self.imageReady : imageReady // ignore: cast_nullable_to_non_nullable
+as bool,title: freezed == title ? _self.title : title // ignore: cast_nullable_to_non_nullable
 as String?,status: null == status ? _self.status : status // ignore: cast_nullable_to_non_nullable
 as String,ready: null == ready ? _self.ready : ready // ignore: cast_nullable_to_non_nullable
 as bool,instruction: null == instruction ? _self.instruction : instruction // ignore: cast_nullable_to_non_nullable

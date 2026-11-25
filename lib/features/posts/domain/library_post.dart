@@ -112,6 +112,8 @@ abstract class PostAuthor with _$PostAuthor {
       _$PostAuthorFromJson(json);
 }
 
+bool _trueOnly(Object? v) => v == true;
+
 /// A post as the mobile API serves it — `ListedPost` / `DetailedPost` in
 /// `lib/services/post.service.ts`.
 ///
@@ -147,6 +149,11 @@ abstract class LibraryPost with _$LibraryPost {
 
     /// Detail payload only.
     PostAuthor? account,
+
+    /// Detail payload only: the user edited the text themselves. The publish
+    /// gate passes an edited playbook post as it is, so its review is advice,
+    /// not a hold — and "Fix with AI" would rewrite the user's own words.
+    @JsonKey(fromJson: _trueOnly) @Default(false) bool contentEdited,
   }) = _LibraryPost;
 
   factory LibraryPost.fromJson(Map<String, dynamic> json) =>

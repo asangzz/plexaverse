@@ -299,13 +299,43 @@ bool _isSunday(int day, DateTime startedAt) =>
 /// and lands on exactly the same index.
 int plannerSlotForToday([DateTime? now]) => (now ?? DateTime.now()).weekday - 1;
 
-/// Builds the 66 days with [progress] applied.
+/// The first day the playbook week applies to (owner, 25 Nov 2026). Mirrors
+/// `PLAYBOOK_WEEK_FROM` in the web's `lib/roadmap-data.ts`.
 ///
-/// Order of operations matters and is the web's: the base roadmap is built for
-/// the brand type FIRST (which decides whether step 3 exists at all and which
-/// extras land on days 1–4), then progress is folded over it in one forward
-/// pass that carries `allDoneSoFar` — that carry is what unlocks a day the
-/// user has run ahead to.
+/// Days before it keep the week they were lived under ([_legacyWeekKinds]):
+/// the roadmap is rebuilt for every past day on every read, so without this a
+/// past Tuesday would lose the post step the user completed and a past
+/// Wednesday would grow one they were never asked for.
+final DateTime playbookWeekFrom = DateTime(2026, 11, 25);
+
+/// The week before the playbook week: Mon and Tue posts, Wed and Fri video
+/// scripts, Thu the newsletter, the weekend off. Mirrors `LEGACY_WEEK_KINDS`.
+const List<DayKind> _legacyWeekKinds = <DayKind>[
+  DayKind.post,
+  DayKind.post,
+  DayKind.videoScript,
+  DayKind.article,
+  DayKind.videoScript,
+  DayKind.rest,
+  DayKind.rest,
+];
+
+/// What roadmap day [day] asked for: the playbook week ([weekShape]) from
+/// [playbookWeekFrom], the old week before it. Mirrors `dayKindOn`.
+///
+/// Calendar arithmetic off the start date, as [_isSunday] does.
+DayKind roadmapDayKind(int day, DateTime startedAt) {
+  final DateTime date = DateTime(
+    startedAt.year,
+    startedAt.month,
+    startedAt.day + (day - 1),
+  );
+  final int index = date.weekday - 1;
+  return date.isBefore(playbookWeekFrom)
+      ? _legacyWeekKinds[index]
+      : dayKindAt(index);
+}
+
 /// The next day of the week that takes a post, starting after [slot].
 ///
 /// Wraps, and falls back to [slot] itself if the week somehow has no posting
@@ -337,6 +367,13 @@ int _windowEnd(int today) {
   return to > roadmapTotalDays ? roadmapTotalDays : to;
 }
 
+/// Builds the window of days (see [roadmapDaysBehind]) with [progress] applied.
+///
+/// Order of operations matters and is the web's: the base roadmap is built for
+/// the brand type FIRST (which decides whether step 3 exists at all and which
+/// extras land on days 1–4), then progress is folded over it in one forward
+/// pass that carries `allDoneSoFar` — that carry is what unlocks a day the
+/// user has run ahead to.
 List<RoadmapLevel> buildRoadmap(RoadmapProgress progress, {DateTime? now}) {
   final bool isCompany = progress.isCompany;
   final DateTime today = now ?? DateTime.now();
@@ -384,11 +421,15 @@ List<RoadmapLevel> buildRoadmap(RoadmapProgress progress, {DateTime? now}) {
 
     // Does this day produce a post at all?
     //
-    // Five of seven days no longer do: Wednesday and Friday are video scripts,
-    // Thursday is the newsletter, and the weekend is off. Asking for a post on
-    // those days is asking for something the plan does not contain — the
-    // planner has no slot to generate and the publish chain has nothing to
-    // send, so the mission could only ever sit there unfinished.
+    // Three days a week do — Monday, Wednesday and Friday. Tuesday and the
+    // weekend rest, and Thursday is the newsletter, which the user pastes into
+    // LinkedIn and which never becomes a Post. Asking for a post on those days
+    // is asking for something the plan does not contain — the planner has no
+    // slot to generate and the publish chain has nothing to send, so the
+    // mission could only ever sit there unfinished.
+    //
+    // Days before 25 Nov 2026 keep the week they were lived under
+    // ([roadmapDayKind]), so rebuilding history never moves a completed step.
     //
     // Without a start date the weekday is unknowable, so the step stays. That
     // is what every caller wanting only a step's copy or route gets today, and
@@ -396,8 +437,7 @@ List<RoadmapLevel> buildRoadmap(RoadmapProgress progress, {DateTime? now}) {
     // (`dayPosts` in lib/roadmap-data.ts).
     final DateTime? startedAt = progress.roadmapStartedAt;
     final bool dayPosts =
-        startedAt == null ||
-        dayKindAt(weekdayIndexForDay(day, startedAt)) == DayKind.post;
+        startedAt == null || roadmapDayKind(day, startedAt) == DayKind.post;
 
     final List<RoadmapStep> steps = <RoadmapStep>[
       if (dayPosts)
@@ -489,11 +529,11 @@ List<RoadmapLevel> buildRoadmap(RoadmapProgress progress, {DateTime? now}) {
                 // Nothing pending or scheduled — the auto-post did not run.
                 //
                 // Prompt a manual generate on the next slot that actually
-                // takes a post, not simply on tomorrow. Tomorrow is a video
-                // script, the newsletter or a rest day five times in seven,
-                // and the planner refuses to generate on all of them — so the
-                // old `(slotToday + 1) % 7` deep-linked to a dead end most
-                // days of the week.
+                // takes a post (Mon, Wed or Fri), not simply on tomorrow.
+                // Tomorrow is the newsletter or a rest day four times in
+                // seven, and the planner refuses to generate on both — so
+                // `(slotToday + 1) % 7` deep-linked to a dead end most days
+                // of the week.
                 final int next = _nextPostingSlotAfter(slotToday);
                 title = "📝 Generate the next post";
                 description =

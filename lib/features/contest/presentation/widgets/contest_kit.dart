@@ -69,6 +69,29 @@ abstract final class ContestColors {
   static const Color linkedIn = Color(0xFF0A66C2);
   static const Color plan = Color(0xFF0F8A63);
   static const Color slab = Color(0xFF1A2150);
+
+  /// The Sunday levels' orange (25 Nov 2026): the web's `--color-orange`
+  /// and the tints `components/contest/path/sunday.ts` mixes from it, for
+  /// the dark ground. Zave has no orange of its own, so it lives here.
+  static const Color sunday = Color(0xFFFF6B35);
+
+  /// Light orange text on the dark ground — orange 45% into white.
+  static const Color sundayInk = Color(0xFFFFBCA4);
+
+  /// A tag's fill — orange at 16%.
+  static const Color sundayTint = Color(0x29FF6B35);
+
+  /// The card: dark enough for white text — orange 62% into black.
+  static const Color sundayCard = Color(0xFF9E4221);
+
+  /// The card's glow — orange at 40%.
+  static const Color sundayGlow = Color(0x66FF6B35);
+
+  /// The node's lit side (orange 55% into white), its ledge (55% into
+  /// black) and its glow (45%).
+  static const Color sundayLight = Color(0xFFFFAE90);
+  static const Color sundayLedge = Color(0xFF8C3B1D);
+  static const Color sundayNodeGlow = Color(0x73FF6B35);
 }
 
 /// The contest's type, where it differs from the app's.

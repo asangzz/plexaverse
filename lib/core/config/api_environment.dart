@@ -30,20 +30,30 @@ class ApiEnvironment {
   ///             fallback so the Dio client always has a base.
   ///   dev     — YOUR LOCAL Next.js server (`npm run dev`, port 3000). See
   ///             [_localDev] for why the host differs on Android.
-  ///   staging — the SAME deployment prod uses, reached directly at its Cloud
-  ///             Run origin instead of through the public domain. There is no
-  ///             separate staging service, so this is not a third environment
-  ///             — it is prod with Cloudflare taken out of the path, which is
-  ///             what you want when diagnosing whether an edge rule is the
-  ///             thing breaking a request.
-  ///   prod    — the live API on the public domain.
+  ///   staging — the SAME deployment prod uses. There is no separate staging
+  ///             service, so this is not a third environment.
+  ///   prod    — the live API on Cloud Run in TOKYO (asia-northeast1, the
+  ///             `-an` service), addressed at its own run.app origin.
+  ///
+  /// Tokyo, because the database is there: Supabase sits in AWS
+  /// ap-northeast-1, and every request makes several round trips to it, so
+  /// an API beside the database beats one beside the user. It used to be
+  /// us-central1 (`-uc`), reached through www.plexaverse.com — Cloudflare
+  /// served that zone from Marseille, so a phone in India went India → France
+  /// → Iowa → Tokyo and back per query, and the contest home timed out.
+  ///
+  /// The run.app origin rather than the public domain, which still fronts the
+  /// us-central1 service. Website links (`core/links/plexaverse.dart`) stay on
+  /// www: those are pages for people, not API calls.
+  static const String _tokyo =
+      'https://dfy-plexaverse-lrthghbmsq-an.a.run.app/api/mobile/v1';
+
   static String _defaultFor(Env env) => switch (env) {
-        Env.mock => 'http://localhost:3000/api/mobile/v1',
-        Env.dev => _localDev,
-        Env.staging =>
-          'https://dfy-plexaverse-lrthghbmsq-uc.a.run.app/api/mobile/v1',
-        Env.prod => 'https://www.plexaverse.com/api/mobile/v1',
-      };
+    Env.mock => 'http://localhost:3000/api/mobile/v1',
+    Env.dev => _localDev,
+    Env.staging => _tokyo,
+    Env.prod => _tokyo,
+  };
 
   /// The local Next.js dev server, addressed the way each platform can reach it.
   ///

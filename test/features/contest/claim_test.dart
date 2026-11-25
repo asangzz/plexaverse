@@ -245,22 +245,25 @@ void main() {
       );
     });
 
-    testWidgets('the mock flavor’s Wednesday video renders', (
-      WidgetTester tester,
-    ) async {
+    // The video levels were retired on 25 Nov 2026; a video claim already
+    // sent still shows, and one sent back can be sent again.
+    testWidgets('the mock flavor’s sent-back video claim renders and can be '
+        'sent again', (WidgetTester tester) async {
       final FakeContestRepository fake = FakeContestRepository(
         latency: Duration.zero,
       );
-      final PostClaim open = (await fake.fetchPath()).claims.firstWhere(
-        (PostClaim c) => c.status == ClaimStatus.open,
+      final PostClaim sentBack = (await fake.fetchPath()).claims.firstWhere(
+        (PostClaim c) => c.status == ClaimStatus.rejected,
       );
+      expect(sentBack.kind, ClaimKind.video);
       await _pump(
         tester,
         fake,
-        kind: open.kind.wire,
-        occurrence: open.occurrence,
+        kind: sentBack.kind.wire,
+        occurrence: sentBack.occurrence,
       );
-      expect(find.text(open.title), findsOneWidget);
+      expect(find.text(sentBack.title), findsOneWidget);
+      expect(find.text('Submit'), findsOneWidget);
       expect(tester.takeException(), isNull);
     });
   });

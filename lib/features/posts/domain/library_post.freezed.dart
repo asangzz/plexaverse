@@ -556,7 +556,10 @@ mixin _$LibraryPost {
  String get id; String? get title; String get content; String? get imageUrl;/// The ~5–15 KB thumbnail the upload pipeline writes. Prefer it in a list;
 /// a library of 50 rows must not pull 50 LinkedIn-sized artifacts.
  String? get imageThumbUrl; List<String> get imageUrls;@JsonKey(unknownEnumValue: PostLibraryStatus.draft) PostLibraryStatus get status; String? get linkedinUrl; DateTime get createdAt; DateTime? get updatedAt; DateTime? get publishedAt; DateTime? get scheduledFor; PostMetrics? get metrics;/// Detail payload only.
- PostAuthor? get account;
+ PostAuthor? get account;/// Detail payload only: the user edited the text themselves. The publish
+/// gate passes an edited playbook post as it is, so its review is advice,
+/// not a hold — and "Fix with AI" would rewrite the user's own words.
+@JsonKey(fromJson: _trueOnly) bool get contentEdited;
 /// Create a copy of LibraryPost
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
@@ -569,16 +572,16 @@ $LibraryPostCopyWith<LibraryPost> get copyWith => _$LibraryPostCopyWithImpl<Libr
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is LibraryPost&&(identical(other.id, id) || other.id == id)&&(identical(other.title, title) || other.title == title)&&(identical(other.content, content) || other.content == content)&&(identical(other.imageUrl, imageUrl) || other.imageUrl == imageUrl)&&(identical(other.imageThumbUrl, imageThumbUrl) || other.imageThumbUrl == imageThumbUrl)&&const DeepCollectionEquality().equals(other.imageUrls, imageUrls)&&(identical(other.status, status) || other.status == status)&&(identical(other.linkedinUrl, linkedinUrl) || other.linkedinUrl == linkedinUrl)&&(identical(other.createdAt, createdAt) || other.createdAt == createdAt)&&(identical(other.updatedAt, updatedAt) || other.updatedAt == updatedAt)&&(identical(other.publishedAt, publishedAt) || other.publishedAt == publishedAt)&&(identical(other.scheduledFor, scheduledFor) || other.scheduledFor == scheduledFor)&&(identical(other.metrics, metrics) || other.metrics == metrics)&&(identical(other.account, account) || other.account == account));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is LibraryPost&&(identical(other.id, id) || other.id == id)&&(identical(other.title, title) || other.title == title)&&(identical(other.content, content) || other.content == content)&&(identical(other.imageUrl, imageUrl) || other.imageUrl == imageUrl)&&(identical(other.imageThumbUrl, imageThumbUrl) || other.imageThumbUrl == imageThumbUrl)&&const DeepCollectionEquality().equals(other.imageUrls, imageUrls)&&(identical(other.status, status) || other.status == status)&&(identical(other.linkedinUrl, linkedinUrl) || other.linkedinUrl == linkedinUrl)&&(identical(other.createdAt, createdAt) || other.createdAt == createdAt)&&(identical(other.updatedAt, updatedAt) || other.updatedAt == updatedAt)&&(identical(other.publishedAt, publishedAt) || other.publishedAt == publishedAt)&&(identical(other.scheduledFor, scheduledFor) || other.scheduledFor == scheduledFor)&&(identical(other.metrics, metrics) || other.metrics == metrics)&&(identical(other.account, account) || other.account == account)&&(identical(other.contentEdited, contentEdited) || other.contentEdited == contentEdited));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
-int get hashCode => Object.hash(runtimeType,id,title,content,imageUrl,imageThumbUrl,const DeepCollectionEquality().hash(imageUrls),status,linkedinUrl,createdAt,updatedAt,publishedAt,scheduledFor,metrics,account);
+int get hashCode => Object.hash(runtimeType,id,title,content,imageUrl,imageThumbUrl,const DeepCollectionEquality().hash(imageUrls),status,linkedinUrl,createdAt,updatedAt,publishedAt,scheduledFor,metrics,account,contentEdited);
 
 @override
 String toString() {
-  return 'LibraryPost(id: $id, title: $title, content: $content, imageUrl: $imageUrl, imageThumbUrl: $imageThumbUrl, imageUrls: $imageUrls, status: $status, linkedinUrl: $linkedinUrl, createdAt: $createdAt, updatedAt: $updatedAt, publishedAt: $publishedAt, scheduledFor: $scheduledFor, metrics: $metrics, account: $account)';
+  return 'LibraryPost(id: $id, title: $title, content: $content, imageUrl: $imageUrl, imageThumbUrl: $imageThumbUrl, imageUrls: $imageUrls, status: $status, linkedinUrl: $linkedinUrl, createdAt: $createdAt, updatedAt: $updatedAt, publishedAt: $publishedAt, scheduledFor: $scheduledFor, metrics: $metrics, account: $account, contentEdited: $contentEdited)';
 }
 
 
@@ -589,7 +592,7 @@ abstract mixin class $LibraryPostCopyWith<$Res>  {
   factory $LibraryPostCopyWith(LibraryPost value, $Res Function(LibraryPost) _then) = _$LibraryPostCopyWithImpl;
 @useResult
 $Res call({
- String id, String? title, String content, String? imageUrl, String? imageThumbUrl, List<String> imageUrls,@JsonKey(unknownEnumValue: PostLibraryStatus.draft) PostLibraryStatus status, String? linkedinUrl, DateTime createdAt, DateTime? updatedAt, DateTime? publishedAt, DateTime? scheduledFor, PostMetrics? metrics, PostAuthor? account
+ String id, String? title, String content, String? imageUrl, String? imageThumbUrl, List<String> imageUrls,@JsonKey(unknownEnumValue: PostLibraryStatus.draft) PostLibraryStatus status, String? linkedinUrl, DateTime createdAt, DateTime? updatedAt, DateTime? publishedAt, DateTime? scheduledFor, PostMetrics? metrics, PostAuthor? account,@JsonKey(fromJson: _trueOnly) bool contentEdited
 });
 
 
@@ -606,7 +609,7 @@ class _$LibraryPostCopyWithImpl<$Res>
 
 /// Create a copy of LibraryPost
 /// with the given fields replaced by the non-null parameter values.
-@pragma('vm:prefer-inline') @override $Res call({Object? id = null,Object? title = freezed,Object? content = null,Object? imageUrl = freezed,Object? imageThumbUrl = freezed,Object? imageUrls = null,Object? status = null,Object? linkedinUrl = freezed,Object? createdAt = null,Object? updatedAt = freezed,Object? publishedAt = freezed,Object? scheduledFor = freezed,Object? metrics = freezed,Object? account = freezed,}) {
+@pragma('vm:prefer-inline') @override $Res call({Object? id = null,Object? title = freezed,Object? content = null,Object? imageUrl = freezed,Object? imageThumbUrl = freezed,Object? imageUrls = null,Object? status = null,Object? linkedinUrl = freezed,Object? createdAt = null,Object? updatedAt = freezed,Object? publishedAt = freezed,Object? scheduledFor = freezed,Object? metrics = freezed,Object? account = freezed,Object? contentEdited = null,}) {
   return _then(_self.copyWith(
 id: null == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
 as String,title: freezed == title ? _self.title : title // ignore: cast_nullable_to_non_nullable
@@ -622,7 +625,8 @@ as DateTime?,publishedAt: freezed == publishedAt ? _self.publishedAt : published
 as DateTime?,scheduledFor: freezed == scheduledFor ? _self.scheduledFor : scheduledFor // ignore: cast_nullable_to_non_nullable
 as DateTime?,metrics: freezed == metrics ? _self.metrics : metrics // ignore: cast_nullable_to_non_nullable
 as PostMetrics?,account: freezed == account ? _self.account : account // ignore: cast_nullable_to_non_nullable
-as PostAuthor?,
+as PostAuthor?,contentEdited: null == contentEdited ? _self.contentEdited : contentEdited // ignore: cast_nullable_to_non_nullable
+as bool,
   ));
 }
 /// Create a copy of LibraryPost
@@ -731,10 +735,10 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String id,  String? title,  String content,  String? imageUrl,  String? imageThumbUrl,  List<String> imageUrls, @JsonKey(unknownEnumValue: PostLibraryStatus.draft)  PostLibraryStatus status,  String? linkedinUrl,  DateTime createdAt,  DateTime? updatedAt,  DateTime? publishedAt,  DateTime? scheduledFor,  PostMetrics? metrics,  PostAuthor? account)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String id,  String? title,  String content,  String? imageUrl,  String? imageThumbUrl,  List<String> imageUrls, @JsonKey(unknownEnumValue: PostLibraryStatus.draft)  PostLibraryStatus status,  String? linkedinUrl,  DateTime createdAt,  DateTime? updatedAt,  DateTime? publishedAt,  DateTime? scheduledFor,  PostMetrics? metrics,  PostAuthor? account, @JsonKey(fromJson: _trueOnly)  bool contentEdited)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _LibraryPost() when $default != null:
-return $default(_that.id,_that.title,_that.content,_that.imageUrl,_that.imageThumbUrl,_that.imageUrls,_that.status,_that.linkedinUrl,_that.createdAt,_that.updatedAt,_that.publishedAt,_that.scheduledFor,_that.metrics,_that.account);case _:
+return $default(_that.id,_that.title,_that.content,_that.imageUrl,_that.imageThumbUrl,_that.imageUrls,_that.status,_that.linkedinUrl,_that.createdAt,_that.updatedAt,_that.publishedAt,_that.scheduledFor,_that.metrics,_that.account,_that.contentEdited);case _:
   return orElse();
 
 }
@@ -752,10 +756,10 @@ return $default(_that.id,_that.title,_that.content,_that.imageUrl,_that.imageThu
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String id,  String? title,  String content,  String? imageUrl,  String? imageThumbUrl,  List<String> imageUrls, @JsonKey(unknownEnumValue: PostLibraryStatus.draft)  PostLibraryStatus status,  String? linkedinUrl,  DateTime createdAt,  DateTime? updatedAt,  DateTime? publishedAt,  DateTime? scheduledFor,  PostMetrics? metrics,  PostAuthor? account)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String id,  String? title,  String content,  String? imageUrl,  String? imageThumbUrl,  List<String> imageUrls, @JsonKey(unknownEnumValue: PostLibraryStatus.draft)  PostLibraryStatus status,  String? linkedinUrl,  DateTime createdAt,  DateTime? updatedAt,  DateTime? publishedAt,  DateTime? scheduledFor,  PostMetrics? metrics,  PostAuthor? account, @JsonKey(fromJson: _trueOnly)  bool contentEdited)  $default,) {final _that = this;
 switch (_that) {
 case _LibraryPost():
-return $default(_that.id,_that.title,_that.content,_that.imageUrl,_that.imageThumbUrl,_that.imageUrls,_that.status,_that.linkedinUrl,_that.createdAt,_that.updatedAt,_that.publishedAt,_that.scheduledFor,_that.metrics,_that.account);case _:
+return $default(_that.id,_that.title,_that.content,_that.imageUrl,_that.imageThumbUrl,_that.imageUrls,_that.status,_that.linkedinUrl,_that.createdAt,_that.updatedAt,_that.publishedAt,_that.scheduledFor,_that.metrics,_that.account,_that.contentEdited);case _:
   throw StateError('Unexpected subclass');
 
 }
@@ -772,10 +776,10 @@ return $default(_that.id,_that.title,_that.content,_that.imageUrl,_that.imageThu
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String id,  String? title,  String content,  String? imageUrl,  String? imageThumbUrl,  List<String> imageUrls, @JsonKey(unknownEnumValue: PostLibraryStatus.draft)  PostLibraryStatus status,  String? linkedinUrl,  DateTime createdAt,  DateTime? updatedAt,  DateTime? publishedAt,  DateTime? scheduledFor,  PostMetrics? metrics,  PostAuthor? account)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String id,  String? title,  String content,  String? imageUrl,  String? imageThumbUrl,  List<String> imageUrls, @JsonKey(unknownEnumValue: PostLibraryStatus.draft)  PostLibraryStatus status,  String? linkedinUrl,  DateTime createdAt,  DateTime? updatedAt,  DateTime? publishedAt,  DateTime? scheduledFor,  PostMetrics? metrics,  PostAuthor? account, @JsonKey(fromJson: _trueOnly)  bool contentEdited)?  $default,) {final _that = this;
 switch (_that) {
 case _LibraryPost() when $default != null:
-return $default(_that.id,_that.title,_that.content,_that.imageUrl,_that.imageThumbUrl,_that.imageUrls,_that.status,_that.linkedinUrl,_that.createdAt,_that.updatedAt,_that.publishedAt,_that.scheduledFor,_that.metrics,_that.account);case _:
+return $default(_that.id,_that.title,_that.content,_that.imageUrl,_that.imageThumbUrl,_that.imageUrls,_that.status,_that.linkedinUrl,_that.createdAt,_that.updatedAt,_that.publishedAt,_that.scheduledFor,_that.metrics,_that.account,_that.contentEdited);case _:
   return null;
 
 }
@@ -787,7 +791,7 @@ return $default(_that.id,_that.title,_that.content,_that.imageUrl,_that.imageThu
 @JsonSerializable()
 
 class _LibraryPost extends LibraryPost {
-  const _LibraryPost({required this.id, this.title, this.content = '', this.imageUrl, this.imageThumbUrl, final  List<String> imageUrls = const <String>[], @JsonKey(unknownEnumValue: PostLibraryStatus.draft) this.status = PostLibraryStatus.draft, this.linkedinUrl, required this.createdAt, this.updatedAt, this.publishedAt, this.scheduledFor, this.metrics, this.account}): _imageUrls = imageUrls,super._();
+  const _LibraryPost({required this.id, this.title, this.content = '', this.imageUrl, this.imageThumbUrl, final  List<String> imageUrls = const <String>[], @JsonKey(unknownEnumValue: PostLibraryStatus.draft) this.status = PostLibraryStatus.draft, this.linkedinUrl, required this.createdAt, this.updatedAt, this.publishedAt, this.scheduledFor, this.metrics, this.account, @JsonKey(fromJson: _trueOnly) this.contentEdited = false}): _imageUrls = imageUrls,super._();
   factory _LibraryPost.fromJson(Map<String, dynamic> json) => _$LibraryPostFromJson(json);
 
 @override final  String id;
@@ -813,6 +817,10 @@ class _LibraryPost extends LibraryPost {
 @override final  PostMetrics? metrics;
 /// Detail payload only.
 @override final  PostAuthor? account;
+/// Detail payload only: the user edited the text themselves. The publish
+/// gate passes an edited playbook post as it is, so its review is advice,
+/// not a hold — and "Fix with AI" would rewrite the user's own words.
+@override@JsonKey(fromJson: _trueOnly) final  bool contentEdited;
 
 /// Create a copy of LibraryPost
 /// with the given fields replaced by the non-null parameter values.
@@ -827,16 +835,16 @@ Map<String, dynamic> toJson() {
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is _LibraryPost&&(identical(other.id, id) || other.id == id)&&(identical(other.title, title) || other.title == title)&&(identical(other.content, content) || other.content == content)&&(identical(other.imageUrl, imageUrl) || other.imageUrl == imageUrl)&&(identical(other.imageThumbUrl, imageThumbUrl) || other.imageThumbUrl == imageThumbUrl)&&const DeepCollectionEquality().equals(other._imageUrls, _imageUrls)&&(identical(other.status, status) || other.status == status)&&(identical(other.linkedinUrl, linkedinUrl) || other.linkedinUrl == linkedinUrl)&&(identical(other.createdAt, createdAt) || other.createdAt == createdAt)&&(identical(other.updatedAt, updatedAt) || other.updatedAt == updatedAt)&&(identical(other.publishedAt, publishedAt) || other.publishedAt == publishedAt)&&(identical(other.scheduledFor, scheduledFor) || other.scheduledFor == scheduledFor)&&(identical(other.metrics, metrics) || other.metrics == metrics)&&(identical(other.account, account) || other.account == account));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is _LibraryPost&&(identical(other.id, id) || other.id == id)&&(identical(other.title, title) || other.title == title)&&(identical(other.content, content) || other.content == content)&&(identical(other.imageUrl, imageUrl) || other.imageUrl == imageUrl)&&(identical(other.imageThumbUrl, imageThumbUrl) || other.imageThumbUrl == imageThumbUrl)&&const DeepCollectionEquality().equals(other._imageUrls, _imageUrls)&&(identical(other.status, status) || other.status == status)&&(identical(other.linkedinUrl, linkedinUrl) || other.linkedinUrl == linkedinUrl)&&(identical(other.createdAt, createdAt) || other.createdAt == createdAt)&&(identical(other.updatedAt, updatedAt) || other.updatedAt == updatedAt)&&(identical(other.publishedAt, publishedAt) || other.publishedAt == publishedAt)&&(identical(other.scheduledFor, scheduledFor) || other.scheduledFor == scheduledFor)&&(identical(other.metrics, metrics) || other.metrics == metrics)&&(identical(other.account, account) || other.account == account)&&(identical(other.contentEdited, contentEdited) || other.contentEdited == contentEdited));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
-int get hashCode => Object.hash(runtimeType,id,title,content,imageUrl,imageThumbUrl,const DeepCollectionEquality().hash(_imageUrls),status,linkedinUrl,createdAt,updatedAt,publishedAt,scheduledFor,metrics,account);
+int get hashCode => Object.hash(runtimeType,id,title,content,imageUrl,imageThumbUrl,const DeepCollectionEquality().hash(_imageUrls),status,linkedinUrl,createdAt,updatedAt,publishedAt,scheduledFor,metrics,account,contentEdited);
 
 @override
 String toString() {
-  return 'LibraryPost(id: $id, title: $title, content: $content, imageUrl: $imageUrl, imageThumbUrl: $imageThumbUrl, imageUrls: $imageUrls, status: $status, linkedinUrl: $linkedinUrl, createdAt: $createdAt, updatedAt: $updatedAt, publishedAt: $publishedAt, scheduledFor: $scheduledFor, metrics: $metrics, account: $account)';
+  return 'LibraryPost(id: $id, title: $title, content: $content, imageUrl: $imageUrl, imageThumbUrl: $imageThumbUrl, imageUrls: $imageUrls, status: $status, linkedinUrl: $linkedinUrl, createdAt: $createdAt, updatedAt: $updatedAt, publishedAt: $publishedAt, scheduledFor: $scheduledFor, metrics: $metrics, account: $account, contentEdited: $contentEdited)';
 }
 
 
@@ -847,7 +855,7 @@ abstract mixin class _$LibraryPostCopyWith<$Res> implements $LibraryPostCopyWith
   factory _$LibraryPostCopyWith(_LibraryPost value, $Res Function(_LibraryPost) _then) = __$LibraryPostCopyWithImpl;
 @override @useResult
 $Res call({
- String id, String? title, String content, String? imageUrl, String? imageThumbUrl, List<String> imageUrls,@JsonKey(unknownEnumValue: PostLibraryStatus.draft) PostLibraryStatus status, String? linkedinUrl, DateTime createdAt, DateTime? updatedAt, DateTime? publishedAt, DateTime? scheduledFor, PostMetrics? metrics, PostAuthor? account
+ String id, String? title, String content, String? imageUrl, String? imageThumbUrl, List<String> imageUrls,@JsonKey(unknownEnumValue: PostLibraryStatus.draft) PostLibraryStatus status, String? linkedinUrl, DateTime createdAt, DateTime? updatedAt, DateTime? publishedAt, DateTime? scheduledFor, PostMetrics? metrics, PostAuthor? account,@JsonKey(fromJson: _trueOnly) bool contentEdited
 });
 
 
@@ -864,7 +872,7 @@ class __$LibraryPostCopyWithImpl<$Res>
 
 /// Create a copy of LibraryPost
 /// with the given fields replaced by the non-null parameter values.
-@override @pragma('vm:prefer-inline') $Res call({Object? id = null,Object? title = freezed,Object? content = null,Object? imageUrl = freezed,Object? imageThumbUrl = freezed,Object? imageUrls = null,Object? status = null,Object? linkedinUrl = freezed,Object? createdAt = null,Object? updatedAt = freezed,Object? publishedAt = freezed,Object? scheduledFor = freezed,Object? metrics = freezed,Object? account = freezed,}) {
+@override @pragma('vm:prefer-inline') $Res call({Object? id = null,Object? title = freezed,Object? content = null,Object? imageUrl = freezed,Object? imageThumbUrl = freezed,Object? imageUrls = null,Object? status = null,Object? linkedinUrl = freezed,Object? createdAt = null,Object? updatedAt = freezed,Object? publishedAt = freezed,Object? scheduledFor = freezed,Object? metrics = freezed,Object? account = freezed,Object? contentEdited = null,}) {
   return _then(_LibraryPost(
 id: null == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
 as String,title: freezed == title ? _self.title : title // ignore: cast_nullable_to_non_nullable
@@ -880,7 +888,8 @@ as DateTime?,publishedAt: freezed == publishedAt ? _self.publishedAt : published
 as DateTime?,scheduledFor: freezed == scheduledFor ? _self.scheduledFor : scheduledFor // ignore: cast_nullable_to_non_nullable
 as DateTime?,metrics: freezed == metrics ? _self.metrics : metrics // ignore: cast_nullable_to_non_nullable
 as PostMetrics?,account: freezed == account ? _self.account : account // ignore: cast_nullable_to_non_nullable
-as PostAuthor?,
+as PostAuthor?,contentEdited: null == contentEdited ? _self.contentEdited : contentEdited // ignore: cast_nullable_to_non_nullable
+as bool,
   ));
 }
 

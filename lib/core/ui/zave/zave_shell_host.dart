@@ -4,6 +4,11 @@ import 'package:go_router/go_router.dart';
 
 import '../../access/feature_access.dart';
 import '../../router/zave_destinations.dart';
+import '../../router/zave_routes.dart';
+import '../../../features/contest/application/contest_controllers.dart'
+    show refreshContestStanding;
+import '../../../features/home/application/home_controllers.dart'
+    show levelsFinishedProvider;
 import '../../../features/preferences/domain/user_preferences.dart';
 import '../../../features/settings/application/settings_controllers.dart';
 import '../../../features/settings/domain/settings_entities.dart';
@@ -48,6 +53,19 @@ class ZaveShellHost extends ConsumerWidget {
       brandType: brandType,
       onNavigate: (String route) {
         final int branch = tabRoutes.indexOf(route);
+        if (branch >= 0 && branch != navigationShell.currentIndex) {
+          // The tabs are preloaded and stay mounted, so a tab coming back into
+          // view shows what it read when it was first built. Two of them show
+          // state another tab moves: a Sunday set-up level is done in the
+          // Planner, and the roadmap's "levels finished" figures move with
+          // every level. Re-read those on the way back (the web refetches on
+          // mount).
+          if (route == ZaveRoutes.contest) {
+            refreshContestStanding(ref.invalidate);
+          } else if (route == ZaveRoutes.roadmap) {
+            ref.invalidate(levelsFinishedProvider);
+          }
+        }
         if (branch >= 0) {
           // A tab. `initialLocation: true` when re-tapping the current tab
           // pops that branch to its root, which is the platform convention.

@@ -130,3 +130,62 @@ final class RoadmapLevelsProvider
 }
 
 String _$roadmapLevelsHash() => r'54ccb89447de8ee5da457b623a6fdcf4e246a6d9';
+
+/// How much of each day's levels was finished, for the roadmap's day rows
+/// (web, 25 Nov 2026 — `useLevelsFinished`).
+///
+/// Its own read, never folded into [roadmapLevels]: a failure here must cost
+/// the rows their figures and nothing else, so the page reads an error as "no
+/// figures" rather than as a broken roadmap.
+
+@ProviderFor(levelsFinished)
+final levelsFinishedProvider = LevelsFinishedProvider._();
+
+/// How much of each day's levels was finished, for the roadmap's day rows
+/// (web, 25 Nov 2026 — `useLevelsFinished`).
+///
+/// Its own read, never folded into [roadmapLevels]: a failure here must cost
+/// the rows their figures and nothing else, so the page reads an error as "no
+/// figures" rather than as a broken roadmap.
+
+final class LevelsFinishedProvider
+    extends
+        $FunctionalProvider<
+          AsyncValue<LevelsFinished>,
+          LevelsFinished,
+          FutureOr<LevelsFinished>
+        >
+    with $FutureModifier<LevelsFinished>, $FutureProvider<LevelsFinished> {
+  /// How much of each day's levels was finished, for the roadmap's day rows
+  /// (web, 25 Nov 2026 — `useLevelsFinished`).
+  ///
+  /// Its own read, never folded into [roadmapLevels]: a failure here must cost
+  /// the rows their figures and nothing else, so the page reads an error as "no
+  /// figures" rather than as a broken roadmap.
+  LevelsFinishedProvider._()
+    : super(
+        from: null,
+        argument: null,
+        retry: null,
+        name: r'levelsFinishedProvider',
+        isAutoDispose: true,
+        dependencies: null,
+        $allTransitiveDependencies: null,
+      );
+
+  @override
+  String debugGetCreateSourceHash() => _$levelsFinishedHash();
+
+  @$internal
+  @override
+  $FutureProviderElement<LevelsFinished> $createElement(
+    $ProviderPointer pointer,
+  ) => $FutureProviderElement(pointer);
+
+  @override
+  FutureOr<LevelsFinished> create(Ref ref) {
+    return levelsFinished(ref);
+  }
+}
+
+String _$levelsFinishedHash() => r'59b3e29737f1c44ec835aa304a3932cfabff9fb4';

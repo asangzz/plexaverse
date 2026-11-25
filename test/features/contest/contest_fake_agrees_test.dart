@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/misc.dart' show Override;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:plexaverse/core/router/zave_routes.dart';
+import 'package:plexaverse/core/week/week_shape.dart';
 import 'package:plexaverse/features/contest/application/contest_controllers.dart';
 import 'package:plexaverse/features/contest/data/contest_repositories.dart';
 import 'package:plexaverse/features/contest/domain/contest_links.dart';
@@ -86,6 +87,23 @@ void _expectServerShaped(ContestPath path, TodayQuiz quiz) {
       // Skip lives on today only.
       if (!d.isToday) expect(n.canSkip, isFalse, reason: n.id);
       if (n.kind == PathNodeKind.planWeek) expect(n.points, 0);
+      // The Sunday levels: set-up steps of the Sunday they sit on, never
+      // skipped, and a passed one opens nothing.
+      if (n.openAllWeek) {
+        expect(n.kind, PathNodeKind.planWeek, reason: n.id);
+        expect(n.setup, isNotNull, reason: n.id);
+        expect(n.canSkip, isFalse, reason: n.id);
+        if (n.state == PathNodeState.missed) expect(n.href, isNull);
+      }
+      // The video levels were retired (25 Nov 2026): a video node is only
+      // ever a claim already sent.
+      if (n.kind == PathNodeKind.video) {
+        expect(<PathNodeState>[
+          PathNodeState.pending,
+          PathNodeState.approved,
+          PathNodeState.rejected,
+        ], contains(n.state));
+      }
       if (n.href != null) expect(canOpen(n), isTrue, reason: n.id);
     }
     // Only the last lesson part pays — the day credit.
@@ -98,10 +116,15 @@ void _expectServerShaped(ContestPath path, TodayQuiz quiz) {
   final PathDay? today = path.today;
   if (today == null) return;
   // The gate: after the first level that is not passable, nothing is open —
-  // but the follow level, which is outside the order (24 Nov 2026): never
-  // locked, never a holder, never skipped.
+  // but the follow level (24 Nov 2026) and the open-all-week Sunday levels
+  // (25 Nov 2026), which are outside the order: never locked behind another
+  // level, never a holder, never skipped.
   bool blocked = false;
   for (final PathNode n in today.nodes) {
+    if (n.openAllWeek) {
+      expect(n.canSkip, isFalse, reason: n.id);
+      continue;
+    }
     if (n.kind == PathNodeKind.followWinners) {
       expect(n.state, isNot(PathNodeState.locked), reason: n.id);
       expect(n.canSkip, isFalse, reason: n.id);
@@ -284,10 +307,12 @@ void main() {
           p.todayNode(PathNodeKind.comment)!.detail,
           'Unlocks after Lesson part 3 of 3',
         );
-        expect(p.todayNode(PathNodeKind.video)!.state, PathNodeState.locked);
+        // No video level any more (25 Nov 2026): the week's one claim is
+        // Thursday's article.
+        expect(p.todayNode(PathNodeKind.video), isNull);
         expect(
-          p.todayNode(PathNodeKind.video)!.detail,
-          'Unlocks after Post 5 valuable comments',
+          p.claims.where((PostClaim c) => c.kind == ClaimKind.article),
+          hasLength(1),
         );
         // Last week's video was sent back and is still claimable.
         expect(
@@ -406,22 +431,30 @@ void main() {
       expect(feed.points, view.points - view.shares.first);
     });
 
-    test('claims: today’s waits on the gate, Thursday’s is too early, last '
-        'week’s rejected one can be sent again', () async {
+    test('claims: no new video, Thursday’s is too early, last week’s '
+        'rejected one can be sent again', () async {
       final FakeContestRepository repo = _fake();
       final ContestPath p = await repo.fetchPath();
       const String url = 'https://www.linkedin.com/posts/me_video-activity-1';
 
-      final PostClaim today = p.claims.firstWhere(
-        (PostClaim c) => c.status == ClaimStatus.open,
+      // Nothing to share today, and a new video claim is refused.
+      expect(
+        p.claims.where((PostClaim c) => c.status == ClaimStatus.open),
+        isEmpty,
       );
       await expectLater(
         repo.claimPostLink(
-          kind: today.kind,
-          occurrence: today.occurrence,
+          kind: ClaimKind.video,
+          occurrence: '6:1:2',
           postUrl: url,
         ),
-        throwsA(isA<ContestLocked>()),
+        throwsA(
+          isA<ContestNotOpen>().having(
+            (ContestNotOpen e) => e.message,
+            'message',
+            'Video levels were retired on 25 Nov 2026.',
+          ),
+        ),
       );
 
       final PostClaim thursday = p.claims.firstWhere(
@@ -515,6 +548,106 @@ void main() {
   // ensureLevelsEntry runs before the overview and the path answer, and
   // enters the learner anonymously. Deliberately changed from the old
   // "joining" group, which pinned the join call this replaced.
+  group('the Sunday levels (setupLevels=1)', () {
+    test('a planned week’s set-up steps are Sunday’s last levels, open all '
+        'week, in every live state', () async {
+      final FakeContestRepository repo = _fake();
+      final ContestPath p = await repo.fetchPath();
+      final PathDay sunday = p.days.first;
+      expect(sunday.weekday, 0);
+      expect(sunday.isToday, isFalse);
+
+      final List<PathNode> steps = sunday.nodes
+          .where((PathNode n) => n.openAllWeek)
+          .toList();
+      // After Sunday's own levels, in place of "Plan this week".
+      expect(sunday.nodes.sublist(sunday.nodes.length - steps.length), steps);
+      expect(
+        sunday.nodes.where(
+          (PathNode n) => n.kind == PathNodeKind.planWeek && !n.openAllWeek,
+        ),
+        isEmpty,
+      );
+      expect(steps.map((PathNode n) => n.title), <String>[
+        'Write Monday’s post',
+        'Add Monday’s image',
+        'Write Wednesday’s post',
+        'Add Wednesday’s image',
+        'Write Friday’s post',
+        'Add Friday’s image',
+      ]);
+      expect(steps.map((PathNode n) => n.state), <PathNodeState>[
+        PathNodeState.done,
+        PathNodeState.missed,
+        PathNodeState.today,
+        PathNodeState.locked,
+        PathNodeState.today,
+        PathNodeState.locked,
+      ]);
+      expect(steps[1].detail, 'Day passed — Monday’s image was not added');
+      expect(steps[1].href, isNull);
+      expect(steps[3].detail, 'Unlocks after Write Wednesday’s post');
+      expect(
+        steps[2].setup,
+        const NodeSetup(dayIndex: 2, step: SetupStep.post),
+      );
+      expect(steps[3].setup!.imageKind, 'photo');
+      expect(steps.every((PathNode n) => n.points == 0), isTrue);
+      expect(steps.first.id, '${sunday.dayKey}:plan_week:post:0');
+
+      // Only the day that holds them; and none of them is START on a
+      // Wednesday, whose own levels come first.
+      expect(
+        p.days.where((PathDay d) => d.nodes.any((PathNode n) => n.openAllWeek)),
+        hasLength(1),
+      );
+      expect(
+        steps.map((PathNode n) => n.id),
+        isNot(contains(currentNodeId(p.days))),
+      );
+    });
+
+    test('a set-up step is refused a skip on every day', () async {
+      final FakeContestRepository repo = _fake();
+      final PathNode step = (await repo.fetchPath()).days.first.nodes
+          .firstWhere(
+            (PathNode n) => n.openAllWeek && n.state == PathNodeState.today,
+          );
+      await expectLater(
+        repo.skipLevel(step.id),
+        throwsA(isA<ContestNotOpen>()),
+      );
+    });
+
+    test('the plan view reads the playbook week: Mon, Wed and Fri posts with '
+        'their roles, Thursday’s article, the rest days', () async {
+      final PlanWeekView v = await _fake().fetchPlanWeek();
+      expect(v.days.map((PlanWeekDay d) => d.kind), <DayKind>[
+        DayKind.rest,
+        DayKind.post,
+        DayKind.rest,
+        DayKind.post,
+        DayKind.article,
+        DayKind.post,
+        DayKind.rest,
+      ]);
+      expect(
+        v.days
+            .where((PlanWeekDay d) => d.kind == DayKind.post)
+            .map((PlanWeekDay d) => '${d.role} · ${d.formatName}'),
+        <String>[
+          'teach · Numbered steps',
+          'story · Mistake → lesson',
+          'opinion · Industry take',
+        ],
+      );
+      expect(
+        v.days.any((PlanWeekDay d) => d.kind == DayKind.videoScript),
+        isFalse,
+      );
+    });
+  });
+
   group('entering on read', () {
     test('a late learner starts today, with the days before it missed and the '
         'lesson not yet opened', () async {
@@ -529,8 +662,12 @@ void main() {
       for (final PathDay d in p.days.where(
         (PathDay d) => d.dayKey.compareTo(p.today!.dayKey) < 0,
       )) {
+        // The Sunday levels are the Planner's, not the entry's: they keep
+        // their live state whenever the learner joined.
         expect(
-          d.nodes.every((PathNode n) => n.state == PathNodeState.missed),
+          d.nodes
+              .where((PathNode n) => !n.openAllWeek)
+              .every((PathNode n) => n.state == PathNodeState.missed),
           isTrue,
           reason: d.dayKey,
         );
